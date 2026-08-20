@@ -109,12 +109,16 @@ export async function toggleCandado(cicloId, bloqueado) {
   await update(ref(db, `ciclos/${cicloId}`), { bloqueoCoach: bloqueado });
 }
 
-/* --- Render del stepper visual según estadoProceso --- */
+/* --- Render del stepper visual según estadoProceso.
+       El último paso, al llegar, se pinta también como "completado"
+       (no solo "actual") para que la línea llegue verde hasta el final —
+       si no, un paso que nunca tiene un siguiente jamás se marca is-done. --- */
 export function renderStepper(estadoActual) {
   const idxActual = ORDEN_ESTADOS.indexOf(estadoActual);
+  const esUltimoPaso = idxActual === ORDEN_ESTADOS.length - 1;
   return ORDEN_ESTADOS.map((estado, idx) => {
     let claseEstado = '';
-    if (idx < idxActual) claseEstado = 'is-done';
+    if (idx < idxActual || (idx === idxActual && esUltimoPaso)) claseEstado = 'is-done';
     else if (idx === idxActual) claseEstado = 'is-current';
     return `<div class="stepper__step ${claseEstado}">
               <div class="stepper__line"></div><div class="stepper__dot"></div>

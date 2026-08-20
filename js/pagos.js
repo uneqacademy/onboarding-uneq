@@ -93,6 +93,12 @@ export async function cargarAcuerdoParaCiclo(cicloId) {
   document.getElementById('pago-abono').value = acuerdo.abono || '';
   recalcularSaldo();
 
+  // Estado del PDF: hoy es solo informativo. La generación real se conecta
+  // en pdf-acuerdo.js, disparada desde "Generar Acuerdo y Enviar a Revisión"
+  // del coach (ver alumnos.js) — el director aquí solo lo ve, no lo genera.
+  const estadoPdfEl = document.getElementById('pago-estado-pdf');
+  if (estadoPdfEl) estadoPdfEl.textContent = acuerdo.pdfUrl ? 'Generado ✓' : 'Aún no generado';
+
   tbody.innerHTML = '';
   const cuotas = acuerdo.cuotas ? Object.values(acuerdo.cuotas).sort((a, b) => (a.fecha || '').localeCompare(b.fecha || '')) : [];
   cuotas.forEach(agregarFilaCuota);
@@ -107,11 +113,6 @@ const inputAbono = document.getElementById('pago-abono');
 
 const btnAgregarCuota = document.getElementById('btn-agregar-cuota-ficha');
 if (btnAgregarCuota) btnAgregarCuota.addEventListener('click', () => agregarFilaCuota());
-
-const btnGenerarPdf = document.getElementById('btn-generar-pdf-acuerdo');
-if (btnGenerarPdf) btnGenerarPdf.addEventListener('click', () => {
-  alert('La generación del PDF se conecta en la última etapa (pdf-acuerdo.js). Por ahora el acuerdo ya queda guardado y disponible en la ficha.');
-});
 
 const btnGuardarAcuerdo = document.getElementById('btn-guardar-acuerdo');
 if (btnGuardarAcuerdo) {

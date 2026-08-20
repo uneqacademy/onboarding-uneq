@@ -348,6 +348,10 @@ if (btnGenerarAcuerdo) {
   btnGenerarAcuerdo.addEventListener('click', async () => {
     if (!currentCicloId) return;
     btnGenerarAcuerdo.disabled = true;
+    // TODO (pdf-acuerdo.js): generar el PDF real acá, con los datos de
+    // alumno + ciclo + acuerdoPago ya reunidos, y guardar su URL en
+    // acuerdosPago/{cicloId}/pdfUrl — este es el "Coach genera el acuerdo"
+    // del proceso original. El director solo lo revisa después, no lo genera.
     await generarAcuerdoYEnviarRevision(currentCicloId);
     await abrirFicha(currentAlumnoId);
     await cargarListasAlumnos();
