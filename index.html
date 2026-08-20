@@ -72,6 +72,13 @@
       </div>
     </nav>
 
+    <div class="nav-group" data-role="director" style="padding: 0 20px; margin-top: 4px;">
+      <div style="font-size:11px; text-transform:uppercase; letter-spacing:0.5px; color:rgba(255,255,255,0.45); margin-bottom:10px;">Respaldo</div>
+      <button id="btn-exportar-json" class="btn btn--ghost" style="display:block; width:100%; text-align:left; color:#fff; border-color:rgba(255,255,255,0.25); background:transparent; margin-bottom:6px; padding:8px 10px; font-size:13px;">⬇ Descargar JSON</button>
+      <button id="btn-importar-json" class="btn btn--ghost" style="display:block; width:100%; text-align:left; color:#fff; border-color:rgba(255,255,255,0.25); background:transparent; padding:8px 10px; font-size:13px;">⬆ Importar JSON</button>
+      <input type="file" id="input-importar-json" accept="application/json" class="hidden">
+    </div>
+
     <div class="sidebar-footer" id="sidebar-user-info">
       Sesión: <strong style="color:#fff;">—</strong><br>
       Rol: —
@@ -411,9 +418,6 @@
           <h2>Alumnos</h2>
           <div style="display:flex; gap:8px; align-items:center;">
             <button class="btn btn--ghost" id="btn-exportar-excel">Descargar Excel</button>
-            <button class="btn btn--ghost" id="btn-exportar-json">Descargar JSON</button>
-            <button class="btn btn--ghost" id="btn-importar-json">Importar JSON</button>
-            <input type="file" id="input-importar-json" accept="application/json" class="hidden">
             <button class="btn btn--accent" id="btn-nuevo-alumno">+ Nuevo Alumno</button>
           </div>
         </div>
