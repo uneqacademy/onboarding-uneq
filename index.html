@@ -318,17 +318,22 @@
         <div class="tab-panel" data-panel="pago">
           <div class="panel">
             <div class="panel__body">
-              <p class="text-soft mb-16">Vista de solo lectura por ahora — la edición completa (cuotas, descuentos, PDF) se conecta en la próxima etapa (pagos.js).</p>
+              <p class="text-soft mb-16">Moneda: <strong id="pago-moneda">—</strong> (definida al crear el alumno, no editable aquí)</p>
               <div class="field-grid mb-16">
-                <div class="field"><label>Monto Total</label><input id="pago-monto-total" disabled></div>
-                <div class="field"><label>Descuento</label><input id="pago-descuento" disabled></div>
-                <div class="field"><label>Abono</label><input id="pago-abono" disabled></div>
-                <div class="field"><label>Saldo</label><input id="pago-saldo" disabled></div>
+                <div class="field"><label>Monto Total</label><input id="pago-monto-total"></div>
+                <div class="field"><label>Descuento</label><input id="pago-descuento" placeholder="0"></div>
+                <div class="field"><label>Abono</label><input id="pago-abono" placeholder="0"></div>
+                <div class="field"><label>Saldo (Monto − Descuento − Abono)</label><input id="pago-saldo" disabled></div>
               </div>
               <table class="data-table mb-16" id="tabla-cuotas-ficha">
-                <thead><tr><th>Fecha</th><th>Monto</th><th>Estado</th></tr></thead>
+                <thead><tr><th>Fecha</th><th>Monto</th><th>Estado</th><th></th></tr></thead>
                 <tbody id="tabla-cuotas-ficha-body"></tbody>
               </table>
+              <button class="btn btn--ghost" id="btn-agregar-cuota-ficha">+ Agregar Cuota</button>
+              <div class="flex-between" style="margin-top:16px;">
+                <button class="btn btn--ghost" id="btn-generar-pdf-acuerdo">Generar PDF del Acuerdo</button>
+                <button class="btn btn--primary" id="btn-guardar-acuerdo">Guardar Acuerdo</button>
+              </div>
             </div>
           </div>
         </div>

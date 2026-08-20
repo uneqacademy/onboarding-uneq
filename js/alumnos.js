@@ -16,6 +16,7 @@ import {
 } from './ciclos.js';
 import { showView, marcarNavActivo, setNav, setCandado, getCurrentRole, getCurrentUserNombre } from './main.js';
 import { cargarTestParaCiclo } from './test.js';
+import { cargarAcuerdoParaCiclo } from './pagos.js';
 
 let coachesMap = {};       // uid -> nombre, solo se llena para el director
 let currentAlumnoId = null;
@@ -205,31 +206,7 @@ async function abrirFicha(alumnoId) {
   renderAcciones(estadoProceso, role);
 
   await cargarTestParaCiclo(currentCicloId);
-
-  if (role === 'director' && currentCicloId) {
-    const acuerdoSnap = await get(ref(db, `acuerdosPago/${currentCicloId}`));
-    const acuerdo = acuerdoSnap.exists() ? acuerdoSnap.val() : null;
-    const moneda = acuerdo ? (acuerdo.moneda || '') : '';
-    document.getElementById('pago-monto-total').value = acuerdo ? `${acuerdo.montoTotal || 0} ${moneda}`.trim() : '—';
-    document.getElementById('pago-descuento').value = acuerdo ? (acuerdo.descuento || '0') : '—';
-    document.getElementById('pago-abono').value = acuerdo ? `${acuerdo.abono || 0} ${moneda}`.trim() : '—';
-    const montoTotalNum = acuerdo ? parseFloat(acuerdo.montoTotal) || 0 : 0;
-    const abonoNum = acuerdo ? parseFloat(acuerdo.abono) || 0 : 0;
-    document.getElementById('pago-saldo').value = acuerdo ? `${(montoTotalNum - abonoNum).toLocaleString('es-CL')} ${moneda}`.trim() : '—';
-
-    const tbodyCuotas = document.getElementById('tabla-cuotas-ficha-body');
-    tbodyCuotas.innerHTML = '';
-    if (acuerdo && acuerdo.cuotas) {
-      Object.values(acuerdo.cuotas)
-        .sort((a, b) => (a.fecha || '').localeCompare(b.fecha || ''))
-        .forEach(cuota => {
-          const tr = document.createElement('tr');
-          const claseBadge = cuota.estado === 'pagada' ? 'badge--pagada' : cuota.estado === 'impaga' ? 'badge--impaga' : 'badge--pendiente';
-          tr.innerHTML = `<td>${formatFecha(cuota.fecha)}</td><td>${cuota.monto || '—'} ${moneda}</td><td><span class="badge ${claseBadge}">${capitalizar(cuota.estado || 'pendiente')}</span></td>`;
-          tbodyCuotas.appendChild(tr);
-        });
-    }
-  }
+  await cargarAcuerdoParaCiclo(currentCicloId);
 
   const panelCandado = document.getElementById('panel-candado');
   if (ciclo && ciclo.estadoProceso === 'matricula_finalizada') {
