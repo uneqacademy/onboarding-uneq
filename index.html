@@ -192,7 +192,10 @@
             <h2 id="ficha-nombre-alumno">—</h2>
             <p class="text-soft">RUT <span id="ficha-rut">—</span> · Programa <span id="ficha-programa">—</span> · Coach: <span id="ficha-coach-nombre">—</span></p>
           </div>
-          <span class="badge badge--activo" id="ficha-badge-estado">—</span>
+          <div style="display:flex; align-items:center; gap:12px;">
+            <span class="badge badge--activo" id="ficha-badge-estado">—</span>
+            <button class="btn btn--danger hidden" id="btn-eliminar-alumno" data-role="director">🗑 Eliminar Alumno</button>
+          </div>
         </div>
 
         <!-- Bloqueo para el coach mientras la pelota está con el director -->
@@ -315,7 +318,7 @@
         </div>
 
         <!-- TAB: Acuerdo de Pago (SOLO DIRECTOR) -->
-        <div class="tab-panel" data-panel="pago">
+        <div class="tab-panel" data-panel="pago" data-role="director">
           <div class="panel">
             <div class="panel__body">
               <p class="text-soft mb-16">Moneda: <strong id="pago-moneda">—</strong> (definida al crear el alumno, no editable aquí)</p>
@@ -383,7 +386,13 @@
       <section id="view-alumnos-director" class="view hidden">
         <div class="flex-between mb-16">
           <h2>Alumnos</h2>
-          <button class="btn btn--accent" id="btn-nuevo-alumno">+ Nuevo Alumno</button>
+          <div style="display:flex; gap:8px; align-items:center;">
+            <button class="btn btn--ghost" id="btn-exportar-excel">Descargar Excel</button>
+            <button class="btn btn--ghost" id="btn-exportar-json">Descargar JSON</button>
+            <button class="btn btn--ghost" id="btn-importar-json">Importar JSON</button>
+            <input type="file" id="input-importar-json" accept="application/json" class="hidden">
+            <button class="btn btn--accent" id="btn-nuevo-alumno">+ Nuevo Alumno</button>
+          </div>
         </div>
         <div class="panel">
           <div class="panel__header">

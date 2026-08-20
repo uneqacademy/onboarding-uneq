@@ -47,7 +47,7 @@ export async function crearCiclo({ alumnoId, coachId, programa, acuerdoPago }) {
     coachId,
     programa,
     estadoProceso: 'asignado',
-    estadoAlumno: 'activo',
+    estadoAlumno: 'en_proceso_matricula',
     fechaIngreso: null,
     fechaEgreso: null,
     bloqueoCoach: false,
@@ -92,6 +92,7 @@ export async function marcarFirmaProcesada(cicloId, fechaFirmaStr) {
 
   await update(ref(db, `ciclos/${cicloId}`), {
     estadoProceso: 'matricula_finalizada',
+    estadoAlumno: 'activo',
     fechaIngreso: fechaFirmaStr,
     fechaEgreso,
     bloqueoCoach: true

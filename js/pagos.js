@@ -80,6 +80,13 @@ export async function cargarAcuerdoParaCiclo(cicloId) {
   const tbody = document.getElementById('tabla-cuotas-ficha-body');
   if (getCurrentRole() !== 'director' || !cicloId) {
     if (tbody) tbody.innerHTML = '';
+    document.getElementById('pago-moneda').textContent = '—';
+    document.getElementById('pago-monto-total').value = '';
+    document.getElementById('pago-descuento').value = '';
+    document.getElementById('pago-abono').value = '';
+    document.getElementById('pago-saldo').value = '';
+    const estadoPdfElVacio = document.getElementById('pago-estado-pdf');
+    if (estadoPdfElVacio) estadoPdfElVacio.textContent = '—';
     return;
   }
 

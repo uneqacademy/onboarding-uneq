@@ -17,6 +17,7 @@ import {
 import { showView, marcarNavActivo, setNav, setCandado, getCurrentRole, getCurrentUserNombre } from './main.js';
 import { cargarTestParaCiclo } from './test.js';
 import { cargarAcuerdoParaCiclo } from './pagos.js';
+import './respaldo.js';
 
 let coachesMap = {};       // uid -> nombre, solo se llena para el director
 let currentAlumnoId = null;
@@ -35,10 +36,19 @@ function formatFecha(fechaStr) {
 }
 
 function claseBadgeEstadoAlumno(estado) {
+  if (estado === 'en_proceso_matricula') return 'badge--pendiente';
   if (estado === 'pausado') return 'badge--pausado';
   if (estado === 'egresado') return 'badge--egresado';
   if (estado === 'abandono') return 'badge--impaga';
   return 'badge--activo';
+}
+
+function labelEstadoAlumno(estado) {
+  if (estado === 'en_proceso_matricula') return 'En Proceso de Matrícula';
+  if (estado === 'pausado') return 'Pausado';
+  if (estado === 'egresado') return 'Egresado';
+  if (estado === 'abandono') return 'Abandono';
+  return 'Activo';
 }
 
 function proximaCuotaPendiente(cuotas) {
@@ -97,7 +107,7 @@ function crearFilaAlumno(alumnoId, alumno, ciclo, columnas, acuerdo) {
   let html = `<td>${nombreCompleto}</td>`;
   if (columnas.coach) html += `<td>${coachNombre}</td>`;
   html += `<td>${programa}</td><td>${estadoProceso}</td>`;
-  html += `<td><span class="badge ${claseBadgeEstadoAlumno(estadoAlumno)}">${capitalizar(estadoAlumno)}</span></td>`;
+  html += `<td><span class="badge ${claseBadgeEstadoAlumno(estadoAlumno)}">${labelEstadoAlumno(estadoAlumno)}</span></td>`;
   if (columnas.fechas) {
     html += `<td>${formatFecha(ciclo && ciclo.fechaIngreso)}</td><td>${formatFecha(ciclo && ciclo.fechaEgreso)}</td>`;
   }
@@ -161,6 +171,11 @@ async function abrirFicha(alumnoId) {
 
   const role = getCurrentRole();
 
+  // Siempre resetea a "Datos Generales" al abrir una ficha — evita que quede
+  // pegada una pestaña restringida (ej. Pago) de una sesión o alumno anterior.
+  document.querySelectorAll('.tab[data-tab]').forEach(t => t.classList.toggle('is-active', t.dataset.tab === 'datos'));
+  document.querySelectorAll('.tab-panel[data-panel]').forEach(p => p.classList.toggle('is-active', p.dataset.panel === 'datos'));
+
   document.getElementById('ficha-nombre-alumno').textContent = `${alumno.nombre || ''} ${alumno.apellido || ''}`.trim() || '(sin nombre)';
   document.getElementById('ficha-rut').textContent = alumno.rut || '—';
   document.getElementById('ficha-programa').textContent = ciclo ? programaLabel(ciclo.programa) : '—';
@@ -170,7 +185,7 @@ async function abrirFicha(alumnoId) {
 
   const badge = document.getElementById('ficha-badge-estado');
   const estadoAlumno = ciclo ? ciclo.estadoAlumno : 'activo';
-  badge.textContent = capitalizar(estadoAlumno);
+  badge.textContent = labelEstadoAlumno(estadoAlumno);
   badge.className = 'badge ' + claseBadgeEstadoAlumno(estadoAlumno);
 
   document.getElementById('datos-nombre').value = alumno.nombre || '';
@@ -427,6 +442,33 @@ if (selectNuevoAlumnoPrograma) selectNuevoAlumnoPrograma.addEventListener('chang
 if (selectNuevoAlumnoMoneda) selectNuevoAlumnoMoneda.addEventListener('change', autocompletarMontoNuevoAlumno);
 if (inputNuevoAlumnoTipoCambio) inputNuevoAlumnoTipoCambio.addEventListener('input', autocompletarMontoNuevoAlumno);
 autocompletarMontoNuevoAlumno(); // prefill inicial (Begin · CLP por defecto)
+
+const btnEliminarAlumno = document.getElementById('btn-eliminar-alumno');
+if (btnEliminarAlumno) {
+  btnEliminarAlumno.addEventListener('click', async () => {
+    if (!currentAlumnoId) return;
+    const nombre = document.getElementById('ficha-nombre-alumno').textContent;
+    const confirmado = confirm(
+      `⚠️ Vas a eliminar a "${nombre}" junto con su ciclo, acuerdo de pago y tests guardados. ` +
+      `Esta acción NO se puede deshacer y se pierden todos esos datos. ¿Confirmas que quieres eliminarlo?`
+    );
+    if (!confirmado) return;
+
+    btnEliminarAlumno.disabled = true;
+    try {
+      const cicloIdAEliminar = currentCicloId;
+      await set(ref(db, `alumnos/${currentAlumnoId}`), null);
+      if (cicloIdAEliminar) {
+        await set(ref(db, `ciclos/${cicloIdAEliminar}`), null);
+        await set(ref(db, `acuerdosPago/${cicloIdAEliminar}`), null);
+      }
+      await cargarListasAlumnos();
+      setNav('alumnos');
+    } finally {
+      btnEliminarAlumno.disabled = false;
+    }
+  });
+}
 
 /* --- Llamado desde auth.js apenas se confirma el rol tras el login --- */
 export async function initAlumnosModule() {
