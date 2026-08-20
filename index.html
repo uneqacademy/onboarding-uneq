@@ -379,22 +379,25 @@
         <!-- TAB: Bitácora -->
         <div class="tab-panel" data-panel="bitacora">
           <div class="restricted-banner" id="bitacora-bloqueada">
-            La bitácora se habilita una vez que el acuerdo quede en estado <strong>&nbsp;"Firma Procesada"</strong>.
+            La bitácora se habilita una vez que el ciclo llegue a <strong>&nbsp;"Proceso de Matrícula Finalizado"</strong>.
           </div>
           <div class="panel hidden" id="bitacora-contenido">
             <div class="panel__header">
               <h3>Bitácora de seguimiento</h3>
-              <button class="btn btn--accent">+ Nueva entrada</button>
             </div>
             <div class="panel__body">
               <div class="field-grid mb-16">
-                <div class="field"><label>Fecha</label><input type="date"></div>
+                <div class="field"><label>Fecha</label><input type="date" id="bitacora-fecha"></div>
                 <div class="field"><label>Canal</label>
-                  <select><option>WhatsApp</option><option>Videollamada</option><option>Llamada telefónica</option><option>Email</option></select>
+                  <select id="bitacora-canal"><option>WhatsApp</option><option>Videollamada</option><option>Llamada telefónica</option><option>Email</option></select>
                 </div>
               </div>
-              <div class="field mb-16"><label>Notas</label><textarea placeholder="Registro libre de la conversación/acción..."></textarea></div>
-              <p class="text-soft">[ listado histórico de entradas de bitácora va aquí ]</p>
+              <div class="field mb-16"><label>Notas</label><textarea id="bitacora-notas" placeholder="Registro libre de la conversación/acción..."></textarea></div>
+              <div class="flex-between mb-16">
+                <span></span>
+                <button class="btn btn--accent" id="btn-guardar-bitacora">+ Agregar Entrada</button>
+              </div>
+              <div id="bitacora-listado"></div>
             </div>
           </div>
         </div>

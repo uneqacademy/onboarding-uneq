@@ -17,6 +17,7 @@ import {
 import { showView, marcarNavActivo, setNav, setCandado, getCurrentRole, getCurrentUserNombre } from './main.js';
 import { cargarTestParaCiclo } from './test.js';
 import { cargarAcuerdoParaCiclo } from './pagos.js';
+import { cargarBitacoraParaCiclo } from './bitacora.js';
 import './respaldo.js';
 import './coaches.js';
 
@@ -302,6 +303,7 @@ async function abrirFicha(alumnoId) {
 
   await cargarTestParaCiclo(currentCicloId);
   await cargarAcuerdoParaCiclo(currentCicloId);
+  await cargarBitacoraParaCiclo(currentCicloId, estadoProceso === 'matricula_finalizada');
 
   const panelCandado = document.getElementById('panel-candado');
   if (ciclo && ciclo.estadoProceso === 'matricula_finalizada') {
