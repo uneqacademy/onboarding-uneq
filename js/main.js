@@ -1,11 +1,12 @@
 /* ============================================================
    main.js — Navegación y UI del app-shell.
    El rol real (director|coach) lo determina auth.js a partir de
-   /usuarios/{uid}. Este archivo expone applyRole()/showLogin()
-   para que auth.js las llame según el estado de sesión.
+   /usuarios/{uid}. Este archivo expone applyRole()/showLogin() y
+   varios helpers que alumnos.js/ciclos.js usan para pintar la UI.
    ============================================================ */
 
 let currentRole = null;
+let currentNombre = '';
 let candadoBloqueado = false;
 
 // Inserta el ícono de marca (brújula) donde corresponda
@@ -16,6 +17,7 @@ document.querySelectorAll('[data-brand-mark]').forEach(el => {
 
 export function applyRole(role, nombre) {
   currentRole = role;
+  currentNombre = nombre;
 
   document.querySelectorAll('[data-role="director"]').forEach(el => {
     el.classList.toggle('hidden', role !== 'director');
@@ -30,10 +32,6 @@ export function applyRole(role, nombre) {
   document.getElementById('sidebar-user-info').innerHTML =
     `Sesión: <strong style="color:#fff;">${nombre}</strong><br>Rol: ${role === 'director' ? 'Director/a Académico' : 'Coach'}`;
 
-  const panelCandado = document.getElementById('panel-candado');
-  if (panelCandado && !panelCandado.classList.contains('hidden')) {
-    setCandado(candadoBloqueado);
-  }
   document.querySelectorAll('.btn-unlock-cuota').forEach(btn => btn.classList.toggle('hidden', role !== 'director'));
 
   document.getElementById('view-login').classList.add('hidden');
@@ -46,21 +44,25 @@ export function showLogin() {
   document.getElementById('app-shell').classList.add('hidden');
   document.getElementById('view-login').classList.remove('hidden');
   currentRole = null;
+  currentNombre = '';
 }
 
+export function getCurrentRole() { return currentRole; }
+export function getCurrentUserNombre() { return currentNombre; }
+
 // --- Router simple entre secciones del menú lateral ---
-function showView(id) {
+export function showView(id) {
   document.querySelectorAll('.view').forEach(v => v.classList.add('hidden'));
   const target = document.getElementById(id);
   if (target) target.classList.remove('hidden');
 }
 
-function marcarNavActivo(section) {
+export function marcarNavActivo(section) {
   document.querySelectorAll('.nav-item[data-nav]').forEach(i =>
     i.classList.toggle('is-active', i.dataset.nav === section));
 }
 
-function setNav(section) {
+export function setNav(section) {
   marcarNavActivo(section);
 
   if (section === 'dashboard') {
@@ -79,15 +81,6 @@ document.querySelectorAll('.nav-item[data-nav]').forEach(item => {
   item.addEventListener('click', () => setNav(item.dataset.nav));
 });
 
-// --- Fila de alumno (en cualquier tabla) -> abre la Ficha ---
-document.querySelectorAll('.row-alumno').forEach(row => {
-  row.addEventListener('click', () => {
-    showView('view-ficha-alumno');
-    marcarNavActivo('alumnos');
-    document.getElementById('topbar-title').textContent = 'Ficha de Alumno';
-  });
-});
-
 // --- Tabs dentro de la ficha de alumno ---
 document.querySelectorAll('.tab[data-tab]').forEach(tab => {
   tab.addEventListener('click', () => {
@@ -100,7 +93,7 @@ document.querySelectorAll('.tab[data-tab]').forEach(tab => {
   });
 });
 
-// --- Crear Alumno ---
+// --- Crear Alumno (navegación; el guardado real vive en alumnos.js) ---
 const btnNuevoAlumno = document.getElementById('btn-nuevo-alumno');
 if (btnNuevoAlumno) btnNuevoAlumno.addEventListener('click', () => {
   showView('view-crear-alumno');
@@ -128,7 +121,8 @@ if (btnAgregarCuota) btnAgregarCuota.addEventListener('click', () => {
   habilitarQuitarCuota(row);
 });
 
-// --- Crear Coach ---
+// --- Crear Coach (navegación; la creación real de la cuenta se conecta
+//     cuando construyamos dashboard-director.js) ---
 const btnNuevoCoach = document.getElementById('btn-nuevo-coach');
 if (btnNuevoCoach) btnNuevoCoach.addEventListener('click', () => {
   showView('view-crear-coach');
@@ -139,20 +133,10 @@ if (btnNuevoCoach) btnNuevoCoach.addEventListener('click', () => {
 const btnCancelarCoach = document.getElementById('btn-cancelar-nuevo-coach');
 if (btnCancelarCoach) btnCancelarCoach.addEventListener('click', () => setNav('coaches'));
 
-// --- Acciones de estado de proceso (mockup — se conecta a ciclos.js en la próxima etapa) ---
-const btnGenerarAcuerdo = document.getElementById('btn-generar-acuerdo');
-if (btnGenerarAcuerdo) btnGenerarAcuerdo.addEventListener('click', () => {
-  alert('Acuerdo generado y enviado al director/a para revisión. Lógica real pendiente: ciclos.js.');
-});
-
-const btnFirmaProcesada = document.getElementById('btn-marcar-firma-procesada');
-if (btnFirmaProcesada) btnFirmaProcesada.addEventListener('click', () => {
-  alert('Firma procesada: se fija la Fecha de Ingreso, se calcula la Fecha de Egreso, y se habilita la bitácora. Lógica real pendiente: ciclos.js.');
-  setCandado(true);
-});
-
-// --- CANDADO A: bloqueo simple post-firma (evita ediciones accidentales del coach) ---
-function setCandado(bloqueado) {
+// --- CANDADO A: bloqueo simple post-firma (evita ediciones accidentales del coach).
+//     El estado real (bloqueado sí/no) lo decide y persiste ciclos.js/alumnos.js;
+//     esta función solo pinta la UI. ---
+export function setCandado(bloqueado) {
   candadoBloqueado = bloqueado;
   const panel = document.getElementById('panel-candado');
   if (panel) panel.classList.remove('hidden');
@@ -171,9 +155,6 @@ function setCandado(bloqueado) {
     '.tab-panel[data-panel="ciclo"] textarea, .tab-panel[data-panel="ciclo"] input:not(:disabled)'
   ).forEach(el => { el.disabled = bloqueado && currentRole === 'coach'; });
 }
-
-const btnToggleCandado = document.getElementById('btn-toggle-candado');
-if (btnToggleCandado) btnToggleCandado.addEventListener('click', () => setCandado(!candadoBloqueado));
 
 // --- CANDADO B: cuotas pagadas quedan fijas; el director las puede desbloquear ---
 function bindCuotaEstadoSelect(select) {

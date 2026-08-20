@@ -144,26 +144,7 @@
                   <th>Estado Alumno</th><th>Próx. Cuota</th><th>Monto</th><th>Estado Pago</th>
                 </tr>
               </thead>
-              <tbody id="tabla-alumnos-director">
-                <tr class="row-alumno">
-                  <td>Javiera Reyes</td><td>Camila S.</td><td>Next</td><td>En Onboarding</td>
-                  <td><span class="badge badge--activo">Activo</span></td>
-                  <td>05 Sep 2026</td><td>$450.000</td>
-                  <td><span class="badge badge--pendiente">Pendiente</span></td>
-                </tr>
-                <tr class="row-alumno">
-                  <td>Rodrigo Paz</td><td>Ignacio T.</td><td>Begin</td><td>Firma Procesada</td>
-                  <td><span class="badge badge--activo">Activo</span></td>
-                  <td>12 Ago 2026</td><td>$375.000</td>
-                  <td><span class="badge badge--impaga">Impaga</span></td>
-                </tr>
-                <tr class="row-alumno">
-                  <td>Consuelo Vidal</td><td>Camila S.</td><td>eXIT</td><td>En Revisión</td>
-                  <td><span class="badge badge--activo">Activo</span></td>
-                  <td>—</td><td>—</td>
-                  <td><span class="badge badge--pagada">Al día</span></td>
-                </tr>
-              </tbody>
+              <tbody id="tabla-alumnos-dashboard-director"></tbody>
             </table>
           </div>
         </div>
@@ -195,16 +176,7 @@
               <thead>
                 <tr><th>Alumno</th><th>Programa</th><th>Estado Proceso</th><th>Estado Alumno</th></tr>
               </thead>
-              <tbody>
-                <tr class="row-alumno">
-                  <td>Javiera Reyes</td><td>Next</td><td>En Onboarding</td>
-                  <td><span class="badge badge--activo">Activo</span></td>
-                </tr>
-                <tr class="row-alumno">
-                  <td>Marcelo Iturra</td><td>Begin</td><td>Enviado para Firma</td>
-                  <td><span class="badge badge--activo">Activo</span></td>
-                </tr>
-              </tbody>
+              <tbody id="tabla-alumnos-dashboard-coach"></tbody>
             </table>
           </div>
         </div>
@@ -217,48 +189,26 @@
 
         <div class="flex-between mb-16">
           <div>
-            <h2 id="ficha-nombre-alumno">Javiera Reyes</h2>
-            <p class="text-soft">RUT 18.234.567-8 · Programa Next · Coach: Camila S.</p>
+            <h2 id="ficha-nombre-alumno">—</h2>
+            <p class="text-soft">RUT <span id="ficha-rut">—</span> · Programa <span id="ficha-programa">—</span> · Coach: <span id="ficha-coach-nombre">—</span></p>
           </div>
-          <span class="badge badge--activo">Activo</span>
+          <span class="badge badge--activo" id="ficha-badge-estado">—</span>
         </div>
 
         <!-- Bloqueo para el coach mientras la pelota está con el director -->
-        <div class="locked-banner" id="banner-bloqueo-coach">
+        <div class="locked-banner hidden" id="banner-bloqueo-coach">
           🔒 Ficha bloqueada temporalmente — el acuerdo está en revisión con el director/a académico.
         </div>
 
         <!-- Stepper de estado de proceso -->
         <div class="panel mb-24">
           <div class="panel__body">
-            <div class="stepper">
-              <div class="stepper__step is-done">
-                <div class="stepper__line"></div><div class="stepper__dot"></div>
-                <div class="stepper__label">Asignado</div>
-              </div>
-              <div class="stepper__step is-current">
-                <div class="stepper__line"></div><div class="stepper__dot"></div>
-                <div class="stepper__label">En Onboarding</div>
-              </div>
-              <div class="stepper__step">
-                <div class="stepper__line"></div><div class="stepper__dot"></div>
-                <div class="stepper__label">Enviado para Firma</div>
-              </div>
-              <div class="stepper__step">
-                <div class="stepper__line"></div><div class="stepper__dot"></div>
-                <div class="stepper__label">En Revisión</div>
-              </div>
-              <div class="stepper__step">
-                <div class="stepper__line"></div><div class="stepper__dot"></div>
-                <div class="stepper__label">Firma Procesada</div>
-              </div>
-            </div>
+            <div class="stepper" id="ficha-stepper"></div>
           </div>
         </div>
 
-        <!-- Acciones según rol + estado del proceso (mockup — se conecta a la
-             lógica real de estados cuando integremos Firebase) -->
-        <div class="panel mb-24" data-role="coach">
+        <!-- Acciones según rol + estado real del ciclo (ciclos.js decide cuál mostrar) -->
+        <div class="panel mb-24 hidden" id="panel-accion-coach" data-role="coach">
           <div class="panel__body flex-between">
             <div>
               <strong>¿Ya completaste el onboarding con el alumno?</strong>
@@ -267,13 +217,25 @@
             <button class="btn btn--accent" id="btn-generar-acuerdo">Generar Acuerdo y Enviar a Revisión</button>
           </div>
         </div>
-        <div class="panel mb-24" data-role="director">
+        <div class="panel mb-24 hidden" id="panel-accion-enviar-revision" data-role="director">
+          <div class="panel__body flex-between">
+            <div>
+              <strong>¿Ya enviaste el documento para firma?</strong>
+              <p class="text-soft" style="margin:4px 0 0;">Envíalo por Google Workspace y marca aquí cuando ya lo hayas hecho — así pasa a "En Revisión".</p>
+            </div>
+            <button class="btn btn--accent" id="btn-enviar-a-revision">Documento Enviado para Firma</button>
+          </div>
+        </div>
+        <div class="panel mb-24 hidden" id="panel-accion-firma-procesada" data-role="director">
           <div class="panel__body flex-between">
             <div>
               <strong>¿El acuerdo ya fue firmado por ambas partes?</strong>
-              <p class="text-soft" style="margin:4px 0 0;">Al marcarlo, se fija la Fecha de Ingreso a hoy, se calcula la Fecha de Egreso, y se habilita la bitácora para el coach.</p>
+              <p class="text-soft" style="margin:4px 0 0;">Define la fecha real en que se firmó — se usa como Fecha de Ingreso y con eso se calcula la Fecha de Egreso.</p>
             </div>
-            <button class="btn btn--primary" id="btn-marcar-firma-procesada">Marcar Firma Procesada</button>
+            <div style="display:flex; align-items:center; gap:8px;">
+              <input type="date" id="input-fecha-firma">
+              <button class="btn btn--primary" id="btn-marcar-firma-procesada">Marcar Firma Procesada</button>
+            </div>
           </div>
         </div>
 
@@ -304,14 +266,18 @@
           <div class="panel">
             <div class="panel__body">
               <div class="field-grid">
-                <div class="field"><label>Nombre</label><input value="Javiera"></div>
-                <div class="field"><label>Apellido</label><input value="Reyes"></div>
-                <div class="field"><label>RUT</label><input value="18.234.567-8"></div>
-                <div class="field"><label>Fecha de Nacimiento</label><input type="date"></div>
-                <div class="field"><label>Género</label><select><option>Femenino</option></select></div>
-                <div class="field"><label>Teléfono</label><input value="+56 9 1234 5678"></div>
-                <div class="field"><label>Dirección</label><input value="Providencia, Santiago"></div>
-                <div class="field"><label>Ocupación</label><input value="Diseñadora / Emprendedora"></div>
+                <div class="field"><label>Nombre</label><input id="datos-nombre"></div>
+                <div class="field"><label>Apellido</label><input id="datos-apellido"></div>
+                <div class="field"><label>RUT</label><input id="datos-rut"></div>
+                <div class="field"><label>Fecha de Nacimiento</label><input type="date" id="datos-fecha-nacimiento"></div>
+                <div class="field"><label>Género</label><select id="datos-genero"><option>Femenino</option><option>Masculino</option><option>Otro</option><option>Prefiere no decir</option></select></div>
+                <div class="field"><label>Teléfono</label><input id="datos-telefono"></div>
+                <div class="field"><label>Dirección</label><input id="datos-direccion"></div>
+                <div class="field"><label>Ocupación</label><input id="datos-ocupacion"></div>
+              </div>
+              <div class="flex-between" style="margin-top:16px;">
+                <span></span>
+                <button class="btn btn--primary" id="btn-guardar-datos">Guardar Datos</button>
               </div>
             </div>
           </div>
@@ -322,18 +288,22 @@
           <div class="panel">
             <div class="panel__body">
               <div class="field-grid">
-                <div class="field"><label>Programa</label><select><option>Next</option></select></div>
-                <div class="field"><label>Fecha Ingreso</label><input type="date" disabled placeholder="Se define al quedar Firma Procesada"></div>
-                <div class="field"><label>Fecha Egreso (auto)</label><input type="date" disabled placeholder="Se calcula sola"></div>
-                <div class="field"><label>Coach Asignado</label><select><option>Camila S.</option></select></div>
+                <div class="field"><label>Programa</label><select id="ciclo-programa" disabled><option value="begin">Begin</option><option value="next">Next</option><option value="exit">eXIT</option></select></div>
+                <div class="field"><label>Fecha Ingreso</label><input type="date" id="ciclo-fecha-ingreso" disabled placeholder="Se define al quedar Firma Procesada"></div>
+                <div class="field"><label>Fecha Egreso (auto)</label><input type="date" id="ciclo-fecha-egreso" disabled placeholder="Se calcula sola"></div>
+                <div class="field"><label>Coach Asignado</label><select id="ciclo-coach"></select></div>
               </div>
               <div class="field-grid mb-16" style="margin-top:14px;">
-                <div class="field"><label>Facturación Actual</label><input placeholder="$0"></div>
-                <div class="field"><label>Objetivo Facturación Largo Plazo</label><input placeholder="$0"></div>
+                <div class="field"><label>Facturación Actual</label><input id="ciclo-facturacion-actual" placeholder="$0"></div>
+                <div class="field"><label>Objetivo Facturación Largo Plazo</label><input id="ciclo-objetivo-facturacion" placeholder="$0"></div>
               </div>
               <div class="field-grid">
-                <div class="field" style="grid-column: span 2;"><label>Situación Personal Actual</label><textarea></textarea></div>
-                <div class="field" style="grid-column: span 2;"><label>Objetivos Personales al Finalizar</label><textarea></textarea></div>
+                <div class="field" style="grid-column: span 2;"><label>Situación Personal Actual</label><textarea id="ciclo-situacion-personal"></textarea></div>
+                <div class="field" style="grid-column: span 2;"><label>Objetivos Personales al Finalizar</label><textarea id="ciclo-objetivos-personales"></textarea></div>
+              </div>
+              <div class="flex-between" style="margin-top:16px;">
+                <span></span>
+                <button class="btn btn--primary" id="btn-guardar-ciclo">Guardar Ciclo</button>
               </div>
             </div>
           </div>
@@ -434,13 +404,7 @@
               <thead>
                 <tr><th>Alumno</th><th>Coach</th><th>Programa</th><th>Estado Proceso</th><th>Estado Alumno</th><th>Ingreso</th><th>Egreso</th></tr>
               </thead>
-              <tbody>
-                <tr class="row-alumno"><td>Javiera Reyes</td><td>Camila S.</td><td>Next</td><td>En Onboarding</td><td><span class="badge badge--activo">Activo</span></td><td>10 Jul 2026</td><td>10 Ene 2027</td></tr>
-                <tr class="row-alumno"><td>Rodrigo Paz</td><td>Ignacio T.</td><td>Begin</td><td>Firma Procesada</td><td><span class="badge badge--activo">Activo</span></td><td>12 May 2026</td><td>12 Ago 2026</td></tr>
-                <tr class="row-alumno"><td>Consuelo Vidal</td><td>Camila S.</td><td>eXIT</td><td>En Revisión</td><td><span class="badge badge--activo">Activo</span></td><td>02 Jun 2026</td><td>02 Dic 2026</td></tr>
-                <tr class="row-alumno"><td>Marcelo Iturra</td><td>Ignacio T.</td><td>Begin</td><td>Enviado para Firma</td><td><span class="badge badge--activo">Activo</span></td><td>20 Jul 2026</td><td>20 Oct 2026</td></tr>
-                <tr class="row-alumno"><td>Fernanda Ortiz</td><td>Pablo M.</td><td>Next</td><td>Firma Procesada</td><td><span class="badge badge--pausado">Pausado</span></td><td>01 Mar 2026</td><td>01 Sep 2026</td></tr>
-              </tbody>
+              <tbody id="tabla-alumnos-director"></tbody>
             </table>
           </div>
         </div>
@@ -457,10 +421,7 @@
               <thead>
                 <tr><th>Alumno</th><th>Programa</th><th>Estado Proceso</th><th>Estado Alumno</th><th>Ingreso</th><th>Egreso</th></tr>
               </thead>
-              <tbody>
-                <tr class="row-alumno"><td>Javiera Reyes</td><td>Next</td><td>En Onboarding</td><td><span class="badge badge--activo">Activo</span></td><td>10 Jul 2026</td><td>10 Ene 2027</td></tr>
-                <tr class="row-alumno"><td>Marcelo Iturra</td><td>Begin</td><td>Enviado para Firma</td><td><span class="badge badge--activo">Activo</span></td><td>20 Jul 2026</td><td>20 Oct 2026</td></tr>
-              </tbody>
+              <tbody id="tabla-alumnos-coach"></tbody>
             </table>
           </div>
         </div>
@@ -483,8 +444,8 @@
           <div class="panel__body">
             <p class="text-soft mb-16">El resto de los datos (RUT, contacto, foto, ocupación, test, etc.) los completa el coach durante la sesión de onboarding.</p>
             <div class="field-grid">
-              <div class="field"><label>Nombre</label><input placeholder="Nombre"></div>
-              <div class="field"><label>Apellido</label><input placeholder="Apellido"></div>
+              <div class="field"><label>Nombre</label><input id="nuevo-alumno-nombre" placeholder="Nombre"></div>
+              <div class="field"><label>Apellido</label><input id="nuevo-alumno-apellido" placeholder="Apellido"></div>
             </div>
           </div>
         </div>
@@ -495,14 +456,14 @@
             <p class="text-soft mb-16">La Fecha de Ingreso se define automáticamente cuando el acuerdo quede "Firma Procesada" — no antes.</p>
             <div class="field-grid">
               <div class="field"><label>Programa</label>
-                <select>
-                  <option>Begin (3 meses · 1.500 USD)</option>
-                  <option>Next (6 meses · 3.000 USD)</option>
-                  <option>eXIT (6 meses · 5.000 USD)</option>
+                <select id="nuevo-alumno-programa">
+                  <option value="begin">Begin (3 meses · 1.500 USD)</option>
+                  <option value="next">Next (6 meses · 3.000 USD)</option>
+                  <option value="exit">eXIT (6 meses · 5.000 USD)</option>
                 </select>
               </div>
               <div class="field"><label>Coach Asignado</label>
-                <select><option>Camila S.</option><option>Ignacio T.</option><option>Pablo M.</option></select>
+                <select id="nuevo-alumno-coach"><option value="">Cargando coaches...</option></select>
               </div>
             </div>
           </div>
@@ -512,10 +473,10 @@
           <div class="panel__header"><h3>Acuerdo de Pago</h3></div>
           <div class="panel__body">
             <div class="field-grid mb-16">
-              <div class="field"><label>Monto Total</label><input placeholder="Según programa"></div>
-              <div class="field"><label>Moneda</label><select><option>USD</option><option>CLP</option></select></div>
-              <div class="field"><label>Descuento (opcional)</label><input placeholder="0"></div>
-              <div class="field"><label>Abono</label><input placeholder="$0"></div>
+              <div class="field"><label>Monto Total</label><input id="nuevo-alumno-monto" placeholder="Según programa"></div>
+              <div class="field"><label>Moneda</label><select id="nuevo-alumno-moneda"><option>USD</option><option>CLP</option></select></div>
+              <div class="field"><label>Descuento (opcional)</label><input id="nuevo-alumno-descuento" placeholder="0"></div>
+              <div class="field"><label>Abono</label><input id="nuevo-alumno-abono" placeholder="$0"></div>
             </div>
             <table class="data-table mb-16" id="tabla-cuotas-nuevo">
               <thead><tr><th>Fecha</th><th>Monto</th><th></th></tr></thead>
@@ -527,9 +488,10 @@
           </div>
         </div>
 
+        <p id="nuevo-alumno-error" class="hidden" style="color:#C0392B; margin-bottom:12px;"></p>
         <div class="flex-between">
           <button class="btn btn--ghost" id="btn-cancelar-nuevo-alumno-2">Cancelar</button>
-          <button class="btn btn--primary">Crear Alumno y Asignar Coach</button>
+          <button class="btn btn--primary" id="btn-crear-alumno">Crear Alumno y Asignar Coach</button>
         </div>
       </section>
 

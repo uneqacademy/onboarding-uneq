@@ -14,6 +14,7 @@ import {
 } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-auth.js";
 import { ref, get } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-database.js";
 import { applyRole, showLogin } from './main.js';
+import { initAlumnosModule } from './alumnos.js';
 
 const inputEmail = document.getElementById('login-email');
 const inputPass = document.getElementById('login-pass');
@@ -96,6 +97,7 @@ onAuthStateChanged(auth, async (user) => {
     inputEmail.value = '';
     inputPass.value = '';
     applyRole(perfil.rol, perfil.nombre || user.email);
+    await initAlumnosModule();
   } catch (err) {
     mostrarError('Error al cargar tu perfil. Intenta de nuevo.');
     await signOut(auth);
