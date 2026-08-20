@@ -103,21 +103,29 @@ function actualizarCampoEspecialidad() {
 const selectOcupacion = document.getElementById('datos-ocupacion');
 if (selectOcupacion) selectOcupacion.addEventListener('change', actualizarCampoEspecialidad);
 
-/* --- Teléfono internacional con banderita (librería intl-tel-input) --- */
+/* --- Teléfono internacional con banderita (librería intl-tel-input).
+       Se inicializa recién al abrir una ficha (no al cargar la página,
+       para no afectar el login), y protegida: si la librería falla,
+       el campo sigue funcionando como texto normal. --- */
 let itiTelefono = null;
 
-function initTelefonoWidget() {
+function initTelefonoWidgetSiCorresponde() {
+  if (itiTelefono) return;
   const input = document.getElementById('datos-telefono');
-  if (!input || itiTelefono || typeof window.intlTelInput !== 'function') return;
-  itiTelefono = window.intlTelInput(input, {
-    initialCountry: 'cl',
-    preferredCountries: ['cl', 'ar', 'pe', 'mx', 'co'],
-    separateDialCode: true
-  });
+  if (!input || typeof window.intlTelInput !== 'function') return;
+  try {
+    itiTelefono = window.intlTelInput(input, {
+      initialCountry: 'cl',
+      preferredCountries: ['cl', 'ar', 'pe', 'mx', 'co'],
+      separateDialCode: true
+    });
+  } catch (err) {
+    itiTelefono = null;
+  }
 }
-initTelefonoWidget();
 
 function setTelefono(valor) {
+  initTelefonoWidgetSiCorresponde();
   if (itiTelefono) {
     itiTelefono.setNumber(valor || '');
   } else {
@@ -133,6 +141,7 @@ function getTelefono() {
 }
 
 
+function poblarSelectCoaches(selectEl, selectedCoachId) {
   selectEl.innerHTML = '';
   Object.entries(coachesMap).forEach(([uid, nombre]) => {
     const opt = document.createElement('option');
