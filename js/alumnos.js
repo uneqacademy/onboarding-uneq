@@ -15,6 +15,7 @@ import {
   marcarEnviadoParaFirma, marcarFirmaProcesada, toggleCandado, renderStepper, renderAcciones
 } from './ciclos.js';
 import { showView, marcarNavActivo, setNav, setCandado, getCurrentRole, getCurrentUserNombre } from './main.js';
+import { cargarTestParaCiclo } from './test.js';
 
 let coachesMap = {};       // uid -> nombre, solo se llena para el director
 let currentAlumnoId = null;
@@ -37,6 +38,25 @@ function claseBadgeEstadoAlumno(estado) {
   if (estado === 'egresado') return 'badge--egresado';
   if (estado === 'abandono') return 'badge--impaga';
   return 'badge--activo';
+}
+
+function proximaCuotaPendiente(cuotas) {
+  const pendientes = cuotas.filter(c => c.estado !== 'pagada' && c.fecha).sort((a, b) => a.fecha.localeCompare(b.fecha));
+  return pendientes.length ? formatFecha(pendientes[0].fecha) : '—';
+}
+
+function estadoPagoDeAcuerdo(acuerdo) {
+  if (!acuerdo || !acuerdo.cuotas || Object.keys(acuerdo.cuotas).length === 0) {
+    return { texto: '—', clase: '', proxCuota: '—' };
+  }
+  const cuotas = Object.values(acuerdo.cuotas);
+  if (cuotas.some(c => c.estado === 'impaga')) {
+    return { texto: 'Impaga', clase: 'badge--impaga', proxCuota: proximaCuotaPendiente(cuotas) };
+  }
+  if (cuotas.every(c => c.estado === 'pagada')) {
+    return { texto: 'Al día', clase: 'badge--pagada', proxCuota: '—' };
+  }
+  return { texto: 'Pendiente', clase: 'badge--pendiente', proxCuota: proximaCuotaPendiente(cuotas) };
 }
 
 function poblarSelectCoaches(selectEl, selectedCoachId) {
@@ -63,7 +83,7 @@ async function cargarCoaches() {
 }
 
 /* --- Construye una fila <tr> de alumno, con columnas según el contexto --- */
-function crearFilaAlumno(alumnoId, alumno, ciclo, columnas) {
+function crearFilaAlumno(alumnoId, alumno, ciclo, columnas, acuerdo) {
   const tr = document.createElement('tr');
   tr.className = 'row-alumno';
 
@@ -81,7 +101,9 @@ function crearFilaAlumno(alumnoId, alumno, ciclo, columnas) {
     html += `<td>${formatFecha(ciclo && ciclo.fechaIngreso)}</td><td>${formatFecha(ciclo && ciclo.fechaEgreso)}</td>`;
   }
   if (columnas.pago) {
-    html += `<td>—</td><td>—</td><td>—</td>`; // se conecta cuando construyamos pagos.js
+    const montoTexto = acuerdo && acuerdo.montoTotal ? `${acuerdo.montoTotal} ${acuerdo.moneda || ''}`.trim() : '—';
+    const estadoPago = estadoPagoDeAcuerdo(acuerdo);
+    html += `<td>${estadoPago.proxCuota}</td><td>${montoTexto}</td><td><span class="badge ${estadoPago.clase}">${estadoPago.texto}</span></td>`;
   }
   tr.innerHTML = html;
   tr.addEventListener('click', () => abrirFicha(alumnoId));
@@ -90,13 +112,14 @@ function crearFilaAlumno(alumnoId, alumno, ciclo, columnas) {
 
 /* --- Recarga las 4 tablas de alumnos según el rol de la sesión actual --- */
 export async function cargarListasAlumnos() {
-  const [alumnosSnap, ciclosSnap] = await Promise.all([
-    get(ref(db, 'alumnos')),
-    get(ref(db, 'ciclos'))
-  ]);
+  const role = getCurrentRole();
+  const promesas = [get(ref(db, 'alumnos')), get(ref(db, 'ciclos'))];
+  if (role === 'director') promesas.push(get(ref(db, 'acuerdosPago')));
+
+  const [alumnosSnap, ciclosSnap, acuerdosSnap] = await Promise.all(promesas);
   const alumnos = alumnosSnap.exists() ? alumnosSnap.val() : {};
   const ciclos = ciclosSnap.exists() ? ciclosSnap.val() : {};
-  const role = getCurrentRole();
+  const acuerdos = (acuerdosSnap && acuerdosSnap.exists()) ? acuerdosSnap.val() : {};
   const uid = auth.currentUser ? auth.currentUser.uid : null;
 
   const tbodyDashDirector = document.getElementById('tabla-alumnos-dashboard-director');
@@ -107,9 +130,10 @@ export async function cargarListasAlumnos() {
 
   Object.entries(alumnos).forEach(([alumnoId, alumno]) => {
     const ciclo = alumno.cicloActualId ? ciclos[alumno.cicloActualId] : null;
+    const acuerdo = alumno.cicloActualId ? acuerdos[alumno.cicloActualId] : null;
 
     if (role === 'director') {
-      if (tbodyDashDirector) tbodyDashDirector.appendChild(crearFilaAlumno(alumnoId, alumno, ciclo, { coach: true, fechas: false, pago: true }));
+      if (tbodyDashDirector) tbodyDashDirector.appendChild(crearFilaAlumno(alumnoId, alumno, ciclo, { coach: true, fechas: false, pago: true }, acuerdo));
       if (tbodyDirector) tbodyDirector.appendChild(crearFilaAlumno(alumnoId, alumno, ciclo, { coach: true, fechas: true, pago: false }));
     } else if (role === 'coach') {
       if (!ciclo || ciclo.coachId !== uid) return;
@@ -180,8 +204,35 @@ async function abrirFicha(alumnoId) {
   document.getElementById('ficha-stepper').innerHTML = renderStepper(estadoProceso);
   renderAcciones(estadoProceso, role);
 
+  await cargarTestParaCiclo(currentCicloId);
+
+  if (role === 'director' && currentCicloId) {
+    const acuerdoSnap = await get(ref(db, `acuerdosPago/${currentCicloId}`));
+    const acuerdo = acuerdoSnap.exists() ? acuerdoSnap.val() : null;
+    const moneda = acuerdo ? (acuerdo.moneda || '') : '';
+    document.getElementById('pago-monto-total').value = acuerdo ? `${acuerdo.montoTotal || 0} ${moneda}`.trim() : '—';
+    document.getElementById('pago-descuento').value = acuerdo ? (acuerdo.descuento || '0') : '—';
+    document.getElementById('pago-abono').value = acuerdo ? `${acuerdo.abono || 0} ${moneda}`.trim() : '—';
+    const montoTotalNum = acuerdo ? parseFloat(acuerdo.montoTotal) || 0 : 0;
+    const abonoNum = acuerdo ? parseFloat(acuerdo.abono) || 0 : 0;
+    document.getElementById('pago-saldo').value = acuerdo ? `${(montoTotalNum - abonoNum).toLocaleString('es-CL')} ${moneda}`.trim() : '—';
+
+    const tbodyCuotas = document.getElementById('tabla-cuotas-ficha-body');
+    tbodyCuotas.innerHTML = '';
+    if (acuerdo && acuerdo.cuotas) {
+      Object.values(acuerdo.cuotas)
+        .sort((a, b) => (a.fecha || '').localeCompare(b.fecha || ''))
+        .forEach(cuota => {
+          const tr = document.createElement('tr');
+          const claseBadge = cuota.estado === 'pagada' ? 'badge--pagada' : cuota.estado === 'impaga' ? 'badge--impaga' : 'badge--pendiente';
+          tr.innerHTML = `<td>${formatFecha(cuota.fecha)}</td><td>${cuota.monto || '—'} ${moneda}</td><td><span class="badge ${claseBadge}">${capitalizar(cuota.estado || 'pendiente')}</span></td>`;
+          tbodyCuotas.appendChild(tr);
+        });
+    }
+  }
+
   const panelCandado = document.getElementById('panel-candado');
-  if (ciclo && ciclo.estadoProceso === 'firma_procesada') {
+  if (ciclo && ciclo.estadoProceso === 'matricula_finalizada') {
     bloqueoActual = !!ciclo.bloqueoCoach;
     setCandado(bloqueoActual);
   } else {
@@ -362,6 +413,39 @@ if (btnToggleCandado) {
     await toggleCandado(currentCicloId, bloqueoActual);
   });
 }
+
+/* --- Autocompleta el Monto Total según el programa elegido.
+       CLP: usa el precio base directo. USD: usa el tipo de cambio manual
+       que ingresa el director (precioClp / tipoCambio). --- */
+function autocompletarMontoNuevoAlumno() {
+  const selectPrograma = document.getElementById('nuevo-alumno-programa');
+  const selectMoneda = document.getElementById('nuevo-alumno-moneda');
+  const inputMonto = document.getElementById('nuevo-alumno-monto');
+  const inputTipoCambio = document.getElementById('nuevo-alumno-tipo-cambio');
+  const campoTipoCambio = document.getElementById('campo-tipo-cambio');
+  if (!selectPrograma || !selectMoneda || !inputMonto) return;
+
+  const programa = PROGRAMAS[selectPrograma.value];
+  if (!programa) return;
+
+  if (selectMoneda.value === 'CLP') {
+    if (campoTipoCambio) campoTipoCambio.classList.add('hidden');
+    inputMonto.value = programa.precioClp.toLocaleString('es-CL');
+  } else if (selectMoneda.value === 'USD') {
+    if (campoTipoCambio) campoTipoCambio.classList.remove('hidden');
+    const tipoCambio = parseFloat(inputTipoCambio ? inputTipoCambio.value : '');
+    if (tipoCambio > 0) {
+      inputMonto.value = (programa.precioClp / tipoCambio).toFixed(2);
+    }
+  }
+}
+const selectNuevoAlumnoPrograma = document.getElementById('nuevo-alumno-programa');
+const selectNuevoAlumnoMoneda = document.getElementById('nuevo-alumno-moneda');
+const inputNuevoAlumnoTipoCambio = document.getElementById('nuevo-alumno-tipo-cambio');
+if (selectNuevoAlumnoPrograma) selectNuevoAlumnoPrograma.addEventListener('change', autocompletarMontoNuevoAlumno);
+if (selectNuevoAlumnoMoneda) selectNuevoAlumnoMoneda.addEventListener('change', autocompletarMontoNuevoAlumno);
+if (inputNuevoAlumnoTipoCambio) inputNuevoAlumnoTipoCambio.addEventListener('input', autocompletarMontoNuevoAlumno);
+autocompletarMontoNuevoAlumno(); // prefill inicial (Begin · CLP por defecto)
 
 /* --- Llamado desde auth.js apenas se confirma el rol tras el login --- */
 export async function initAlumnosModule() {

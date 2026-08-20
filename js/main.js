@@ -156,34 +156,6 @@ export function setCandado(bloqueado) {
   ).forEach(el => { el.disabled = bloqueado && currentRole === 'coach'; });
 }
 
-// --- CANDADO B: cuotas pagadas quedan fijas; el director las puede desbloquear ---
-function bindCuotaEstadoSelect(select) {
-  select.addEventListener('change', () => {
-    if (select.value !== 'pagada') return;
-    select.disabled = true;
-    if (select.nextElementSibling && select.nextElementSibling.classList.contains('btn-unlock-cuota')) return;
-
-    const unlockBtn = document.createElement('button');
-    unlockBtn.className = 'btn btn--ghost btn-unlock-cuota';
-    unlockBtn.style.cssText = 'margin-left:8px; padding:4px 8px; font-size:11px;';
-    unlockBtn.textContent = '🔓 Desbloquear';
-    unlockBtn.setAttribute('data-role', 'director');
-    unlockBtn.classList.toggle('hidden', currentRole !== 'director');
-    unlockBtn.addEventListener('click', () => {
-      select.disabled = false;
-      unlockBtn.remove();
-    });
-    select.insertAdjacentElement('afterend', unlockBtn);
-  });
-}
-document.querySelectorAll('.cuota-estado-select').forEach(bindCuotaEstadoSelect);
-
-const btnAgregarCuotaFicha = document.getElementById('btn-agregar-cuota-ficha');
-if (btnAgregarCuotaFicha) btnAgregarCuotaFicha.addEventListener('click', () => {
-  const tbody = document.querySelector('#tabla-cuotas-ficha tbody');
-  const row = document.createElement('tr');
-  row.innerHTML = `<td><input type="date"></td><td><input placeholder="$0"></td>
-    <td><select class="cuota-estado-select"><option value="pendiente" selected>Pendiente</option><option value="pagada">Pagada</option><option value="impaga">Impaga</option></select></td>`;
-  tbody.appendChild(row);
-  bindCuotaEstadoSelect(row.querySelector('.cuota-estado-select'));
-});
+// --- CANDADO B (cuotas pagadas quedan fijas) se reactiva cuando construyamos
+//     la edición completa de Acuerdo de Pago en pagos.js — la pestaña hoy es
+//     de solo lectura.

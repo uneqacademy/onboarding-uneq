@@ -318,27 +318,17 @@
         <div class="tab-panel" data-panel="pago">
           <div class="panel">
             <div class="panel__body">
+              <p class="text-soft mb-16">Vista de solo lectura por ahora — la edición completa (cuotas, descuentos, PDF) se conecta en la próxima etapa (pagos.js).</p>
               <div class="field-grid mb-16">
-                <div class="field"><label>Monto Total</label><input value="3.000 USD"></div>
-                <div class="field"><label>Descuento</label><input placeholder="0"></div>
-                <div class="field"><label>Abono</label><input placeholder="$0"></div>
-                <div class="field"><label>Saldo</label><input placeholder="$0" disabled></div>
+                <div class="field"><label>Monto Total</label><input id="pago-monto-total" disabled></div>
+                <div class="field"><label>Descuento</label><input id="pago-descuento" disabled></div>
+                <div class="field"><label>Abono</label><input id="pago-abono" disabled></div>
+                <div class="field"><label>Saldo</label><input id="pago-saldo" disabled></div>
               </div>
               <table class="data-table mb-16" id="tabla-cuotas-ficha">
                 <thead><tr><th>Fecha</th><th>Monto</th><th>Estado</th></tr></thead>
-                <tbody>
-                  <tr>
-                    <td>05 Sep 2026</td><td>$450.000</td>
-                    <td><select class="cuota-estado-select"><option value="pendiente" selected>Pendiente</option><option value="pagada">Pagada</option><option value="impaga">Impaga</option></select></td>
-                  </tr>
-                  <tr>
-                    <td>05 Oct 2026</td><td>$450.000</td>
-                    <td><select class="cuota-estado-select"><option value="pendiente" selected>Pendiente</option><option value="pagada">Pagada</option><option value="impaga">Impaga</option></select></td>
-                  </tr>
-                </tbody>
+                <tbody id="tabla-cuotas-ficha-body"></tbody>
               </table>
-              <button class="btn btn--ghost" id="btn-agregar-cuota-ficha">+ Agregar Cuota</button>
-              <button class="btn btn--accent" style="float:right;">Generar PDF del Acuerdo</button>
             </div>
           </div>
         </div>
@@ -457,9 +447,9 @@
             <div class="field-grid">
               <div class="field"><label>Programa</label>
                 <select id="nuevo-alumno-programa">
-                  <option value="begin">Begin (3 meses · 1.500 USD)</option>
-                  <option value="next">Next (6 meses · 3.000 USD)</option>
-                  <option value="exit">eXIT (6 meses · 5.000 USD)</option>
+                  <option value="begin">Begin (3 meses · $1.500.000)</option>
+                  <option value="next">Next (6 meses · $3.000.000)</option>
+                  <option value="exit">eXIT (6 meses · $5.000.000)</option>
                 </select>
               </div>
               <div class="field"><label>Coach Asignado</label>
@@ -474,7 +464,8 @@
           <div class="panel__body">
             <div class="field-grid mb-16">
               <div class="field"><label>Monto Total</label><input id="nuevo-alumno-monto" placeholder="Según programa"></div>
-              <div class="field"><label>Moneda</label><select id="nuevo-alumno-moneda"><option>USD</option><option>CLP</option></select></div>
+              <div class="field"><label>Moneda</label><select id="nuevo-alumno-moneda"><option>CLP</option><option>USD</option></select></div>
+              <div class="field hidden" id="campo-tipo-cambio"><label>Tipo de Cambio (CLP por USD)</label><input type="number" id="nuevo-alumno-tipo-cambio" placeholder="Ej: 950"></div>
               <div class="field"><label>Descuento (opcional)</label><input id="nuevo-alumno-descuento" placeholder="0"></div>
               <div class="field"><label>Abono</label><input id="nuevo-alumno-abono" placeholder="$0"></div>
             </div>
@@ -542,6 +533,5 @@
 </div>
 
 <script type="module" src="js/auth.js"></script>
-<script type="module" src="js/test.js"></script>
 </body>
 </html>

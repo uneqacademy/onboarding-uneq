@@ -13,19 +13,20 @@ import {
 } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-database.js";
 
 export const PROGRAMAS = {
-  begin: { label: 'Begin', meses: 3, precioUsd: 1500 },
-  next:  { label: 'Next',  meses: 6, precioUsd: 3000 },
-  exit:  { label: 'eXIT',  meses: 6, precioUsd: 5000 }
+  begin: { label: 'Begin', meses: 3, precioClp: 1500000 },
+  next:  { label: 'Next',  meses: 6, precioClp: 3000000 },
+  exit:  { label: 'eXIT',  meses: 6, precioClp: 5000000 }
 };
 
-const ORDEN_ESTADOS = ['asignado', 'en_onboarding', 'enviado_firma', 'en_revision', 'firma_procesada'];
+const ORDEN_ESTADOS = ['asignado', 'en_onboarding', 'enviado_firma', 'en_revision', 'firma_procesada', 'matricula_finalizada'];
 
 const LABELS_ESTADO = {
   asignado: 'Asignado',
   en_onboarding: 'En Onboarding',
   enviado_firma: 'Enviado para Firma',
   en_revision: 'En Revisión',
-  firma_procesada: 'Firma Procesada'
+  firma_procesada: 'Firma Procesada',
+  matricula_finalizada: 'Proceso de Matrícula Finalizado'
 };
 
 export function programaLabel(key) {
@@ -81,14 +82,16 @@ export async function marcarEnviadoParaFirma(cicloId) {
   await update(ref(db, `ciclos/${cicloId}`), { estadoProceso: 'en_revision' });
 }
 
-/* --- en_revision -> firma_procesada (director fija la fecha real de firma) --- */
+/* --- en_revision -> firma_procesada -> matricula_finalizada (automático e inmediato:
+       el director fija la fecha real de firma y, en el mismo paso, se da por
+       finalizado el proceso de matrícula) --- */
 export async function marcarFirmaProcesada(cicloId, fechaFirmaStr) {
   const snap = await get(ref(db, `ciclos/${cicloId}/programa`));
   const programa = snap.val();
   const fechaEgreso = calcularFechaEgreso(fechaFirmaStr, programa);
 
   await update(ref(db, `ciclos/${cicloId}`), {
-    estadoProceso: 'firma_procesada',
+    estadoProceso: 'matricula_finalizada',
     fechaIngreso: fechaFirmaStr,
     fechaEgreso,
     bloqueoCoach: true
