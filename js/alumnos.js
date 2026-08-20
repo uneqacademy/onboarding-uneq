@@ -370,3 +370,13 @@ export async function initAlumnosModule() {
   }
   await cargarListasAlumnos();
 }
+
+// Refresca las tablas cada vez que se navega a Dashboard o Alumnos —
+// evita que quede mostrando datos viejos si otro rol cambió algo mientras tanto.
+document.querySelectorAll('.nav-item[data-nav]').forEach(item => {
+  item.addEventListener('click', () => {
+    if (item.dataset.nav === 'dashboard' || item.dataset.nav === 'alumnos') {
+      cargarListasAlumnos();
+    }
+  });
+});
