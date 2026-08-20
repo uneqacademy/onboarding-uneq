@@ -1,0 +1,585 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Onboarding UNEQ Mentoring</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+
+<!-- ============================================================
+     BLOQUE: LOGO REUTILIZABLE (brújula simple, marca del proyecto)
+     ============================================================ -->
+<template id="tpl-brand-mark">
+  <svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <circle cx="16" cy="16" r="14.5" stroke="currentColor" stroke-width="1.5"/>
+    <path d="M21 11L17.5 17.5L11 21L14.5 14.5L21 11Z" fill="currentColor"/>
+    <circle cx="16" cy="16" r="1.6" fill="currentColor"/>
+  </svg>
+</template>
+
+<!-- ============================================================
+     VISTA: LOGIN
+     ============================================================ -->
+<div id="view-login" class="login-view">
+  <div class="login-card">
+    <div class="brand">
+      <div class="brand__mark" style="color:#1B2A4A; width:38px; height:38px;" data-brand-mark></div>
+      <div>
+        <div class="brand__name">UNEQ Mentoring</div>
+        <div class="brand__sub" style="color:#5B6472;">Onboarding &amp; Seguimiento</div>
+      </div>
+    </div>
+    <div class="field">
+      <label for="login-email">Correo</label>
+      <input type="email" id="login-email" placeholder="nombre@agenciauneq.com">
+    </div>
+    <div class="field">
+      <label for="login-pass">Contraseña</label>
+      <input type="password" id="login-pass" placeholder="••••••••">
+    </div>
+    <button class="btn btn--primary" id="btn-login">Ingresar</button>
+    <p id="login-error" class="hidden" style="color:#C0392B; text-align:center; margin-top:12px; font-size:13px;"></p>
+    <p class="text-soft" style="text-align:center; margin-top:14px;">Acceso restringido — cuentas creadas por el director/a académico.</p>
+  </div>
+</div>
+
+<!-- ============================================================
+     APP SHELL (Dashboard + Ficha) — visible tras login
+     ============================================================ -->
+<div id="app-shell" class="app-shell hidden">
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="brand__mark" style="width:26px; height:26px;" data-brand-mark></div>
+      <div>
+        <div class="brand__name">UNEQ Mentoring</div>
+        <div class="brand__sub">Onboarding</div>
+      </div>
+    </div>
+
+    <nav class="nav-group">
+      <div class="nav-list">
+        <li class="nav-item is-active" data-nav="dashboard">Dashboard</li>
+        <li class="nav-item" data-nav="alumnos">Alumnos</li>
+        <li class="nav-item" data-role="director" data-nav="coaches">Coaches</li>
+      </div>
+    </nav>
+
+    <div class="sidebar-footer" id="sidebar-user-info">
+      Sesión: <strong style="color:#fff;">—</strong><br>
+      Rol: —
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <div class="main">
+    <header class="topbar">
+      <div class="topbar__title" id="topbar-title">Dashboard</div>
+      <div class="topbar__right">
+        <button class="btn btn--ghost" id="btn-logout">Cerrar sesión</button>
+      </div>
+    </header>
+
+    <div class="content">
+
+      <!-- ======================================================
+           DASHBOARD — DIRECTOR
+           ====================================================== -->
+      <section id="view-dashboard-director" class="view">
+        <div class="kpi-grid">
+          <div class="kpi-card">
+            <div class="kpi-card__label">Alumnos Activos</div>
+            <div class="kpi-card__value">42</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-card__label">Alumnos Totales (histórico)</div>
+            <div class="kpi-card__value">67</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-card__label">Activos · Begin</div>
+            <div class="kpi-card__value">18</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-card__label">Activos · Next</div>
+            <div class="kpi-card__value">16</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-card__label">Activos · eXIT</div>
+            <div class="kpi-card__value">8</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-card__label">Pendientes de Firma</div>
+            <div class="kpi-card__value warning">5</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-card__label">Por Cobrar Total</div>
+            <div class="kpi-card__value">$12.500.000</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-card__label">Atrasado Total</div>
+            <div class="kpi-card__value danger">$1.800.000</div>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel__header">
+            <h3>Todos los alumnos</h3>
+            <div class="filters">
+              <select><option>Coach: Todos</option></select>
+              <select><option>Programa: Todos</option></select>
+              <select><option>Estado: Todos</option></select>
+              <input type="text" placeholder="Buscar alumno...">
+            </div>
+          </div>
+          <div class="panel__body" style="padding:0;">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Alumno</th><th>Coach</th><th>Programa</th><th>Estado Proceso</th>
+                  <th>Estado Alumno</th><th>Próx. Cuota</th><th>Monto</th><th>Estado Pago</th>
+                </tr>
+              </thead>
+              <tbody id="tabla-alumnos-director">
+                <tr class="row-alumno">
+                  <td>Javiera Reyes</td><td>Camila S.</td><td>Next</td><td>En Onboarding</td>
+                  <td><span class="badge badge--activo">Activo</span></td>
+                  <td>05 Sep 2026</td><td>$450.000</td>
+                  <td><span class="badge badge--pendiente">Pendiente</span></td>
+                </tr>
+                <tr class="row-alumno">
+                  <td>Rodrigo Paz</td><td>Ignacio T.</td><td>Begin</td><td>Firma Procesada</td>
+                  <td><span class="badge badge--activo">Activo</span></td>
+                  <td>12 Ago 2026</td><td>$375.000</td>
+                  <td><span class="badge badge--impaga">Impaga</span></td>
+                </tr>
+                <tr class="row-alumno">
+                  <td>Consuelo Vidal</td><td>Camila S.</td><td>eXIT</td><td>En Revisión</td>
+                  <td><span class="badge badge--activo">Activo</span></td>
+                  <td>—</td><td>—</td>
+                  <td><span class="badge badge--pagada">Al día</span></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- ======================================================
+           DASHBOARD — COACH
+           ====================================================== -->
+      <section id="view-dashboard-coach" class="view hidden">
+        <div class="kpi-grid">
+          <div class="kpi-card">
+            <div class="kpi-card__label">Mis Alumnos Activos</div>
+            <div class="kpi-card__value">9</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-card__label">En Onboarding</div>
+            <div class="kpi-card__value accent">3</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-card__label">Esperando al Director</div>
+            <div class="kpi-card__value warning">2</div>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel__header"><h3>Mis alumnos asignados</h3></div>
+          <div class="panel__body" style="padding:0;">
+            <table class="data-table">
+              <thead>
+                <tr><th>Alumno</th><th>Programa</th><th>Estado Proceso</th><th>Estado Alumno</th></tr>
+              </thead>
+              <tbody>
+                <tr class="row-alumno">
+                  <td>Javiera Reyes</td><td>Next</td><td>En Onboarding</td>
+                  <td><span class="badge badge--activo">Activo</span></td>
+                </tr>
+                <tr class="row-alumno">
+                  <td>Marcelo Iturra</td><td>Begin</td><td>Enviado para Firma</td>
+                  <td><span class="badge badge--activo">Activo</span></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- ======================================================
+           FICHA DE ALUMNO (compartida, visibilidad según rol)
+           ====================================================== -->
+      <section id="view-ficha-alumno" class="view hidden">
+
+        <div class="flex-between mb-16">
+          <div>
+            <h2 id="ficha-nombre-alumno">Javiera Reyes</h2>
+            <p class="text-soft">RUT 18.234.567-8 · Programa Next · Coach: Camila S.</p>
+          </div>
+          <span class="badge badge--activo">Activo</span>
+        </div>
+
+        <!-- Bloqueo para el coach mientras la pelota está con el director -->
+        <div class="locked-banner" id="banner-bloqueo-coach">
+          🔒 Ficha bloqueada temporalmente — el acuerdo está en revisión con el director/a académico.
+        </div>
+
+        <!-- Stepper de estado de proceso -->
+        <div class="panel mb-24">
+          <div class="panel__body">
+            <div class="stepper">
+              <div class="stepper__step is-done">
+                <div class="stepper__line"></div><div class="stepper__dot"></div>
+                <div class="stepper__label">Asignado</div>
+              </div>
+              <div class="stepper__step is-current">
+                <div class="stepper__line"></div><div class="stepper__dot"></div>
+                <div class="stepper__label">En Onboarding</div>
+              </div>
+              <div class="stepper__step">
+                <div class="stepper__line"></div><div class="stepper__dot"></div>
+                <div class="stepper__label">Enviado para Firma</div>
+              </div>
+              <div class="stepper__step">
+                <div class="stepper__line"></div><div class="stepper__dot"></div>
+                <div class="stepper__label">En Revisión</div>
+              </div>
+              <div class="stepper__step">
+                <div class="stepper__line"></div><div class="stepper__dot"></div>
+                <div class="stepper__label">Firma Procesada</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Acciones según rol + estado del proceso (mockup — se conecta a la
+             lógica real de estados cuando integremos Firebase) -->
+        <div class="panel mb-24" data-role="coach">
+          <div class="panel__body flex-between">
+            <div>
+              <strong>¿Ya completaste el onboarding con el alumno?</strong>
+              <p class="text-soft" style="margin:4px 0 0;">Al generar el acuerdo, pasa directo al director/a para revisión — no vas a ver el documento con los montos.</p>
+            </div>
+            <button class="btn btn--accent" id="btn-generar-acuerdo">Generar Acuerdo y Enviar a Revisión</button>
+          </div>
+        </div>
+        <div class="panel mb-24" data-role="director">
+          <div class="panel__body flex-between">
+            <div>
+              <strong>¿El acuerdo ya fue firmado por ambas partes?</strong>
+              <p class="text-soft" style="margin:4px 0 0;">Al marcarlo, se fija la Fecha de Ingreso a hoy, se calcula la Fecha de Egreso, y se habilita la bitácora para el coach.</p>
+            </div>
+            <button class="btn btn--primary" id="btn-marcar-firma-procesada">Marcar Firma Procesada</button>
+          </div>
+        </div>
+
+        <!-- Candado post-firma: se activa solo al marcar Firma Procesada.
+             Bloquea edición al coach para evitar cambios accidentales.
+             El director lo puede desbloquear/bloquear con un clic, sin flujo de aprobación. -->
+        <div class="panel mb-24 hidden" id="panel-candado">
+          <div class="panel__body flex-between">
+            <div>
+              <strong id="candado-titulo">🔒 Datos bloqueados</strong>
+              <p class="text-soft" id="candado-descripcion" style="margin:4px 0 0;">Se bloquearon automáticamente al procesar la firma, para evitar ediciones accidentales.</p>
+            </div>
+            <button class="btn btn--ghost" id="btn-toggle-candado" data-role="director">Desbloquear</button>
+          </div>
+        </div>
+
+        <div class="tabs">
+          <div class="tab is-active" data-tab="datos">Datos Generales</div>
+          <div class="tab" data-tab="ciclo">Ciclo Actual</div>
+          <div class="tab" data-tab="test">Test Brújula</div>
+          <div class="tab" data-tab="pago" data-role="director">Acuerdo de Pago</div>
+          <div class="tab" data-tab="bitacora">Bitácora</div>
+          <div class="tab" data-tab="historial">Historial de Ciclos</div>
+        </div>
+
+        <!-- TAB: Datos Generales -->
+        <div class="tab-panel is-active" data-panel="datos">
+          <div class="panel">
+            <div class="panel__body">
+              <div class="field-grid">
+                <div class="field"><label>Nombre</label><input value="Javiera"></div>
+                <div class="field"><label>Apellido</label><input value="Reyes"></div>
+                <div class="field"><label>RUT</label><input value="18.234.567-8"></div>
+                <div class="field"><label>Fecha de Nacimiento</label><input type="date"></div>
+                <div class="field"><label>Género</label><select><option>Femenino</option></select></div>
+                <div class="field"><label>Teléfono</label><input value="+56 9 1234 5678"></div>
+                <div class="field"><label>Dirección</label><input value="Providencia, Santiago"></div>
+                <div class="field"><label>Ocupación</label><input value="Diseñadora / Emprendedora"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- TAB: Ciclo Actual -->
+        <div class="tab-panel" data-panel="ciclo">
+          <div class="panel">
+            <div class="panel__body">
+              <div class="field-grid">
+                <div class="field"><label>Programa</label><select><option>Next</option></select></div>
+                <div class="field"><label>Fecha Ingreso</label><input type="date" disabled placeholder="Se define al quedar Firma Procesada"></div>
+                <div class="field"><label>Fecha Egreso (auto)</label><input type="date" disabled placeholder="Se calcula sola"></div>
+                <div class="field"><label>Coach Asignado</label><select><option>Camila S.</option></select></div>
+              </div>
+              <div class="field-grid mb-16" style="margin-top:14px;">
+                <div class="field"><label>Facturación Actual</label><input placeholder="$0"></div>
+                <div class="field"><label>Objetivo Facturación Largo Plazo</label><input placeholder="$0"></div>
+              </div>
+              <div class="field-grid">
+                <div class="field" style="grid-column: span 2;"><label>Situación Personal Actual</label><textarea></textarea></div>
+                <div class="field" style="grid-column: span 2;"><label>Objetivos Personales al Finalizar</label><textarea></textarea></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- TAB: Test Brújula -->
+        <div class="tab-panel" data-panel="test">
+          <div id="test-wizard-root"></div>
+        </div>
+
+        <!-- TAB: Acuerdo de Pago (SOLO DIRECTOR) -->
+        <div class="tab-panel" data-panel="pago">
+          <div class="panel">
+            <div class="panel__body">
+              <div class="field-grid mb-16">
+                <div class="field"><label>Monto Total</label><input value="3.000 USD"></div>
+                <div class="field"><label>Descuento</label><input placeholder="0"></div>
+                <div class="field"><label>Abono</label><input placeholder="$0"></div>
+                <div class="field"><label>Saldo</label><input placeholder="$0" disabled></div>
+              </div>
+              <table class="data-table mb-16" id="tabla-cuotas-ficha">
+                <thead><tr><th>Fecha</th><th>Monto</th><th>Estado</th></tr></thead>
+                <tbody>
+                  <tr>
+                    <td>05 Sep 2026</td><td>$450.000</td>
+                    <td><select class="cuota-estado-select"><option value="pendiente" selected>Pendiente</option><option value="pagada">Pagada</option><option value="impaga">Impaga</option></select></td>
+                  </tr>
+                  <tr>
+                    <td>05 Oct 2026</td><td>$450.000</td>
+                    <td><select class="cuota-estado-select"><option value="pendiente" selected>Pendiente</option><option value="pagada">Pagada</option><option value="impaga">Impaga</option></select></td>
+                  </tr>
+                </tbody>
+              </table>
+              <button class="btn btn--ghost" id="btn-agregar-cuota-ficha">+ Agregar Cuota</button>
+              <button class="btn btn--accent" style="float:right;">Generar PDF del Acuerdo</button>
+            </div>
+          </div>
+        </div>
+        <!-- Vista que ve el coach en el mismo tab si intentara acceder -->
+        <div class="tab-panel hidden" data-panel="pago-restringido">
+          <div class="restricted-banner">🔒 No tienes acceso a la información de pagos de este alumno.</div>
+        </div>
+
+        <!-- TAB: Bitácora -->
+        <div class="tab-panel" data-panel="bitacora">
+          <div class="restricted-banner" id="bitacora-bloqueada">
+            La bitácora se habilita una vez que el acuerdo quede en estado <strong>&nbsp;"Firma Procesada"</strong>.
+          </div>
+          <div class="panel hidden" id="bitacora-contenido">
+            <div class="panel__header">
+              <h3>Bitácora de seguimiento</h3>
+              <button class="btn btn--accent">+ Nueva entrada</button>
+            </div>
+            <div class="panel__body">
+              <div class="field-grid mb-16">
+                <div class="field"><label>Fecha</label><input type="date"></div>
+                <div class="field"><label>Canal</label>
+                  <select><option>WhatsApp</option><option>Videollamada</option><option>Llamada telefónica</option><option>Email</option></select>
+                </div>
+              </div>
+              <div class="field mb-16"><label>Notas</label><textarea placeholder="Registro libre de la conversación/acción..."></textarea></div>
+              <p class="text-soft">[ listado histórico de entradas de bitácora va aquí ]</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- TAB: Historial de Ciclos -->
+        <div class="tab-panel" data-panel="historial">
+          <div class="panel">
+            <div class="panel__body text-soft">
+              Este alumno aún no ha cursado ciclos anteriores. Cuando tome un nuevo nivel, aparecerá aquí el resumen de cada ciclo pasado (programa, fechas, resultados del test, acuerdo asociado).
+            </div>
+          </div>
+        </div>
+
+      </section>
+
+      <!-- ======================================================
+           ALUMNOS — vista DIRECTOR (lista completa)
+           ====================================================== -->
+      <section id="view-alumnos-director" class="view hidden">
+        <div class="flex-between mb-16">
+          <h2>Alumnos</h2>
+          <button class="btn btn--accent" id="btn-nuevo-alumno">+ Nuevo Alumno</button>
+        </div>
+        <div class="panel">
+          <div class="panel__header">
+            <h3>Todos los alumnos</h3>
+            <div class="filters">
+              <select><option>Coach: Todos</option></select>
+              <select><option>Programa: Todos</option></select>
+              <select><option>Estado: Todos</option></select>
+              <input type="text" placeholder="Buscar alumno...">
+            </div>
+          </div>
+          <div class="panel__body" style="padding:0;">
+            <table class="data-table">
+              <thead>
+                <tr><th>Alumno</th><th>Coach</th><th>Programa</th><th>Estado Proceso</th><th>Estado Alumno</th><th>Ingreso</th><th>Egreso</th></tr>
+              </thead>
+              <tbody>
+                <tr class="row-alumno"><td>Javiera Reyes</td><td>Camila S.</td><td>Next</td><td>En Onboarding</td><td><span class="badge badge--activo">Activo</span></td><td>10 Jul 2026</td><td>10 Ene 2027</td></tr>
+                <tr class="row-alumno"><td>Rodrigo Paz</td><td>Ignacio T.</td><td>Begin</td><td>Firma Procesada</td><td><span class="badge badge--activo">Activo</span></td><td>12 May 2026</td><td>12 Ago 2026</td></tr>
+                <tr class="row-alumno"><td>Consuelo Vidal</td><td>Camila S.</td><td>eXIT</td><td>En Revisión</td><td><span class="badge badge--activo">Activo</span></td><td>02 Jun 2026</td><td>02 Dic 2026</td></tr>
+                <tr class="row-alumno"><td>Marcelo Iturra</td><td>Ignacio T.</td><td>Begin</td><td>Enviado para Firma</td><td><span class="badge badge--activo">Activo</span></td><td>20 Jul 2026</td><td>20 Oct 2026</td></tr>
+                <tr class="row-alumno"><td>Fernanda Ortiz</td><td>Pablo M.</td><td>Next</td><td>Firma Procesada</td><td><span class="badge badge--pausado">Pausado</span></td><td>01 Mar 2026</td><td>01 Sep 2026</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- ======================================================
+           ALUMNOS — vista COACH (solo asignados)
+           ====================================================== -->
+      <section id="view-alumnos-coach" class="view hidden">
+        <div class="flex-between mb-16"><h2>Mis Alumnos</h2></div>
+        <div class="panel">
+          <div class="panel__body" style="padding:0;">
+            <table class="data-table">
+              <thead>
+                <tr><th>Alumno</th><th>Programa</th><th>Estado Proceso</th><th>Estado Alumno</th><th>Ingreso</th><th>Egreso</th></tr>
+              </thead>
+              <tbody>
+                <tr class="row-alumno"><td>Javiera Reyes</td><td>Next</td><td>En Onboarding</td><td><span class="badge badge--activo">Activo</span></td><td>10 Jul 2026</td><td>10 Ene 2027</td></tr>
+                <tr class="row-alumno"><td>Marcelo Iturra</td><td>Begin</td><td>Enviado para Firma</td><td><span class="badge badge--activo">Activo</span></td><td>20 Jul 2026</td><td>20 Oct 2026</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- ======================================================
+           CREAR ALUMNO (solo Director) — datos base + programa +
+           coach + acuerdo de pago. El resto (test, campos narrativos,
+           ocupación, foto) lo completa el coach durante el onboarding,
+           dentro de la Ficha de Alumno.
+           ====================================================== -->
+      <section id="view-crear-alumno" class="view hidden">
+        <div class="flex-between mb-16">
+          <h2>Nuevo Alumno</h2>
+          <button class="btn btn--ghost" id="btn-cancelar-nuevo-alumno">← Volver</button>
+        </div>
+
+        <div class="panel mb-16">
+          <div class="panel__header"><h3>Identificación del Alumno</h3></div>
+          <div class="panel__body">
+            <p class="text-soft mb-16">El resto de los datos (RUT, contacto, foto, ocupación, test, etc.) los completa el coach durante la sesión de onboarding.</p>
+            <div class="field-grid">
+              <div class="field"><label>Nombre</label><input placeholder="Nombre"></div>
+              <div class="field"><label>Apellido</label><input placeholder="Apellido"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel mb-16">
+          <div class="panel__header"><h3>Programa y Coach</h3></div>
+          <div class="panel__body">
+            <p class="text-soft mb-16">La Fecha de Ingreso se define automáticamente cuando el acuerdo quede "Firma Procesada" — no antes.</p>
+            <div class="field-grid">
+              <div class="field"><label>Programa</label>
+                <select>
+                  <option>Begin (3 meses · 1.500 USD)</option>
+                  <option>Next (6 meses · 3.000 USD)</option>
+                  <option>eXIT (6 meses · 5.000 USD)</option>
+                </select>
+              </div>
+              <div class="field"><label>Coach Asignado</label>
+                <select><option>Camila S.</option><option>Ignacio T.</option><option>Pablo M.</option></select>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel mb-16">
+          <div class="panel__header"><h3>Acuerdo de Pago</h3></div>
+          <div class="panel__body">
+            <div class="field-grid mb-16">
+              <div class="field"><label>Monto Total</label><input placeholder="Según programa"></div>
+              <div class="field"><label>Moneda</label><select><option>USD</option><option>CLP</option></select></div>
+              <div class="field"><label>Descuento (opcional)</label><input placeholder="0"></div>
+              <div class="field"><label>Abono</label><input placeholder="$0"></div>
+            </div>
+            <table class="data-table mb-16" id="tabla-cuotas-nuevo">
+              <thead><tr><th>Fecha</th><th>Monto</th><th></th></tr></thead>
+              <tbody>
+                <tr><td><input type="date"></td><td><input placeholder="$0"></td><td><button class="btn btn--danger">Quitar</button></td></tr>
+              </tbody>
+            </table>
+            <button class="btn btn--ghost" id="btn-agregar-cuota">+ Agregar Cuota</button>
+          </div>
+        </div>
+
+        <div class="flex-between">
+          <button class="btn btn--ghost" id="btn-cancelar-nuevo-alumno-2">Cancelar</button>
+          <button class="btn btn--primary">Crear Alumno y Asignar Coach</button>
+        </div>
+      </section>
+
+      <!-- ======================================================
+           COACHES (solo Director)
+           ====================================================== -->
+      <section id="view-coaches" class="view hidden">
+        <div class="flex-between mb-16">
+          <h2>Coaches</h2>
+          <button class="btn btn--accent" id="btn-nuevo-coach">+ Nuevo Coach</button>
+        </div>
+        <div class="panel">
+          <div class="panel__body" style="padding:0;">
+            <table class="data-table">
+              <thead><tr><th>Nombre</th><th>Email</th><th>Alumnos Activos</th><th>Estado</th><th></th></tr></thead>
+              <tbody>
+                <tr><td>Camila S.</td><td>camila@agenciauneq.com</td><td>4</td><td><span class="badge badge--activo">Activo</span></td><td><button class="btn btn--ghost">Desactivar</button></td></tr>
+                <tr><td>Ignacio T.</td><td>ignacio@agenciauneq.com</td><td>3</td><td><span class="badge badge--activo">Activo</span></td><td><button class="btn btn--ghost">Desactivar</button></td></tr>
+                <tr><td>Pablo M.</td><td>pablo@agenciauneq.com</td><td>2</td><td><span class="badge badge--activo">Activo</span></td><td><button class="btn btn--ghost">Desactivar</button></td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- ======================================================
+           CREAR COACH (solo Director)
+           ====================================================== -->
+      <section id="view-crear-coach" class="view hidden">
+        <div class="flex-between mb-16">
+          <h2>Nuevo Coach</h2>
+          <button class="btn btn--ghost" id="btn-cancelar-nuevo-coach">← Volver</button>
+        </div>
+        <div class="panel">
+          <div class="panel__body">
+            <div class="field-grid mb-16">
+              <div class="field"><label>Nombre completo</label><input placeholder="Nombre y apellido"></div>
+              <div class="field"><label>Correo</label><input type="email" placeholder="nombre@agenciauneq.com"></div>
+            </div>
+            <p class="text-soft mb-16">La contraseña inicial se genera y se envía por correo — esto se conecta cuando integremos Firebase Auth.</p>
+            <button class="btn btn--primary">Crear Cuenta de Coach</button>
+          </div>
+        </div>
+      </section>
+
+    </div>
+  </div>
+</div>
+
+<script type="module" src="js/auth.js"></script>
+<script type="module" src="js/test.js"></script>
+</body>
+</html>
