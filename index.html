@@ -7,6 +7,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Sora:wght@600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/styles.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/intl-tel-input@latest/build/css/intlTelInput.min.css">
+<script src="https://cdn.jsdelivr.net/npm/intl-tel-input@latest/build/js/intlTelInputWithUtils.min.js"></script>
 </head>
 <body>
 
@@ -273,10 +275,31 @@
                 <div class="field"><label>Apellido</label><input id="datos-apellido"></div>
                 <div class="field"><label>RUT</label><input id="datos-rut"></div>
                 <div class="field"><label>Fecha de Nacimiento</label><input type="date" id="datos-fecha-nacimiento"></div>
+                <div class="field"><label>Edad</label><input id="datos-edad" disabled placeholder="Se calcula sola"></div>
                 <div class="field"><label>Género</label><select id="datos-genero"><option>Femenino</option><option>Masculino</option><option>Otro</option><option>Prefiere no decir</option></select></div>
-                <div class="field"><label>Teléfono</label><input id="datos-telefono"></div>
-                <div class="field"><label>Dirección</label><input id="datos-direccion"></div>
-                <div class="field"><label>Ocupación</label><input id="datos-ocupacion"></div>
+                <div class="field"><label>Teléfono</label><input type="tel" id="datos-telefono"></div>
+                <div class="field">
+                  <label>Ocupación</label>
+                  <select id="datos-ocupacion">
+                    <option value="">Selecciona...</option>
+                    <option value="Coach">Coach (Definir Especialidad)</option>
+                    <option value="Terapeuta">Terapeuta (Definir Especialidad)</option>
+                    <option value="Psicólogo/a">Psicólogo/a</option>
+                    <option value="Ingeniero/a">Ingeniero/a (Definir Especialidad)</option>
+                    <option value="Abogado/a">Abogado/a</option>
+                    <option value="Consultor/a">Consultor/a (Definir Especialidad)</option>
+                    <option value="Otro">Otro</option>
+                  </select>
+                </div>
+                <div class="field hidden" id="campo-ocupacion-especialidad"><label>Especialidad</label><input id="datos-ocupacion-especialidad" placeholder="Ej: Nutrición, Derecho comercial, Marketing..."></div>
+              </div>
+              <div class="field-grid mb-16" style="margin-top:14px;">
+                <div class="field"><label>Calle</label><input id="datos-direccion-calle"></div>
+                <div class="field"><label>Número</label><input id="datos-direccion-numero"></div>
+                <div class="field"><label>Departamento/Oficina (opcional)</label><input id="datos-direccion-depto"></div>
+                <div class="field"><label>Comuna</label><input id="datos-direccion-comuna"></div>
+                <div class="field"><label>Región</label><input id="datos-direccion-region"></div>
+                <div class="field"><label>País</label><input id="datos-direccion-pais" value="Chile"></div>
               </div>
               <div class="flex-between" style="margin-top:16px;">
                 <span></span>
@@ -513,11 +536,7 @@
           <div class="panel__body" style="padding:0;">
             <table class="data-table">
               <thead><tr><th>Nombre</th><th>Email</th><th>Alumnos Activos</th><th>Estado</th><th></th></tr></thead>
-              <tbody>
-                <tr><td>Camila S.</td><td>camila@agenciauneq.com</td><td>4</td><td><span class="badge badge--activo">Activo</span></td><td><button class="btn btn--ghost">Desactivar</button></td></tr>
-                <tr><td>Ignacio T.</td><td>ignacio@agenciauneq.com</td><td>3</td><td><span class="badge badge--activo">Activo</span></td><td><button class="btn btn--ghost">Desactivar</button></td></tr>
-                <tr><td>Pablo M.</td><td>pablo@agenciauneq.com</td><td>2</td><td><span class="badge badge--activo">Activo</span></td><td><button class="btn btn--ghost">Desactivar</button></td></tr>
-              </tbody>
+              <tbody id="tabla-coaches-body"></tbody>
             </table>
           </div>
         </div>

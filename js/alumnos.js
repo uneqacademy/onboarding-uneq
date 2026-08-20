@@ -18,6 +18,7 @@ import { showView, marcarNavActivo, setNav, setCandado, getCurrentRole, getCurre
 import { cargarTestParaCiclo } from './test.js';
 import { cargarAcuerdoParaCiclo } from './pagos.js';
 import './respaldo.js';
+import './coaches.js';
 
 let coachesMap = {};       // uid -> nombre, solo se llena para el director
 let currentAlumnoId = null;
@@ -70,7 +71,68 @@ function estadoPagoDeAcuerdo(acuerdo) {
   return { texto: 'Pendiente', clase: 'badge--pendiente', proxCuota: proximaCuotaPendiente(cuotas) };
 }
 
-function poblarSelectCoaches(selectEl, selectedCoachId) {
+/* --- Edad automática, según Fecha de Nacimiento vs. hoy --- */
+function calcularEdad(fechaNacStr) {
+  if (!fechaNacStr) return '';
+  const nacimiento = new Date(fechaNacStr + 'T00:00:00');
+  const hoy = new Date();
+  let edad = hoy.getFullYear() - nacimiento.getFullYear();
+  const noHaCumplidoAunEsteAnio = (hoy.getMonth() < nacimiento.getMonth()) ||
+    (hoy.getMonth() === nacimiento.getMonth() && hoy.getDate() < nacimiento.getDate());
+  if (noHaCumplidoAunEsteAnio) edad--;
+  return edad >= 0 ? edad : '';
+}
+
+function actualizarEdad() {
+  const fecha = document.getElementById('datos-fecha-nacimiento').value;
+  document.getElementById('datos-edad').value = fecha ? `${calcularEdad(fecha)} años` : '';
+}
+
+const inputFechaNacimiento = document.getElementById('datos-fecha-nacimiento');
+if (inputFechaNacimiento) inputFechaNacimiento.addEventListener('change', actualizarEdad);
+
+/* --- Ocupación: muestra el campo de especialidad solo para las que lo piden --- */
+const OCUPACIONES_CON_ESPECIALIDAD = ['Coach', 'Terapeuta', 'Ingeniero/a', 'Consultor/a', 'Otro'];
+
+function actualizarCampoEspecialidad() {
+  const ocupacion = document.getElementById('datos-ocupacion').value;
+  const campo = document.getElementById('campo-ocupacion-especialidad');
+  campo.classList.toggle('hidden', !OCUPACIONES_CON_ESPECIALIDAD.includes(ocupacion));
+}
+
+const selectOcupacion = document.getElementById('datos-ocupacion');
+if (selectOcupacion) selectOcupacion.addEventListener('change', actualizarCampoEspecialidad);
+
+/* --- Teléfono internacional con banderita (librería intl-tel-input) --- */
+let itiTelefono = null;
+
+function initTelefonoWidget() {
+  const input = document.getElementById('datos-telefono');
+  if (!input || itiTelefono || typeof window.intlTelInput !== 'function') return;
+  itiTelefono = window.intlTelInput(input, {
+    initialCountry: 'cl',
+    preferredCountries: ['cl', 'ar', 'pe', 'mx', 'co'],
+    separateDialCode: true
+  });
+}
+initTelefonoWidget();
+
+function setTelefono(valor) {
+  if (itiTelefono) {
+    itiTelefono.setNumber(valor || '');
+  } else {
+    const input = document.getElementById('datos-telefono');
+    if (input) input.value = valor || '';
+  }
+}
+
+function getTelefono() {
+  if (itiTelefono) return itiTelefono.getNumber() || '';
+  const input = document.getElementById('datos-telefono');
+  return input ? input.value.trim() : '';
+}
+
+
   selectEl.innerHTML = '';
   Object.entries(coachesMap).forEach(([uid, nombre]) => {
     const opt = document.createElement('option');
@@ -192,10 +254,19 @@ async function abrirFicha(alumnoId) {
   document.getElementById('datos-apellido').value = alumno.apellido || '';
   document.getElementById('datos-rut').value = alumno.rut || '';
   document.getElementById('datos-fecha-nacimiento').value = alumno.fechaNacimiento || '';
+  actualizarEdad();
   document.getElementById('datos-genero').value = alumno.genero || 'Femenino';
-  document.getElementById('datos-telefono').value = alumno.telefono || '';
-  document.getElementById('datos-direccion').value = alumno.direccion || '';
+  setTelefono(alumno.telefono || '');
+  const dir = alumno.direccion || {};
+  document.getElementById('datos-direccion-calle').value = dir.calle || '';
+  document.getElementById('datos-direccion-numero').value = dir.numero || '';
+  document.getElementById('datos-direccion-depto').value = dir.departamento || '';
+  document.getElementById('datos-direccion-comuna').value = dir.comuna || '';
+  document.getElementById('datos-direccion-region').value = dir.region || '';
+  document.getElementById('datos-direccion-pais').value = dir.pais || 'Chile';
   document.getElementById('datos-ocupacion').value = alumno.ocupacion || '';
+  document.getElementById('datos-ocupacion-especialidad').value = alumno.ocupacionEspecialidad || '';
+  actualizarCampoEspecialidad();
 
   const selectCoach = document.getElementById('ciclo-coach');
   if (role === 'director') {
@@ -320,9 +391,17 @@ if (btnGuardarDatos) {
         rut: document.getElementById('datos-rut').value.trim(),
         fechaNacimiento: document.getElementById('datos-fecha-nacimiento').value,
         genero: document.getElementById('datos-genero').value,
-        telefono: document.getElementById('datos-telefono').value.trim(),
-        direccion: document.getElementById('datos-direccion').value.trim(),
-        ocupacion: document.getElementById('datos-ocupacion').value.trim()
+        telefono: getTelefono(),
+        direccion: {
+          calle: document.getElementById('datos-direccion-calle').value.trim(),
+          numero: document.getElementById('datos-direccion-numero').value.trim(),
+          departamento: document.getElementById('datos-direccion-depto').value.trim(),
+          comuna: document.getElementById('datos-direccion-comuna').value.trim(),
+          region: document.getElementById('datos-direccion-region').value.trim(),
+          pais: document.getElementById('datos-direccion-pais').value.trim()
+        },
+        ocupacion: document.getElementById('datos-ocupacion').value,
+        ocupacionEspecialidad: document.getElementById('datos-ocupacion-especialidad').value.trim()
       });
       if (currentCicloId) await iniciarOnboardingSiCorresponde(currentCicloId);
       await abrirFicha(currentAlumnoId);
