@@ -25,12 +25,21 @@ export function applyRole(role, nombre) {
   document.querySelectorAll('[data-role="coach"]').forEach(el => {
     el.classList.toggle('hidden', role !== 'coach');
   });
+  document.querySelectorAll('[data-role="mentor"]').forEach(el => {
+    el.classList.toggle('hidden', role !== 'mentor');
+  });
+
+  // "Alumnos" (la ficha completa) es solo para director/coach — el mentor
+  // usa su propia vista de matriz, dentro de su Dashboard.
+  const navAlumnos = document.querySelector('.nav-item[data-nav="alumnos"]');
+  if (navAlumnos) navAlumnos.classList.toggle('hidden', role === 'mentor');
 
   const tabPago = document.querySelector('.tab[data-tab="pago"]');
   if (tabPago) tabPago.classList.toggle('hidden', role !== 'director');
 
+  const NOMBRES_ROL = { director: 'Director/a Académico', coach: 'Coach', mentor: 'Mentor/a' };
   document.getElementById('sidebar-user-info').innerHTML =
-    `Sesión: <strong style="color:#fff;">${nombre}</strong><br>Rol: ${role === 'director' ? 'Director/a Académico' : 'Coach'}`;
+    `Sesión: <strong style="color:#fff;">${nombre}</strong><br>Rol: ${NOMBRES_ROL[role] || role}`;
 
   document.querySelectorAll('.btn-unlock-cuota').forEach(btn => btn.classList.toggle('hidden', role !== 'director'));
 
@@ -66,7 +75,10 @@ export function setNav(section) {
   marcarNavActivo(section);
 
   if (section === 'dashboard') {
-    showView(currentRole === 'director' ? 'view-dashboard-director' : 'view-dashboard-coach');
+    const vista = currentRole === 'director' ? 'view-dashboard-director'
+      : currentRole === 'mentor' ? 'view-dashboard-mentor'
+      : 'view-dashboard-coach';
+    showView(vista);
     document.getElementById('topbar-title').textContent = 'Dashboard';
   } else if (section === 'alumnos') {
     showView(currentRole === 'director' ? 'view-alumnos-director' : 'view-alumnos-coach');
@@ -74,6 +86,9 @@ export function setNav(section) {
   } else if (section === 'coaches') {
     showView('view-coaches');
     document.getElementById('topbar-title').textContent = 'Coaches';
+  } else if (section === 'mentores') {
+    showView('view-mentores');
+    document.getElementById('topbar-title').textContent = 'Mentores';
   }
 }
 
@@ -132,6 +147,17 @@ if (btnNuevoCoach) btnNuevoCoach.addEventListener('click', () => {
 
 const btnCancelarCoach = document.getElementById('btn-cancelar-nuevo-coach');
 if (btnCancelarCoach) btnCancelarCoach.addEventListener('click', () => setNav('coaches'));
+
+// --- Crear Mentor (navegación; la creación real vive en mentores.js) ---
+const btnNuevoMentor = document.getElementById('btn-nuevo-mentor');
+if (btnNuevoMentor) btnNuevoMentor.addEventListener('click', () => {
+  showView('view-crear-mentor');
+  marcarNavActivo('mentores');
+  document.getElementById('topbar-title').textContent = 'Nuevo Mentor';
+});
+
+const btnCancelarMentor = document.getElementById('btn-cancelar-nuevo-mentor');
+if (btnCancelarMentor) btnCancelarMentor.addEventListener('click', () => setNav('mentores'));
 
 // --- CANDADO A: bloqueo simple post-firma (evita ediciones accidentales del coach).
 //     El estado real (bloqueado sí/no) lo decide y persiste ciclos.js/alumnos.js;

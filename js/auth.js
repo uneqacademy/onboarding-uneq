@@ -87,7 +87,7 @@ onAuthStateChanged(auth, async (user) => {
       return;
     }
 
-    if (perfil.rol !== 'director' && perfil.rol !== 'coach') {
+    if (!['director', 'coach', 'mentor'].includes(perfil.rol)) {
       mostrarError('Esta cuenta no tiene un rol válido asignado.');
       await signOut(auth);
       return;

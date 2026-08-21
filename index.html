@@ -69,6 +69,7 @@
         <li class="nav-item is-active" data-nav="dashboard">Dashboard</li>
         <li class="nav-item" data-nav="alumnos">Alumnos</li>
         <li class="nav-item" data-role="director" data-nav="coaches">Coaches</li>
+        <li class="nav-item" data-role="director" data-nav="mentores">Mentores</li>
       </div>
     </nav>
 
@@ -201,9 +202,12 @@
       <section id="view-ficha-alumno" class="view hidden">
 
         <div class="flex-between mb-16">
-          <div>
-            <h2 id="ficha-nombre-alumno">—</h2>
-            <p class="text-soft">RUT <span id="ficha-rut">—</span> · Programa <span id="ficha-programa">—</span> · Coach: <span id="ficha-coach-nombre">—</span></p>
+          <div style="display:flex; align-items:center; gap:14px;">
+            <img id="ficha-foto-alumno" src="" alt="" style="width:56px; height:56px; border-radius:50%; object-fit:cover; flex-shrink:0;">
+            <div>
+              <h2 id="ficha-nombre-alumno">—</h2>
+              <p class="text-soft">RUT <span id="ficha-rut">—</span> · Programa <span id="ficha-programa">—</span> · Coach: <span id="ficha-coach-nombre">—</span></p>
+            </div>
           </div>
           <div style="display:flex; align-items:center; gap:12px;">
             <span class="badge badge--activo" id="ficha-badge-estado">—</span>
@@ -316,6 +320,12 @@
           <div class="panel">
             <div class="panel__body">
               <div class="field-grid">
+                <div class="field" style="display:flex; flex-direction:column; align-items:flex-start;">
+                  <label>Foto de Perfil</label>
+                  <img id="datos-foto-preview" src="" alt="" style="width:72px; height:72px; border-radius:50%; object-fit:cover; margin:6px 0;">
+                  <input type="file" id="datos-foto-input" accept="image/*" class="hidden">
+                  <button type="button" class="btn btn--ghost" id="btn-cambiar-foto" style="font-size:11px; padding:4px 10px;">Cambiar Foto</button>
+                </div>
                 <div class="field"><label>Nombre <span style="color:#C0392B;">*</span></label><input id="datos-nombre"></div>
                 <div class="field"><label>Apellido <span style="color:#C0392B;">*</span></label><input id="datos-apellido"></div>
                 <div class="field"><label>RUT <span style="color:#C0392B;">*</span></label><input id="datos-rut"></div>
@@ -646,6 +656,103 @@
                 <button class="btn btn--ghost" id="btn-copiar-password-coach">Copiar contraseña</button>
               </div>
             </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ======================================================
+           MENTORES (solo Director)
+           ====================================================== -->
+      <section id="view-mentores" class="view hidden">
+        <div class="flex-between mb-16">
+          <h2>Mentores</h2>
+          <button class="btn btn--accent" id="btn-nuevo-mentor">+ Nuevo Mentor</button>
+        </div>
+        <div class="panel">
+          <div class="panel__body" style="padding:0;">
+            <table class="data-table">
+              <thead><tr><th>Nombre</th><th>Email</th><th>Estado</th><th></th></tr></thead>
+              <tbody id="tabla-mentores-body"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <section id="view-crear-mentor" class="view hidden">
+        <div class="flex-between mb-16">
+          <h2>Nuevo Mentor</h2>
+          <button class="btn btn--ghost" id="btn-cancelar-nuevo-mentor">← Volver</button>
+        </div>
+        <div class="panel">
+          <div class="panel__body">
+            <div class="field-grid mb-16">
+              <div class="field"><label>Nombre completo</label><input id="nuevo-mentor-nombre" placeholder="Nombre y apellido" autocomplete="off"></div>
+              <div class="field"><label>Correo</label><input type="email" id="nuevo-mentor-email" placeholder="nombre@agenciauneq.com" autocomplete="off"></div>
+            </div>
+            <p class="text-soft mb-16">Se genera una contraseña inicial automática — te la muestro al final para que se la compartas tú mismo.</p>
+            <p id="nuevo-mentor-error" class="hidden" style="color:#C0392B; margin-bottom:12px;"></p>
+            <button class="btn btn--primary" id="btn-crear-mentor">Crear Cuenta de Mentor</button>
+
+            <div class="panel mb-16 hidden" id="panel-mentor-creado" style="margin-top:16px;">
+              <div class="panel__body">
+                <p style="margin-bottom:12px;"><strong>✓ Cuenta creada</strong> — cópiala y compártesela tú mismo, no queda guardada en ningún lado.</p>
+                <div class="field-grid mb-16">
+                  <div class="field"><label>Correo</label><input id="mentor-creado-email" readonly></div>
+                  <div class="field"><label>Contraseña inicial</label><input id="mentor-creado-password" readonly></div>
+                </div>
+                <button class="btn btn--ghost" id="btn-copiar-password-mentor">Copiar contraseña</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ======================================================
+           DASHBOARD — MENTOR
+           ====================================================== -->
+      <section id="view-dashboard-mentor" class="view hidden">
+        <div class="kpi-grid" id="kpi-grid-mentor">
+          <div class="kpi-card">
+            <div class="kpi-card__label">Activos · Begin</div>
+            <div class="kpi-card__value" id="kpi-mentor-begin">—</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-card__label">Activos · Next</div>
+            <div class="kpi-card__value" id="kpi-mentor-next">—</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-card__label">Activos · eXIT</div>
+            <div class="kpi-card__value" id="kpi-mentor-exit">—</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-card__label">Total Alumnos Activos</div>
+            <div class="kpi-card__value accent" id="kpi-mentor-total">—</div>
+          </div>
+        </div>
+
+        <div class="panel mb-24">
+          <div class="panel__header"><h3>Mi Perfil</h3></div>
+          <div class="panel__body" style="display:flex; align-items:center; gap:20px; flex-wrap:wrap;">
+            <div style="display:flex; flex-direction:column; align-items:center; gap:8px;">
+              <img id="mentor-foto-preview" src="" alt="" style="width:72px; height:72px; border-radius:50%; object-fit:cover;">
+              <input type="file" id="mentor-foto-input" accept="image/*" class="hidden">
+              <button type="button" class="btn btn--ghost" id="btn-cambiar-foto-mentor" style="font-size:11px; padding:4px 10px;">Cambiar Foto</button>
+            </div>
+            <div>
+              <p style="margin:0 0 4px;">Mi NPS resumido</p>
+              <p class="kpi-card__value accent" style="margin:0;" id="mentor-nps-resumen">—</p>
+              <p class="text-soft" style="margin:4px 0 0; font-size:12px;">Se calcula con las evaluaciones de tus mentorías en vivo — llega en la próxima etapa.</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel__header"><h3>Alumnos Activos</h3></div>
+          <div class="panel__body" style="padding:0;">
+            <table class="data-table">
+              <thead><tr><th></th><th>Alumno</th><th>Programa</th><th>Fase</th><th>Coach</th><th>Matrícula</th><th></th></tr></thead>
+              <tbody id="tabla-matriz-mentor"></tbody>
+            </table>
           </div>
         </div>
       </section>

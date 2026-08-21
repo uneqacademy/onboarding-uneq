@@ -5,10 +5,13 @@
    Las transiciones de estado viven en ciclos.js.
    ============================================================ */
 
-import { db, auth } from './firebase-config.js';
+import { db, auth, storage } from './firebase-config.js';
 import {
   ref, get, set, update, push
 } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-database.js";
+import {
+  ref as storageRef, uploadBytes, getDownloadURL
+} from "https://www.gstatic.com/firebasejs/12.17.1/firebase-storage.js";
 import {
   PROGRAMAS, programaLabel, estadoProcesoLabel,
   crearCiclo, iniciarOnboardingSiCorresponde, generarAcuerdoYEnviarRevision,
@@ -21,6 +24,7 @@ import { cargarBitacoraParaCiclo } from './bitacora.js';
 import { generarPdfAcuerdo } from './pdf-acuerdo.js';
 import './respaldo.js';
 import { cargarMiEvaluacionCoach } from './coaches.js';
+import { cargarDashboardMentor, cargarPerfilMentor } from './mentores.js';
 
 let coachesMap = {};       // uid -> nombre, solo se llena para el director
 let currentAlumnoId = null;
@@ -101,6 +105,39 @@ if (inputFechaNacimiento) inputFechaNacimiento.addEventListener('change', actual
 
 /* --- Ocupación: muestra el campo de especialidad solo para las que lo piden --- */
 const OCUPACIONES_CON_ESPECIALIDAD = ['Coach', 'Terapeuta', 'Ingeniero/a', 'Consultor/a', 'Otro'];
+
+/* --- Foto de perfil del alumno (Storage) --- */
+export const PLACEHOLDER_FOTO = 'data:image/svg+xml;utf8,' + encodeURIComponent(
+  '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 80"><rect width="80" height="80" rx="40" fill="#E4E7EC"/><circle cx="40" cy="32" r="14" fill="#9AA4B2"/><ellipse cx="40" cy="70" rx="24" ry="18" fill="#9AA4B2"/></svg>'
+);
+
+const btnCambiarFoto = document.getElementById('btn-cambiar-foto');
+const inputFoto = document.getElementById('datos-foto-input');
+if (btnCambiarFoto && inputFoto) {
+  btnCambiarFoto.addEventListener('click', () => { if (!btnCambiarFoto.disabled) inputFoto.click(); });
+  inputFoto.addEventListener('change', async () => {
+    const file = inputFoto.files[0];
+    if (!file || !currentAlumnoId) return;
+    btnCambiarFoto.disabled = true;
+    const textoOriginal = btnCambiarFoto.textContent;
+    btnCambiarFoto.textContent = 'Subiendo...';
+    try {
+      const archivoRef = storageRef(storage, `fotos-alumnos/${currentAlumnoId}`);
+      await uploadBytes(archivoRef, file);
+      const url = await getDownloadURL(archivoRef);
+      await update(ref(db, `alumnos/${currentAlumnoId}`), { fotoUrl: url });
+      document.getElementById('datos-foto-preview').src = url;
+      await cargarListasAlumnos();
+    } catch (err) {
+      alert('No se pudo subir la foto. Intenta de nuevo.');
+    } finally {
+      btnCambiarFoto.disabled = false;
+      btnCambiarFoto.textContent = textoOriginal;
+      inputFoto.value = '';
+    }
+  });
+}
+
 
 /* --- Redes sociales: se escribe el usuario, la URL se arma sola --- */
 const PLATAFORMAS_REDES = ['Instagram', 'Facebook', 'TikTok', 'YouTube', 'LinkedIn', 'Otro'];
@@ -306,7 +343,7 @@ function crearFilaAlumno(alumnoId, alumno, ciclo, columnas, acuerdo) {
   const estadoProceso = ciclo ? estadoProcesoLabel(ciclo.estadoProceso) : '—';
   const estadoAlumno = ciclo ? ciclo.estadoAlumno : 'activo';
 
-  let html = `<td>${nombreCompleto}</td>`;
+  let html = `<td><img src="${alumno.fotoUrl || PLACEHOLDER_FOTO}" alt="" style="width:28px; height:28px; border-radius:50%; object-fit:cover; vertical-align:middle; margin-right:8px;">${nombreCompleto}</td>`;
   if (columnas.coach) html += `<td>${coachNombre}</td>`;
   html += `<td>${programa}</td><td>${estadoProceso}</td>`;
   html += `<td><span class="badge ${claseBadgeEstadoAlumno(estadoAlumno)}">${labelEstadoAlumno(estadoAlumno)}</span></td>`;
@@ -545,6 +582,7 @@ async function abrirFicha(alumnoId) {
   document.querySelectorAll('.tab-panel[data-panel]').forEach(p => p.classList.toggle('is-active', p.dataset.panel === 'datos'));
 
   document.getElementById('ficha-nombre-alumno').textContent = `${alumno.nombre || ''} ${alumno.apellido || ''}`.trim() || '(sin nombre)';
+  document.getElementById('ficha-foto-alumno').src = alumno.fotoUrl || PLACEHOLDER_FOTO;
   document.getElementById('ficha-rut').textContent = alumno.rut || '—';
   document.getElementById('ficha-programa').textContent = ciclo ? programaLabel(ciclo.programa) : '—';
   document.getElementById('ficha-coach-nombre').textContent = ciclo
@@ -556,6 +594,7 @@ async function abrirFicha(alumnoId) {
   badge.textContent = labelEstadoAlumno(estadoAlumno);
   badge.className = 'badge ' + claseBadgeEstadoAlumno(estadoAlumno);
 
+  document.getElementById('datos-foto-preview').src = alumno.fotoUrl || PLACEHOLDER_FOTO;
   document.getElementById('datos-nombre').value = alumno.nombre || '';
   document.getElementById('datos-apellido').value = alumno.apellido || '';
   document.getElementById('datos-rut').value = alumno.rut || '';
@@ -1018,10 +1057,14 @@ if (btnCrearNuevoCiclo) {
 export async function initAlumnosModule() {
   if (getCurrentRole() === 'director') {
     await cargarCoaches();
+    await cargarListasAlumnos();
   } else if (getCurrentRole() === 'coach') {
     await cargarMiEvaluacionCoach();
+    await cargarListasAlumnos();
+  } else if (getCurrentRole() === 'mentor') {
+    await cargarDashboardMentor();
+    await cargarPerfilMentor();
   }
-  await cargarListasAlumnos();
 }
 
 // Refresca las tablas y la lista de coaches cada vez que se navega —
