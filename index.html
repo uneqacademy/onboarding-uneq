@@ -70,6 +70,7 @@
         <li class="nav-item" data-nav="alumnos">Alumnos</li>
         <li class="nav-item" data-role="director" data-nav="coaches">Coaches</li>
         <li class="nav-item" data-role="director" data-nav="mentores">Mentores</li>
+        <li class="nav-item" data-role="mentor" data-nav="box-consultas">BOX de Consultas</li>
       </div>
     </nav>
 
@@ -747,28 +748,89 @@
         </div>
 
         <div class="panel mb-24">
+          <div class="panel__header flex-between">
+            <h3>Mi Presentación</h3>
+            <button class="btn btn--ghost hidden" id="btn-editar-bio-mentor">✏️ Editar</button>
+          </div>
+          <div class="panel__body">
+            <p class="text-soft mb-16">Especialidad, experiencia, lo que quieras que sepan de ti — esto lo verán los alumnos más adelante.</p>
+            <textarea id="mentor-bio" placeholder="Cuéntales sobre tu especialidad y experiencia..." style="min-height:110px;"></textarea>
+            <div class="flex-between" style="margin-top:12px;">
+              <span></span>
+              <button class="btn btn--primary" id="btn-guardar-bio-mentor">Guardar Presentación</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel">
           <div class="panel__header"><h3>Mis Mentorías</h3></div>
           <div class="panel__body">
             <div class="field-grid mb-16">
               <div class="field"><label>Tema</label><input id="mentoria-tema" placeholder="Ej: Copywriting"></div>
               <div class="field"><label>Fecha</label><input type="date" id="mentoria-fecha"></div>
+              <div class="field"><label>Hora</label><input type="time" id="mentoria-hora"></div>
               <div class="field"><label>Link de Acceso (Zoom, etc.)</label><input id="mentoria-link" placeholder="https://..."></div>
             </div>
             <button class="btn btn--accent" id="btn-agregar-mentoria">+ Agregar Mentoría</button>
             <table class="data-table mb-16" style="margin-top:16px;">
-              <thead><tr><th>Tema</th><th>Fecha</th><th>Acceso</th><th>NPS de la sesión</th><th></th></tr></thead>
+              <thead><tr><th>Tema</th><th>Fecha</th><th>Hora</th><th>Acceso</th><th>NPS de la sesión</th><th></th></tr></thead>
               <tbody id="tabla-mentorias-body"></tbody>
             </table>
           </div>
         </div>
+      </section>
 
+      <!-- ======================================================
+           ALUMNOS — vista MENTOR (matriz con filtros)
+           ====================================================== -->
+      <section id="view-alumnos-mentor" class="view hidden">
+        <div class="flex-between mb-16"><h2>Alumnos Activos</h2></div>
         <div class="panel">
-          <div class="panel__header"><h3>Alumnos Activos</h3></div>
           <div class="panel__body" style="padding:0;">
             <table class="data-table">
-              <thead><tr><th></th><th>Alumno</th><th>Programa</th><th>Fase</th><th>Coach</th><th>Matrícula</th><th></th></tr></thead>
+              <thead>
+                <tr><th></th><th>Alumno</th><th>Programa</th><th>Fase</th><th>Coach</th><th>Matrícula</th><th></th></tr>
+                <tr>
+                  <th></th>
+                  <th><input id="filtro-mentor-nombre" placeholder="Buscar..." style="font-weight:400; width:100%;"></th>
+                  <th>
+                    <select id="filtro-mentor-programa" style="font-weight:400; width:100%;">
+                      <option value="">Todos</option>
+                      <option value="begin">Begin</option>
+                      <option value="next">Next</option>
+                      <option value="exit">eXIT</option>
+                    </select>
+                  </th>
+                  <th>
+                    <select id="filtro-mentor-fase" style="font-weight:400; width:100%;">
+                      <option value="">Todas</option>
+                      <option value="fase1">Fase 1</option>
+                      <option value="fase2">Fase 2</option>
+                      <option value="fase3">Fase 3</option>
+                      <option value="fase4">Fase 4</option>
+                      <option value="sin-definir">Sin definir</option>
+                    </select>
+                  </th>
+                  <th><input id="filtro-mentor-coach" placeholder="Buscar..." style="font-weight:400; width:100%;"></th>
+                  <th></th><th></th>
+                </tr>
+              </thead>
               <tbody id="tabla-matriz-mentor"></tbody>
             </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- ======================================================
+           BOX DE CONSULTAS — vista MENTOR
+           (queda lista pero vacía: depende de que Alumnos tenga
+           cuenta propia, eso es la Fase 2)
+           ====================================================== -->
+      <section id="view-box-mentor" class="view hidden">
+        <div class="flex-between mb-16"><h2>BOX de Consultas</h2></div>
+        <div class="panel">
+          <div class="panel__body">
+            <p class="text-soft">Aún no hay preguntas — esta sección se activa cuando los alumnos tengan su propia cuenta (Fase 2), y podrán escribirte consultas que respondas desde aquí.</p>
           </div>
         </div>
       </section>

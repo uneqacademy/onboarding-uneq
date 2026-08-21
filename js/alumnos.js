@@ -24,7 +24,7 @@ import { cargarBitacoraParaCiclo } from './bitacora.js';
 import { generarPdfAcuerdo } from './pdf-acuerdo.js';
 import './respaldo.js';
 import { cargarMiEvaluacionCoach } from './coaches.js';
-import { cargarDashboardMentor, cargarPerfilMentor, cargarMentoriasView } from './mentores.js';
+import { cargarDashboardMentor, cargarAlumnosMentor, cargarPerfilMentor, cargarMentoriasView } from './mentores.js';
 
 let coachesMap = {};       // uid -> nombre, solo se llena para el director
 let currentAlumnoId = null;
@@ -1063,6 +1063,7 @@ export async function initAlumnosModule() {
     await cargarListasAlumnos();
   } else if (getCurrentRole() === 'mentor') {
     await cargarDashboardMentor();
+    await cargarAlumnosMentor();
     await cargarPerfilMentor();
     await cargarMentoriasView();
   }

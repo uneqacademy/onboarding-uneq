@@ -29,10 +29,8 @@ export function applyRole(role, nombre) {
     el.classList.toggle('hidden', role !== 'mentor');
   });
 
-  // "Alumnos" (la ficha completa) es solo para director/coach — el mentor
-  // usa su propia vista de matriz, dentro de su Dashboard.
-  const navAlumnos = document.querySelector('.nav-item[data-nav="alumnos"]');
-  if (navAlumnos) navAlumnos.classList.toggle('hidden', role === 'mentor');
+  // "Alumnos" ahora existe para los 3 roles — director/coach ven la ficha
+  // completa, el mentor ve su propia matriz (setNav decide cuál mostrar).
 
   const tabPago = document.querySelector('.tab[data-tab="pago"]');
   if (tabPago) tabPago.classList.toggle('hidden', role !== 'director');
@@ -81,7 +79,10 @@ export function setNav(section) {
     showView(vista);
     document.getElementById('topbar-title').textContent = 'Dashboard';
   } else if (section === 'alumnos') {
-    showView(currentRole === 'director' ? 'view-alumnos-director' : 'view-alumnos-coach');
+    const vista = currentRole === 'director' ? 'view-alumnos-director'
+      : currentRole === 'mentor' ? 'view-alumnos-mentor'
+      : 'view-alumnos-coach';
+    showView(vista);
     document.getElementById('topbar-title').textContent = 'Alumnos';
   } else if (section === 'coaches') {
     showView('view-coaches');
@@ -89,6 +90,9 @@ export function setNav(section) {
   } else if (section === 'mentores') {
     showView('view-mentores');
     document.getElementById('topbar-title').textContent = 'Mentores';
+  } else if (section === 'box-consultas') {
+    showView('view-box-mentor');
+    document.getElementById('topbar-title').textContent = 'BOX de Consultas';
   }
 }
 
