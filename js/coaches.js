@@ -13,7 +13,7 @@
 import { db, auth, firebaseConfig } from './firebase-config.js';
 import { ref, get, set } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-database.js";
 import { initializeApp, deleteApp } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-app.js";
-import { getAuth, createUserWithEmailAndPassword, signOut as signOutSecundaria } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-auth.js";
+import { getAuth, createUserWithEmailAndPassword, signOut as signOutSecundaria, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-auth.js";
 import { getCurrentRole, setNav } from './main.js';
 
 const ESTADOS_VIGENTES = ['activo', 'en_proceso_matricula', 'pausado'];
@@ -179,6 +179,7 @@ async function cargarCoachesView() {
           <button class="btn btn--ghost btn-ver-nps" style="font-size:11px; padding:4px 8px;">Ver NPS</button>
           <button class="btn btn--ghost btn-copiar-medio" style="font-size:11px; padding:4px 8px;">Link Medio</button>
           <button class="btn btn--ghost btn-copiar-final" style="font-size:11px; padding:4px 8px;">Link Final</button>
+          <button class="btn btn--ghost btn-restablecer-password" style="font-size:11px; padding:4px 8px;">Restablecer Contraseña</button>
           <button class="btn btn--ghost btn-eliminar-coach" style="font-size:11px; padding:4px 8px;">Eliminar</button>
         </td>`;
       tbody.appendChild(tr);
@@ -186,6 +187,7 @@ async function cargarCoachesView() {
       tr.querySelector('.btn-copiar-medio').addEventListener('click', () => copiarLink(uid, nombreCoach, 'medio'));
       tr.querySelector('.btn-copiar-final').addEventListener('click', () => copiarLink(uid, nombreCoach, 'final'));
       tr.querySelector('.btn-eliminar-coach').addEventListener('click', () => eliminarCoach(uid, nombreCoach, vigentes));
+      tr.querySelector('.btn-restablecer-password').addEventListener('click', (ev) => enviarResetPassword(coach.email, ev.target));
 
       let filaDetalle = null;
       tr.querySelector('.btn-ver-nps').addEventListener('click', (ev) => {
@@ -199,6 +201,22 @@ async function cargarCoachesView() {
         tr.insertAdjacentElement('afterend', filaDetalle);
       });
     });
+}
+
+async function enviarResetPassword(email, boton) {
+  if (!email) return;
+  const textoOriginal = boton.textContent;
+  boton.disabled = true;
+  boton.textContent = 'Enviando...';
+  try {
+    await sendPasswordResetEmail(auth, email);
+    alert(`Listo — Firebase le mandó un correo a ${email} con un link para que elija su nueva contraseña.`);
+  } catch (err) {
+    alert('No se pudo enviar el correo. Revisa que el email esté bien escrito.');
+  } finally {
+    boton.disabled = false;
+    boton.textContent = textoOriginal;
+  }
 }
 
 async function eliminarCoach(uid, nombreCoach, vigentes) {
@@ -241,6 +259,21 @@ export async function cargarMiEvaluacionCoach() {
   }
 }
 
+const btnCopiarPasswordCoach = document.getElementById('btn-copiar-password-coach');
+if (btnCopiarPasswordCoach) {
+  btnCopiarPasswordCoach.addEventListener('click', () => {
+    const valor = document.getElementById('coach-creado-password').value;
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(valor)
+        .then(() => { btnCopiarPasswordCoach.textContent = '¡Copiada! ✓'; setTimeout(() => { btnCopiarPasswordCoach.textContent = 'Copiar contraseña'; }, 1500); })
+        .catch(() => alert('No se pudo copiar automático — selecciónala manualmente del campo.'));
+    } else {
+      document.getElementById('coach-creado-password').select();
+      alert('Selecciónala y usa Ctrl+C / Cmd+C para copiarla.');
+    }
+  });
+}
+
 document.querySelectorAll('.nav-item[data-nav="coaches"]').forEach(item => {
   item.addEventListener('click', cargarCoachesView);
 });
@@ -262,6 +295,7 @@ if (btnCrearCoach) {
   btnCrearCoach.addEventListener('click', async () => {
     const errorEl = document.getElementById('nuevo-coach-error');
     errorEl.classList.add('hidden');
+    document.getElementById('panel-coach-creado').classList.add('hidden');
     const nombre = document.getElementById('nuevo-coach-nombre').value.trim();
     const email = document.getElementById('nuevo-coach-email').value.trim();
 
@@ -288,12 +322,14 @@ if (btnCrearCoach) {
       document.getElementById('nuevo-coach-nombre').value = '';
       document.getElementById('nuevo-coach-email').value = '';
 
-      alert(
-        `Cuenta creada ✓\n\nCorreo: ${email}\nContraseña inicial: ${password}\n\n` +
-        `Cópiala ahora y compártesela tú mismo a ${nombre} — no queda guardada en ningún lado.`
-      );
+      document.getElementById('coach-creado-email').value = email;
+      document.getElementById('coach-creado-password').value = password;
+      document.getElementById('panel-coach-creado').classList.remove('hidden');
+
       await cargarCoachesView();
-      setNav('coaches');
+      // Ojo: NO navegamos a "Coaches" acá a propósito — así el panel con la
+      // contraseña se queda visible hasta que el director lo copie y decida
+      // volver él mismo con "← Volver".
     } catch (err) {
       errorEl.textContent = err.code === 'auth/email-already-in-use'
         ? 'Ese correo ya tiene una cuenta creada.'

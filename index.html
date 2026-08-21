@@ -603,6 +603,17 @@
             <p class="text-soft mb-16">Se genera una contraseña inicial automática — te la muestro al final para que se la compartas tú mismo (no enviamos correos todavía).</p>
             <p id="nuevo-coach-error" class="hidden" style="color:#C0392B; margin-bottom:12px;"></p>
             <button class="btn btn--primary" id="btn-crear-coach">Crear Cuenta de Coach</button>
+
+            <div class="panel mb-16 hidden" id="panel-coach-creado" style="margin-top:16px;">
+              <div class="panel__body">
+                <p style="margin-bottom:12px;"><strong>✓ Cuenta creada</strong> — cópiala y compártesela tú mismo, no queda guardada en ningún lado.</p>
+                <div class="field-grid mb-16">
+                  <div class="field"><label>Correo</label><input id="coach-creado-email" readonly></div>
+                  <div class="field"><label>Contraseña inicial</label><input id="coach-creado-password" readonly></div>
+                </div>
+                <button class="btn btn--ghost" id="btn-copiar-password-coach">Copiar contraseña</button>
+              </div>
+            </div>
           </div>
         </div>
       </section>
