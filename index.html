@@ -207,6 +207,7 @@
           </div>
           <div style="display:flex; align-items:center; gap:12px;">
             <span class="badge badge--activo" id="ficha-badge-estado">—</span>
+            <button class="btn btn--ghost hidden" id="btn-editar-datos-ciclo">✏️ Editar</button>
             <button class="btn btn--danger hidden" id="btn-eliminar-alumno" data-role="director">🗑 Eliminar Alumno</button>
           </div>
         </div>
@@ -315,16 +316,16 @@
           <div class="panel">
             <div class="panel__body">
               <div class="field-grid">
-                <div class="field"><label>Nombre</label><input id="datos-nombre"></div>
-                <div class="field"><label>Apellido</label><input id="datos-apellido"></div>
-                <div class="field"><label>RUT</label><input id="datos-rut"></div>
-                <div class="field"><label>Fecha de Nacimiento</label><input type="date" id="datos-fecha-nacimiento"></div>
+                <div class="field"><label>Nombre <span style="color:#C0392B;">*</span></label><input id="datos-nombre"></div>
+                <div class="field"><label>Apellido <span style="color:#C0392B;">*</span></label><input id="datos-apellido"></div>
+                <div class="field"><label>RUT <span style="color:#C0392B;">*</span></label><input id="datos-rut"></div>
+                <div class="field"><label>Fecha de Nacimiento <span style="color:#C0392B;">*</span></label><input type="date" id="datos-fecha-nacimiento"></div>
                 <div class="field"><label>Edad</label><input id="datos-edad" disabled placeholder="Se calcula sola"></div>
-                <div class="field"><label>Género</label><select id="datos-genero"><option>Femenino</option><option>Masculino</option><option>Otro</option><option>Prefiere no decir</option></select></div>
-                <div class="field"><label>Teléfono</label><input type="tel" id="datos-telefono"></div>
-                <div class="field"><label>Correo</label><input type="email" id="datos-email"></div>
+                <div class="field"><label>Género <span style="color:#C0392B;">*</span></label><select id="datos-genero"><option>Femenino</option><option>Masculino</option><option>Otro</option><option>Prefiere no decir</option></select></div>
+                <div class="field"><label>Teléfono <span style="color:#C0392B;">*</span></label><input type="tel" id="datos-telefono"></div>
+                <div class="field"><label>Correo <span style="color:#C0392B;">*</span></label><input type="email" id="datos-email"></div>
                 <div class="field">
-                  <label>Ocupación</label>
+                  <label>Ocupación <span style="color:#C0392B;">*</span></label>
                   <select id="datos-ocupacion">
                     <option value="">Selecciona...</option>
                     <option value="Coach">Coach (Definir Especialidad)</option>
@@ -336,15 +337,15 @@
                     <option value="Otro">Otro</option>
                   </select>
                 </div>
-                <div class="field hidden" id="campo-ocupacion-especialidad"><label>Especialidad</label><input id="datos-ocupacion-especialidad" placeholder="Ej: Nutrición, Derecho comercial, Marketing..."></div>
+                <div class="field hidden" id="campo-ocupacion-especialidad"><label>Especialidad <span style="color:#C0392B;">*</span></label><input id="datos-ocupacion-especialidad" placeholder="Ej: Nutrición, Derecho comercial, Marketing..."></div>
               </div>
               <div class="field-grid mb-16" style="margin-top:14px;">
-                <div class="field"><label>Calle</label><input id="datos-direccion-calle"></div>
-                <div class="field"><label>Número</label><input id="datos-direccion-numero"></div>
+                <div class="field"><label>Calle <span style="color:#C0392B;">*</span></label><input id="datos-direccion-calle"></div>
+                <div class="field"><label>Número <span style="color:#C0392B;">*</span></label><input id="datos-direccion-numero"></div>
                 <div class="field"><label>Departamento/Oficina (opcional)</label><input id="datos-direccion-depto"></div>
-                <div class="field"><label>Comuna</label><input id="datos-direccion-comuna"></div>
-                <div class="field"><label>Región</label><input id="datos-direccion-region"></div>
-                <div class="field"><label>País</label><input id="datos-direccion-pais" value="Chile"></div>
+                <div class="field"><label>Comuna <span style="color:#C0392B;">*</span></label><input id="datos-direccion-comuna"></div>
+                <div class="field"><label>Región <span style="color:#C0392B;">*</span></label><input id="datos-direccion-region"></div>
+                <div class="field"><label>País <span style="color:#C0392B;">*</span></label><input id="datos-direccion-pais" value="Chile"></div>
               </div>
               <div class="mb-16" style="margin-top:14px;">
                 <label>Redes Sociales (opcional)</label>
@@ -384,19 +385,21 @@
                 </div>
                 <div class="field">
                   <label>Grupo de WhatsApp de su nivel</label>
-                  <label style="display:flex; align-items:center; gap:8px; margin-top:8px; font-weight:400;">
-                    <input type="checkbox" id="ciclo-whatsapp-grupo" style="width:auto;"> Ya se unió
-                  </label>
+                  <div>
+                    <button type="button" id="ciclo-whatsapp-toggle" class="badge badge--impaga" style="cursor:pointer; border:none; margin-top:8px; padding:8px 14px; font-size:13px;">Aún no se une al grupo</button>
+                    <input type="hidden" id="ciclo-whatsapp-grupo" value="false">
+                  </div>
                 </div>
               </div>
               <div class="field-grid mb-16" style="margin-top:14px;">
-                <div class="field"><label>Facturación Actual</label><input id="ciclo-facturacion-actual" placeholder="$0"></div>
-                <div class="field"><label>Objetivo Facturación Largo Plazo</label><input id="ciclo-objetivo-facturacion" placeholder="$0"></div>
+                <div class="field"><label>Facturación Actual <span style="color:#C0392B;">*</span></label><input id="ciclo-facturacion-actual" placeholder="$0"></div>
+                <div class="field"><label>Objetivo Facturación Largo Plazo <span style="color:#C0392B;">*</span></label><input id="ciclo-objetivo-facturacion" placeholder="$0"></div>
               </div>
               <div class="field-grid">
-                <div class="field" style="grid-column: span 2;"><label>Situación Personal Actual</label><textarea id="ciclo-situacion-personal"></textarea></div>
-                <div class="field" style="grid-column: span 2;"><label>Objetivos Personales al Finalizar</label><textarea id="ciclo-objetivos-personales"></textarea></div>
+                <div class="field" style="grid-column: span 2;"><label>Situación Personal Actual <span style="color:#C0392B;">*</span></label><textarea id="ciclo-situacion-personal"></textarea></div>
+                <div class="field" style="grid-column: span 2;"><label>Objetivos Personales al Finalizar <span style="color:#C0392B;">*</span></label><textarea id="ciclo-objetivos-personales"></textarea></div>
               </div>
+              <p id="ciclo-error" class="hidden" style="color:#C0392B; margin-top:12px;"></p>
               <div class="flex-between" style="margin-top:16px;">
                 <span></span>
                 <button class="btn btn--primary" id="btn-guardar-ciclo">Guardar Ciclo</button>

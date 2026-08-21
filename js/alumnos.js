@@ -26,6 +26,7 @@ let coachesMap = {};       // uid -> nombre, solo se llena para el director
 let currentAlumnoId = null;
 let currentCicloId = null;
 let bloqueoActual = false;
+let estadoProcesoActual = null;
 
 function capitalizar(texto) {
   if (!texto) return '';
@@ -151,21 +152,54 @@ const btnAgregarRedSocial = document.getElementById('btn-agregar-red-social');
 if (btnAgregarRedSocial) btnAgregarRedSocial.addEventListener('click', () => agregarFilaRedSocial());
 
 
-function datosGeneralesCompletos(alumno) {
-  if (!alumno) return false;
+function validarDatosGenerales(alumno) {
+  const faltantes = [];
+  const check = (valor, id) => { if (!valor || !valor.toString().trim()) faltantes.push(id); };
+  if (!alumno) return ['datos-nombre', 'datos-apellido', 'datos-rut', 'datos-fecha-nacimiento', 'datos-genero', 'datos-telefono', 'datos-email', 'datos-ocupacion', 'datos-direccion-calle', 'datos-direccion-numero', 'datos-direccion-comuna', 'datos-direccion-region', 'datos-direccion-pais'];
   const dir = alumno.direccion || {};
-  const campos = [
-    alumno.nombre, alumno.apellido, alumno.rut, alumno.fechaNacimiento, alumno.genero,
-    alumno.telefono, alumno.email, alumno.ocupacion, dir.calle, dir.numero, dir.comuna, dir.region, dir.pais
-  ];
-  if (campos.some(v => !v || !v.toString().trim())) return false;
-  if (OCUPACIONES_CON_ESPECIALIDAD.includes(alumno.ocupacion) && !alumno.ocupacionEspecialidad) return false;
-  return true;
+  check(alumno.nombre, 'datos-nombre');
+  check(alumno.apellido, 'datos-apellido');
+  check(alumno.rut, 'datos-rut');
+  check(alumno.fechaNacimiento, 'datos-fecha-nacimiento');
+  check(alumno.genero, 'datos-genero');
+  check(alumno.telefono, 'datos-telefono');
+  check(alumno.email, 'datos-email');
+  check(alumno.ocupacion, 'datos-ocupacion');
+  check(dir.calle, 'datos-direccion-calle');
+  check(dir.numero, 'datos-direccion-numero');
+  check(dir.comuna, 'datos-direccion-comuna');
+  check(dir.region, 'datos-direccion-region');
+  check(dir.pais, 'datos-direccion-pais');
+  if (OCUPACIONES_CON_ESPECIALIDAD.includes(alumno.ocupacion) && !alumno.ocupacionEspecialidad) faltantes.push('datos-ocupacion-especialidad');
+  return faltantes;
+}
+
+function datosGeneralesCompletos(alumno) {
+  return validarDatosGenerales(alumno).length === 0;
+}
+
+function validarCiclo(ciclo) {
+  const faltantes = [];
+  const check = (valor, id) => { if (!valor || !valor.toString().trim()) faltantes.push(id); };
+  if (!ciclo) return ['ciclo-facturacion-actual', 'ciclo-objetivo-facturacion', 'ciclo-situacion-personal', 'ciclo-objetivos-personales'];
+  check(ciclo.facturacionActual, 'ciclo-facturacion-actual');
+  check(ciclo.objetivoFacturacion, 'ciclo-objetivo-facturacion');
+  check(ciclo.situacionPersonal, 'ciclo-situacion-personal');
+  check(ciclo.objetivosPersonales, 'ciclo-objetivos-personales');
+  return faltantes;
 }
 
 function cicloCompleto(ciclo) {
-  if (!ciclo) return false;
-  return !!(ciclo.facturacionActual && ciclo.objetivoFacturacion && ciclo.situacionPersonal && ciclo.objetivosPersonales);
+  return validarCiclo(ciclo).length === 0;
+}
+
+function marcarCamposFaltantes(ids) {
+  document.querySelectorAll('.tab-panel[data-panel="datos"] input, .tab-panel[data-panel="datos"] select, .tab-panel[data-panel="ciclo"] input, .tab-panel[data-panel="ciclo"] textarea')
+    .forEach(el => { el.style.border = ''; el.style.backgroundColor = ''; });
+  ids.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) { el.style.border = '1.5px solid #C0392B'; el.style.backgroundColor = '#FDEDED'; }
+  });
 }
 
 function actualizarCampoEspecialidad() {
@@ -407,6 +441,85 @@ async function renderHistorialCiclos(ciclosAnterioresIds) {
     }).join('') || '<p class="text-soft">Sin datos.</p>';
 }
 
+/* --- Bloqueo general de Datos/Ciclo tras guardar, con botón "Editar" ---
+       Director: el botón desbloquea todo. Coach: solo Correo, Teléfono,
+       Dirección y Redes Sociales (la Fase tiene su propia regla aparte,
+       ver abrirFicha). No se toca ciclo-programa/fechas (siempre fijos)
+       ni ciclo-coach (ya lo gobierna su propia regla de rol). */
+function aplicarBloqueoDatosCiclo(bloqueado, role) {
+  document.querySelectorAll('.tab-panel[data-panel="datos"] input, .tab-panel[data-panel="datos"] select, .tab-panel[data-panel="datos"] textarea')
+    .forEach(el => { if (el.id !== 'datos-edad') el.disabled = bloqueado; });
+
+  document.querySelectorAll('.tab-panel[data-panel="ciclo"] input, .tab-panel[data-panel="ciclo"] textarea')
+    .forEach(el => {
+      if (['ciclo-fecha-ingreso', 'ciclo-fecha-egreso', 'ciclo-whatsapp-grupo'].includes(el.id)) return;
+      el.disabled = bloqueado;
+    });
+
+  const selectFase = document.getElementById('ciclo-fase-metodologia');
+  if (selectFase) selectFase.disabled = bloqueado;
+
+  if (role === 'director') {
+    const selectCoach = document.getElementById('ciclo-coach');
+    if (selectCoach) selectCoach.disabled = bloqueado;
+  }
+
+  const btnWhatsapp = document.getElementById('ciclo-whatsapp-toggle');
+  if (btnWhatsapp) btnWhatsapp.disabled = bloqueado;
+
+  document.querySelectorAll('#tabla-redes-sociales-body select, #tabla-redes-sociales-body input, #tabla-redes-sociales-body button')
+    .forEach(el => { el.disabled = bloqueado; });
+  const btnAgregarRed = document.getElementById('btn-agregar-red-social');
+  if (btnAgregarRed) btnAgregarRed.disabled = bloqueado;
+}
+
+function habilitarEdicionParcialCoach() {
+  ['datos-email', 'datos-telefono', 'datos-direccion-calle', 'datos-direccion-numero',
+    'datos-direccion-depto', 'datos-direccion-comuna', 'datos-direccion-region', 'datos-direccion-pais',
+    'ciclo-fase-metodologia'
+  ].forEach(id => { const el = document.getElementById(id); if (el) el.disabled = false; });
+
+  document.querySelectorAll('#tabla-redes-sociales-body select, #tabla-redes-sociales-body input, #tabla-redes-sociales-body button')
+    .forEach(el => { el.disabled = false; });
+  const btnAgregarRed = document.getElementById('btn-agregar-red-social');
+  if (btnAgregarRed) btnAgregarRed.disabled = false;
+}
+
+const btnEditarDatosCiclo = document.getElementById('btn-editar-datos-ciclo');
+if (btnEditarDatosCiclo) {
+  btnEditarDatosCiclo.addEventListener('click', () => {
+    if (getCurrentRole() === 'director') {
+      aplicarBloqueoDatosCiclo(false, 'director');
+    } else {
+      habilitarEdicionParcialCoach();
+      if (estadoProcesoActual !== 'matricula_finalizada') {
+        document.getElementById('ciclo-fase-metodologia').disabled = true;
+      }
+    }
+    btnEditarDatosCiclo.classList.add('hidden');
+  });
+}
+
+/* --- Switch visual del grupo de WhatsApp --- */
+function actualizarBotonWhatsapp(activo) {
+  const btn = document.getElementById('ciclo-whatsapp-toggle');
+  const hidden = document.getElementById('ciclo-whatsapp-grupo');
+  if (!btn || !hidden) return;
+  hidden.value = activo ? 'true' : 'false';
+  btn.className = activo ? 'badge badge--activo' : 'badge badge--impaga';
+  btn.textContent = activo ? '✓ Ya se unió' : 'Aún no se une al grupo';
+  btn.style.cssText = 'cursor:pointer; border:none; margin-top:8px; padding:8px 14px; font-size:13px;';
+}
+
+const btnWhatsappToggle = document.getElementById('ciclo-whatsapp-toggle');
+if (btnWhatsappToggle) {
+  btnWhatsappToggle.addEventListener('click', () => {
+    const hidden = document.getElementById('ciclo-whatsapp-grupo');
+    actualizarBotonWhatsapp(hidden.value !== 'true');
+  });
+}
+
+
 /* --- Abre la ficha de un alumno con sus datos reales --- */
 async function abrirFicha(alumnoId) {
   if (getCurrentRole() === 'director') await cargarCoaches();
@@ -485,10 +598,11 @@ async function abrirFicha(alumnoId) {
     document.getElementById('ciclo-situacion-personal').value = ciclo.situacionPersonal || '';
     document.getElementById('ciclo-objetivos-personales').value = ciclo.objetivosPersonales || '';
     document.getElementById('ciclo-fase-metodologia').value = ciclo.faseMetodologia || '';
-    document.getElementById('ciclo-whatsapp-grupo').checked = !!ciclo.enGrupoWhatsapp;
+    actualizarBotonWhatsapp(!!ciclo.enGrupoWhatsapp);
   }
 
   const estadoProceso = ciclo ? ciclo.estadoProceso : 'asignado';
+  estadoProcesoActual = estadoProceso;
   const estadoAlumnoActual = ciclo ? ciclo.estadoAlumno : null;
   document.getElementById('ficha-stepper').innerHTML = renderStepper(estadoProceso);
 
@@ -507,16 +621,42 @@ async function abrirFicha(alumnoId) {
   const listoParaGenerarAcuerdo = datosGeneralesCompletos(alumno) && cicloCompleto(ciclo) && hayTestCompletado();
   renderAcciones(estadoProceso, role, listoParaGenerarAcuerdo);
 
+  // --- Bloqueo general: si Datos+Ciclo ya están completos, se bloquea todo
+  //     y aparece "Editar" (alcance según rol). Si aún falta algo, queda
+  //     editable para poder completarlo. ---
+  const btnEditar = document.getElementById('btn-editar-datos-ciclo');
+  const datosCicloCompletos = datosGeneralesCompletos(alumno) && cicloCompleto(ciclo);
+  if (datosCicloCompletos) {
+    aplicarBloqueoDatosCiclo(true, role);
+    btnEditar.classList.remove('hidden');
+  } else {
+    aplicarBloqueoDatosCiclo(false, role);
+    btnEditar.classList.add('hidden');
+  }
+
+  // La Fase de la Metodología ahora forma parte del bloqueo general (botón
+  // "Editar") — solo se fuerza deshabilitada si aún no corresponde mostrarla
+  // (antes de "Proceso de Matrícula Finalizado").
+  if (estadoProceso !== 'matricula_finalizada') {
+    document.getElementById('ciclo-fase-metodologia').disabled = true;
+  }
+
+  // --- Bloqueos de mayor prioridad, exclusivos para el coach (pisan lo de arriba) ---
   const panelCandado = document.getElementById('panel-candado');
-  if (estadoProceso === 'enviado_firma' || estadoProceso === 'en_revision') {
+  if (role === 'coach' && (estadoProceso === 'enviado_firma' || estadoProceso === 'en_revision')) {
     aplicarBloqueoCamposFicha(true);
+    btnEditar.classList.add('hidden');
     panelCandado.classList.add('hidden');
   } else if (ciclo && estadoProceso === 'matricula_finalizada') {
     bloqueoActual = !!ciclo.bloqueoCoach;
-    setCandado(bloqueoActual);
+    if (role === 'coach') {
+      setCandado(bloqueoActual);
+      if (bloqueoActual) btnEditar.classList.add('hidden');
+    } else {
+      panelCandado.classList.add('hidden');
+    }
   } else {
     bloqueoActual = false;
-    aplicarBloqueoCamposFicha(false);
     panelCandado.classList.add('hidden');
   }
 
@@ -632,11 +772,14 @@ if (btnGuardarDatos) {
       })()
     };
 
-    if (!datosGeneralesCompletos(datosForm)) {
-      errorEl.textContent = 'Faltan campos por completar — todos son obligatorios excepto Departamento/Oficina.';
+    const faltantesDatos = validarDatosGenerales(datosForm);
+    if (faltantesDatos.length > 0) {
+      errorEl.textContent = 'Faltan datos por completar — revisa los campos marcados en rojo.';
       errorEl.classList.remove('hidden');
+      marcarCamposFaltantes(faltantesDatos);
       return;
     }
+    marcarCamposFaltantes([]);
 
     btnGuardarDatos.disabled = true;
     try {
@@ -654,16 +797,29 @@ const btnGuardarCiclo = document.getElementById('btn-guardar-ciclo');
 if (btnGuardarCiclo) {
   btnGuardarCiclo.addEventListener('click', async () => {
     if (!currentCicloId) return;
+    const errorElCiclo = document.getElementById('ciclo-error');
+    errorElCiclo.classList.add('hidden');
+
+    const datos = {
+      facturacionActual: document.getElementById('ciclo-facturacion-actual').value.trim(),
+      objetivoFacturacion: document.getElementById('ciclo-objetivo-facturacion').value.trim(),
+      situacionPersonal: document.getElementById('ciclo-situacion-personal').value.trim(),
+      objetivosPersonales: document.getElementById('ciclo-objetivos-personales').value.trim(),
+      faseMetodologia: document.getElementById('ciclo-fase-metodologia').value,
+      enGrupoWhatsapp: document.getElementById('ciclo-whatsapp-grupo').value === 'true'
+    };
+
+    const faltantesCiclo = validarCiclo(datos);
+    if (faltantesCiclo.length > 0) {
+      errorElCiclo.textContent = 'Faltan datos por completar — revisa los campos marcados en rojo.';
+      errorElCiclo.classList.remove('hidden');
+      marcarCamposFaltantes(faltantesCiclo);
+      return;
+    }
+    marcarCamposFaltantes([]);
+
     btnGuardarCiclo.disabled = true;
     try {
-      const datos = {
-        facturacionActual: document.getElementById('ciclo-facturacion-actual').value.trim(),
-        objetivoFacturacion: document.getElementById('ciclo-objetivo-facturacion').value.trim(),
-        situacionPersonal: document.getElementById('ciclo-situacion-personal').value.trim(),
-        objetivosPersonales: document.getElementById('ciclo-objetivos-personales').value.trim(),
-        faseMetodologia: document.getElementById('ciclo-fase-metodologia').value,
-        enGrupoWhatsapp: document.getElementById('ciclo-whatsapp-grupo').checked
-      };
       if (getCurrentRole() === 'director') {
         datos.coachId = document.getElementById('ciclo-coach').value;
       }
