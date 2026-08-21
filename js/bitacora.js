@@ -34,6 +34,7 @@ export async function cargarBitacoraParaCiclo(cicloId, habilitada) {
   banner.classList.add('hidden');
   contenido.classList.remove('hidden');
   document.getElementById('bitacora-fecha').value = new Date().toISOString().slice(0, 10);
+  document.getElementById('bitacora-titulo').value = '';
   document.getElementById('bitacora-notas').value = '';
 
   const snap = await get(ref(db, `bitacora/${cicloId}`));
@@ -55,9 +56,10 @@ export async function cargarBitacoraParaCiclo(cicloId, habilitada) {
       div.style.cssText = 'padding:12px 0; border-bottom:0.5px solid var(--border);';
       div.innerHTML = `
         <div style="display:flex; justify-content:space-between; margin-bottom:4px;">
-          <strong>${formatFecha(entrada.fecha)} · ${entrada.canal || ''}</strong>
+          <strong>${entrada.titulo || '(sin título)'}</strong>
           <span class="text-soft" style="font-size:12px;">${entrada.autorNombre || ''}</span>
         </div>
+        <div class="text-soft" style="font-size:12px; margin-bottom:6px;">${formatFecha(entrada.fecha)} · ${entrada.canal || ''}</div>
         <p style="margin:0;">${entrada.notas || ''}</p>`;
       listadoEl.appendChild(div);
     });
@@ -67,12 +69,13 @@ const btnGuardarBitacora = document.getElementById('btn-guardar-bitacora');
 if (btnGuardarBitacora) {
   btnGuardarBitacora.addEventListener('click', async () => {
     if (!cicloIdActual) return;
+    const titulo = document.getElementById('bitacora-titulo').value.trim();
     const fecha = document.getElementById('bitacora-fecha').value;
     const canal = document.getElementById('bitacora-canal').value;
     const notas = document.getElementById('bitacora-notas').value.trim();
 
-    if (!notas) {
-      alert('Escribe algo en las notas antes de guardar.');
+    if (!titulo || !notas) {
+      alert('Completa el título y las notas antes de guardar.');
       return;
     }
 
@@ -80,6 +83,7 @@ if (btnGuardarBitacora) {
     try {
       const entradaRef = push(ref(db, `bitacora/${cicloIdActual}`));
       await set(entradaRef, {
+        titulo,
         fecha,
         canal,
         notas,
@@ -117,6 +121,7 @@ if (btnDescargarWord) {
       const filas = entradas.map(e => `
         <tr>
           <td style="border:1px solid #ccc; padding:8px;">${formatFecha(e.fecha)}</td>
+          <td style="border:1px solid #ccc; padding:8px;"><strong>${e.titulo || ''}</strong></td>
           <td style="border:1px solid #ccc; padding:8px;">${e.canal || ''}</td>
           <td style="border:1px solid #ccc; padding:8px;">${(e.notas || '').replace(/\n/g, '<br>')}</td>
         </tr>`).join('');
@@ -130,10 +135,11 @@ if (btnDescargarWord) {
           <table style="border-collapse:collapse; width:100%; margin-top:12px;">
             <tr>
               <th style="border:1px solid #ccc; padding:8px; background:#f2f2f2; text-align:left;">Fecha</th>
+              <th style="border:1px solid #ccc; padding:8px; background:#f2f2f2; text-align:left;">Título</th>
               <th style="border:1px solid #ccc; padding:8px; background:#f2f2f2; text-align:left;">Canal</th>
               <th style="border:1px solid #ccc; padding:8px; background:#f2f2f2; text-align:left;">Notas</th>
             </tr>
-            ${filas || '<tr><td colspan="3" style="padding:8px;">Sin entradas registradas.</td></tr>'}
+            ${filas || '<tr><td colspan="4" style="padding:8px;">Sin entradas registradas.</td></tr>'}
           </table>
         </body>
         </html>`;
