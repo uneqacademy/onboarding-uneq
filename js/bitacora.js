@@ -116,31 +116,23 @@ if (btnDescargarWord) {
         : [];
 
       const nombreAlumno = document.getElementById('ficha-nombre-alumno').textContent.trim() || 'Alumno';
-      const hoyTexto = new Intl.DateTimeFormat('es-CL', { day: '2-digit', month: 'long', year: 'numeric' }).format(new Date());
+      const programaTexto = document.getElementById('ficha-programa').textContent.trim() || '';
 
-      const filas = entradas.map(e => `
-        <tr>
-          <td style="border:1px solid #ccc; padding:8px;">${formatFecha(e.fecha)}</td>
-          <td style="border:1px solid #ccc; padding:8px;"><strong>${e.titulo || ''}</strong></td>
-          <td style="border:1px solid #ccc; padding:8px;">${e.canal || ''}</td>
-          <td style="border:1px solid #ccc; padding:8px;">${(e.notas || '').replace(/\n/g, '<br>')}</td>
-        </tr>`).join('');
+      const bloques = entradas.map(e => `
+        <p style="font-family:Arial; font-weight:bold; font-size:18px; margin:0 0 2px 0;">${e.titulo || ''}</p>
+        <p style="font-family:Arial; font-size:12px; margin:0;">${formatFecha(e.fecha)}</p>
+        <p style="font-family:Arial; font-size:12px; margin:0 0 12px 0;">${e.canal || ''}</p>
+        <p style="font-family:Arial; font-size:12px; margin:0 0 20px 0;">${(e.notas || '').replace(/\n/g, '<br>')}</p>
+        <hr style="border:none; border-top:1px solid #999; margin:0 0 20px 0;">`
+      ).join('');
 
       const html = `
         <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
         <head><meta charset="utf-8"><title>Bitácora</title></head>
-        <body style="font-family:Calibri, Arial, sans-serif;">
-          <h1 style="font-size:20px;">Bitácora de Seguimiento — ${nombreAlumno}</h1>
-          <p style="color:#555;">Actualizado el ${hoyTexto} · ${entradas.length} ${entradas.length === 1 ? 'entrada' : 'entradas'}</p>
-          <table style="border-collapse:collapse; width:100%; margin-top:12px;">
-            <tr>
-              <th style="border:1px solid #ccc; padding:8px; background:#f2f2f2; text-align:left;">Fecha</th>
-              <th style="border:1px solid #ccc; padding:8px; background:#f2f2f2; text-align:left;">Título</th>
-              <th style="border:1px solid #ccc; padding:8px; background:#f2f2f2; text-align:left;">Canal</th>
-              <th style="border:1px solid #ccc; padding:8px; background:#f2f2f2; text-align:left;">Notas</th>
-            </tr>
-            ${filas || '<tr><td colspan="4" style="padding:8px;">Sin entradas registradas.</td></tr>'}
-          </table>
+        <body style="font-family:Arial, sans-serif;">
+          <p style="font-family:Arial; font-weight:bold; font-size:20px; margin:0;">BITÁCORA "${nombreAlumno.toUpperCase()}"</p>
+          <p style="font-family:Arial; font-size:14px; margin:0 0 28px 0;">ALUMNO "${programaTexto.toUpperCase()}"</p>
+          ${bloques || '<p style="font-family:Arial; font-size:12px;">Sin entradas registradas.</p>'}
         </body>
         </html>`;
 
