@@ -120,8 +120,8 @@ if (btnDescargarWord) {
 
       const bloques = entradas.map(e => `
         <p style="font-family:Arial; font-weight:bold; font-size:18px; margin:0 0 2px 0;">${e.titulo || ''}</p>
-        <p style="font-family:Arial; font-size:12px; margin:0;">${formatFecha(e.fecha)}</p>
-        <p style="font-family:Arial; font-size:12px; margin:0 0 12px 0;">${e.canal || ''}</p>
+        <p style="font-family:Arial; font-size:12px; margin:0;">Fecha: ${formatFecha(e.fecha)}</p>
+        <p style="font-family:Arial; font-size:12px; margin:0 0 12px 0;">Canal: ${e.canal || ''}</p>
         <p style="font-family:Arial; font-size:12px; margin:0 0 20px 0;">${(e.notas || '').replace(/\n/g, '<br>')}</p>
         <hr style="border:none; border-top:1px solid #999; margin:0 0 20px 0;">`
       ).join('');
