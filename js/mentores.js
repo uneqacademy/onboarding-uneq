@@ -13,7 +13,7 @@ import { db, auth, storage, firebaseConfig } from './firebase-config.js';
 import { ref, get, set, update, push } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-database.js";
 import { ref as storageRef, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-storage.js";
 import { initializeApp, deleteApp } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-app.js";
-import { getAuth, createUserWithEmailAndPassword, signOut as signOutSecundaria } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-auth.js";
+import { getAuth, createUserWithEmailAndPassword, signOut as signOutSecundaria, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-auth.js";
 import { getCurrentRole, setNav } from './main.js';
 import { programaLabel } from './ciclos.js';
 
@@ -53,20 +53,33 @@ async function cargarMentoresView() {
   const tbody = document.getElementById('tabla-mentores-body');
   if (!tbody) return;
 
-  const snap = await get(ref(db, 'usuarios'));
-  const usuarios = snap.exists() ? snap.val() : {};
+  const [usuariosSnap, npsMentoriasSnap] = await Promise.all([
+    get(ref(db, 'usuarios')),
+    get(ref(db, 'npsMentorias'))
+  ]);
+  const usuarios = usuariosSnap.exists() ? usuariosSnap.val() : {};
+  const npsMentoriasTodos = npsMentoriasSnap.exists() ? npsMentoriasSnap.val() : {};
   tbody.innerHTML = '';
 
   Object.entries(usuarios)
     .filter(([, u]) => u.rol === 'mentor')
     .forEach(([uid, mentor]) => {
+      const { promedio, total } = calcularNpsResumenMentor(npsMentoriasTodos[uid]);
+      const npsTexto = promedio !== null ? `${promedio.toFixed(1)} ★ (${total})` : '—';
+
       const tr = document.createElement('tr');
       tr.innerHTML = `
         <td>${mentor.nombre || ''}</td>
         <td>${mentor.email || ''}</td>
         <td><span class="badge ${mentor.activo === false ? 'badge--impaga' : 'badge--activo'}">${mentor.activo === false ? 'Inactivo' : 'Activo'}</span></td>
-        <td><button class="btn btn--ghost btn-eliminar-mentor" style="font-size:11px; padding:4px 8px;">Eliminar</button></td>`;
+        <td>${npsTexto}</td>
+        <td style="display:flex; gap:6px; flex-wrap:wrap;">
+          <button class="btn btn--ghost btn-restablecer-password-mentor" style="font-size:11px; padding:4px 8px;">Restablecer Contraseña</button>
+          <button class="btn btn--ghost btn-eliminar-mentor" style="font-size:11px; padding:4px 8px;">Eliminar</button>
+        </td>`;
       tbody.appendChild(tr);
+
+      tr.querySelector('.btn-restablecer-password-mentor').addEventListener('click', (ev) => enviarResetPasswordMentor(mentor.email, ev.target));
 
       tr.querySelector('.btn-eliminar-mentor').addEventListener('click', async () => {
         const confirmado = confirm(`¿Eliminar a ${mentor.nombre || mentor.email}? Ya no va a poder entrar a la app.`);
@@ -135,6 +148,22 @@ if (btnCopiarPasswordMentor) {
         .catch(() => alert('No se pudo copiar automático — selecciónala manualmente del campo.'));
     }
   });
+}
+
+async function enviarResetPasswordMentor(email, boton) {
+  if (!email) return;
+  const textoOriginal = boton.textContent;
+  boton.disabled = true;
+  boton.textContent = 'Enviando...';
+  try {
+    await sendPasswordResetEmail(auth, email);
+    alert(`Listo — Firebase le mandó un correo a ${email} con un link para que elija su nueva contraseña.`);
+  } catch (err) {
+    alert('No se pudo enviar el correo. Revisa que el email esté bien escrito.');
+  } finally {
+    boton.disabled = false;
+    boton.textContent = textoOriginal;
+  }
 }
 
 document.querySelectorAll('.nav-item[data-nav="mentores"]').forEach(item => {
