@@ -485,7 +485,7 @@ async function renderHistorialCiclos(ciclosAnterioresIds) {
        ni ciclo-coach (ya lo gobierna su propia regla de rol). */
 function aplicarBloqueoDatosCiclo(bloqueado, role) {
   document.querySelectorAll('.tab-panel[data-panel="datos"] input, .tab-panel[data-panel="datos"] select, .tab-panel[data-panel="datos"] textarea')
-    .forEach(el => { if (el.id !== 'datos-edad') el.disabled = bloqueado; });
+    .forEach(el => { if (el.id !== 'datos-edad' && el.id !== 'datos-foto-input') el.disabled = bloqueado; });
 
   document.querySelectorAll('.tab-panel[data-panel="ciclo"] input, .tab-panel[data-panel="ciclo"] textarea')
     .forEach(el => {
