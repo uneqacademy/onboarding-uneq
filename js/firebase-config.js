@@ -11,7 +11,7 @@ import { getAuth } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-aut
 import { getDatabase } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-database.js";
 import { getStorage } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-storage.js";
 
-const firebaseConfig = {
+export const firebaseConfig = {
   apiKey: "AIzaSyClu2_ZQXflm4QqyUM9B9PLpaQTnxNoobA",
   authDomain: "onboarding-uneq.firebaseapp.com",
   databaseURL: "https://onboarding-uneq-default-rtdb.firebaseio.com/",

@@ -100,11 +100,14 @@ export async function cargarAcuerdoParaCiclo(cicloId) {
   document.getElementById('pago-abono').value = acuerdo.abono || '';
   recalcularSaldo();
 
-  // Estado del PDF: hoy es solo informativo. La generación real se conecta
-  // en pdf-acuerdo.js, disparada desde "Generar Acuerdo y Enviar a Revisión"
-  // del coach (ver alumnos.js) — el director aquí solo lo ve, no lo genera.
+  // Estado del PDF: se genera desde "Generar Acuerdo y Enviar a Revisión"
+  // del coach (ver alumnos.js / pdf-acuerdo.js) — el director aquí solo lo ve.
   const estadoPdfEl = document.getElementById('pago-estado-pdf');
-  if (estadoPdfEl) estadoPdfEl.textContent = acuerdo.pdfUrl ? 'Generado ✓' : 'Aún no generado';
+  if (estadoPdfEl) {
+    estadoPdfEl.innerHTML = acuerdo.pdfUrl
+      ? `<a href="${acuerdo.pdfUrl}" target="_blank" rel="noopener">Ver PDF ↗</a>`
+      : 'Aún no generado';
+  }
 
   tbody.innerHTML = '';
   const cuotas = acuerdo.cuotas ? Object.values(acuerdo.cuotas).sort((a, b) => (a.fecha || '').localeCompare(b.fecha || '')) : [];

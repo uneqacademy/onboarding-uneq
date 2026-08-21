@@ -10,9 +10,11 @@
    leyendo /nps/{coachId} cada vez, para no duplicar datos.
    ============================================================ */
 
-import { db, auth } from './firebase-config.js';
+import { db, auth, firebaseConfig } from './firebase-config.js';
 import { ref, get, set } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-database.js";
-import { getCurrentRole } from './main.js';
+import { initializeApp, deleteApp } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-app.js";
+import { getAuth, createUserWithEmailAndPassword, signOut as signOutSecundaria } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-auth.js";
+import { getCurrentRole, setNav } from './main.js';
 
 const ESTADOS_VIGENTES = ['activo', 'en_proceso_matricula', 'pausado'];
 const AREA_LABELS = {
@@ -24,16 +26,33 @@ const AREA_LABELS = {
   mentorias: 'Mentorías en vivo'
 };
 
-/* --- Calcula promedios por área/momento + promedio general, desde las entradas crudas --- */
+const SESENTA_DIAS_MS = 60 * 24 * 60 * 60 * 1000;
+
+/* --- Calcula promedios por área/momento + promedio general.
+       Prioriza los últimos 60 días; si no hay al menos 3 respuestas
+       en ese rango, va sumando las más antiguas hasta llegar a 3
+       (o a todas, si hay menos de 3 en total) — así el promedio
+       nunca desaparece una vez que el coach alcanzó 3 respuestas,
+       pero refleja mejoras recientes cuando hay suficiente volumen.
+       Los comentarios NO se filtran por fecha, se muestran todos. --- */
 function calcularStatsCoach(entradasObj) {
-  const entradas = entradasObj ? Object.values(entradasObj) : [];
+  const todas = entradasObj ? Object.values(entradasObj) : [];
+  const ahora = Date.now();
+
+  const comentarios = todas
+    .filter(e => e.comentario)
+    .map(e => ({ momento: e.momento === 'final' ? 'final' : 'medio', comentario: e.comentario, createdAt: e.createdAt || 0 }))
+    .sort((a, b) => b.createdAt - a.createdAt);
+
+  const ordenadas = [...todas].sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+  const dentroDe60 = ordenadas.filter(e => (ahora - (e.createdAt || 0)) <= SESENTA_DIAS_MS);
+  const seleccionadas = dentroDe60.length >= 3 ? dentroDe60 : ordenadas.slice(0, Math.max(3, dentroDe60.length));
+
   const porArea = {};
   Object.keys(AREA_LABELS).forEach(a => { porArea[a] = { medio: [], final: [] }; });
-
   const todasLasNotas = [];
-  const comentarios = [];
 
-  entradas.forEach(e => {
+  seleccionadas.forEach(e => {
     const momento = e.momento === 'final' ? 'final' : 'medio';
     Object.keys(AREA_LABELS).forEach(a => {
       const val = e.areas ? e.areas[a] : undefined;
@@ -42,7 +61,6 @@ function calcularStatsCoach(entradasObj) {
         todasLasNotas.push(val);
       }
     });
-    if (e.comentario) comentarios.push({ momento, comentario: e.comentario, createdAt: e.createdAt || 0 });
   });
 
   const promedio = arr => arr.length ? arr.reduce((x, y) => x + y, 0) / arr.length : null;
@@ -55,8 +73,8 @@ function calcularStatsCoach(entradasObj) {
   return {
     promedios,
     promedioGeneral: promedio(todasLasNotas),
-    totalRespuestas: entradas.length,
-    comentarios: comentarios.sort((a, b) => b.createdAt - a.createdAt)
+    totalRespuestas: seleccionadas.length,
+    comentarios
   };
 }
 
@@ -100,7 +118,8 @@ function renderDetalleNps(stats) {
       <div style="display:flex; gap:24px; flex-wrap:wrap;">
         <div style="flex:1; min-width:240px;">
           <strong style="font-size:13px;">Promedio por área (Medio / Final)</strong>
-          <table class="data-table" style="margin-top:8px;">
+          <p class="text-soft" style="font-size:11px; margin:2px 0 6px;">Últimos 60 días (si no hay 3 respuestas recientes, incluye las más antiguas)</p>
+          <table class="data-table" style="margin-top:0;">
             <thead><tr><th>Área</th><th>Medio</th><th>Final</th></tr></thead>
             <tbody>${filasAreas}</tbody>
           </table>
@@ -228,5 +247,64 @@ document.querySelectorAll('.nav-item[data-nav="coaches"]').forEach(item => {
 document.querySelectorAll('.nav-item[data-nav="dashboard"]').forEach(item => {
   item.addEventListener('click', cargarMiEvaluacionCoach);
 });
+
+/* --- Crear cuenta real de coach — usa una instancia SECUNDARIA de Firebase
+       para no cerrar la sesión del director al crear el usuario nuevo. --- */
+function generarPassword() {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789';
+  let pass = '';
+  for (let i = 0; i < 10; i++) pass += chars[Math.floor(Math.random() * chars.length)];
+  return pass;
+}
+
+const btnCrearCoach = document.getElementById('btn-crear-coach');
+if (btnCrearCoach) {
+  btnCrearCoach.addEventListener('click', async () => {
+    const errorEl = document.getElementById('nuevo-coach-error');
+    errorEl.classList.add('hidden');
+    const nombre = document.getElementById('nuevo-coach-nombre').value.trim();
+    const email = document.getElementById('nuevo-coach-email').value.trim();
+
+    if (!nombre || !email) {
+      errorEl.textContent = 'Completa nombre y correo.';
+      errorEl.classList.remove('hidden');
+      return;
+    }
+
+    btnCrearCoach.disabled = true;
+    btnCrearCoach.textContent = 'Creando...';
+
+    const password = generarPassword();
+    let secundaria = null;
+    try {
+      secundaria = initializeApp(firebaseConfig, 'crear-coach-' + Date.now());
+      const authSecundaria = getAuth(secundaria);
+      const credencial = await createUserWithEmailAndPassword(authSecundaria, email, password);
+      const nuevoUid = credencial.user.uid;
+      await signOutSecundaria(authSecundaria);
+
+      await set(ref(db, `usuarios/${nuevoUid}`), { nombre, email, rol: 'coach', activo: true });
+
+      document.getElementById('nuevo-coach-nombre').value = '';
+      document.getElementById('nuevo-coach-email').value = '';
+
+      alert(
+        `Cuenta creada ✓\n\nCorreo: ${email}\nContraseña inicial: ${password}\n\n` +
+        `Cópiala ahora y compártesela tú mismo a ${nombre} — no queda guardada en ningún lado.`
+      );
+      await cargarCoachesView();
+      setNav('coaches');
+    } catch (err) {
+      errorEl.textContent = err.code === 'auth/email-already-in-use'
+        ? 'Ese correo ya tiene una cuenta creada.'
+        : 'No se pudo crear la cuenta. Intenta de nuevo.';
+      errorEl.classList.remove('hidden');
+    } finally {
+      if (secundaria) await deleteApp(secundaria);
+      btnCrearCoach.disabled = false;
+      btnCrearCoach.textContent = 'Crear Cuenta de Coach';
+    }
+  });
+}
 
 export { cargarCoachesView };

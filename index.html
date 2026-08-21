@@ -103,35 +103,35 @@
         <div class="kpi-grid">
           <div class="kpi-card">
             <div class="kpi-card__label">Alumnos Activos</div>
-            <div class="kpi-card__value">42</div>
+            <div class="kpi-card__value" id="kpi-alumnos-activos">—</div>
           </div>
           <div class="kpi-card">
             <div class="kpi-card__label">Alumnos Totales (histórico)</div>
-            <div class="kpi-card__value">67</div>
+            <div class="kpi-card__value" id="kpi-alumnos-totales">—</div>
           </div>
           <div class="kpi-card">
             <div class="kpi-card__label">Activos · Begin</div>
-            <div class="kpi-card__value">18</div>
+            <div class="kpi-card__value" id="kpi-activos-begin">—</div>
           </div>
           <div class="kpi-card">
             <div class="kpi-card__label">Activos · Next</div>
-            <div class="kpi-card__value">16</div>
+            <div class="kpi-card__value" id="kpi-activos-next">—</div>
           </div>
           <div class="kpi-card">
             <div class="kpi-card__label">Activos · eXIT</div>
-            <div class="kpi-card__value">8</div>
+            <div class="kpi-card__value" id="kpi-activos-exit">—</div>
           </div>
           <div class="kpi-card">
             <div class="kpi-card__label">Pendientes de Firma</div>
-            <div class="kpi-card__value warning">5</div>
+            <div class="kpi-card__value warning" id="kpi-pendientes-firma">—</div>
           </div>
           <div class="kpi-card">
             <div class="kpi-card__label">Por Cobrar Total</div>
-            <div class="kpi-card__value">$12.500.000</div>
+            <div class="kpi-card__value" id="kpi-por-cobrar">—</div>
           </div>
           <div class="kpi-card">
             <div class="kpi-card__label">Atrasado Total</div>
-            <div class="kpi-card__value danger">$1.800.000</div>
+            <div class="kpi-card__value danger" id="kpi-atrasado">—</div>
           </div>
         </div>
 
@@ -166,15 +166,15 @@
         <div class="kpi-grid">
           <div class="kpi-card">
             <div class="kpi-card__label">Mis Alumnos Activos</div>
-            <div class="kpi-card__value">9</div>
+            <div class="kpi-card__value" id="kpi-coach-alumnos-activos">—</div>
           </div>
           <div class="kpi-card">
             <div class="kpi-card__label">En Onboarding</div>
-            <div class="kpi-card__value accent">3</div>
+            <div class="kpi-card__value accent" id="kpi-coach-en-onboarding">—</div>
           </div>
           <div class="kpi-card">
             <div class="kpi-card__label">Esperando al Director</div>
-            <div class="kpi-card__value warning">2</div>
+            <div class="kpi-card__value warning" id="kpi-coach-esperando-director">—</div>
           </div>
           <div class="kpi-card hidden" id="kpi-card-mi-evaluacion">
             <div class="kpi-card__label">Mi Evaluación</div>
@@ -252,6 +252,36 @@
               <input type="date" id="input-fecha-firma">
               <button class="btn btn--primary" id="btn-marcar-firma-procesada">Marcar Firma Procesada</button>
             </div>
+          </div>
+        </div>
+
+        <!-- Egreso y nuevo ciclo: mantiene el historial intacto -->
+        <div class="panel mb-24 hidden" id="panel-marcar-egresado" data-role="director">
+          <div class="panel__body flex-between">
+            <div>
+              <strong>¿Este alumno terminó el programa?</strong>
+              <p class="text-soft" style="margin:4px 0 0;">Al marcarlo egresado, puedes iniciarle un ciclo nuevo después (ej. de Begin a Next) sin perder nada de lo anterior.</p>
+            </div>
+            <button class="btn btn--primary" id="btn-marcar-egresado">Marcar Egresado</button>
+          </div>
+        </div>
+        <div class="panel mb-24 hidden" id="panel-nuevo-ciclo" data-role="director">
+          <div class="panel__body">
+            <strong>Iniciar un nuevo ciclo</strong>
+            <p class="text-soft" style="margin:4px 0 12px;">El ciclo anterior queda guardado en "Historial de Ciclos". El acuerdo de pago completo (descuento, cuotas) se termina de completar después, en la pestaña Acuerdo de Pago.</p>
+            <div class="field-grid mb-16">
+              <div class="field"><label>Programa</label>
+                <select id="nuevo-ciclo-programa">
+                  <option value="begin">Begin (3 meses · $1.500.000)</option>
+                  <option value="next">Next (6 meses · $3.000.000)</option>
+                  <option value="exit">eXIT (6 meses · $5.000.000)</option>
+                </select>
+              </div>
+              <div class="field"><label>Coach Asignado</label><select id="nuevo-ciclo-coach"></select></div>
+              <div class="field"><label>Monto Total</label><input id="nuevo-ciclo-monto"></div>
+              <div class="field"><label>Moneda</label><select id="nuevo-ciclo-moneda"><option>CLP</option><option>USD</option></select></div>
+            </div>
+            <button class="btn btn--primary" id="btn-crear-nuevo-ciclo">Crear Nuevo Ciclo</button>
           </div>
         </div>
 
@@ -411,8 +441,8 @@
         <!-- TAB: Historial de Ciclos -->
         <div class="tab-panel" data-panel="historial">
           <div class="panel">
-            <div class="panel__body text-soft">
-              Este alumno aún no ha cursado ciclos anteriores. Cuando tome un nuevo nivel, aparecerá aquí el resumen de cada ciclo pasado (programa, fechas, resultados del test, acuerdo asociado).
+            <div class="panel__body text-soft" id="historial-ciclos-contenido">
+              Este alumno aún no ha cursado ciclos anteriores. Cuando tome un nuevo nivel, aparecerá aquí el resumen de cada ciclo pasado.
             </div>
           </div>
         </div>
@@ -566,11 +596,12 @@
         <div class="panel">
           <div class="panel__body">
             <div class="field-grid mb-16">
-              <div class="field"><label>Nombre completo</label><input placeholder="Nombre y apellido"></div>
-              <div class="field"><label>Correo</label><input type="email" placeholder="nombre@agenciauneq.com"></div>
+              <div class="field"><label>Nombre completo</label><input id="nuevo-coach-nombre" placeholder="Nombre y apellido"></div>
+              <div class="field"><label>Correo</label><input type="email" id="nuevo-coach-email" placeholder="nombre@agenciauneq.com"></div>
             </div>
-            <p class="text-soft mb-16">La contraseña inicial se genera y se envía por correo — esto se conecta cuando integremos Firebase Auth.</p>
-            <button class="btn btn--primary">Crear Cuenta de Coach</button>
+            <p class="text-soft mb-16">Se genera una contraseña inicial automática — te la muestro al final para que se la compartas tú mismo (no enviamos correos todavía).</p>
+            <p id="nuevo-coach-error" class="hidden" style="color:#C0392B; margin-bottom:12px;"></p>
+            <button class="btn btn--primary" id="btn-crear-coach">Crear Cuenta de Coach</button>
           </div>
         </div>
       </section>

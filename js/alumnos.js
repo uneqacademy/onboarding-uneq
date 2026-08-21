@@ -18,6 +18,7 @@ import { showView, marcarNavActivo, setNav, setCandado, getCurrentRole, getCurre
 import { cargarTestParaCiclo } from './test.js';
 import { cargarAcuerdoParaCiclo } from './pagos.js';
 import { cargarBitacoraParaCiclo } from './bitacora.js';
+import { generarPdfAcuerdo } from './pdf-acuerdo.js';
 import './respaldo.js';
 import { cargarMiEvaluacionCoach } from './coaches.js';
 
@@ -142,6 +143,13 @@ function getTelefono() {
 }
 
 
+function formatMontoPorMoneda(totalesPorMoneda) {
+  const partes = Object.entries(totalesPorMoneda)
+    .filter(([, monto]) => monto > 0)
+    .map(([moneda, monto]) => `${monto.toLocaleString('es-CL')} ${moneda}`);
+  return partes.length ? partes.join(' · ') : '$0';
+}
+
 function poblarSelectCoaches(selectEl, selectedCoachId) {
   selectEl.innerHTML = '';
   Object.entries(coachesMap).forEach(([uid, nombre]) => {
@@ -224,6 +232,88 @@ export async function cargarListasAlumnos() {
       if (tbodyCoach) tbodyCoach.appendChild(crearFilaAlumno(alumnoId, alumno, ciclo, { coach: false, fechas: true, pago: false }));
     }
   });
+
+  const setTexto = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
+
+  if (role === 'director') {
+    let activos = 0, begin = 0, next = 0, exit = 0, pendientesFirma = 0;
+    const porCobrarPorMoneda = {};
+    const atrasadoPorMoneda = {};
+
+    Object.values(alumnos).forEach(alumno => {
+      const ciclo = alumno.cicloActualId ? ciclos[alumno.cicloActualId] : null;
+      const acuerdo = alumno.cicloActualId ? acuerdos[alumno.cicloActualId] : null;
+      if (!ciclo) return;
+
+      if (ciclo.estadoAlumno === 'activo') {
+        activos++;
+        if (ciclo.programa === 'begin') begin++;
+        else if (ciclo.programa === 'next') next++;
+        else if (ciclo.programa === 'exit') exit++;
+      }
+      if (ciclo.estadoProceso === 'enviado_firma' || ciclo.estadoProceso === 'en_revision') pendientesFirma++;
+
+      if (acuerdo) {
+        const moneda = acuerdo.moneda || 'CLP';
+        const montoTotal = parseFloat(acuerdo.montoTotal) || 0;
+        const descuento = parseFloat(acuerdo.descuento) || 0;
+        const abono = parseFloat(acuerdo.abono) || 0;
+        const saldoBase = montoTotal - descuento - abono;
+
+        const cuotas = acuerdo.cuotas ? Object.values(acuerdo.cuotas) : [];
+        const pagado = cuotas.filter(c => c.estado === 'pagada').reduce((s, c) => s + (parseFloat(c.monto) || 0), 0);
+        const impago = cuotas.filter(c => c.estado === 'impaga').reduce((s, c) => s + (parseFloat(c.monto) || 0), 0);
+
+        const porCobrar = Math.max(saldoBase - pagado, 0);
+        if (porCobrar > 0) porCobrarPorMoneda[moneda] = (porCobrarPorMoneda[moneda] || 0) + porCobrar;
+        if (impago > 0) atrasadoPorMoneda[moneda] = (atrasadoPorMoneda[moneda] || 0) + impago;
+      }
+    });
+
+    setTexto('kpi-alumnos-activos', activos);
+    setTexto('kpi-alumnos-totales', Object.keys(alumnos).length);
+    setTexto('kpi-activos-begin', begin);
+    setTexto('kpi-activos-next', next);
+    setTexto('kpi-activos-exit', exit);
+    setTexto('kpi-pendientes-firma', pendientesFirma);
+    setTexto('kpi-por-cobrar', formatMontoPorMoneda(porCobrarPorMoneda));
+    setTexto('kpi-atrasado', formatMontoPorMoneda(atrasadoPorMoneda));
+  } else if (role === 'coach') {
+    let activos = 0, enOnboarding = 0, esperandoDirector = 0;
+    Object.values(alumnos).forEach(alumno => {
+      const ciclo = alumno.cicloActualId ? ciclos[alumno.cicloActualId] : null;
+      if (!ciclo || ciclo.coachId !== uid) return;
+      if (ciclo.estadoAlumno === 'activo') activos++;
+      if (ciclo.estadoProceso === 'en_onboarding') enOnboarding++;
+      if (ciclo.estadoProceso === 'enviado_firma' || ciclo.estadoProceso === 'en_revision') esperandoDirector++;
+    });
+    setTexto('kpi-coach-alumnos-activos', activos);
+    setTexto('kpi-coach-en-onboarding', enOnboarding);
+    setTexto('kpi-coach-esperando-director', esperandoDirector);
+  }
+}
+
+async function renderHistorialCiclos(ciclosAnterioresIds) {
+  const contenedor = document.getElementById('historial-ciclos-contenido');
+  if (!contenedor) return;
+
+  if (!ciclosAnterioresIds || !ciclosAnterioresIds.length) {
+    contenedor.className = 'panel__body text-soft';
+    contenedor.textContent = 'Este alumno aún no ha cursado ciclos anteriores. Cuando tome un nuevo nivel, aparecerá aquí el resumen de cada ciclo pasado.';
+    return;
+  }
+
+  const snaps = await Promise.all(ciclosAnterioresIds.map(id => get(ref(db, `ciclos/${id}`))));
+  contenedor.className = 'panel__body';
+  contenedor.innerHTML = snaps
+    .filter(s => s.exists())
+    .map(s => {
+      const c = s.val();
+      return `<div style="padding:10px 0; border-bottom:0.5px solid var(--border);">
+        <strong>${programaLabel(c.programa)}</strong>
+        <span class="text-soft" style="font-size:12px;"> · ${formatFecha(c.fechaIngreso)} — ${formatFecha(c.fechaEgreso)} · ${labelEstadoAlumno(c.estadoAlumno)}</span>
+      </div>`;
+    }).join('') || '<p class="text-soft">Sin datos.</p>';
 }
 
 /* --- Abre la ficha de un alumno con sus datos reales --- */
@@ -298,8 +388,17 @@ async function abrirFicha(alumnoId) {
   }
 
   const estadoProceso = ciclo ? ciclo.estadoProceso : 'asignado';
+  const estadoAlumnoActual = ciclo ? ciclo.estadoAlumno : null;
   document.getElementById('ficha-stepper').innerHTML = renderStepper(estadoProceso);
   renderAcciones(estadoProceso, role);
+
+  document.getElementById('panel-marcar-egresado').classList.toggle('hidden', !(role === 'director' && estadoAlumnoActual === 'activo'));
+  document.getElementById('panel-nuevo-ciclo').classList.toggle('hidden', !(role === 'director' && estadoAlumnoActual === 'egresado'));
+  if (role === 'director' && estadoAlumnoActual === 'egresado') {
+    poblarSelectCoaches(document.getElementById('nuevo-ciclo-coach'), null);
+  }
+
+  await renderHistorialCiclos(alumno.ciclosAnteriores);
 
   await cargarTestParaCiclo(currentCicloId);
   await cargarAcuerdoParaCiclo(currentCicloId);
@@ -453,14 +552,18 @@ if (btnGenerarAcuerdo) {
   btnGenerarAcuerdo.addEventListener('click', async () => {
     if (!currentCicloId) return;
     btnGenerarAcuerdo.disabled = true;
-    // TODO (pdf-acuerdo.js): generar el PDF real acá, con los datos de
-    // alumno + ciclo + acuerdoPago ya reunidos, y guardar su URL en
-    // acuerdosPago/{cicloId}/pdfUrl — este es el "Coach genera el acuerdo"
-    // del proceso original. El director solo lo revisa después, no lo genera.
-    await generarAcuerdoYEnviarRevision(currentCicloId);
-    await abrirFicha(currentAlumnoId);
-    await cargarListasAlumnos();
-    btnGenerarAcuerdo.disabled = false;
+    btnGenerarAcuerdo.textContent = 'Generando PDF...';
+    try {
+      await generarPdfAcuerdo(currentAlumnoId, currentCicloId);
+      await generarAcuerdoYEnviarRevision(currentCicloId);
+      await abrirFicha(currentAlumnoId);
+      await cargarListasAlumnos();
+    } catch (err) {
+      alert('No se pudo generar el PDF del acuerdo. Intenta de nuevo.');
+    } finally {
+      btnGenerarAcuerdo.disabled = false;
+      btnGenerarAcuerdo.textContent = 'Generar Acuerdo y Enviar a Revisión';
+    }
   });
 }
 
@@ -556,6 +659,70 @@ if (btnEliminarAlumno) {
       setNav('alumnos');
     } finally {
       btnEliminarAlumno.disabled = false;
+    }
+  });
+}
+
+const btnMarcarEgresado = document.getElementById('btn-marcar-egresado');
+if (btnMarcarEgresado) {
+  btnMarcarEgresado.addEventListener('click', async () => {
+    if (!currentCicloId) return;
+    const confirmado = confirm('¿Marcar a este alumno como egresado? Vas a poder iniciarle un ciclo nuevo después sin perder nada del historial.');
+    if (!confirmado) return;
+    btnMarcarEgresado.disabled = true;
+    try {
+      await update(ref(db, `ciclos/${currentCicloId}`), { estadoAlumno: 'egresado' });
+      await abrirFicha(currentAlumnoId);
+      await cargarListasAlumnos();
+    } finally {
+      btnMarcarEgresado.disabled = false;
+    }
+  });
+}
+
+function autocompletarMontoNuevoCiclo() {
+  const selectPrograma = document.getElementById('nuevo-ciclo-programa');
+  const selectMoneda = document.getElementById('nuevo-ciclo-moneda');
+  const inputMonto = document.getElementById('nuevo-ciclo-monto');
+  if (!selectPrograma || !selectMoneda || !inputMonto) return;
+  const programa = PROGRAMAS[selectPrograma.value];
+  if (selectMoneda.value === 'CLP' && programa) {
+    inputMonto.value = programa.precioClp.toLocaleString('es-CL');
+  }
+}
+const selectNuevoCicloPrograma = document.getElementById('nuevo-ciclo-programa');
+const selectNuevoCicloMoneda = document.getElementById('nuevo-ciclo-moneda');
+if (selectNuevoCicloPrograma) selectNuevoCicloPrograma.addEventListener('change', autocompletarMontoNuevoCiclo);
+if (selectNuevoCicloMoneda) selectNuevoCicloMoneda.addEventListener('change', autocompletarMontoNuevoCiclo);
+
+const btnCrearNuevoCiclo = document.getElementById('btn-crear-nuevo-ciclo');
+if (btnCrearNuevoCiclo) {
+  btnCrearNuevoCiclo.addEventListener('click', async () => {
+    if (!currentAlumnoId || !currentCicloId) return;
+    const programa = document.getElementById('nuevo-ciclo-programa').value;
+    const coachId = document.getElementById('nuevo-ciclo-coach').value;
+    const monto = document.getElementById('nuevo-ciclo-monto').value.trim();
+    const moneda = document.getElementById('nuevo-ciclo-moneda').value;
+
+    if (!coachId) { alert('Selecciona un coach.'); return; }
+
+    btnCrearNuevoCiclo.disabled = true;
+    try {
+      const cicloQueTermina = currentCicloId;
+      const alumnoSnap = await get(ref(db, `alumnos/${currentAlumnoId}`));
+      const ciclosAnteriores = (alumnoSnap.exists() && alumnoSnap.val().ciclosAnteriores) || [];
+      if (!ciclosAnteriores.includes(cicloQueTermina)) ciclosAnteriores.push(cicloQueTermina);
+      await update(ref(db, `alumnos/${currentAlumnoId}`), { ciclosAnteriores });
+
+      await crearCiclo({
+        alumnoId: currentAlumnoId, coachId, programa,
+        acuerdoPago: { montoTotal: monto, moneda, descuento: '', abono: '', saldo: monto, cuotas: {}, pdfUrl: '' }
+      });
+
+      await abrirFicha(currentAlumnoId);
+      await cargarListasAlumnos();
+    } finally {
+      btnCrearNuevoCiclo.disabled = false;
     }
   });
 }
