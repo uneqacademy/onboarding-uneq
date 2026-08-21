@@ -12,7 +12,7 @@
    ============================================================ */
 
 import { db } from './firebase-config.js';
-import { ref, get, set } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-database.js";
+import { ref, get, set, update } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-database.js";
 import { getCurrentRole } from './main.js';
 
 let cicloIdActual = null;
@@ -84,6 +84,7 @@ export async function cargarAcuerdoParaCiclo(cicloId) {
     document.getElementById('pago-monto-total').value = '';
     document.getElementById('pago-descuento').value = '';
     document.getElementById('pago-abono').value = '';
+    document.getElementById('pago-fecha-abono').value = '';
     document.getElementById('pago-saldo').value = '';
     const estadoPdfElVacio = document.getElementById('pago-estado-pdf');
     if (estadoPdfElVacio) estadoPdfElVacio.textContent = '—';
@@ -98,6 +99,7 @@ export async function cargarAcuerdoParaCiclo(cicloId) {
   document.getElementById('pago-monto-total').value = acuerdo.montoTotal || '';
   document.getElementById('pago-descuento').value = acuerdo.descuento || '';
   document.getElementById('pago-abono').value = acuerdo.abono || '';
+  document.getElementById('pago-fecha-abono').value = acuerdo.fechaAbono || '';
   recalcularSaldo();
 
   // Estado del PDF: se genera desde "Generar Acuerdo y Enviar a Revisión"
@@ -141,13 +143,13 @@ if (btnGuardarAcuerdo) {
         }
       });
 
-      await set(ref(db, `acuerdosPago/${cicloIdActual}`), {
+      await update(ref(db, `acuerdosPago/${cicloIdActual}`), {
         montoTotal: inputMonto.value.trim(),
         moneda: monedaActual,
         descuento: inputDescuento.value.trim(),
         abono: inputAbono.value.trim(),
-        cuotas,
-        pdfUrl: ''
+        fechaAbono: document.getElementById('pago-fecha-abono').value,
+        cuotas
       });
 
       await cargarAcuerdoParaCiclo(cicloIdActual);

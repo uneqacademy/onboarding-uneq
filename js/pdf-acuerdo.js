@@ -1,18 +1,125 @@
 /* ============================================================
    pdf-acuerdo.js
-   Genera el PDF del acuerdo (alumno + programa + condiciones de
-   pago + cuotas) y lo sube a Firebase Storage en
+   Genera el Acuerdo de Prestación de Servicios de Mentoría real
+   (texto legal completo de UNEQ) y lo sube a Firebase Storage en
    /acuerdos/{cicloId}.pdf, guardando la URL en
    acuerdosPago/{cicloId}/pdfUrl. Se dispara desde el botón del
-   coach "Generar Acuerdo y Enviar a Revisión" — es el "Coach
-   genera el acuerdo" del proceso original.
+   coach "Generar Acuerdo y Enviar a Revisión".
+
+   Nota de diseño: los títulos de cláusula van en negrita; el
+   texto DENTRO de los párrafos va en formato normal, sin
+   negritas a media frase (mezclar negrita/normal en la misma
+   línea con jsPDF requiere posicionamiento manual palabra por
+   palabra — no cambia el contenido ni el valor legal).
+
+   fecha_ingreso/fecha_egreso: como no existen aún en este punto
+   del flujo (se fijan recién al marcar Firma Procesada), se usa
+   la fecha de generación del documento como inicio estimado —
+   NO se guarda en el ciclo, es solo para el texto del PDF.
    ============================================================ */
 
 import { db, storage } from './firebase-config.js';
 import { ref, get, update } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-database.js";
 import { ref as storageRef, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-storage.js";
 import { jsPDF } from "https://esm.sh/jspdf@4.2.1";
-import { programaLabel } from './ciclos.js';
+import { programaLabel, calcularFechaEgreso } from './ciclos.js';
+
+const MARGEN_X = 20;
+const ANCHO_UTIL = 170;
+const ALTO_MAX = 277;
+
+function parsearMontoCLP(valor) {
+  if (typeof valor === 'number') return valor;
+  if (!valor) return 0;
+  const limpio = valor.toString().replace(/\./g, '').replace(',', '.');
+  return parseFloat(limpio) || 0;
+}
+
+function formatFechaLarga(fechaStr) {
+  if (!fechaStr) return '—';
+  return new Intl.DateTimeFormat('es-CL', { day: 'numeric', month: 'long', year: 'numeric' }).format(new Date(fechaStr + 'T00:00:00'));
+}
+
+function formatDireccion(dir) {
+  if (!dir) return '—';
+  const partes = [
+    [dir.calle, dir.numero].filter(Boolean).join(' '),
+    dir.departamento,
+    dir.comuna,
+    dir.region,
+    dir.pais
+  ].filter(Boolean);
+  return partes.length ? partes.join(', ') : '—';
+}
+
+function capitalizar(texto) {
+  if (!texto) return '';
+  return texto.charAt(0).toUpperCase() + texto.slice(1);
+}
+
+/* --- Beneficios por programa (texto estático, tal cual lo definiste) --- */
+const BENEFICIOS = {
+  begin: {
+    items: [
+      'Contenido pregrabado de ejecución práctica — Nivel Inicial, para las 4 fases de la metodología 2E (acceso: 1 año)',
+      'BOX de consultas sobre el contenido, con mentor de cabecera que conoce la metodología completa y responde todas las temáticas (tiempo de respuesta: hasta 3 días hábiles) — vigente durante el programa: 3 meses',
+      'Comunidad UNEQ Mentoring en Hotmart (acceso: 6 meses)',
+      'Sesiones semanales grupales con coach (vigente durante el programa: 3 meses)',
+      '1 sesión mensual grupal con Maca y Felipe (vigente durante el programa: 3 meses)',
+      'Acceso a Membresía ONE, con clases todos los miércoles a las 9:00 hrs (acceso: 3 meses)',
+      'Acceso al Programa de Acompañamiento Sinergia (acceso: de por vida)',
+      'Acceso al Curso Tu Cliente Soñado (acceso: de por vida)',
+      'Grupo de WhatsApp exclusivo Begin (acceso: 6 meses)',
+      'Grupo de WhatsApp Ex-Alumnos Begin (acceso: de por vida, una vez finalizado el programa)',
+      'Plantillas prediseñadas listas para usar'
+    ],
+    duracion: 'Duración del programa (sesiones en vivo y BOX de consultas): 3 meses.',
+    nota: null
+  },
+  next: {
+    items: [
+      'Contenido pregrabado de ejecución práctica — Nivel Inicial + Nivel Intermedio, para las 4 fases de la metodología 2E (acceso: de por vida)',
+      'BOX de consultas específica por temática, con mentor especializado distinto por área (tiempo de respuesta: máximo 48 horas) — vigente durante el programa: 6 meses',
+      'Comunidad UNEQ Mentoring en Hotmart (vigente durante el programa: 6 meses)',
+      'Coach personalizado (vigente durante el programa: 6 meses)',
+      'Mentorías en vivo de lunes a viernes, con temáticas: Lunes Copywriting, Martes Mentalidad-Estrategia-Tráfico, Miércoles Identidad Visual y Redes Sociales, Jueves Ventas Energéticas, Viernes Gestión de Proyectos y Estructuración de Calendarios (vigente durante el programa: 6 meses)',
+      'Acceso a Membresía ONE, con clases todos los miércoles a las 9:00 hrs (acceso: 6 meses)',
+      'Acceso al Programa de Acompañamiento Sinergia (acceso: de por vida)',
+      'Acceso al Curso Tu Cliente Soñado (acceso: de por vida)',
+      'Plantillas prediseñadas listas para usar',
+      'Acceso a equipo del alumno, si lo requiere (hasta 2 personas)',
+      'Grupo de WhatsApp UNEQ Mentoring (acceso: 6 meses)',
+      'Grupo de WhatsApp Ex-Alumnos UNEQ Mentoring (acceso: de por vida, una vez finalizado el programa)',
+      'Hotseat el primer martes de cada mes (acceso: 1 año)',
+      'Acceso gratuito a todos los eventos online que realice la Academia (acceso: 1 año)',
+      '1 acceso general al evento presencial Sinergia on Stage'
+    ],
+    duracion: 'Duración del programa (sesiones en vivo y BOX de consultas): 6 meses.',
+    nota: null
+  },
+  exit: {
+    items: [
+      'Contenido pregrabado de ejecución práctica — Nivel Avanzado, para las 4 fases de la metodología 2E (acceso: de por vida)',
+      'BOX de consultas específica por temática, con mentor especializado distinto por área (tiempo de respuesta: máximo 48 horas) — vigente durante el programa: 6 meses',
+      'Comunidad UNEQ Mentoring en Hotmart (vigente durante el programa: 6 meses)',
+      'Mentorías en vivo de lunes a viernes, con temáticas: Lunes Copywriting, Martes Mentalidad-Estrategia-Tráfico, Miércoles Identidad Visual y Redes Sociales, Jueves Ventas Energéticas, Viernes Gestión de Proyectos y Estructuración de Calendarios (vigente durante el programa: 6 meses)',
+      'Acceso a Membresía ONE, con clases todos los miércoles a las 9:00 hrs (acceso: 1 año)',
+      'Acceso al Programa de Acompañamiento Sinergia (acceso: de por vida)',
+      'Acceso al Curso Tu Cliente Soñado (acceso: de por vida)',
+      'Plantillas prediseñadas listas para usar',
+      'Acceso a equipo del alumno, si lo requiere (hasta 2 personas)',
+      'Grupo de WhatsApp UNEQ Mentoring (vigente durante el programa: 6 meses)',
+      'Grupo de WhatsApp privado y exclusivo con Maca y Felipe (vigente durante el programa: 6 meses)',
+      'Grupo de WhatsApp Ex-Alumnos UNEQ Mentoring (acceso: de por vida, una vez finalizado el programa)',
+      '8 sesiones personalizadas en Zoom con Maca y Felipe, directo (deben utilizarse dentro de los primeros 6 meses del programa)',
+      'Hotseat el primer martes de cada mes (acceso: 1 año)',
+      'Acceso gratuito a todos los eventos online que realice la Academia (acceso: 1 año)',
+      '1 acceso general al evento presencial Sinergia on Stage'
+    ],
+    duracion: 'Duración del programa (sesiones en vivo y BOX de consultas): 6 meses.',
+    nota: '(En eXIT no se incluye Coach Personalizado; este es reemplazado por el acompañamiento directo de Maca y Felipe a través de WhatsApp privado y las sesiones personalizadas en Zoom.)'
+  }
+};
 
 export async function generarPdfAcuerdo(alumnoId, cicloId) {
   const [alumnoSnap, cicloSnap, acuerdoSnap] = await Promise.all([
@@ -23,49 +130,170 @@ export async function generarPdfAcuerdo(alumnoId, cicloId) {
   const alumno = alumnoSnap.exists() ? alumnoSnap.val() : {};
   const ciclo = cicloSnap.exists() ? cicloSnap.val() : {};
   const acuerdo = acuerdoSnap.exists() ? acuerdoSnap.val() : {};
-  const moneda = acuerdo.moneda || '';
+  const moneda = acuerdo.moneda || 'CLP';
+
+  const hoyStr = new Date().toISOString().slice(0, 10);
+  const fechaIngresoEstimada = hoyStr;
+  const fechaEgresoEstimada = calcularFechaEgreso(hoyStr, ciclo.programa);
+
+  const montoTotal = parsearMontoCLP(acuerdo.montoTotal);
+  const descuento = parsearMontoCLP(acuerdo.descuento);
+  const abono = parsearMontoCLP(acuerdo.abono);
+  const saldo = montoTotal - descuento - abono;
+
+  const nombreCompleto = `${alumno.nombre || ''} ${alumno.apellido || ''}`.trim();
+  let nombreCoach = '—';
+  if (ciclo.coachId) {
+    const coachSnap = await get(ref(db, `usuarios/${ciclo.coachId}/nombre`));
+    if (coachSnap.exists()) nombreCoach = coachSnap.val();
+  }
 
   const doc = new jsPDF();
   let y = 22;
 
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(16);
-  doc.text('Acuerdo de Mentoría — UNEQ Mentoring', 20, y);
-  y += 14;
-
-  doc.setFontSize(11);
-  doc.setFont('helvetica', 'normal');
-  doc.text(`Alumno: ${alumno.nombre || ''} ${alumno.apellido || ''}`, 20, y); y += 7;
-  doc.text(`RUT: ${alumno.rut || '—'}`, 20, y); y += 7;
-  doc.text(`Programa: ${programaLabel(ciclo.programa)}`, 20, y); y += 14;
-
-  doc.setFont('helvetica', 'bold');
-  doc.text('Condiciones de pago', 20, y); y += 8;
-  doc.setFont('helvetica', 'normal');
-
-  const montoTotal = parseFloat(acuerdo.montoTotal) || 0;
-  const descuento = parseFloat(acuerdo.descuento) || 0;
-  const abono = parseFloat(acuerdo.abono) || 0;
-  const saldo = montoTotal - descuento - abono;
-
-  doc.text(`Monto total: ${acuerdo.montoTotal || '—'} ${moneda}`, 20, y); y += 7;
-  doc.text(`Descuento: ${acuerdo.descuento || '0'}`, 20, y); y += 7;
-  doc.text(`Abono: ${acuerdo.abono || '0'} ${moneda}`, 20, y); y += 7;
-  doc.text(`Saldo a financiar: ${saldo.toLocaleString('es-CL')} ${moneda}`, 20, y); y += 14;
-
-  if (acuerdo.cuotas && Object.keys(acuerdo.cuotas).length) {
-    doc.setFont('helvetica', 'bold');
-    doc.text('Cuotas', 20, y); y += 8;
-    doc.setFont('helvetica', 'normal');
-    Object.values(acuerdo.cuotas)
-      .sort((a, b) => (a.fecha || '').localeCompare(b.fecha || ''))
-      .forEach(c => {
-        if (y > 275) { doc.addPage(); y = 20; }
-        doc.text(`${c.fecha || '—'}    ${c.monto || '—'} ${moneda}`, 20, y);
-        y += 7;
-      });
+  function saltoDePaginaSiNecesario(altura) {
+    if (y + altura > ALTO_MAX) {
+      doc.addPage();
+      y = 20;
+    }
   }
 
+  function parrafo(texto, { size = 10.5, style = 'normal', spacingAfter = 5, indentPrimeraLinea = 0 } = {}) {
+    doc.setFontSize(size);
+    doc.setFont('helvetica', style);
+    const lineas = doc.splitTextToSize(texto, ANCHO_UTIL - indentPrimeraLinea);
+    const alturaLinea = size * 0.42;
+    lineas.forEach(linea => {
+      saltoDePaginaSiNecesario(alturaLinea);
+      doc.text(linea, MARGEN_X, y);
+      y += alturaLinea;
+    });
+    y += spacingAfter;
+  }
+
+  function tituloSeccion(texto) {
+    saltoDePaginaSiNecesario(12);
+    doc.setFontSize(12);
+    doc.setFont('helvetica', 'bold');
+    doc.text(texto, MARGEN_X, y);
+    y += 7;
+  }
+
+  function bullets(items) {
+    doc.setFontSize(10.5);
+    doc.setFont('helvetica', 'normal');
+    const alturaLinea = 4.4;
+    items.forEach(item => {
+      const lineas = doc.splitTextToSize('•  ' + item, ANCHO_UTIL - 4);
+      lineas.forEach((linea, idx) => {
+        saltoDePaginaSiNecesario(alturaLinea);
+        doc.text(linea, MARGEN_X + (idx === 0 ? 0 : 4), y);
+        y += alturaLinea;
+      });
+    });
+    y += 3;
+  }
+
+  function tablaCuotas(cuotas) {
+    if (!cuotas.length) {
+      parrafo('Sin cuotas registradas.', { style: 'normal' });
+      return;
+    }
+    saltoDePaginaSiNecesario(10);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(10.5);
+    doc.text('Fecha', MARGEN_X, y);
+    doc.text('Monto', MARGEN_X + 55, y);
+    doc.text('Estado', MARGEN_X + 110, y);
+    y += 2;
+    doc.setDrawColor(180);
+    doc.line(MARGEN_X, y, MARGEN_X + ANCHO_UTIL, y);
+    y += 5;
+    doc.setFont('helvetica', 'normal');
+    cuotas.forEach(c => {
+      saltoDePaginaSiNecesario(6);
+      doc.text(formatFechaLarga(c.fecha), MARGEN_X, y);
+      doc.text(`${c.monto || '—'} ${moneda}`, MARGEN_X + 55, y);
+      doc.text(capitalizar(c.estado || 'pendiente'), MARGEN_X + 110, y);
+      y += 6;
+    });
+    y += 4;
+  }
+
+  // --- Título ---
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(14);
+  doc.text('ACUERDO DE PRESTACIÓN DE SERVICIOS DE MENTORÍA', 105, y, { align: 'center' });
+  y += 12;
+
+  // --- Intro y partes ---
+  parrafo(
+    `En Santiago de Chile, con fecha ${formatFechaLarga(hoyStr)}, entre AGENCIA UNEQ LTDA., RUT 77.438.998-9, representada en este acto por don Luis Felipe Gostling, RUT 13.673.392-3, y doña Macarena Francisca Cruz Montt, RUT 16.143.054-4, en adelante "UNEQ"; y ${nombreCompleto}, RUT ${alumno.rut || '—'}, con domicilio en ${formatDireccion(alumno.direccion)}, en adelante "el/la Alumno/a"; se acuerda celebrar el presente Acuerdo de Prestación de Servicios de Mentoría, sujeto a las siguientes cláusulas:`
+  );
+
+  // --- PRIMERO ---
+  tituloSeccion('PRIMERO: Objeto del Acuerdo');
+  parrafo(
+    `UNEQ se compromete a prestar al Alumno/a servicios de mentoría bajo el programa ${programaLabel(ciclo.programa)}, basado en la metodología propia 2E, con fecha de inicio el ${formatFechaLarga(fechaIngresoEstimada)} y fecha de término estimada el ${formatFechaLarga(fechaEgresoEstimada)}.`
+  );
+  parrafo(`El Alumno/a será acompañado/a durante este proceso por su coach asignado/a, ${nombreCoach}.`);
+
+  // --- SEGUNDO ---
+  tituloSeccion('SEGUNDO: Condiciones Económicas');
+  const textoDescuento = descuento > 0 ? ', que incluye un descuento aplicado sobre el valor de lista' : '';
+  parrafo(`El valor total del programa ${programaLabel(ciclo.programa)} es de ${acuerdo.montoTotal || '—'} ${moneda}${textoDescuento}.`);
+  parrafo('La forma de pago acordada es la siguiente:');
+  parrafo(`Abono inicial: ${acuerdo.abono || '0'} ${moneda}, pagado con fecha ${formatFechaLarga(acuerdo.fechaAbono)}`);
+  parrafo(`Saldo: ${saldo.toLocaleString('es-CL')} ${moneda}, según el siguiente calendario de cuotas:`);
+
+  const cuotasArr = acuerdo.cuotas ? Object.values(acuerdo.cuotas).sort((a, b) => (a.fecha || '').localeCompare(b.fecha || '')) : [];
+  tablaCuotas(cuotasArr);
+
+  parrafo('En Chile, UNEQ emite factura por los servicios prestados. Para alumnos extranjeros, el comprobante de pago es emitido a través de la plataforma Hotmart.');
+
+  // --- TERCERO ---
+  tituloSeccion('TERCERO: Compromisos de UNEQ');
+  parrafo('UNEQ se compromete a otorgar al Alumno/a acceso a los siguientes contenidos y beneficios, correspondientes al programa contratado:');
+  const beneficios = BENEFICIOS[ciclo.programa] || BENEFICIOS.begin;
+  bullets(beneficios.items);
+  parrafo(beneficios.duracion, { style: 'bold' });
+  if (beneficios.nota) parrafo(beneficios.nota, { style: 'italic' });
+
+  // --- CUARTO ---
+  tituloSeccion('CUARTO: Compromisos del Alumno/a');
+  parrafo('El Alumno/a se compromete a participar activamente, asistir a las sesiones acordadas, y cumplir con los pagos en las fechas establecidas.');
+  parrafo('El Alumno/a declara comprender que los resultados de esta mentoría no dependen exclusivamente de UNEQ, sino principalmente del esfuerzo, compromiso y ejecución del propio Alumno/a, y que dichos resultados están sujetos a múltiples variables externas que escapan del control de UNEQ (mercado, industria, contexto económico, entre otras). Cada proyecto es único, por lo que los resultados obtenidos por otros alumnos no constituyen garantía ni referencia vinculante de los resultados que el Alumno/a pueda obtener.');
+  parrafo('Asimismo, el Alumno/a declara entender que, para aplicar correctamente los contenidos entregados y obtener resultados, es probable que deba considerar inversión adicional propia en publicidad y/o herramientas digitales, según su caso particular.');
+
+  // --- QUINTO ---
+  tituloSeccion('QUINTO: Atraso en Pagos');
+  parrafo('En caso de atraso en el pago de alguna cuota acordada, el Alumno/a podría perder el acceso a los activos del programa y a las mentorías en vivo mientras dicho atraso se mantenga vigente. El acceso se restablece una vez regularizado el pago.');
+
+  // --- SEXTO ---
+  tituloSeccion('SEXTO: Retiro y Congelamiento');
+  parrafo('En caso de retiro voluntario del Alumno/a durante el desarrollo del programa, no procederá devolución de los montos pagados.');
+  parrafo('El Alumno/a tendrá derecho a solicitar un (1) congelamiento de su participación en el programa, por un período máximo de tres (3) meses. La fecha de término del programa se extenderá automáticamente por el mismo número de días que dure el congelamiento.');
+
+  // --- SÉPTIMO ---
+  tituloSeccion('SÉPTIMO: Comportamiento y Convivencia en la Comunidad');
+  parrafo('El respeto hacia el equipo de UNEQ, coaches y demás miembros de la comunidad es un valor fundamental e innegociable. Cualquier conducta que atente contra este principio, o contra los valores de UNEQ, será causal de expulsión inmediata del programa, sin derecho a devolución de los montos pagados.');
+
+  // --- OCTAVO ---
+  tituloSeccion('OCTAVO: Confidencialidad y Propiedad Intelectual');
+  parrafo('La metodología 2E, materiales, contenidos y demás recursos entregados durante el programa son de propiedad exclusiva de UNEQ, y su uso queda restringido exclusivamente al desarrollo personal del Alumno/a, quedando prohibida su reproducción, distribución o uso comercial no autorizado.');
+
+  // --- NOVENO ---
+  tituloSeccion('NOVENO: Jurisdicción');
+  parrafo('Para todos los efectos legales derivados del presente acuerdo, las partes fijan su domicilio en la ciudad de Santiago de Chile, sometiéndose a la jurisdicción de sus Tribunales.');
+
+  // --- FIRMAS ---
+  tituloSeccion('FIRMAS');
+  parrafo('Firmado electrónicamente por las partes a través de Google Workspace.');
+  parrafo('Felipe Gostling, RUT 13.673.392-3 en representación de Agencia UNEQ Ltda.');
+  parrafo('Macarena Cruz, RUT 16.143.054-4 en representación de Agencia UNEQ Ltda.');
+  parrafo(`${nombreCompleto}, RUT: ${alumno.rut || '—'}`);
+
+  // --- Subir a Storage y guardar la URL ---
   const blob = doc.output('blob');
   const archivoRef = storageRef(storage, `acuerdos/${cicloId}.pdf`);
   await uploadBytes(archivoRef, blob);

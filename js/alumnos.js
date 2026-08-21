@@ -143,6 +143,13 @@ function getTelefono() {
 }
 
 
+function parsearMontoCLP(valor) {
+  if (typeof valor === 'number') return valor;
+  if (!valor) return 0;
+  const limpio = valor.toString().replace(/\./g, '').replace(',', '.');
+  return parseFloat(limpio) || 0;
+}
+
 function formatMontoPorMoneda(totalesPorMoneda) {
   const partes = Object.entries(totalesPorMoneda)
     .filter(([, monto]) => monto > 0)
@@ -255,14 +262,14 @@ export async function cargarListasAlumnos() {
 
       if (acuerdo) {
         const moneda = acuerdo.moneda || 'CLP';
-        const montoTotal = parseFloat(acuerdo.montoTotal) || 0;
-        const descuento = parseFloat(acuerdo.descuento) || 0;
-        const abono = parseFloat(acuerdo.abono) || 0;
+        const montoTotal = parsearMontoCLP(acuerdo.montoTotal);
+        const descuento = parsearMontoCLP(acuerdo.descuento);
+        const abono = parsearMontoCLP(acuerdo.abono);
         const saldoBase = montoTotal - descuento - abono;
 
         const cuotas = acuerdo.cuotas ? Object.values(acuerdo.cuotas) : [];
-        const pagado = cuotas.filter(c => c.estado === 'pagada').reduce((s, c) => s + (parseFloat(c.monto) || 0), 0);
-        const impago = cuotas.filter(c => c.estado === 'impaga').reduce((s, c) => s + (parseFloat(c.monto) || 0), 0);
+        const pagado = cuotas.filter(c => c.estado === 'pagada').reduce((s, c) => s + parsearMontoCLP(c.monto), 0);
+        const impago = cuotas.filter(c => c.estado === 'impaga').reduce((s, c) => s + parsearMontoCLP(c.monto), 0);
 
         const porCobrar = Math.max(saldoBase - pagado, 0);
         if (porCobrar > 0) porCobrarPorMoneda[moneda] = (porCobrarPorMoneda[moneda] || 0) + porCobrar;
