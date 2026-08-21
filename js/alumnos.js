@@ -126,12 +126,12 @@ if (btnCambiarFoto && inputFoto) {
       await uploadBytes(archivoRef, file);
       const url = await getDownloadURL(archivoRef);
       await update(ref(db, `alumnos/${currentAlumnoId}`), { fotoUrl: url });
-      document.getElementById('datos-foto-preview').src = url;
+      await abrirFicha(currentAlumnoId);
       await cargarListasAlumnos();
     } catch (err) {
       alert('No se pudo subir la foto. Intenta de nuevo.');
-    } finally {
       btnCambiarFoto.disabled = false;
+    } finally {
       btnCambiarFoto.textContent = textoOriginal;
       inputFoto.value = '';
     }
@@ -504,6 +504,9 @@ function aplicarBloqueoDatosCiclo(bloqueado, role) {
   const btnWhatsapp = document.getElementById('ciclo-whatsapp-toggle');
   if (btnWhatsapp) btnWhatsapp.disabled = bloqueado;
 
+  const btnFoto = document.getElementById('btn-cambiar-foto');
+  if (btnFoto) btnFoto.disabled = bloqueado;
+
   document.querySelectorAll('#tabla-redes-sociales-body select, #tabla-redes-sociales-body input, #tabla-redes-sociales-body button')
     .forEach(el => { el.disabled = bloqueado; });
   const btnAgregarRed = document.getElementById('btn-agregar-red-social');
@@ -513,7 +516,7 @@ function aplicarBloqueoDatosCiclo(bloqueado, role) {
 function habilitarEdicionParcialCoach() {
   ['datos-email', 'datos-telefono', 'datos-direccion-calle', 'datos-direccion-numero',
     'datos-direccion-depto', 'datos-direccion-comuna', 'datos-direccion-region', 'datos-direccion-pais',
-    'ciclo-fase-metodologia'
+    'ciclo-fase-metodologia', 'ciclo-whatsapp-toggle', 'btn-cambiar-foto'
   ].forEach(id => { const el = document.getElementById(id); if (el) el.disabled = false; });
 
   document.querySelectorAll('#tabla-redes-sociales-body select, #tabla-redes-sociales-body input, #tabla-redes-sociales-body button')
@@ -690,7 +693,6 @@ async function abrirFicha(alumnoId) {
     bloqueoActual = !!ciclo.bloqueoCoach;
     if (role === 'coach') {
       setCandado(bloqueoActual);
-      if (bloqueoActual) btnEditar.classList.add('hidden');
     } else {
       panelCandado.classList.add('hidden');
     }
