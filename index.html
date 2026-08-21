@@ -187,7 +187,7 @@
           <div class="panel__body" style="padding:0;">
             <table class="data-table">
               <thead>
-                <tr><th>Alumno</th><th>Programa</th><th>Estado Proceso</th><th>Estado Alumno</th></tr>
+                <tr><th>Alumno</th><th>Programa</th><th>Estado Proceso</th><th>Estado Alumno</th><th>Fase</th></tr>
               </thead>
               <tbody id="tabla-alumnos-dashboard-coach"></tbody>
             </table>
@@ -322,6 +322,7 @@
                 <div class="field"><label>Edad</label><input id="datos-edad" disabled placeholder="Se calcula sola"></div>
                 <div class="field"><label>Género</label><select id="datos-genero"><option>Femenino</option><option>Masculino</option><option>Otro</option><option>Prefiere no decir</option></select></div>
                 <div class="field"><label>Teléfono</label><input type="tel" id="datos-telefono"></div>
+                <div class="field"><label>Correo</label><input type="email" id="datos-email"></div>
                 <div class="field">
                   <label>Ocupación</label>
                   <select id="datos-ocupacion">
@@ -345,6 +346,14 @@
                 <div class="field"><label>Región</label><input id="datos-direccion-region"></div>
                 <div class="field"><label>País</label><input id="datos-direccion-pais" value="Chile"></div>
               </div>
+              <div class="mb-16" style="margin-top:14px;">
+                <label>Redes Sociales (opcional)</label>
+                <table class="data-table mb-16" id="tabla-redes-sociales">
+                  <thead><tr><th>Plataforma</th><th>Usuario / URL</th><th></th><th></th></tr></thead>
+                  <tbody id="tabla-redes-sociales-body"></tbody>
+                </table>
+                <button class="btn btn--ghost" id="btn-agregar-red-social">+ Agregar Red Social</button>
+              </div>
               <p id="datos-error" class="hidden" style="color:#C0392B; margin-bottom:12px;"></p>
               <div class="flex-between" style="margin-top:16px;">
                 <span></span>
@@ -363,6 +372,22 @@
                 <div class="field"><label>Fecha Ingreso</label><input type="date" id="ciclo-fecha-ingreso" disabled placeholder="Se define al quedar Firma Procesada"></div>
                 <div class="field"><label>Fecha Egreso (auto)</label><input type="date" id="ciclo-fecha-egreso" disabled placeholder="Se calcula sola"></div>
                 <div class="field"><label>Coach Asignado</label><select id="ciclo-coach"></select></div>
+                <div class="field">
+                  <label>Fase de la Metodología</label>
+                  <select id="ciclo-fase-metodologia">
+                    <option value="">Sin definir</option>
+                    <option value="fase1">Fase 1: Claridad y Fundamentos</option>
+                    <option value="fase2">Fase 2: Cliente Soñado</option>
+                    <option value="fase3">Fase 3: Oferta y Método</option>
+                    <option value="fase4">Fase 4: Acción y Sistemas</option>
+                  </select>
+                </div>
+                <div class="field">
+                  <label>Grupo de WhatsApp de su nivel</label>
+                  <label style="display:flex; align-items:center; gap:8px; margin-top:8px; font-weight:400;">
+                    <input type="checkbox" id="ciclo-whatsapp-grupo" style="width:auto;"> Ya se unió
+                  </label>
+                </div>
               </div>
               <div class="field-grid mb-16" style="margin-top:14px;">
                 <div class="field"><label>Facturación Actual</label><input id="ciclo-facturacion-actual" placeholder="$0"></div>
@@ -495,7 +520,7 @@
           <div class="panel__body" style="padding:0;">
             <table class="data-table">
               <thead>
-                <tr><th>Alumno</th><th>Programa</th><th>Estado Proceso</th><th>Estado Alumno</th><th>Ingreso</th><th>Egreso</th></tr>
+                <tr><th>Alumno</th><th>Programa</th><th>Estado Proceso</th><th>Estado Alumno</th><th>Fase</th><th>Ingreso</th><th>Egreso</th></tr>
               </thead>
               <tbody id="tabla-alumnos-coach"></tbody>
             </table>

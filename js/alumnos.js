@@ -54,6 +54,11 @@ function labelEstadoAlumno(estado) {
   return 'Activo';
 }
 
+const FASE_METODOLOGIA_LABELS = { fase1: 'Fase 1', fase2: 'Fase 2', fase3: 'Fase 3', fase4: 'Fase 4' };
+function faseMetodologiaLabel(fase) {
+  return FASE_METODOLOGIA_LABELS[fase] || 'Sin definir';
+}
+
 function proximaCuotaPendiente(cuotas) {
   const pendientes = cuotas.filter(c => c.estado !== 'pagada' && c.fecha).sort((a, b) => a.fecha.localeCompare(b.fecha));
   return pendientes.length ? formatFecha(pendientes[0].fecha) : '—';
@@ -96,12 +101,62 @@ if (inputFechaNacimiento) inputFechaNacimiento.addEventListener('change', actual
 /* --- Ocupación: muestra el campo de especialidad solo para las que lo piden --- */
 const OCUPACIONES_CON_ESPECIALIDAD = ['Coach', 'Terapeuta', 'Ingeniero/a', 'Consultor/a', 'Otro'];
 
+/* --- Redes sociales: se escribe el usuario, la URL se arma sola --- */
+const PLATAFORMAS_REDES = ['Instagram', 'Facebook', 'TikTok', 'YouTube', 'LinkedIn', 'Otro'];
+
+const URL_REDES = {
+  Instagram: u => `https://instagram.com/${u.replace(/^@/, '')}`,
+  Facebook: u => `https://facebook.com/${u.replace(/^@/, '')}`,
+  TikTok: u => `https://tiktok.com/@${u.replace(/^@/, '')}`,
+  YouTube: u => `https://youtube.com/@${u.replace(/^@/, '')}`,
+  LinkedIn: u => `https://linkedin.com/in/${u.replace(/^@/, '')}`,
+  Otro: u => (u.startsWith('http') ? u : `https://${u}`)
+};
+
+function construirUrlRed(plataforma, usuario) {
+  if (!usuario) return '';
+  const fn = URL_REDES[plataforma] || URL_REDES.Otro;
+  return fn(usuario.trim());
+}
+
+function agregarFilaRedSocial(entrada) {
+  const tbody = document.getElementById('tabla-redes-sociales-body');
+  if (!tbody) return;
+  const tr = document.createElement('tr');
+  const opciones = PLATAFORMAS_REDES.map(p =>
+    `<option value="${p}" ${entrada && entrada.plataforma === p ? 'selected' : ''}>${p}</option>`
+  ).join('');
+  tr.innerHTML = `
+    <td><select class="red-social-plataforma">${opciones}</select></td>
+    <td><input class="red-social-usuario" placeholder="usuario o URL" value="${entrada ? (entrada.usuario || '') : ''}"></td>
+    <td><a href="#" class="btn btn--ghost red-social-visitar" target="_blank" rel="noopener" style="font-size:11px; padding:4px 8px;">Visitar Perfil</a></td>
+    <td><button class="btn btn--danger red-social-quitar" style="font-size:11px; padding:4px 8px;">Quitar</button></td>`;
+  tbody.appendChild(tr);
+
+  const selectPlataforma = tr.querySelector('.red-social-plataforma');
+  const inputUsuario = tr.querySelector('.red-social-usuario');
+  const linkVisitar = tr.querySelector('.red-social-visitar');
+
+  function actualizarLink() {
+    const url = construirUrlRed(selectPlataforma.value, inputUsuario.value);
+    linkVisitar.href = url || '#';
+  }
+  actualizarLink();
+  selectPlataforma.addEventListener('change', actualizarLink);
+  inputUsuario.addEventListener('input', actualizarLink);
+  tr.querySelector('.red-social-quitar').addEventListener('click', () => tr.remove());
+}
+
+const btnAgregarRedSocial = document.getElementById('btn-agregar-red-social');
+if (btnAgregarRedSocial) btnAgregarRedSocial.addEventListener('click', () => agregarFilaRedSocial());
+
+
 function datosGeneralesCompletos(alumno) {
   if (!alumno) return false;
   const dir = alumno.direccion || {};
   const campos = [
     alumno.nombre, alumno.apellido, alumno.rut, alumno.fechaNacimiento, alumno.genero,
-    alumno.telefono, alumno.ocupacion, dir.calle, dir.numero, dir.comuna, dir.region, dir.pais
+    alumno.telefono, alumno.email, alumno.ocupacion, dir.calle, dir.numero, dir.comuna, dir.region, dir.pais
   ];
   if (campos.some(v => !v || !v.toString().trim())) return false;
   if (OCUPACIONES_CON_ESPECIALIDAD.includes(alumno.ocupacion) && !alumno.ocupacionEspecialidad) return false;
@@ -221,6 +276,9 @@ function crearFilaAlumno(alumnoId, alumno, ciclo, columnas, acuerdo) {
   if (columnas.coach) html += `<td>${coachNombre}</td>`;
   html += `<td>${programa}</td><td>${estadoProceso}</td>`;
   html += `<td><span class="badge ${claseBadgeEstadoAlumno(estadoAlumno)}">${labelEstadoAlumno(estadoAlumno)}</span></td>`;
+  if (columnas.fase) {
+    html += `<td>${ciclo ? faseMetodologiaLabel(ciclo.faseMetodologia) : '—'}</td>`;
+  }
   if (columnas.fechas) {
     html += `<td>${formatFecha(ciclo && ciclo.fechaIngreso)}</td><td>${formatFecha(ciclo && ciclo.fechaEgreso)}</td>`;
   }
@@ -261,8 +319,8 @@ export async function cargarListasAlumnos() {
       if (tbodyDirector) tbodyDirector.appendChild(crearFilaAlumno(alumnoId, alumno, ciclo, { coach: true, fechas: true, pago: false }));
     } else if (role === 'coach') {
       if (!ciclo || ciclo.coachId !== uid) return;
-      if (tbodyDashCoach) tbodyDashCoach.appendChild(crearFilaAlumno(alumnoId, alumno, ciclo, { coach: false, fechas: false, pago: false }));
-      if (tbodyCoach) tbodyCoach.appendChild(crearFilaAlumno(alumnoId, alumno, ciclo, { coach: false, fechas: true, pago: false }));
+      if (tbodyDashCoach) tbodyDashCoach.appendChild(crearFilaAlumno(alumnoId, alumno, ciclo, { coach: false, fase: true, fechas: false, pago: false }));
+      if (tbodyCoach) tbodyCoach.appendChild(crearFilaAlumno(alumnoId, alumno, ciclo, { coach: false, fase: true, fechas: true, pago: false }));
     }
   });
 
@@ -392,6 +450,7 @@ async function abrirFicha(alumnoId) {
   actualizarEdad();
   document.getElementById('datos-genero').value = alumno.genero || 'Femenino';
   setTelefono(alumno.telefono || '');
+  document.getElementById('datos-email').value = alumno.email || '';
   const dir = alumno.direccion || {};
   document.getElementById('datos-direccion-calle').value = dir.calle || '';
   document.getElementById('datos-direccion-numero').value = dir.numero || '';
@@ -402,6 +461,11 @@ async function abrirFicha(alumnoId) {
   document.getElementById('datos-ocupacion').value = alumno.ocupacion || '';
   document.getElementById('datos-ocupacion-especialidad').value = alumno.ocupacionEspecialidad || '';
   actualizarCampoEspecialidad();
+
+  const tbodyRedes = document.getElementById('tabla-redes-sociales-body');
+  tbodyRedes.innerHTML = '';
+  const redes = alumno.redesSociales ? Object.values(alumno.redesSociales) : [];
+  redes.forEach(agregarFilaRedSocial);
 
   const selectCoach = document.getElementById('ciclo-coach');
   if (role === 'director') {
@@ -420,6 +484,8 @@ async function abrirFicha(alumnoId) {
     document.getElementById('ciclo-objetivo-facturacion').value = ciclo.objetivoFacturacion || '';
     document.getElementById('ciclo-situacion-personal').value = ciclo.situacionPersonal || '';
     document.getElementById('ciclo-objetivos-personales').value = ciclo.objetivosPersonales || '';
+    document.getElementById('ciclo-fase-metodologia').value = ciclo.faseMetodologia || '';
+    document.getElementById('ciclo-whatsapp-grupo').checked = !!ciclo.enGrupoWhatsapp;
   }
 
   const estadoProceso = ciclo ? ciclo.estadoProceso : 'asignado';
@@ -544,6 +610,7 @@ if (btnGuardarDatos) {
       fechaNacimiento: document.getElementById('datos-fecha-nacimiento').value,
       genero: document.getElementById('datos-genero').value,
       telefono: getTelefono(),
+      email: document.getElementById('datos-email').value.trim(),
       direccion: {
         calle: document.getElementById('datos-direccion-calle').value.trim(),
         numero: document.getElementById('datos-direccion-numero').value.trim(),
@@ -553,7 +620,16 @@ if (btnGuardarDatos) {
         pais: document.getElementById('datos-direccion-pais').value.trim()
       },
       ocupacion: document.getElementById('datos-ocupacion').value,
-      ocupacionEspecialidad: document.getElementById('datos-ocupacion-especialidad').value.trim()
+      ocupacionEspecialidad: document.getElementById('datos-ocupacion-especialidad').value.trim(),
+      redesSociales: (() => {
+        const redes = {};
+        document.querySelectorAll('#tabla-redes-sociales-body tr').forEach((row, idx) => {
+          const plataforma = row.querySelector('.red-social-plataforma').value;
+          const usuario = row.querySelector('.red-social-usuario').value.trim();
+          if (usuario) redes[`r${idx}_${Date.now()}`] = { plataforma, usuario };
+        });
+        return redes;
+      })()
     };
 
     if (!datosGeneralesCompletos(datosForm)) {
@@ -584,7 +660,9 @@ if (btnGuardarCiclo) {
         facturacionActual: document.getElementById('ciclo-facturacion-actual').value.trim(),
         objetivoFacturacion: document.getElementById('ciclo-objetivo-facturacion').value.trim(),
         situacionPersonal: document.getElementById('ciclo-situacion-personal').value.trim(),
-        objetivosPersonales: document.getElementById('ciclo-objetivos-personales').value.trim()
+        objetivosPersonales: document.getElementById('ciclo-objetivos-personales').value.trim(),
+        faseMetodologia: document.getElementById('ciclo-fase-metodologia').value,
+        enGrupoWhatsapp: document.getElementById('ciclo-whatsapp-grupo').checked
       };
       if (getCurrentRole() === 'director') {
         datos.coachId = document.getElementById('ciclo-coach').value;
