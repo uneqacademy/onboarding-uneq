@@ -559,7 +559,8 @@ if (btnGenerarAcuerdo) {
       await abrirFicha(currentAlumnoId);
       await cargarListasAlumnos();
     } catch (err) {
-      alert('No se pudo generar el PDF del acuerdo. Intenta de nuevo.');
+      console.error('Error al generar el PDF del acuerdo:', err);
+      alert('No se pudo generar el PDF del acuerdo. Revisa la consola (F12) y mándale el error a Claude. Detalle: ' + (err && err.message ? err.message : err));
     } finally {
       btnGenerarAcuerdo.disabled = false;
       btnGenerarAcuerdo.textContent = 'Generar Acuerdo y Enviar a Revisión';
