@@ -14,8 +14,8 @@ import {
   crearCiclo, iniciarOnboardingSiCorresponde, generarAcuerdoYEnviarRevision,
   marcarEnviadoParaFirma, marcarFirmaProcesada, toggleCandado, renderStepper, renderAcciones
 } from './ciclos.js';
-import { showView, marcarNavActivo, setNav, setCandado, getCurrentRole, getCurrentUserNombre } from './main.js';
-import { cargarTestParaCiclo } from './test.js';
+import { showView, marcarNavActivo, setNav, setCandado, aplicarBloqueoCamposFicha, getCurrentRole, getCurrentUserNombre } from './main.js';
+import { cargarTestParaCiclo, hayTestCompletado } from './test.js';
 import { cargarAcuerdoParaCiclo } from './pagos.js';
 import { cargarBitacoraParaCiclo } from './bitacora.js';
 import { generarPdfAcuerdo } from './pdf-acuerdo.js';
@@ -95,6 +95,23 @@ if (inputFechaNacimiento) inputFechaNacimiento.addEventListener('change', actual
 
 /* --- Ocupación: muestra el campo de especialidad solo para las que lo piden --- */
 const OCUPACIONES_CON_ESPECIALIDAD = ['Coach', 'Terapeuta', 'Ingeniero/a', 'Consultor/a', 'Otro'];
+
+function datosGeneralesCompletos(alumno) {
+  if (!alumno) return false;
+  const dir = alumno.direccion || {};
+  const campos = [
+    alumno.nombre, alumno.apellido, alumno.rut, alumno.fechaNacimiento, alumno.genero,
+    alumno.telefono, alumno.ocupacion, dir.calle, dir.numero, dir.comuna, dir.region, dir.pais
+  ];
+  if (campos.some(v => !v || !v.toString().trim())) return false;
+  if (OCUPACIONES_CON_ESPECIALIDAD.includes(alumno.ocupacion) && !alumno.ocupacionEspecialidad) return false;
+  return true;
+}
+
+function cicloCompleto(ciclo) {
+  if (!ciclo) return false;
+  return !!(ciclo.facturacionActual && ciclo.objetivoFacturacion && ciclo.situacionPersonal && ciclo.objetivosPersonales);
+}
 
 function actualizarCampoEspecialidad() {
   const ocupacion = document.getElementById('datos-ocupacion').value;
@@ -408,7 +425,6 @@ async function abrirFicha(alumnoId) {
   const estadoProceso = ciclo ? ciclo.estadoProceso : 'asignado';
   const estadoAlumnoActual = ciclo ? ciclo.estadoAlumno : null;
   document.getElementById('ficha-stepper').innerHTML = renderStepper(estadoProceso);
-  renderAcciones(estadoProceso, role);
 
   document.getElementById('panel-marcar-egresado').classList.toggle('hidden', !(role === 'director' && estadoAlumnoActual === 'activo'));
   document.getElementById('panel-nuevo-ciclo').classList.toggle('hidden', !(role === 'director' && estadoAlumnoActual === 'egresado'));
@@ -422,12 +438,19 @@ async function abrirFicha(alumnoId) {
   await cargarAcuerdoParaCiclo(currentCicloId);
   await cargarBitacoraParaCiclo(currentCicloId, estadoProceso === 'matricula_finalizada');
 
+  const listoParaGenerarAcuerdo = datosGeneralesCompletos(alumno) && cicloCompleto(ciclo) && hayTestCompletado();
+  renderAcciones(estadoProceso, role, listoParaGenerarAcuerdo);
+
   const panelCandado = document.getElementById('panel-candado');
-  if (ciclo && ciclo.estadoProceso === 'matricula_finalizada') {
+  if (estadoProceso === 'enviado_firma' || estadoProceso === 'en_revision') {
+    aplicarBloqueoCamposFicha(true);
+    panelCandado.classList.add('hidden');
+  } else if (ciclo && estadoProceso === 'matricula_finalizada') {
     bloqueoActual = !!ciclo.bloqueoCoach;
     setCandado(bloqueoActual);
   } else {
     bloqueoActual = false;
+    aplicarBloqueoCamposFicha(false);
     panelCandado.classList.add('hidden');
   }
 
@@ -511,26 +534,37 @@ const btnGuardarDatos = document.getElementById('btn-guardar-datos');
 if (btnGuardarDatos) {
   btnGuardarDatos.addEventListener('click', async () => {
     if (!currentAlumnoId) return;
+    const errorEl = document.getElementById('datos-error');
+    errorEl.classList.add('hidden');
+
+    const datosForm = {
+      nombre: document.getElementById('datos-nombre').value.trim(),
+      apellido: document.getElementById('datos-apellido').value.trim(),
+      rut: document.getElementById('datos-rut').value.trim(),
+      fechaNacimiento: document.getElementById('datos-fecha-nacimiento').value,
+      genero: document.getElementById('datos-genero').value,
+      telefono: getTelefono(),
+      direccion: {
+        calle: document.getElementById('datos-direccion-calle').value.trim(),
+        numero: document.getElementById('datos-direccion-numero').value.trim(),
+        departamento: document.getElementById('datos-direccion-depto').value.trim(),
+        comuna: document.getElementById('datos-direccion-comuna').value.trim(),
+        region: document.getElementById('datos-direccion-region').value.trim(),
+        pais: document.getElementById('datos-direccion-pais').value.trim()
+      },
+      ocupacion: document.getElementById('datos-ocupacion').value,
+      ocupacionEspecialidad: document.getElementById('datos-ocupacion-especialidad').value.trim()
+    };
+
+    if (!datosGeneralesCompletos(datosForm)) {
+      errorEl.textContent = 'Faltan campos por completar — todos son obligatorios excepto Departamento/Oficina.';
+      errorEl.classList.remove('hidden');
+      return;
+    }
+
     btnGuardarDatos.disabled = true;
     try {
-      await update(ref(db, `alumnos/${currentAlumnoId}`), {
-        nombre: document.getElementById('datos-nombre').value.trim(),
-        apellido: document.getElementById('datos-apellido').value.trim(),
-        rut: document.getElementById('datos-rut').value.trim(),
-        fechaNacimiento: document.getElementById('datos-fecha-nacimiento').value,
-        genero: document.getElementById('datos-genero').value,
-        telefono: getTelefono(),
-        direccion: {
-          calle: document.getElementById('datos-direccion-calle').value.trim(),
-          numero: document.getElementById('datos-direccion-numero').value.trim(),
-          departamento: document.getElementById('datos-direccion-depto').value.trim(),
-          comuna: document.getElementById('datos-direccion-comuna').value.trim(),
-          region: document.getElementById('datos-direccion-region').value.trim(),
-          pais: document.getElementById('datos-direccion-pais').value.trim()
-        },
-        ocupacion: document.getElementById('datos-ocupacion').value,
-        ocupacionEspecialidad: document.getElementById('datos-ocupacion-especialidad').value.trim()
-      });
+      await update(ref(db, `alumnos/${currentAlumnoId}`), datosForm);
       if (currentCicloId) await iniciarOnboardingSiCorresponde(currentCicloId);
       await abrirFicha(currentAlumnoId);
       await cargarListasAlumnos();

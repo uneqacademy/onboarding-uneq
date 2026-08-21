@@ -136,6 +136,13 @@ if (btnCancelarCoach) btnCancelarCoach.addEventListener('click', () => setNav('c
 // --- CANDADO A: bloqueo simple post-firma (evita ediciones accidentales del coach).
 //     El estado real (bloqueado sí/no) lo decide y persiste ciclos.js/alumnos.js;
 //     esta función solo pinta la UI. ---
+export function aplicarBloqueoCamposFicha(bloqueado) {
+  document.querySelectorAll(
+    '.tab-panel[data-panel="datos"] input, .tab-panel[data-panel="datos"] select,' +
+    '.tab-panel[data-panel="ciclo"] textarea, .tab-panel[data-panel="ciclo"] input:not(:disabled)'
+  ).forEach(el => { el.disabled = bloqueado && currentRole === 'coach'; });
+}
+
 export function setCandado(bloqueado) {
   candadoBloqueado = bloqueado;
   const panel = document.getElementById('panel-candado');
@@ -150,10 +157,7 @@ export function setCandado(bloqueado) {
     : 'Campos editables. Vuelve a bloquear cuando termines la corrección.';
   if (toggleBtn) toggleBtn.textContent = bloqueado ? 'Desbloquear' : 'Bloquear';
 
-  document.querySelectorAll(
-    '.tab-panel[data-panel="datos"] input, .tab-panel[data-panel="datos"] select,' +
-    '.tab-panel[data-panel="ciclo"] textarea, .tab-panel[data-panel="ciclo"] input:not(:disabled)'
-  ).forEach(el => { el.disabled = bloqueado && currentRole === 'coach'; });
+  aplicarBloqueoCamposFicha(bloqueado);
 }
 
 // --- CANDADO B (cuotas pagadas quedan fijas) se reactiva cuando construyamos

@@ -204,7 +204,6 @@ export async function generarPdfAcuerdo(alumnoId, cicloId) {
     doc.setFontSize(10.5);
     doc.text('Fecha', MARGEN_X, y);
     doc.text('Monto', MARGEN_X + 55, y);
-    doc.text('Estado', MARGEN_X + 110, y);
     y += 2;
     doc.setDrawColor(180);
     doc.line(MARGEN_X, y, MARGEN_X + ANCHO_UTIL, y);
@@ -214,7 +213,6 @@ export async function generarPdfAcuerdo(alumnoId, cicloId) {
       saltoDePaginaSiNecesario(6);
       doc.text(formatFechaLarga(c.fecha), MARGEN_X, y);
       doc.text(`${c.monto || '—'} ${moneda}`, MARGEN_X + 55, y);
-      doc.text(capitalizar(c.estado || 'pendiente'), MARGEN_X + 110, y);
       y += 6;
     });
     y += 4;
@@ -243,7 +241,8 @@ export async function generarPdfAcuerdo(alumnoId, cicloId) {
   const textoDescuento = descuento > 0 ? ', que incluye un descuento aplicado sobre el valor de lista' : '';
   parrafo(`El valor total del programa ${programaLabel(ciclo.programa)} es de ${acuerdo.montoTotal || '—'} ${moneda}${textoDescuento}.`);
   parrafo('La forma de pago acordada es la siguiente:');
-  parrafo(`Abono inicial: ${acuerdo.abono || '0'} ${moneda}, pagado con fecha ${formatFechaLarga(acuerdo.fechaAbono)}`);
+  const fechaAbono = ciclo.createdAt ? new Date(ciclo.createdAt).toISOString().slice(0, 10) : null;
+  parrafo(`Abono inicial: ${acuerdo.abono || '0'} ${moneda}, pagado con fecha ${formatFechaLarga(fechaAbono)}`);
   parrafo(`Saldo: ${saldo.toLocaleString('es-CL')} ${moneda}, según el siguiente calendario de cuotas:`);
 
   const cuotasArr = acuerdo.cuotas ? Object.values(acuerdo.cuotas).sort((a, b) => (a.fecha || '').localeCompare(b.fecha || '')) : [];
@@ -288,10 +287,10 @@ export async function generarPdfAcuerdo(alumnoId, cicloId) {
 
   // --- FIRMAS ---
   tituloSeccion('FIRMAS');
-  parrafo('Firmado electrónicamente por las partes a través de Google Workspace.');
-  parrafo('Felipe Gostling, RUT 13.673.392-3 en representación de Agencia UNEQ Ltda.');
-  parrafo('Macarena Cruz, RUT 16.143.054-4 en representación de Agencia UNEQ Ltda.');
-  parrafo(`${nombreCompleto}, RUT: ${alumno.rut || '—'}`);
+  parrafo('Firmado electrónicamente por las partes a través de Google Workspace.', { spacingAfter: 22 });
+  parrafo('Felipe Gostling, RUT 13.673.392-3 en representación de Agencia UNEQ Ltda.', { spacingAfter: 22 });
+  parrafo('Macarena Cruz, RUT 16.143.054-4 en representación de Agencia UNEQ Ltda.', { spacingAfter: 22 });
+  parrafo(`${nombreCompleto}, RUT: ${alumno.rut || '—'}`, { spacingAfter: 10 });
 
   // --- Subir a Storage y guardar la URL ---
   const blob = doc.output('blob');

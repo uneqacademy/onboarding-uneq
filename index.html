@@ -224,6 +224,9 @@
         </div>
 
         <!-- Acciones según rol + estado real del ciclo (ciclos.js decide cuál mostrar) -->
+        <div class="restricted-banner hidden" id="aviso-datos-incompletos" data-role="coach">
+          Completa Datos Generales, Ciclo Actual (facturación/objetivo/situación/objetivos) y el Test Brújula antes de poder generar el acuerdo.
+        </div>
         <div class="panel mb-24 hidden" id="panel-accion-coach" data-role="coach">
           <div class="panel__body flex-between">
             <div>
@@ -342,6 +345,7 @@
                 <div class="field"><label>Región</label><input id="datos-direccion-region"></div>
                 <div class="field"><label>País</label><input id="datos-direccion-pais" value="Chile"></div>
               </div>
+              <p id="datos-error" class="hidden" style="color:#C0392B; margin-bottom:12px;"></p>
               <div class="flex-between" style="margin-top:16px;">
                 <span></span>
                 <button class="btn btn--primary" id="btn-guardar-datos">Guardar Datos</button>
@@ -390,7 +394,7 @@
                 <div class="field"><label>Monto Total</label><input id="pago-monto-total"></div>
                 <div class="field"><label>Descuento</label><input id="pago-descuento" placeholder="0"></div>
                 <div class="field"><label>Abono</label><input id="pago-abono" placeholder="0"></div>
-                <div class="field"><label>Fecha de Abono</label><input type="date" id="pago-fecha-abono"></div>
+                <div class="field"><label>Fecha de Abono (automática, fecha de asignación)</label><input type="date" id="pago-fecha-abono" disabled></div>
                 <div class="field"><label>Saldo (Monto − Descuento − Abono)</label><input id="pago-saldo" disabled></div>
               </div>
               <table class="data-table mb-16" id="tabla-cuotas-ficha">

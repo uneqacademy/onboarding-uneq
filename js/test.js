@@ -13,6 +13,7 @@
 
 import { db } from './firebase-config.js';
 import { ref, get, set, push } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-database.js";
+import html2canvas from "https://esm.sh/html2canvas@1.4.1";
 
 const root = document.getElementById('test-wizard-root');
 
@@ -247,6 +248,7 @@ function renderHistorial() {
   }).join('');
 
   const seleccionado = historial.find(t => t.id === testSeleccionadoId) || historial[0];
+  const fechaSeleccionado = new Intl.DateTimeFormat('es-CL', { day: '2-digit', month: 'long', year: 'numeric' }).format(new Date(seleccionado.completadoAt));
 
   return `
     <div class="panel mb-16">
@@ -261,8 +263,19 @@ function renderHistorial() {
         </table>
       </div>
     </div>
-    <p class="text-soft mb-16">Detalle del test seleccionado — haz clic en otra fila del historial para comparar.</p>
-    ${renderResumenContenido(seleccionado.respuestas)}`;
+    <div class="flex-between mb-16">
+      <p class="text-soft" style="margin:0;">Detalle del test seleccionado — haz clic en otra fila del historial para comparar.</p>
+      <button class="btn btn--ghost" id="btn-descargar-imagen-test">Descargar Imagen (JPG)</button>
+    </div>
+    <div id="test-captura-imagen" style="background:#fff; padding:12px;">
+      <h3 style="margin:0 0 4px;">${document.getElementById('ficha-nombre-alumno') ? document.getElementById('ficha-nombre-alumno').textContent.trim() : ''}</h3>
+      <p class="text-soft" style="margin:0 0 16px;">Test Brújula — ${fechaSeleccionado}</p>
+      ${renderResumenContenido(seleccionado.respuestas)}
+    </div>`;
+}
+
+export function hayTestCompletado() {
+  return historial.length > 0;
 }
 
 function renderBarrasDe(respuestas, seccionKey) {
@@ -293,6 +306,30 @@ function volverAlHistorial() {
 }
 
 function bindEventos() {
+  const btnDescargarImagenTest = document.getElementById('btn-descargar-imagen-test');
+  if (btnDescargarImagenTest) {
+    btnDescargarImagenTest.addEventListener('click', async () => {
+      btnDescargarImagenTest.disabled = true;
+      btnDescargarImagenTest.textContent = 'Generando...';
+      try {
+        const nodo = document.getElementById('test-captura-imagen');
+        const canvas = await html2canvas(nodo, { backgroundColor: '#ffffff', scale: 2 });
+        const nombreAlumno = (document.getElementById('ficha-nombre-alumno')?.textContent || 'alumno').trim();
+        const a = document.createElement('a');
+        a.href = canvas.toDataURL('image/jpeg', 0.95);
+        a.download = `test-brujula-${nombreAlumno}.jpg`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+      } catch (err) {
+        alert('No se pudo generar la imagen. Intenta de nuevo.');
+      } finally {
+        btnDescargarImagenTest.disabled = false;
+        btnDescargarImagenTest.textContent = 'Descargar Imagen (JPG)';
+      }
+    });
+  }
+
   root.querySelectorAll('input[type="range"]').forEach(input => {
     input.addEventListener('input', () => {
       const qid = input.dataset.qid;

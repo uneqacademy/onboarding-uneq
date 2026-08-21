@@ -129,12 +129,15 @@ export function renderStepper(estadoActual) {
 }
 
 /* --- Decide qué panel de acción mostrar, según rol + estado --- */
-export function renderAcciones(estadoProceso, role) {
+export function renderAcciones(estadoProceso, role, listoParaGenerarAcuerdo = true) {
   const panelCoach = document.getElementById('panel-accion-coach');
   const panelEnviarRevision = document.getElementById('panel-accion-enviar-revision');
   const panelFirmaProcesada = document.getElementById('panel-accion-firma-procesada');
+  const avisoIncompleto = document.getElementById('aviso-datos-incompletos');
 
-  panelCoach.classList.toggle('hidden', !(role === 'coach' && estadoProceso === 'en_onboarding'));
+  const debeVerPanelCoach = role === 'coach' && estadoProceso === 'en_onboarding';
+  panelCoach.classList.toggle('hidden', !(debeVerPanelCoach && listoParaGenerarAcuerdo));
+  if (avisoIncompleto) avisoIncompleto.classList.toggle('hidden', !(debeVerPanelCoach && !listoParaGenerarAcuerdo));
   panelEnviarRevision.classList.toggle('hidden', !(role === 'director' && estadoProceso === 'enviado_firma'));
   panelFirmaProcesada.classList.toggle('hidden', !(role === 'director' && estadoProceso === 'en_revision'));
 

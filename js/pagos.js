@@ -99,7 +99,9 @@ export async function cargarAcuerdoParaCiclo(cicloId) {
   document.getElementById('pago-monto-total').value = acuerdo.montoTotal || '';
   document.getElementById('pago-descuento').value = acuerdo.descuento || '';
   document.getElementById('pago-abono').value = acuerdo.abono || '';
-  document.getElementById('pago-fecha-abono').value = acuerdo.fechaAbono || '';
+  const cicloSnap = await get(ref(db, `ciclos/${cicloId}/createdAt`));
+  const fechaAbono = cicloSnap.exists() ? new Date(cicloSnap.val()).toISOString().slice(0, 10) : '';
+  document.getElementById('pago-fecha-abono').value = fechaAbono;
   recalcularSaldo();
 
   // Estado del PDF: se genera desde "Generar Acuerdo y Enviar a Revisión"
@@ -148,7 +150,6 @@ if (btnGuardarAcuerdo) {
         moneda: monedaActual,
         descuento: inputDescuento.value.trim(),
         abono: inputAbono.value.trim(),
-        fechaAbono: document.getElementById('pago-fecha-abono').value,
         cuotas
       });
 
