@@ -1,45 +1,140 @@
 /* ============================================================
    coaches.js
-   Vista "Coaches" (solo Director): lista real desde /usuarios,
-   y eliminar un coach — bloqueado si tiene alumnos vigentes
-   (activos, en proceso de matrícula, o pausados), para forzar
-   la reasignación antes de borrarlo. La reasignación en sí ya
-   existe en la ficha del alumno (pestaña Ciclo → Coach Asignado)
-   y no pierde nada: bitácora, tests y datos quedan atados al
-   ciclo, no al coach, así que el historial se mantiene intacto
-   con el nuevo coach.
+   Vista "Coaches" (Director): lista real, NPS con desglose por
+   área y momento (medio/final), comentarios, links para copiar
+   y mandar al alumno, y eliminar (bloqueado si tiene alumnos
+   vigentes). También carga el cuadro "Mi Evaluación" en el
+   dashboard del coach (solo con 3+ respuestas, protege anonimato).
 
-   Nota: esto borra el registro en /usuarios (le quita el acceso
-   a la app), pero no borra la cuenta de Firebase Authentication
-   en sí — eso hay que hacerlo manualmente en la consola si se
-   quiere eliminar del todo.
+   El promedio de NPS NO se guarda aparte — se calcula al vuelo
+   leyendo /nps/{coachId} cada vez, para no duplicar datos.
    ============================================================ */
 
-import { db } from './firebase-config.js';
+import { db, auth } from './firebase-config.js';
 import { ref, get, set } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-database.js";
 import { getCurrentRole } from './main.js';
 
 const ESTADOS_VIGENTES = ['activo', 'en_proceso_matricula', 'pausado'];
+const AREA_LABELS = {
+  dominio: 'Dominio y soporte',
+  acceso: 'Acceso a contenidos',
+  seguimiento: 'Seguimiento',
+  cercania: 'Cercanía y empatía',
+  motivacion: 'Motivación',
+  mentorias: 'Mentorías en vivo'
+};
+
+/* --- Calcula promedios por área/momento + promedio general, desde las entradas crudas --- */
+function calcularStatsCoach(entradasObj) {
+  const entradas = entradasObj ? Object.values(entradasObj) : [];
+  const porArea = {};
+  Object.keys(AREA_LABELS).forEach(a => { porArea[a] = { medio: [], final: [] }; });
+
+  const todasLasNotas = [];
+  const comentarios = [];
+
+  entradas.forEach(e => {
+    const momento = e.momento === 'final' ? 'final' : 'medio';
+    Object.keys(AREA_LABELS).forEach(a => {
+      const val = e.areas ? e.areas[a] : undefined;
+      if (typeof val === 'number') {
+        porArea[a][momento].push(val);
+        todasLasNotas.push(val);
+      }
+    });
+    if (e.comentario) comentarios.push({ momento, comentario: e.comentario, createdAt: e.createdAt || 0 });
+  });
+
+  const promedio = arr => arr.length ? arr.reduce((x, y) => x + y, 0) / arr.length : null;
+
+  const promedios = {};
+  Object.keys(AREA_LABELS).forEach(a => {
+    promedios[a] = { medio: promedio(porArea[a].medio), final: promedio(porArea[a].final) };
+  });
+
+  return {
+    promedios,
+    promedioGeneral: promedio(todasLasNotas),
+    totalRespuestas: entradas.length,
+    comentarios: comentarios.sort((a, b) => b.createdAt - a.createdAt)
+  };
+}
+
+function construirLinkNps(uid, nombre, momento) {
+  const url = new URL('nps.html', window.location.href);
+  url.searchParams.set('coach', uid);
+  url.searchParams.set('nombre', nombre);
+  url.searchParams.set('momento', momento);
+  return url.href;
+}
+
+function copiarLink(uid, nombre, momento) {
+  const url = construirLinkNps(uid, nombre, momento);
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(url)
+      .then(() => alert(`Link copiado (evaluación "${momento}"). Pégalo donde quieras mandarlo.`))
+      .catch(() => prompt('Copia este link manualmente:', url));
+  } else {
+    prompt('Copia este link manualmente:', url);
+  }
+}
+
+function renderDetalleNps(stats) {
+  const filasAreas = Object.entries(AREA_LABELS).map(([key, label]) => {
+    const p = stats.promedios[key];
+    const medioTxt = p.medio !== null ? p.medio.toFixed(1) : '—';
+    const finalTxt = p.final !== null ? p.final.toFixed(1) : '—';
+    return `<tr><td>${label}</td><td>${medioTxt}</td><td>${finalTxt}</td></tr>`;
+  }).join('');
+
+  const comentariosHtml = stats.comentarios.length
+    ? stats.comentarios.map(c => `
+        <div style="padding:8px 0; border-bottom:0.5px solid var(--border);">
+          <span class="text-soft" style="font-size:11px;">${c.momento === 'final' ? 'Final' : 'Medio'}</span>
+          <p style="margin:2px 0 0;">${c.comentario}</p>
+        </div>`).join('')
+    : '<p class="text-soft">Sin comentarios.</p>';
+
+  return `
+    <td colspan="6" style="background:#F7F8FA; padding:16px;">
+      <div style="display:flex; gap:24px; flex-wrap:wrap;">
+        <div style="flex:1; min-width:240px;">
+          <strong style="font-size:13px;">Promedio por área (Medio / Final)</strong>
+          <table class="data-table" style="margin-top:8px;">
+            <thead><tr><th>Área</th><th>Medio</th><th>Final</th></tr></thead>
+            <tbody>${filasAreas}</tbody>
+          </table>
+        </div>
+        <div style="flex:1; min-width:240px;">
+          <strong style="font-size:13px;">Comentarios (${stats.comentarios.length})</strong>
+          <div style="margin-top:8px; max-height:220px; overflow-y:auto;">${comentariosHtml}</div>
+        </div>
+      </div>
+    </td>`;
+}
 
 async function cargarCoachesView() {
   if (getCurrentRole() !== 'director') return;
   const tbody = document.getElementById('tabla-coaches-body');
   if (!tbody) return;
 
-  const [usuariosSnap, alumnosSnap, ciclosSnap] = await Promise.all([
+  const [usuariosSnap, alumnosSnap, ciclosSnap, npsSnap] = await Promise.all([
     get(ref(db, 'usuarios')),
     get(ref(db, 'alumnos')),
-    get(ref(db, 'ciclos'))
+    get(ref(db, 'ciclos')),
+    get(ref(db, 'nps'))
   ]);
   const usuarios = usuariosSnap.exists() ? usuariosSnap.val() : {};
   const alumnos = alumnosSnap.exists() ? alumnosSnap.val() : {};
   const ciclos = ciclosSnap.exists() ? ciclosSnap.val() : {};
+  const npsTodos = npsSnap.exists() ? npsSnap.val() : {};
 
   tbody.innerHTML = '';
 
   Object.entries(usuarios)
     .filter(([, u]) => u.rol === 'coach')
     .forEach(([uid, coach]) => {
+      const nombreCoach = coach.nombre || coach.email;
       const alumnosDeCoach = Object.entries(alumnos).filter(([, al]) => {
         const ciclo = al.cicloActualId ? ciclos[al.cicloActualId] : null;
         return ciclo && ciclo.coachId === uid;
@@ -49,18 +144,41 @@ async function cargarCoachesView() {
         return ciclo && ESTADOS_VIGENTES.includes(ciclo.estadoAlumno);
       });
 
+      const stats = calcularStatsCoach(npsTodos[uid]);
+      const npsTexto = stats.promedioGeneral !== null
+        ? `${stats.promedioGeneral.toFixed(1)} ★ <span class="text-soft" style="font-size:11px;">(${stats.totalRespuestas})</span>`
+        : '<span class="text-soft">—</span>';
+
       const tr = document.createElement('tr');
       tr.innerHTML = `
-        <td>${coach.nombre || ''}</td>
+        <td>${nombreCoach}</td>
         <td>${coach.email || ''}</td>
         <td>${alumnosDeCoach.length}</td>
         <td><span class="badge ${coach.activo === false ? 'badge--impaga' : 'badge--activo'}">${coach.activo === false ? 'Inactivo' : 'Activo'}</span></td>
-        <td><button class="btn btn--ghost btn-eliminar-coach">Eliminar</button></td>`;
+        <td>${npsTexto}</td>
+        <td style="display:flex; gap:6px; flex-wrap:wrap;">
+          <button class="btn btn--ghost btn-ver-nps" style="font-size:11px; padding:4px 8px;">Ver NPS</button>
+          <button class="btn btn--ghost btn-copiar-medio" style="font-size:11px; padding:4px 8px;">Link Medio</button>
+          <button class="btn btn--ghost btn-copiar-final" style="font-size:11px; padding:4px 8px;">Link Final</button>
+          <button class="btn btn--ghost btn-eliminar-coach" style="font-size:11px; padding:4px 8px;">Eliminar</button>
+        </td>`;
       tbody.appendChild(tr);
 
-      tr.querySelector('.btn-eliminar-coach').addEventListener('click', () =>
-        eliminarCoach(uid, coach.nombre || coach.email, vigentes)
-      );
+      tr.querySelector('.btn-copiar-medio').addEventListener('click', () => copiarLink(uid, nombreCoach, 'medio'));
+      tr.querySelector('.btn-copiar-final').addEventListener('click', () => copiarLink(uid, nombreCoach, 'final'));
+      tr.querySelector('.btn-eliminar-coach').addEventListener('click', () => eliminarCoach(uid, nombreCoach, vigentes));
+
+      let filaDetalle = null;
+      tr.querySelector('.btn-ver-nps').addEventListener('click', (ev) => {
+        if (filaDetalle) {
+          filaDetalle.remove();
+          filaDetalle = null;
+          return;
+        }
+        filaDetalle = document.createElement('tr');
+        filaDetalle.innerHTML = renderDetalleNps(stats);
+        tr.insertAdjacentElement('afterend', filaDetalle);
+      });
     });
 }
 
@@ -85,8 +203,30 @@ async function eliminarCoach(uid, nombreCoach, vigentes) {
   await cargarCoachesView();
 }
 
+/* --- Cuadro "Mi Evaluación" en el dashboard del coach — solo con 3+ respuestas --- */
+export async function cargarMiEvaluacionCoach() {
+  if (getCurrentRole() !== 'coach') return;
+  const uid = auth.currentUser ? auth.currentUser.uid : null;
+  const card = document.getElementById('kpi-card-mi-evaluacion');
+  const valorEl = document.getElementById('kpi-mi-evaluacion-valor');
+  if (!uid || !card || !valorEl) return;
+
+  const snap = await get(ref(db, `nps/${uid}`));
+  const stats = calcularStatsCoach(snap.exists() ? snap.val() : null);
+
+  if (stats.totalRespuestas >= 3 && stats.promedioGeneral !== null) {
+    valorEl.textContent = `${stats.promedioGeneral.toFixed(1)} ★`;
+    card.classList.remove('hidden');
+  } else {
+    card.classList.add('hidden');
+  }
+}
+
 document.querySelectorAll('.nav-item[data-nav="coaches"]').forEach(item => {
   item.addEventListener('click', cargarCoachesView);
+});
+document.querySelectorAll('.nav-item[data-nav="dashboard"]').forEach(item => {
+  item.addEventListener('click', cargarMiEvaluacionCoach);
 });
 
 export { cargarCoachesView };

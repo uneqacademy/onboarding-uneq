@@ -19,7 +19,7 @@ import { cargarTestParaCiclo } from './test.js';
 import { cargarAcuerdoParaCiclo } from './pagos.js';
 import { cargarBitacoraParaCiclo } from './bitacora.js';
 import './respaldo.js';
-import './coaches.js';
+import { cargarMiEvaluacionCoach } from './coaches.js';
 
 let coachesMap = {};       // uid -> nombre, solo se llena para el director
 let currentAlumnoId = null;
@@ -564,6 +564,8 @@ if (btnEliminarAlumno) {
 export async function initAlumnosModule() {
   if (getCurrentRole() === 'director') {
     await cargarCoaches();
+  } else if (getCurrentRole() === 'coach') {
+    await cargarMiEvaluacionCoach();
   }
   await cargarListasAlumnos();
 }
