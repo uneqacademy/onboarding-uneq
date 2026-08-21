@@ -180,6 +180,15 @@ async function cargarCoaches() {
   if (selectNuevoAlumno) poblarSelectCoaches(selectNuevoAlumno, null);
 }
 
+// Refresca la lista de coaches cada vez que se abre "Nuevo Alumno" — evita que
+// quede desactualizada si se agregó un coach después del login, sin recargar.
+const btnNuevoAlumnoRefrescaCoaches = document.getElementById('btn-nuevo-alumno');
+if (btnNuevoAlumnoRefrescaCoaches) {
+  btnNuevoAlumnoRefrescaCoaches.addEventListener('click', () => {
+    if (getCurrentRole() === 'director') cargarCoaches();
+  });
+}
+
 /* --- Construye una fila <tr> de alumno, con columnas según el contexto --- */
 function crearFilaAlumno(alumnoId, alumno, ciclo, columnas, acuerdo) {
   const tr = document.createElement('tr');
@@ -325,6 +334,8 @@ async function renderHistorialCiclos(ciclosAnterioresIds) {
 
 /* --- Abre la ficha de un alumno con sus datos reales --- */
 async function abrirFicha(alumnoId) {
+  if (getCurrentRole() === 'director') await cargarCoaches();
+
   const alumnoSnap = await get(ref(db, `alumnos/${alumnoId}`));
   if (!alumnoSnap.exists()) return;
   const alumno = alumnoSnap.val();
@@ -745,12 +756,14 @@ export async function initAlumnosModule() {
   await cargarListasAlumnos();
 }
 
-// Refresca las tablas cada vez que se navega a Dashboard o Alumnos —
-// evita que quede mostrando datos viejos si otro rol cambió algo mientras tanto.
+// Refresca las tablas y la lista de coaches cada vez que se navega —
+// evita que quede mostrando datos viejos si algo cambió mientras tanto
+// (ej. un coach eliminado que se quedaba pegado en los desplegables).
 document.querySelectorAll('.nav-item[data-nav]').forEach(item => {
   item.addEventListener('click', () => {
-    if (item.dataset.nav === 'dashboard' || item.dataset.nav === 'alumnos') {
+    if (item.dataset.nav === 'dashboard' || item.dataset.nav === 'alumnos' || item.dataset.nav === 'coaches') {
       cargarListasAlumnos();
+      if (getCurrentRole() === 'director') cargarCoaches();
     }
   });
 });
