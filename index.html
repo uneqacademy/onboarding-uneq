@@ -741,8 +741,24 @@
             <div>
               <p style="margin:0 0 4px;">Mi NPS resumido</p>
               <p class="kpi-card__value accent" style="margin:0;" id="mentor-nps-resumen">—</p>
-              <p class="text-soft" style="margin:4px 0 0; font-size:12px;">Se calcula con las evaluaciones de tus mentorías en vivo — llega en la próxima etapa.</p>
+              <p class="text-soft" style="margin:4px 0 0; font-size:12px;">Promedio de todas las evaluaciones de tus mentorías en vivo.</p>
             </div>
+          </div>
+        </div>
+
+        <div class="panel mb-24">
+          <div class="panel__header"><h3>Mis Mentorías</h3></div>
+          <div class="panel__body">
+            <div class="field-grid mb-16">
+              <div class="field"><label>Tema</label><input id="mentoria-tema" placeholder="Ej: Copywriting"></div>
+              <div class="field"><label>Fecha</label><input type="date" id="mentoria-fecha"></div>
+              <div class="field"><label>Link de Acceso (Zoom, etc.)</label><input id="mentoria-link" placeholder="https://..."></div>
+            </div>
+            <button class="btn btn--accent" id="btn-agregar-mentoria">+ Agregar Mentoría</button>
+            <table class="data-table mb-16" style="margin-top:16px;">
+              <thead><tr><th>Tema</th><th>Fecha</th><th>Acceso</th><th>NPS de la sesión</th><th></th></tr></thead>
+              <tbody id="tabla-mentorias-body"></tbody>
+            </table>
           </div>
         </div>
 

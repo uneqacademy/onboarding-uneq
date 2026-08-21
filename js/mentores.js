@@ -10,7 +10,7 @@
    ============================================================ */
 
 import { db, auth, storage, firebaseConfig } from './firebase-config.js';
-import { ref, get, set, update } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-database.js";
+import { ref, get, set, update, push } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-database.js";
 import { ref as storageRef, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-storage.js";
 import { initializeApp, deleteApp } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-app.js";
 import { getAuth, createUserWithEmailAndPassword, signOut as signOutSecundaria } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-auth.js";
@@ -236,18 +236,30 @@ document.querySelectorAll('.nav-item[data-nav="dashboard"]').forEach(item => {
    MENTOR: mi perfil (foto + NPS resumido — el NPS real llega
    con las mentorías, en la próxima etapa)
    ============================================================ */
+function calcularNpsResumenMentor(npsMentoriasData) {
+  if (!npsMentoriasData) return { promedio: null, total: 0 };
+  const todasLasEntradas = Object.values(npsMentoriasData).flatMap(m => Object.values(m));
+  const puntajes = todasLasEntradas.map(e => e.puntaje).filter(p => typeof p === 'number');
+  if (!puntajes.length) return { promedio: null, total: 0 };
+  return { promedio: puntajes.reduce((a, b) => a + b, 0) / puntajes.length, total: puntajes.length };
+}
+
 export async function cargarPerfilMentor() {
   if (getCurrentRole() !== 'mentor') return;
   const uid = auth.currentUser ? auth.currentUser.uid : null;
   const preview = document.getElementById('mentor-foto-preview');
   if (!uid || !preview) return;
 
-  const snap = await get(ref(db, `usuarios/${uid}`));
-  const datos = snap.exists() ? snap.val() : {};
+  const [usuarioSnap, npsSnap] = await Promise.all([
+    get(ref(db, `usuarios/${uid}`)),
+    get(ref(db, `npsMentorias/${uid}`))
+  ]);
+  const datos = usuarioSnap.exists() ? usuarioSnap.val() : {};
   preview.src = datos.fotoUrl || PLACEHOLDER_FOTO_PERFIL;
 
+  const { promedio, total } = calcularNpsResumenMentor(npsSnap.exists() ? npsSnap.val() : null);
   const npsEl = document.getElementById('mentor-nps-resumen');
-  if (npsEl) npsEl.textContent = 'Aún sin evaluaciones';
+  if (npsEl) npsEl.textContent = promedio !== null ? `${promedio.toFixed(1)} ★ (${total})` : 'Aún sin evaluaciones';
 }
 
 const btnCambiarFotoMentor = document.getElementById('btn-cambiar-foto-mentor');
@@ -278,3 +290,95 @@ if (btnCambiarFotoMentor && inputFotoMentor) {
 }
 
 export { cargarMentoresView };
+
+/* ============================================================
+   MENTOR: Mis Mentorías (crear con link de acceso + link de NPS
+   por sesión, automático)
+   ============================================================ */
+function construirLinkNpsMentoria(mentorId, mentoriaId, tema) {
+  const url = new URL('nps-mentoria.html', window.location.href);
+  url.searchParams.set('mentor', mentorId);
+  url.searchParams.set('mentoria', mentoriaId);
+  url.searchParams.set('tema', tema);
+  return url.href;
+}
+
+async function cargarMentoriasView() {
+  if (getCurrentRole() !== 'mentor') return;
+  const uid = auth.currentUser ? auth.currentUser.uid : null;
+  const tbody = document.getElementById('tabla-mentorias-body');
+  if (!uid || !tbody) return;
+
+  const [mentoriasSnap, npsSnap] = await Promise.all([
+    get(ref(db, `mentorias/${uid}`)),
+    get(ref(db, `npsMentorias/${uid}`))
+  ]);
+  const mentorias = mentoriasSnap.exists() ? mentoriasSnap.val() : {};
+  const npsTodas = npsSnap.exists() ? npsSnap.val() : {};
+
+  tbody.innerHTML = '';
+  Object.entries(mentorias)
+    .sort((a, b) => (b[1].fecha || '').localeCompare(a[1].fecha || ''))
+    .forEach(([mentoriaId, m]) => {
+      const entradas = npsTodas[mentoriaId] ? Object.values(npsTodas[mentoriaId]) : [];
+      const puntajes = entradas.map(e => e.puntaje).filter(p => typeof p === 'number');
+      const promedioTexto = puntajes.length
+        ? `${(puntajes.reduce((a, b) => a + b, 0) / puntajes.length).toFixed(1)} ★ (${puntajes.length})`
+        : '—';
+
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td>${m.tema || ''}</td>
+        <td>${formatFechaCorta(m.fecha)}</td>
+        <td>${m.link ? `<a href="${m.link}" target="_blank" rel="noopener">Ir al link</a>` : '—'}</td>
+        <td>${promedioTexto}</td>
+        <td><button class="btn btn--ghost btn-copiar-link-nps-mentoria" style="font-size:11px; padding:4px 8px;">Copiar Link NPS</button></td>`;
+      tbody.appendChild(tr);
+
+      tr.querySelector('.btn-copiar-link-nps-mentoria').addEventListener('click', () => {
+        const url = construirLinkNpsMentoria(uid, mentoriaId, m.tema || '');
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(url)
+            .then(() => alert('Link copiado — mándalo a los asistentes al terminar la sesión.'))
+            .catch(() => prompt('Copia este link manualmente:', url));
+        } else {
+          prompt('Copia este link manualmente:', url);
+        }
+      });
+    });
+}
+
+const btnAgregarMentoria = document.getElementById('btn-agregar-mentoria');
+if (btnAgregarMentoria) {
+  btnAgregarMentoria.addEventListener('click', async () => {
+    const uid = auth.currentUser ? auth.currentUser.uid : null;
+    const tema = document.getElementById('mentoria-tema').value.trim();
+    const fecha = document.getElementById('mentoria-fecha').value;
+    const link = document.getElementById('mentoria-link').value.trim();
+
+    if (!uid || !tema || !fecha) {
+      alert('Completa al menos el Tema y la Fecha.');
+      return;
+    }
+
+    btnAgregarMentoria.disabled = true;
+    try {
+      const nuevaRef = push(ref(db, `mentorias/${uid}`));
+      await set(nuevaRef, { tema, fecha, link, createdAt: Date.now() });
+
+      document.getElementById('mentoria-tema').value = '';
+      document.getElementById('mentoria-fecha').value = '';
+      document.getElementById('mentoria-link').value = '';
+
+      await cargarMentoriasView();
+    } finally {
+      btnAgregarMentoria.disabled = false;
+    }
+  });
+}
+
+document.querySelectorAll('.nav-item[data-nav="dashboard"]').forEach(item => {
+  item.addEventListener('click', cargarMentoriasView);
+});
+
+export { cargarMentoriasView };
