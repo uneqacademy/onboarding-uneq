@@ -10,7 +10,11 @@ import { auth, db } from './firebase-config.js';
 import {
   signInWithEmailAndPassword,
   signOut,
-  onAuthStateChanged
+  onAuthStateChanged,
+  sendPasswordResetEmail,
+  EmailAuthProvider,
+  reauthenticateWithCredential,
+  updatePassword
 } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-auth.js";
 import { ref, get } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-database.js";
 import { applyRole, showLogin } from './main.js';
@@ -63,6 +67,85 @@ btnLogin.addEventListener('click', async () => {
 btnLogout.addEventListener('click', () => {
   signOut(auth);
 });
+
+const linkOlvidePassword = document.getElementById('link-olvide-password');
+if (linkOlvidePassword) {
+  linkOlvidePassword.addEventListener('click', async (ev) => {
+    ev.preventDefault();
+    limpiarError();
+    const email = inputEmail.value.trim();
+    if (!email) {
+      mostrarError('Escribe tu correo arriba y luego haz clic en "¿Olvidaste tu contraseña?".');
+      return;
+    }
+    try {
+      await sendPasswordResetEmail(auth, email);
+      alert(`Te mandamos un correo a ${email} con un link para elegir una nueva contraseña.`);
+    } catch (err) {
+      mostrarError('No se pudo enviar el correo. Verifica que esté bien escrito.');
+    }
+  });
+}
+
+/* --- Cambiar contraseña dentro de la sesión (los 3 roles) --- */
+const btnCambiarPassword = document.getElementById('btn-cambiar-password');
+const panelCambiarPassword = document.getElementById('panel-cambiar-password');
+if (btnCambiarPassword && panelCambiarPassword) {
+  btnCambiarPassword.addEventListener('click', () => panelCambiarPassword.classList.toggle('hidden'));
+}
+
+const btnCerrarCambiarPassword = document.getElementById('btn-cerrar-cambiar-password');
+if (btnCerrarCambiarPassword) {
+  btnCerrarCambiarPassword.addEventListener('click', () => panelCambiarPassword.classList.add('hidden'));
+}
+
+const btnGuardarPassword = document.getElementById('btn-guardar-password');
+if (btnGuardarPassword) {
+  btnGuardarPassword.addEventListener('click', async () => {
+    const errorEl = document.getElementById('cambiar-password-error');
+    errorEl.classList.add('hidden');
+    const actual = document.getElementById('password-actual').value;
+    const nueva = document.getElementById('password-nueva').value;
+    const confirmar = document.getElementById('password-confirmar').value;
+
+    if (!actual || !nueva || !confirmar) {
+      errorEl.textContent = 'Completa los 3 campos.';
+      errorEl.classList.remove('hidden');
+      return;
+    }
+    if (nueva !== confirmar) {
+      errorEl.textContent = 'La nueva contraseña no coincide con la confirmación.';
+      errorEl.classList.remove('hidden');
+      return;
+    }
+    if (nueva.length < 6) {
+      errorEl.textContent = 'La nueva contraseña debe tener al menos 6 caracteres.';
+      errorEl.classList.remove('hidden');
+      return;
+    }
+
+    btnGuardarPassword.disabled = true;
+    try {
+      const user = auth.currentUser;
+      const credencial = EmailAuthProvider.credential(user.email, actual);
+      await reauthenticateWithCredential(user, credencial);
+      await updatePassword(user, nueva);
+
+      document.getElementById('password-actual').value = '';
+      document.getElementById('password-nueva').value = '';
+      document.getElementById('password-confirmar').value = '';
+      panelCambiarPassword.classList.add('hidden');
+      alert('Contraseña actualizada correctamente.');
+    } catch (err) {
+      errorEl.textContent = (err.code === 'auth/wrong-password' || err.code === 'auth/invalid-credential')
+        ? 'La contraseña actual no es correcta.'
+        : 'No se pudo cambiar la contraseña. Intenta de nuevo.';
+      errorEl.classList.remove('hidden');
+    } finally {
+      btnGuardarPassword.disabled = false;
+    }
+  });
+}
 
 onAuthStateChanged(auth, async (user) => {
   if (!user) {

@@ -412,11 +412,17 @@ export async function cargarPerfilMentor() {
   if (npsEl) npsEl.textContent = promedio !== null ? `${promedio.toFixed(1)} ★ (${total})` : 'Aún sin evaluaciones';
 
   const bioTextarea = document.getElementById('mentor-bio');
+  const bioTexto = document.getElementById('mentor-bio-texto');
   const btnGuardarBio = document.getElementById('btn-guardar-bio-mentor');
   const btnEditarBio = document.getElementById('btn-editar-bio-mentor');
   if (bioTextarea) {
     bioTextarea.value = datos.bio || '';
     const tieneBio = !!(datos.bio && datos.bio.trim());
+    if (bioTexto) {
+      bioTexto.textContent = datos.bio || 'Aún no has escrito tu presentación.';
+      bioTexto.classList.toggle('hidden', !tieneBio);
+    }
+    bioTextarea.classList.toggle('hidden', tieneBio);
     bioTextarea.disabled = tieneBio;
     if (btnGuardarBio) btnGuardarBio.classList.toggle('hidden', tieneBio);
     if (btnEditarBio) btnEditarBio.classList.toggle('hidden', !tieneBio);
@@ -442,6 +448,8 @@ if (btnGuardarBioMentor) {
 const btnEditarBioMentor = document.getElementById('btn-editar-bio-mentor');
 if (btnEditarBioMentor) {
   btnEditarBioMentor.addEventListener('click', () => {
+    document.getElementById('mentor-bio-texto').classList.add('hidden');
+    document.getElementById('mentor-bio').classList.remove('hidden');
     document.getElementById('mentor-bio').disabled = false;
     document.getElementById('btn-guardar-bio-mentor').classList.remove('hidden');
     btnEditarBioMentor.classList.add('hidden');
@@ -519,8 +527,35 @@ async function cargarMentoriasView() {
         <td>${m.hora || '—'}</td>
         <td>${m.link ? `<a href="${m.link}" target="_blank" rel="noopener">Ir al link</a>` : '—'}</td>
         <td>${promedioTexto}</td>
+        <td>
+          ${m.resumenUrl ? `<a href="${m.resumenUrl}" target="_blank" rel="noopener">Ver Resumen ↗</a><br>` : ''}
+          <button class="btn btn--ghost btn-subir-resumen" style="font-size:11px; padding:4px 8px; margin-top:4px;">${m.resumenUrl ? 'Reemplazar' : 'Subir Resumen'}</button>
+          <input type="file" class="input-resumen-mentoria hidden" accept=".doc,.docx">
+        </td>
         <td><button class="btn btn--ghost btn-copiar-link-nps-mentoria" style="font-size:11px; padding:4px 8px;">Copiar Link NPS</button></td>`;
       tbody.appendChild(tr);
+
+      const btnSubirResumen = tr.querySelector('.btn-subir-resumen');
+      const inputResumen = tr.querySelector('.input-resumen-mentoria');
+      btnSubirResumen.addEventListener('click', () => inputResumen.click());
+      inputResumen.addEventListener('change', async () => {
+        const file = inputResumen.files[0];
+        if (!file) return;
+        const textoOriginal = btnSubirResumen.textContent;
+        btnSubirResumen.disabled = true;
+        btnSubirResumen.textContent = 'Subiendo...';
+        try {
+          const archivoRef = storageRef(storage, `resumenes-mentorias/${uid}/${mentoriaId}`);
+          await uploadBytes(archivoRef, file);
+          const url = await getDownloadURL(archivoRef);
+          await update(ref(db, `mentorias/${uid}/${mentoriaId}`), { resumenUrl: url });
+          await cargarMentoriasView();
+        } catch (err) {
+          alert('No se pudo subir el resumen. Intenta de nuevo.');
+          btnSubirResumen.disabled = false;
+          btnSubirResumen.textContent = textoOriginal;
+        }
+      });
 
       tr.querySelector('.btn-copiar-link-nps-mentoria').addEventListener('click', () => {
         const url = construirLinkNpsMentoria(uid, mentoriaId, m.tema || '');

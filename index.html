@@ -45,6 +45,7 @@
     </div>
     <button class="btn btn--primary" id="btn-login">Ingresar</button>
     <p id="login-error" class="hidden" style="color:#C0392B; text-align:center; margin-top:12px; font-size:13px;"></p>
+    <p style="text-align:center; margin-top:10px;"><a href="#" id="link-olvide-password" style="font-size:13px;">¿Olvidaste tu contraseña?</a></p>
     <p class="text-soft" style="text-align:center; margin-top:14px;">Acceso restringido — cuentas creadas por el director/a académico.</p>
   </div>
 </div>
@@ -93,8 +94,23 @@
   <div class="main">
     <header class="topbar">
       <div class="topbar__title" id="topbar-title">Dashboard</div>
-      <div class="topbar__right">
+      <div class="topbar__right" style="display:flex; align-items:center; gap:8px; position:relative;">
+        <button class="btn btn--ghost" id="btn-cambiar-password">Cambiar Contraseña</button>
         <button class="btn btn--ghost" id="btn-logout">Cerrar sesión</button>
+
+        <div class="panel hidden" id="panel-cambiar-password" style="position:absolute; top:44px; right:0; width:300px; z-index:1000; box-shadow:0 4px 20px rgba(0,0,0,0.15);">
+          <div class="panel__header flex-between">
+            <h3 style="margin:0; font-size:14px;">Cambiar Contraseña</h3>
+            <button class="btn btn--ghost" id="btn-cerrar-cambiar-password" style="padding:2px 8px;">✕</button>
+          </div>
+          <div class="panel__body">
+            <div class="field mb-16"><label>Contraseña Actual</label><input type="password" id="password-actual"></div>
+            <div class="field mb-16"><label>Nueva Contraseña</label><input type="password" id="password-nueva"></div>
+            <div class="field mb-16"><label>Confirmar Nueva Contraseña</label><input type="password" id="password-confirmar"></div>
+            <p id="cambiar-password-error" class="hidden" style="color:#C0392B; margin-bottom:12px; font-size:13px;"></p>
+            <button class="btn btn--primary" id="btn-guardar-password" style="width:100%;">Guardar</button>
+          </div>
+        </div>
       </div>
     </header>
 
@@ -762,7 +778,8 @@
           </div>
           <div class="panel__body">
             <p class="text-soft mb-16">Especialidad, experiencia, lo que quieras que sepan de ti — esto lo verán los alumnos más adelante.</p>
-            <textarea id="mentor-bio" placeholder="Cuéntales sobre tu especialidad y experiencia..." style="min-height:110px;"></textarea>
+            <p id="mentor-bio-texto" class="hidden" style="white-space:pre-wrap; margin:0;"></p>
+            <textarea id="mentor-bio" placeholder="Cuéntales sobre tu especialidad y experiencia..." style="min-height:110px; resize:none;"></textarea>
             <div class="flex-between" style="margin-top:12px;">
               <span></span>
               <button class="btn btn--primary" id="btn-guardar-bio-mentor">Guardar Presentación</button>
@@ -781,7 +798,7 @@
             </div>
             <button class="btn btn--accent" id="btn-agregar-mentoria">+ Agregar Mentoría</button>
             <table class="data-table mb-16" style="margin-top:16px;">
-              <thead><tr><th>Tema</th><th>Fecha</th><th>Hora</th><th>Acceso</th><th>NPS de la sesión</th><th></th></tr></thead>
+              <thead><tr><th>Tema</th><th>Fecha</th><th>Hora</th><th>Acceso</th><th>NPS de la sesión</th><th>Resumen IA</th><th></th></tr></thead>
               <tbody id="tabla-mentorias-body"></tbody>
             </table>
           </div>

@@ -204,7 +204,10 @@ export function aplicarBloqueoCamposFicha(bloqueado) {
   document.querySelectorAll(
     '.tab-panel[data-panel="datos"] input, .tab-panel[data-panel="datos"] select,' +
     '.tab-panel[data-panel="ciclo"] textarea, .tab-panel[data-panel="ciclo"] input:not(:disabled)'
-  ).forEach(el => { el.disabled = bloqueado && currentRole === 'coach'; });
+  ).forEach(el => {
+    if (el.id === 'datos-foto-input') return;
+    el.disabled = bloqueado && currentRole === 'coach';
+  });
 }
 
 export function setCandado(bloqueado) {
