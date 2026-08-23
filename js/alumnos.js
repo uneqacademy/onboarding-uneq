@@ -466,16 +466,68 @@ async function renderHistorialCiclos(ciclosAnterioresIds) {
   }
 
   const snaps = await Promise.all(ciclosAnterioresIds.map(id => get(ref(db, `ciclos/${id}`))));
+  const ciclosConId = ciclosAnterioresIds
+    .map((id, idx) => ({ id, datos: snaps[idx].exists() ? snaps[idx].val() : null }))
+    .filter(c => c.datos);
+
   contenedor.className = 'panel__body';
-  contenedor.innerHTML = snaps
-    .filter(s => s.exists())
-    .map(s => {
-      const c = s.val();
-      return `<div style="padding:10px 0; border-bottom:0.5px solid var(--border);">
-        <strong>${programaLabel(c.programa)}</strong>
-        <span class="text-soft" style="font-size:12px;"> · ${formatFecha(c.fechaIngreso)} — ${formatFecha(c.fechaEgreso)} · ${labelEstadoAlumno(c.estadoAlumno)}</span>
-      </div>`;
-    }).join('') || '<p class="text-soft">Sin datos.</p>';
+  contenedor.innerHTML = ciclosConId.map(({ id, datos: c }) => `
+    <div style="padding:10px 0; border-bottom:0.5px solid var(--border);">
+      <div class="flex-between">
+        <div>
+          <strong>${programaLabel(c.programa)}</strong>
+          <span class="text-soft" style="font-size:12px;"> · ${formatFecha(c.fechaIngreso)} — ${formatFecha(c.fechaEgreso)} · ${labelEstadoAlumno(c.estadoAlumno)}</span>
+        </div>
+        <button class="btn btn--ghost btn-ver-detalle-historico" data-ciclo-id="${id}" style="font-size:11px; padding:4px 8px;">Ver Detalle</button>
+      </div>
+      <div class="hidden" id="detalle-historico-${id}" style="margin-top:10px;"></div>
+    </div>`).join('') || '<p class="text-soft">Sin datos.</p>';
+
+  contenedor.querySelectorAll('.btn-ver-detalle-historico').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const cicloId = btn.dataset.cicloId;
+      const panel = document.getElementById(`detalle-historico-${cicloId}`);
+
+      if (!panel.classList.contains('hidden')) {
+        panel.classList.add('hidden');
+        panel.innerHTML = '';
+        btn.textContent = 'Ver Detalle';
+        return;
+      }
+
+      btn.textContent = 'Cargando...';
+      const [testsSnap, bitacoraSnap] = await Promise.all([
+        get(ref(db, `ciclos/${cicloId}/tests`)),
+        get(ref(db, `bitacora/${cicloId}`))
+      ]);
+
+      const tests = testsSnap.exists() ? Object.values(testsSnap.val()) : [];
+      const entradasBitacora = bitacoraSnap.exists() ? Object.values(bitacoraSnap.val()) : [];
+
+      const testsHtml = tests.length
+        ? tests.sort((a, b) => b.completadoAt - a.completadoAt).map(t => {
+            const fecha = new Intl.DateTimeFormat('es-CL', { day: '2-digit', month: 'short', year: 'numeric' }).format(new Date(t.completadoAt));
+            const p = t.promedios || {};
+            return `<div style="font-size:13px; padding:4px 0;">${fecha} — Fase1: ${p.fase1 ?? '—'} · Fase2: ${p.fase2 ?? '—'} · Fase3: ${p.fase3 ?? '—'} · Fase4: ${p.fase4 ?? '—'}</div>`;
+          }).join('')
+        : '<p class="text-soft" style="font-size:13px;">Sin tests registrados en este ciclo.</p>';
+
+      const bitacoraHtml = entradasBitacora.length
+        ? entradasBitacora.sort((a, b) => b.createdAt - a.createdAt).map(e => `
+            <div style="font-size:13px; padding:6px 0; border-top:0.5px solid var(--border);">
+              <strong>${e.titulo || ''}</strong> — ${formatFecha(e.fecha)} · ${e.canal || ''}<br>${e.notas || ''}
+            </div>`).join('')
+        : '<p class="text-soft" style="font-size:13px;">Sin entradas de bitácora en este ciclo.</p>';
+
+      panel.innerHTML = `
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:20px;">
+          <div><strong style="font-size:13px;">Tests realizados</strong>${testsHtml}</div>
+          <div><strong style="font-size:13px;">Bitácora</strong>${bitacoraHtml}</div>
+        </div>`;
+      panel.classList.remove('hidden');
+      btn.textContent = 'Ocultar Detalle';
+    });
+  });
 }
 
 /* --- Bloqueo general de Datos/Ciclo tras guardar, con botón "Editar" ---
