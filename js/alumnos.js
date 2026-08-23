@@ -1071,6 +1071,8 @@ export async function initAlumnosModule() {
   }
 }
 
+document.addEventListener('rolCambiado', () => { initAlumnosModule(); });
+
 // Refresca las tablas y la lista de coaches cada vez que se navega —
 // evita que quede mostrando datos viejos si algo cambió mientras tanto
 // (ej. un coach eliminado que se quedaba pegado en los desplegables).

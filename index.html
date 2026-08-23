@@ -81,6 +81,8 @@
       <input type="file" id="input-importar-json" accept="application/json" class="hidden">
     </div>
 
+    <div class="hidden" id="selector-rol-container" style="padding:0 20px 12px;"></div>
+
     <div class="sidebar-footer" id="sidebar-user-info">
       Sesión: <strong style="color:#fff;">—</strong><br>
       Rol: —
@@ -643,7 +645,10 @@
               <div class="field"><label>Nombre completo</label><input id="nuevo-coach-nombre" placeholder="Nombre y apellido" autocomplete="off"></div>
               <div class="field"><label>Correo</label><input type="email" id="nuevo-coach-email" placeholder="nombre@agenciauneq.com" autocomplete="off"></div>
             </div>
-            <p class="text-soft mb-16">Se genera una contraseña inicial automática — te la muestro al final para que se la compartas tú mismo (no enviamos correos todavía).</p>
+            <label style="display:flex; align-items:center; gap:8px; margin-bottom:16px; font-weight:400;">
+              <input type="checkbox" id="nuevo-coach-tambien-mentor" style="width:auto;"> ¿También es Mentor?
+            </label>
+            <p class="text-soft mb-16">Si el correo ya existe como Mentor, se le agrega el rol de Coach a esa misma cuenta (sin crear una nueva ni generar contraseña). Si es una cuenta nueva, se genera una contraseña inicial automática — te la muestro al final para que se la compartas tú mismo.</p>
             <p id="nuevo-coach-error" class="hidden" style="color:#C0392B; margin-bottom:12px;"></p>
             <button class="btn btn--primary" id="btn-crear-coach">Crear Cuenta de Coach</button>
 
@@ -690,7 +695,10 @@
               <div class="field"><label>Nombre completo</label><input id="nuevo-mentor-nombre" placeholder="Nombre y apellido" autocomplete="off"></div>
               <div class="field"><label>Correo</label><input type="email" id="nuevo-mentor-email" placeholder="nombre@agenciauneq.com" autocomplete="off"></div>
             </div>
-            <p class="text-soft mb-16">Se genera una contraseña inicial automática — te la muestro al final para que se la compartas tú mismo.</p>
+            <label style="display:flex; align-items:center; gap:8px; margin-bottom:16px; font-weight:400;">
+              <input type="checkbox" id="nuevo-mentor-tambien-coach" style="width:auto;"> ¿También es Coach?
+            </label>
+            <p class="text-soft mb-16">Si el correo ya existe como Coach, se le agrega el rol de Mentor a esa misma cuenta (sin crear una nueva ni generar contraseña). Si es una cuenta nueva, se genera una contraseña inicial automática — te la muestro al final para que se la compartas tú mismo.</p>
             <p id="nuevo-mentor-error" class="hidden" style="color:#C0392B; margin-bottom:12px;"></p>
             <button class="btn btn--primary" id="btn-crear-mentor">Crear Cuenta de Mentor</button>
 

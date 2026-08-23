@@ -11,12 +11,23 @@
    ============================================================ */
 
 import { db, auth, firebaseConfig } from './firebase-config.js';
-import { ref, get, set } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-database.js";
+import { ref, get, set, update } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-database.js";
 import { initializeApp, deleteApp } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-app.js";
 import { getAuth, createUserWithEmailAndPassword, signOut as signOutSecundaria, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-auth.js";
 import { getCurrentRole, setNav } from './main.js';
 
 const ESTADOS_VIGENTES = ['activo', 'en_proceso_matricula', 'pausado'];
+
+/* --- Compatibilidad: cuentas viejas tienen "rol" (string), las nuevas
+       tienen "roles" (objeto con varios a la vez). --- */
+function normalizarRoles(perfil) {
+  if (perfil.roles && typeof perfil.roles === 'object') return { ...perfil.roles };
+  if (perfil.rol) return { [perfil.rol]: true };
+  return {};
+}
+function tieneRol(perfil, rol) {
+  return !!normalizarRoles(perfil)[rol];
+}
 const AREA_LABELS = {
   dominio: 'Dominio y soporte',
   acceso: 'Acceso a contenidos',
@@ -151,7 +162,7 @@ async function cargarCoachesView() {
   tbody.innerHTML = '';
 
   Object.entries(usuarios)
-    .filter(([, u]) => u.rol === 'coach')
+    .filter(([, u]) => tieneRol(u, 'coach'))
     .forEach(([uid, coach]) => {
       const nombreCoach = coach.nombre || coach.email;
       const alumnosDeCoach = Object.entries(alumnos).filter(([, al]) => {
@@ -179,6 +190,7 @@ async function cargarCoachesView() {
           <button class="btn btn--ghost btn-ver-nps" style="font-size:11px; padding:4px 8px;">Ver NPS</button>
           <button class="btn btn--ghost btn-copiar-medio" style="font-size:11px; padding:4px 8px;">Link Medio</button>
           <button class="btn btn--ghost btn-copiar-final" style="font-size:11px; padding:4px 8px;">Link Final</button>
+          <button class="btn btn--ghost btn-gestionar-roles" style="font-size:11px; padding:4px 8px;">Roles</button>
           <button class="btn btn--ghost btn-restablecer-password" style="font-size:11px; padding:4px 8px;">Restablecer Contraseña</button>
           <button class="btn btn--ghost btn-eliminar-coach" style="font-size:11px; padding:4px 8px;">Eliminar</button>
         </td>`;
@@ -188,6 +200,37 @@ async function cargarCoachesView() {
       tr.querySelector('.btn-copiar-final').addEventListener('click', () => copiarLink(uid, nombreCoach, 'final'));
       tr.querySelector('.btn-eliminar-coach').addEventListener('click', () => eliminarCoach(uid, nombreCoach, vigentes));
       tr.querySelector('.btn-restablecer-password').addEventListener('click', (ev) => enviarResetPassword(coach.email, ev.target));
+
+      let filaRoles = null;
+      tr.querySelector('.btn-gestionar-roles').addEventListener('click', () => {
+        if (filaRoles) { filaRoles.remove(); filaRoles = null; return; }
+        const rolesActuales = normalizarRoles(coach);
+        filaRoles = document.createElement('tr');
+        filaRoles.innerHTML = `
+          <td colspan="6" style="background:#F7F8FA; padding:14px 16px;">
+            <div style="display:flex; align-items:center; gap:16px; flex-wrap:wrap;">
+              <label style="font-weight:400;"><input type="checkbox" class="chk-rol-coach" ${rolesActuales.coach ? 'checked' : ''}> Coach</label>
+              <label style="font-weight:400;"><input type="checkbox" class="chk-rol-mentor" ${rolesActuales.mentor ? 'checked' : ''}> Mentor</label>
+              <span class="text-soft" style="font-size:12px;">El rol Director se asigna aparte, en Firebase Console.</span>
+              <button class="btn btn--primary btn-guardar-roles" style="font-size:11px; padding:4px 10px;">Guardar</button>
+            </div>
+          </td>`;
+        tr.insertAdjacentElement('afterend', filaRoles);
+
+        filaRoles.querySelector('.btn-guardar-roles').addEventListener('click', async () => {
+          const nuevosRoles = {
+            ...rolesActuales,
+            coach: filaRoles.querySelector('.chk-rol-coach').checked,
+            mentor: filaRoles.querySelector('.chk-rol-mentor').checked
+          };
+          if (!Object.values(nuevosRoles).some(Boolean)) {
+            alert('Debe quedar con al menos un rol activo. Para sacarle todos los accesos, usa "Eliminar".');
+            return;
+          }
+          await update(ref(db, `usuarios/${uid}`), { roles: nuevosRoles, rol: null });
+          await cargarCoachesView();
+        });
+      });
 
       let filaDetalle = null;
       tr.querySelector('.btn-ver-nps').addEventListener('click', (ev) => {
@@ -298,6 +341,7 @@ if (btnCrearCoach) {
     document.getElementById('panel-coach-creado').classList.add('hidden');
     const nombre = document.getElementById('nuevo-coach-nombre').value.trim();
     const email = document.getElementById('nuevo-coach-email').value.trim();
+    const tambienMentor = document.getElementById('nuevo-coach-tambien-mentor').checked;
 
     if (!nombre || !email) {
       errorEl.textContent = 'Completa nombre y correo.';
@@ -308,35 +352,61 @@ if (btnCrearCoach) {
     btnCrearCoach.disabled = true;
     btnCrearCoach.textContent = 'Creando...';
 
-    const password = generarPassword();
-    let secundaria = null;
     try {
-      secundaria = initializeApp(firebaseConfig, 'crear-coach-' + Date.now());
-      const authSecundaria = getAuth(secundaria);
-      const credencial = await createUserWithEmailAndPassword(authSecundaria, email, password);
-      const nuevoUid = credencial.user.uid;
-      await signOutSecundaria(authSecundaria);
+      // ¿Ya existe una cuenta con este correo? Si es así, solo le agregamos
+      // el rol — no se crea una cuenta nueva ni se genera contraseña.
+      const usuariosSnap = await get(ref(db, 'usuarios'));
+      const usuarios = usuariosSnap.exists() ? usuariosSnap.val() : {};
+      const existente = Object.entries(usuarios).find(([, u]) => (u.email || '').toLowerCase() === email.toLowerCase());
 
-      await set(ref(db, `usuarios/${nuevoUid}`), { nombre, email, rol: 'coach', activo: true });
+      if (existente) {
+        const [uidExistente, datosExistente] = existente;
+        const rolesNuevos = { ...normalizarRoles(datosExistente), coach: true };
+        if (tambienMentor) rolesNuevos.mentor = true;
+        await update(ref(db, `usuarios/${uidExistente}`), { roles: rolesNuevos, rol: null });
 
-      document.getElementById('nuevo-coach-nombre').value = '';
-      document.getElementById('nuevo-coach-email').value = '';
+        document.getElementById('nuevo-coach-nombre').value = '';
+        document.getElementById('nuevo-coach-email').value = '';
+        document.getElementById('nuevo-coach-tambien-mentor').checked = false;
+        alert(`${datosExistente.nombre || email} ya tenía una cuenta — se le agregó el rol de Coach${tambienMentor ? ' y Mentor' : ''} a la misma cuenta, sin generar contraseña nueva.`);
+        await cargarCoachesView();
+        return;
+      }
 
-      document.getElementById('coach-creado-email').value = email;
-      document.getElementById('coach-creado-password').value = password;
-      document.getElementById('panel-coach-creado').classList.remove('hidden');
+      const password = generarPassword();
+      let secundaria = null;
+      try {
+        secundaria = initializeApp(firebaseConfig, 'crear-coach-' + Date.now());
+        const authSecundaria = getAuth(secundaria);
+        const credencial = await createUserWithEmailAndPassword(authSecundaria, email, password);
+        const nuevoUid = credencial.user.uid;
+        await signOutSecundaria(authSecundaria);
 
-      await cargarCoachesView();
-      // Ojo: NO navegamos a "Coaches" acá a propósito — así el panel con la
-      // contraseña se queda visible hasta que el director lo copie y decida
-      // volver él mismo con "← Volver".
+        const roles = { coach: true };
+        if (tambienMentor) roles.mentor = true;
+        await set(ref(db, `usuarios/${nuevoUid}`), { nombre, email, roles, activo: true });
+
+        document.getElementById('nuevo-coach-nombre').value = '';
+        document.getElementById('nuevo-coach-email').value = '';
+        document.getElementById('nuevo-coach-tambien-mentor').checked = false;
+
+        document.getElementById('coach-creado-email').value = email;
+        document.getElementById('coach-creado-password').value = password;
+        document.getElementById('panel-coach-creado').classList.remove('hidden');
+
+        await cargarCoachesView();
+        // Ojo: NO navegamos a "Coaches" acá a propósito — así el panel con la
+        // contraseña se queda visible hasta que el director lo copie y decida
+        // volver él mismo con "← Volver".
+      } finally {
+        if (secundaria) await deleteApp(secundaria);
+      }
     } catch (err) {
       errorEl.textContent = err.code === 'auth/email-already-in-use'
         ? 'Ese correo ya tiene una cuenta creada.'
         : 'No se pudo crear la cuenta. Intenta de nuevo.';
       errorEl.classList.remove('hidden');
     } finally {
-      if (secundaria) await deleteApp(secundaria);
       btnCrearCoach.disabled = false;
       btnCrearCoach.textContent = 'Crear Cuenta de Coach';
     }

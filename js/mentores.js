@@ -21,6 +21,17 @@ export const PLACEHOLDER_FOTO_PERFIL = 'data:image/svg+xml;utf8,' + encodeURICom
   '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 80"><rect width="80" height="80" rx="40" fill="#E4E7EC"/><circle cx="40" cy="32" r="14" fill="#9AA4B2"/><ellipse cx="40" cy="70" rx="24" ry="18" fill="#9AA4B2"/></svg>'
 );
 
+/* --- Compatibilidad: cuentas viejas tienen "rol" (string), las nuevas
+       tienen "roles" (objeto con varios a la vez). --- */
+function normalizarRoles(perfil) {
+  if (perfil.roles && typeof perfil.roles === 'object') return { ...perfil.roles };
+  if (perfil.rol) return { [perfil.rol]: true };
+  return {};
+}
+function tieneRol(perfil, rol) {
+  return !!normalizarRoles(perfil)[rol];
+}
+
 const FASE_LABELS = { fase1: 'Fase 1', fase2: 'Fase 2', fase3: 'Fase 3', fase4: 'Fase 4' };
 const URL_REDES = {
   Instagram: u => `https://instagram.com/${u.replace(/^@/, '')}`,
@@ -62,7 +73,7 @@ async function cargarMentoresView() {
   tbody.innerHTML = '';
 
   Object.entries(usuarios)
-    .filter(([, u]) => u.rol === 'mentor')
+    .filter(([, u]) => tieneRol(u, 'mentor'))
     .forEach(([uid, mentor]) => {
       const { promedio, total } = calcularNpsResumenMentor(npsMentoriasTodos[uid]);
       const npsTexto = promedio !== null ? `${promedio.toFixed(1)} ★ (${total})` : '—';
@@ -74,12 +85,44 @@ async function cargarMentoresView() {
         <td><span class="badge ${mentor.activo === false ? 'badge--impaga' : 'badge--activo'}">${mentor.activo === false ? 'Inactivo' : 'Activo'}</span></td>
         <td>${npsTexto}</td>
         <td style="display:flex; gap:6px; flex-wrap:wrap;">
+          <button class="btn btn--ghost btn-gestionar-roles-mentor" style="font-size:11px; padding:4px 8px;">Roles</button>
           <button class="btn btn--ghost btn-restablecer-password-mentor" style="font-size:11px; padding:4px 8px;">Restablecer Contraseña</button>
           <button class="btn btn--ghost btn-eliminar-mentor" style="font-size:11px; padding:4px 8px;">Eliminar</button>
         </td>`;
       tbody.appendChild(tr);
 
       tr.querySelector('.btn-restablecer-password-mentor').addEventListener('click', (ev) => enviarResetPasswordMentor(mentor.email, ev.target));
+
+      let filaRolesMentor = null;
+      tr.querySelector('.btn-gestionar-roles-mentor').addEventListener('click', () => {
+        if (filaRolesMentor) { filaRolesMentor.remove(); filaRolesMentor = null; return; }
+        const rolesActuales = normalizarRoles(mentor);
+        filaRolesMentor = document.createElement('tr');
+        filaRolesMentor.innerHTML = `
+          <td colspan="5" style="background:#F7F8FA; padding:14px 16px;">
+            <div style="display:flex; align-items:center; gap:16px; flex-wrap:wrap;">
+              <label style="font-weight:400;"><input type="checkbox" class="chk-rol-mentor-m" ${rolesActuales.mentor ? 'checked' : ''}> Mentor</label>
+              <label style="font-weight:400;"><input type="checkbox" class="chk-rol-coach-m" ${rolesActuales.coach ? 'checked' : ''}> Coach</label>
+              <span class="text-soft" style="font-size:12px;">El rol Director se asigna aparte, en Firebase Console.</span>
+              <button class="btn btn--primary btn-guardar-roles-mentor" style="font-size:11px; padding:4px 10px;">Guardar</button>
+            </div>
+          </td>`;
+        tr.insertAdjacentElement('afterend', filaRolesMentor);
+
+        filaRolesMentor.querySelector('.btn-guardar-roles-mentor').addEventListener('click', async () => {
+          const nuevosRoles = {
+            ...rolesActuales,
+            mentor: filaRolesMentor.querySelector('.chk-rol-mentor-m').checked,
+            coach: filaRolesMentor.querySelector('.chk-rol-coach-m').checked
+          };
+          if (!Object.values(nuevosRoles).some(Boolean)) {
+            alert('Debe quedar con al menos un rol activo. Para sacarle todos los accesos, usa "Eliminar".');
+            return;
+          }
+          await update(ref(db, `usuarios/${uid}`), { roles: nuevosRoles, rol: null });
+          await cargarMentoresView();
+        });
+      });
 
       tr.querySelector('.btn-eliminar-mentor').addEventListener('click', async () => {
         const confirmado = confirm(`¿Eliminar a ${mentor.nombre || mentor.email}? Ya no va a poder entrar a la app.`);
@@ -98,6 +141,7 @@ if (btnCrearMentor) {
     document.getElementById('panel-mentor-creado').classList.add('hidden');
     const nombre = document.getElementById('nuevo-mentor-nombre').value.trim();
     const email = document.getElementById('nuevo-mentor-email').value.trim();
+    const tambienCoach = document.getElementById('nuevo-mentor-tambien-coach').checked;
 
     if (!nombre || !email) {
       errorEl.textContent = 'Completa nombre y correo.';
@@ -107,31 +151,56 @@ if (btnCrearMentor) {
 
     btnCrearMentor.disabled = true;
     btnCrearMentor.textContent = 'Creando...';
-    const password = generarPassword();
-    let secundaria = null;
+
     try {
-      secundaria = initializeApp(firebaseConfig, 'crear-mentor-' + Date.now());
-      const authSecundaria = getAuth(secundaria);
-      const credencial = await createUserWithEmailAndPassword(authSecundaria, email, password);
-      const nuevoUid = credencial.user.uid;
-      await signOutSecundaria(authSecundaria);
+      const usuariosSnap = await get(ref(db, 'usuarios'));
+      const usuarios = usuariosSnap.exists() ? usuariosSnap.val() : {};
+      const existente = Object.entries(usuarios).find(([, u]) => (u.email || '').toLowerCase() === email.toLowerCase());
 
-      await set(ref(db, `usuarios/${nuevoUid}`), { nombre, email, rol: 'mentor', activo: true });
+      if (existente) {
+        const [uidExistente, datosExistente] = existente;
+        const rolesNuevos = { ...normalizarRoles(datosExistente), mentor: true };
+        if (tambienCoach) rolesNuevos.coach = true;
+        await update(ref(db, `usuarios/${uidExistente}`), { roles: rolesNuevos, rol: null });
 
-      document.getElementById('nuevo-mentor-nombre').value = '';
-      document.getElementById('nuevo-mentor-email').value = '';
-      document.getElementById('mentor-creado-email').value = email;
-      document.getElementById('mentor-creado-password').value = password;
-      document.getElementById('panel-mentor-creado').classList.remove('hidden');
+        document.getElementById('nuevo-mentor-nombre').value = '';
+        document.getElementById('nuevo-mentor-email').value = '';
+        document.getElementById('nuevo-mentor-tambien-coach').checked = false;
+        alert(`${datosExistente.nombre || email} ya tenía una cuenta — se le agregó el rol de Mentor${tambienCoach ? ' y Coach' : ''} a la misma cuenta, sin generar contraseña nueva.`);
+        await cargarMentoresView();
+        return;
+      }
 
-      await cargarMentoresView();
+      const password = generarPassword();
+      let secundaria = null;
+      try {
+        secundaria = initializeApp(firebaseConfig, 'crear-mentor-' + Date.now());
+        const authSecundaria = getAuth(secundaria);
+        const credencial = await createUserWithEmailAndPassword(authSecundaria, email, password);
+        const nuevoUid = credencial.user.uid;
+        await signOutSecundaria(authSecundaria);
+
+        const roles = { mentor: true };
+        if (tambienCoach) roles.coach = true;
+        await set(ref(db, `usuarios/${nuevoUid}`), { nombre, email, roles, activo: true });
+
+        document.getElementById('nuevo-mentor-nombre').value = '';
+        document.getElementById('nuevo-mentor-email').value = '';
+        document.getElementById('nuevo-mentor-tambien-coach').checked = false;
+        document.getElementById('mentor-creado-email').value = email;
+        document.getElementById('mentor-creado-password').value = password;
+        document.getElementById('panel-mentor-creado').classList.remove('hidden');
+
+        await cargarMentoresView();
+      } finally {
+        if (secundaria) await deleteApp(secundaria);
+      }
     } catch (err) {
       errorEl.textContent = err.code === 'auth/email-already-in-use'
         ? 'Ese correo ya tiene una cuenta creada.'
         : 'No se pudo crear la cuenta. Intenta de nuevo.';
       errorEl.classList.remove('hidden');
     } finally {
-      if (secundaria) await deleteApp(secundaria);
       btnCrearMentor.disabled = false;
       btnCrearMentor.textContent = 'Crear Cuenta de Mentor';
     }

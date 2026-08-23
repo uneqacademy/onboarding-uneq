@@ -7,6 +7,7 @@
 
 let currentRole = null;
 let currentNombre = '';
+let currentRolesDisponibles = [];
 let candadoBloqueado = false;
 
 // Inserta el ícono de marca (brújula) donde corresponda
@@ -15,9 +16,12 @@ document.querySelectorAll('[data-brand-mark]').forEach(el => {
   el.appendChild(tpl.content.cloneNode(true));
 });
 
-export function applyRole(role, nombre) {
+const NOMBRES_ROL = { director: 'Director/a Académico', coach: 'Coach', mentor: 'Mentor/a' };
+
+export function applyRole(role, nombre, rolesDisponibles) {
   currentRole = role;
   currentNombre = nombre;
+  currentRolesDisponibles = (rolesDisponibles && rolesDisponibles.length) ? rolesDisponibles : [role];
 
   document.querySelectorAll('[data-role="director"]').forEach(el => {
     el.classList.toggle('hidden', role !== 'director');
@@ -35,9 +39,10 @@ export function applyRole(role, nombre) {
   const tabPago = document.querySelector('.tab[data-tab="pago"]');
   if (tabPago) tabPago.classList.toggle('hidden', role !== 'director');
 
-  const NOMBRES_ROL = { director: 'Director/a Académico', coach: 'Coach', mentor: 'Mentor/a' };
   document.getElementById('sidebar-user-info').innerHTML =
     `Sesión: <strong style="color:#fff;">${nombre}</strong><br>Rol: ${NOMBRES_ROL[role] || role}`;
+
+  renderSelectorRol();
 
   document.querySelectorAll('.btn-unlock-cuota').forEach(btn => btn.classList.toggle('hidden', role !== 'director'));
 
@@ -45,6 +50,35 @@ export function applyRole(role, nombre) {
   document.getElementById('app-shell').classList.remove('hidden');
 
   setNav('dashboard');
+}
+
+/* --- Si la cuenta tiene más de un rol, muestra un selector para cambiar
+       de vista sin cerrar sesión. Al cambiar, dispara "rolCambiado" para
+       que alumnos.js recargue los datos del rol nuevo. --- */
+function renderSelectorRol() {
+  const cont = document.getElementById('selector-rol-container');
+  if (!cont) return;
+
+  if (currentRolesDisponibles.length <= 1) {
+    cont.classList.add('hidden');
+    cont.innerHTML = '';
+    return;
+  }
+
+  cont.classList.remove('hidden');
+  const opciones = currentRolesDisponibles
+    .map(r => `<option value="${r}" ${r === currentRole ? 'selected' : ''}>${NOMBRES_ROL[r] || r}</option>`)
+    .join('');
+  cont.innerHTML = `
+    <label style="display:block; font-size:11px; color:rgba(255,255,255,0.45); margin-bottom:4px;">Viendo como</label>
+    <select id="selector-rol-activo" style="width:100%; background:transparent; color:#fff; border:1px solid rgba(255,255,255,0.25); border-radius:6px; padding:6px;">
+      ${opciones}
+    </select>`;
+
+  document.getElementById('selector-rol-activo').addEventListener('change', (ev) => {
+    applyRole(ev.target.value, currentNombre, currentRolesDisponibles);
+    document.dispatchEvent(new CustomEvent('rolCambiado'));
+  });
 }
 
 export function showLogin() {

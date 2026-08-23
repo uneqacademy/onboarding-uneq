@@ -87,7 +87,11 @@ onAuthStateChanged(auth, async (user) => {
       return;
     }
 
-    if (!['director', 'coach', 'mentor'].includes(perfil.rol)) {
+    const roles = (perfil.roles && typeof perfil.roles === 'object')
+      ? Object.keys(perfil.roles).filter(r => perfil.roles[r])
+      : (perfil.rol ? [perfil.rol] : []);
+
+    if (!roles.length || !roles.every(r => ['director', 'coach', 'mentor'].includes(r))) {
       mostrarError('Esta cuenta no tiene un rol válido asignado.');
       await signOut(auth);
       return;
@@ -96,7 +100,8 @@ onAuthStateChanged(auth, async (user) => {
     limpiarError();
     inputEmail.value = '';
     inputPass.value = '';
-    applyRole(perfil.rol, perfil.nombre || user.email);
+    const rolActivo = roles.includes('director') ? 'director' : roles.includes('coach') ? 'coach' : 'mentor';
+    applyRole(rolActivo, perfil.nombre || user.email, roles);
     await initAlumnosModule();
   } catch (err) {
     mostrarError('Error al cargar tu perfil. Intenta de nuevo.');
