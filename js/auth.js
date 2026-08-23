@@ -19,6 +19,7 @@ import {
 import { ref, get } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-database.js";
 import { applyRole, showLogin } from './main.js';
 import { initAlumnosModule } from './alumnos.js';
+import { cargarDashboardAlumno } from './alumno-portal.js';
 
 const inputEmail = document.getElementById('login-email');
 const inputPass = document.getElementById('login-pass');
@@ -157,6 +158,24 @@ onAuthStateChanged(auth, async (user) => {
     const snap = await get(ref(db, `usuarios/${user.uid}`));
 
     if (!snap.exists()) {
+      const mapaSnap = await get(ref(db, `alumnoPorAuthUid/${user.uid}`));
+      if (mapaSnap.exists()) {
+        const alumnoId = mapaSnap.val();
+        const alumnoSnap = await get(ref(db, `alumnos/${alumnoId}`));
+        if (!alumnoSnap.exists()) {
+          mostrarError('No se encontró tu ficha. Contacta a tu coach.');
+          await signOut(auth);
+          return;
+        }
+        const datosAlumno = alumnoSnap.val();
+        limpiarError();
+        inputEmail.value = '';
+        inputPass.value = '';
+        applyRole('alumno', `${datosAlumno.nombre || ''} ${datosAlumno.apellido || ''}`.trim() || user.email, ['alumno']);
+        await cargarDashboardAlumno(alumnoId);
+        return;
+      }
+
       mostrarError('Esta cuenta no tiene un perfil asignado. Contacta al director/a.');
       await signOut(auth);
       return;

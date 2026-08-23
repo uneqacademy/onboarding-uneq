@@ -25,6 +25,7 @@ import { generarPdfAcuerdo } from './pdf-acuerdo.js';
 import './respaldo.js';
 import { cargarMiEvaluacionCoach } from './coaches.js';
 import { cargarDashboardMentor, cargarAlumnosMentor, cargarPerfilMentor, cargarMentoriasView } from './mentores.js';
+import { actualizarBotonAccesoAlumno } from './alumno-portal.js';
 
 let coachesMap = {};       // uid -> nombre, solo se llena para el director
 let currentAlumnoId = null;
@@ -622,6 +623,8 @@ async function abrirFicha(alumnoId) {
 
   currentAlumnoId = alumnoId;
   currentCicloId = alumno.cicloActualId || null;
+
+  actualizarBotonAccesoAlumno(alumnoId, !!alumno.authUid);
 
   let ciclo = null;
   if (currentCicloId) {

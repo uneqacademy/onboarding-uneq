@@ -389,6 +389,21 @@
                 <span></span>
                 <button class="btn btn--primary" id="btn-guardar-datos">Guardar Datos</button>
               </div>
+
+              <div style="border-top:0.5px solid var(--border); margin-top:20px; padding-top:16px;">
+                <p class="text-soft mb-16">Acceso del alumno a su propio portal (ficha, test y bitácora de solo lectura).</p>
+                <button class="btn btn--ghost" id="btn-crear-acceso-alumno">🔑 Crear Acceso para el Alumno</button>
+                <div class="panel mb-16 hidden" id="panel-acceso-alumno-creado" style="margin-top:16px;">
+                  <div class="panel__body">
+                    <p style="margin-bottom:12px;"><strong>✓ Acceso creado</strong> — cópialo y compártelo con el alumno.</p>
+                    <div class="field-grid mb-16">
+                      <div class="field"><label>Correo</label><input id="acceso-alumno-email" readonly></div>
+                      <div class="field"><label>Contraseña inicial</label><input id="acceso-alumno-password" readonly></div>
+                    </div>
+                    <button class="btn btn--ghost" id="btn-copiar-password-alumno">Copiar contraseña</button>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -857,6 +872,28 @@
           <div class="panel__body">
             <p class="text-soft">Aún no hay preguntas — esta sección se activa cuando los alumnos tengan su propia cuenta (Fase 2), y podrán escribirte consultas que respondas desde aquí.</p>
           </div>
+        </div>
+      </section>
+
+      <!-- ======================================================
+           DASHBOARD — ALUMNO (solo lectura)
+           ====================================================== -->
+      <section id="view-dashboard-alumno" class="view hidden">
+        <div class="panel mb-24">
+          <div class="panel__header"><h3>Mi Ficha</h3></div>
+          <div class="panel__body" id="alumno-mi-ficha"></div>
+        </div>
+        <div class="panel mb-24">
+          <div class="panel__header"><h3>Mi Acuerdo</h3></div>
+          <div class="panel__body" id="alumno-mi-acuerdo"></div>
+        </div>
+        <div class="panel mb-24">
+          <div class="panel__header"><h3>Mi Test Brújula</h3></div>
+          <div class="panel__body" id="alumno-mi-test"></div>
+        </div>
+        <div class="panel">
+          <div class="panel__header"><h3>Mi Bitácora</h3></div>
+          <div class="panel__body" id="alumno-mi-bitacora"></div>
         </div>
       </section>
 

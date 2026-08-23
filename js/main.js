@@ -16,7 +16,7 @@ document.querySelectorAll('[data-brand-mark]').forEach(el => {
   el.appendChild(tpl.content.cloneNode(true));
 });
 
-const NOMBRES_ROL = { director: 'Director/a Académico', coach: 'Coach', mentor: 'Mentor/a' };
+const NOMBRES_ROL = { director: 'Director/a Académico', coach: 'Coach', mentor: 'Mentor/a', alumno: 'Alumno/a' };
 
 export function applyRole(role, nombre, rolesDisponibles) {
   currentRole = role;
@@ -32,9 +32,14 @@ export function applyRole(role, nombre, rolesDisponibles) {
   document.querySelectorAll('[data-role="mentor"]').forEach(el => {
     el.classList.toggle('hidden', role !== 'mentor');
   });
+  document.querySelectorAll('[data-role="alumno"]').forEach(el => {
+    el.classList.toggle('hidden', role !== 'alumno');
+  });
 
-  // "Alumnos" ahora existe para los 3 roles — director/coach ven la ficha
-  // completa, el mentor ve su propia matriz (setNav decide cuál mostrar).
+  // "Alumnos" (el nav-item, la lista/ficha completa) es solo para
+  // director/coach/mentor — un alumno tiene su propio Dashboard aparte.
+  const navAlumnos = document.querySelector('.nav-item[data-nav="alumnos"]');
+  if (navAlumnos) navAlumnos.classList.toggle('hidden', role === 'alumno');
 
   const tabPago = document.querySelector('.tab[data-tab="pago"]');
   if (tabPago) tabPago.classList.toggle('hidden', role !== 'director');
@@ -109,6 +114,7 @@ export function setNav(section) {
   if (section === 'dashboard') {
     const vista = currentRole === 'director' ? 'view-dashboard-director'
       : currentRole === 'mentor' ? 'view-dashboard-mentor'
+      : currentRole === 'alumno' ? 'view-dashboard-alumno'
       : 'view-dashboard-coach';
     showView(vista);
     document.getElementById('topbar-title').textContent = 'Dashboard';
