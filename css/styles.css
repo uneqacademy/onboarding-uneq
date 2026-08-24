@@ -340,6 +340,7 @@ a { color: inherit; }
   color: var(--color-ink);
 }
 .field textarea { resize: vertical; min-height: 70px; }
+textarea { max-width: 100%; box-sizing: border-box; resize: vertical; }
 
 .btn {
   border: none;

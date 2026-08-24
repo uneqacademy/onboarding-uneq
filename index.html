@@ -65,6 +65,10 @@
       </div>
     </div>
 
+    <div class="hidden" data-role="alumno" style="text-align:center; padding:16px 0;">
+      <img id="sidebar-foto-alumno" src="" alt="" style="width:88px; height:88px; border-radius:50%; object-fit:cover; border:3px solid rgba(255,255,255,0.25);">
+    </div>
+
     <nav class="nav-group">
       <div class="nav-list">
         <li class="nav-item is-active" data-nav="dashboard">Dashboard</li>
@@ -72,9 +76,12 @@
         <li class="nav-item" data-role="director" data-nav="coaches">Coaches</li>
         <li class="nav-item" data-role="director" data-nav="mentores">Mentores</li>
         <li class="nav-item" data-role="director" data-nav="configuracion">Configuración</li>
+        <li class="nav-item" data-role="alumno" data-nav="ficha-alumno-propia">Mi Ficha Alumno</li>
         <li class="nav-item" data-role="alumno" data-nav="bitacora-alumno">Bitácora</li>
         <li class="nav-item" data-role="alumno" data-nav="test-alumno">Test Brújula</li>
         <li class="nav-item hidden" data-nav="box-consultas">BOX de Consultas</li>
+        <li class="nav-item" data-role="alumno" data-nav="preguntas-comunidad">Preguntas de la Comunidad</li>
+        <li class="nav-item" data-role="alumno" data-nav="acuerdo-alumno">Acuerdo Alumno</li>
       </div>
     </nav>
 
@@ -896,22 +903,39 @@
            BOX DE CONSULTAS — vista ALUMNO
            ====================================================== -->
       <section id="view-box-alumno" class="view hidden">
-        <div class="flex-between mb-16"><h2>BOX de Consultas</h2></div>
+        <div class="flex-between mb-16">
+          <h2>BOX de Consultas</h2>
+          <span class="badge badge--activo" id="box-alumno-contador">—</span>
+        </div>
+
         <div class="panel mb-24">
-          <div class="panel__header"><h3>Nueva Consulta</h3></div>
+          <div class="panel__header"><h3>Elige a quién preguntarle</h3></div>
+          <div class="panel__body" id="box-alumno-mentores-grid"></div>
+        </div>
+
+        <div class="panel mb-24 hidden" id="box-alumno-form-panel">
+          <div class="panel__header flex-between">
+            <h3 id="box-alumno-form-titulo">Pregunta</h3>
+            <button class="btn btn--ghost" id="btn-cerrar-form-pregunta" style="padding:2px 10px;">✕</button>
+          </div>
           <div class="panel__body">
+            <p class="mb-16">Tu pregunta va dirigida a <strong id="box-alumno-mentor-nombre-form">—</strong>.</p>
             <div class="field mb-16">
-              <label>¿A quién quieres preguntarle?</label>
-              <select id="box-alumno-mentor-select"></select>
-            </div>
-            <div class="field mb-16">
-              <label>Tu pregunta</label>
               <textarea id="box-alumno-pregunta" placeholder="Escribe tu consulta..."></textarea>
             </div>
             <p id="box-alumno-error" class="hidden" style="color:#C0392B; margin-bottom:12px;"></p>
             <button class="btn btn--primary" id="btn-enviar-pregunta-alumno">Enviar Pregunta</button>
           </div>
         </div>
+
+        <div class="panel mb-24 hidden" id="box-alumno-detalle-panel">
+          <div class="panel__header flex-between">
+            <h3>Sobre este Mentor</h3>
+            <button class="btn btn--ghost" id="btn-cerrar-detalle-mentor" style="padding:2px 10px;">✕</button>
+          </div>
+          <div class="panel__body" id="box-alumno-detalle-contenido"></div>
+        </div>
+
         <div class="panel">
           <div class="panel__header"><h3>Mis Consultas</h3></div>
           <div class="panel__body" id="box-alumno-listado">
@@ -924,17 +948,11 @@
            DASHBOARD — ALUMNO (solo lectura)
            ====================================================== -->
       <section id="view-dashboard-alumno" class="view hidden">
+        <div id="alumno-stepper-programa" class="mb-24"></div>
+        <h2 id="alumno-bienvenida" style="margin-bottom:20px;">Bienvenido,</h2>
         <div class="panel mb-24">
           <div class="panel__header"><h3>Accesos Directos</h3></div>
           <div class="panel__body" id="alumno-accesos-directos"></div>
-        </div>
-        <div class="panel mb-24">
-          <div class="panel__header"><h3>Mi Ficha</h3></div>
-          <div class="panel__body" id="alumno-mi-ficha"></div>
-        </div>
-        <div class="panel mb-24">
-          <div class="panel__header"><h3>Mi Acuerdo</h3></div>
-          <div class="panel__body" id="alumno-mi-acuerdo"></div>
         </div>
         <div class="panel">
           <div class="panel__header flex-between">
@@ -942,6 +960,48 @@
             <button class="btn btn--ghost" id="btn-ver-historial-test-alumno" style="font-size:12px;">Ver historial completo →</button>
           </div>
           <div class="panel__body" id="alumno-ultimo-test"></div>
+        </div>
+      </section>
+
+      <!-- ======================================================
+           MI FICHA ALUMNO — página propia
+           ====================================================== -->
+      <section id="view-ficha-alumno-propia" class="view hidden">
+        <div class="flex-between mb-16"><h2>Mi Ficha Alumno</h2></div>
+        <div class="panel">
+          <div class="panel__body" id="alumno-mi-ficha"></div>
+        </div>
+      </section>
+
+      <!-- ======================================================
+           ACUERDO ALUMNO — página propia, descarga directa
+           ====================================================== -->
+      <section id="view-acuerdo-alumno" class="view hidden">
+        <div class="flex-between mb-16"><h2>Acuerdo Alumno</h2></div>
+        <div class="panel">
+          <div class="panel__body" id="alumno-mi-acuerdo"></div>
+        </div>
+      </section>
+
+      <!-- ======================================================
+           PREGUNTAS DE LA COMUNIDAD — página propia
+           ====================================================== -->
+      <section id="view-preguntas-comunidad" class="view hidden">
+        <div class="flex-between mb-16"><h2>Preguntas de la Comunidad</h2></div>
+        <div class="panel mb-24">
+          <div class="panel__body" style="display:flex; gap:16px; flex-wrap:wrap;">
+            <div class="field" style="flex:1; min-width:200px;">
+              <label>Filtrar por Mentor</label>
+              <select id="comunidad-filtro-mentor"><option value="">Todos</option></select>
+            </div>
+            <div class="field" style="flex:1; min-width:200px;">
+              <label>Filtrar por Temática</label>
+              <select id="comunidad-filtro-tema"><option value="">Todas</option></select>
+            </div>
+          </div>
+        </div>
+        <div class="panel">
+          <div class="panel__body" id="comunidad-listado"></div>
         </div>
       </section>
 

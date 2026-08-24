@@ -146,6 +146,15 @@ export function setNav(section) {
   } else if (section === 'test-alumno') {
     showView('view-test-alumno');
     document.getElementById('topbar-title').textContent = 'Mi Test Brújula';
+  } else if (section === 'ficha-alumno-propia') {
+    showView('view-ficha-alumno-propia');
+    document.getElementById('topbar-title').textContent = 'Mi Ficha Alumno';
+  } else if (section === 'acuerdo-alumno') {
+    showView('view-acuerdo-alumno');
+    document.getElementById('topbar-title').textContent = 'Acuerdo Alumno';
+  } else if (section === 'preguntas-comunidad') {
+    showView('view-preguntas-comunidad');
+    document.getElementById('topbar-title').textContent = 'Preguntas de la Comunidad';
   }
 }
 

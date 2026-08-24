@@ -624,6 +624,8 @@ function renderRespuestaExistente(respuesta) {
   return html;
 }
 
+const TEMAS_BOX = ['Mentalidad', 'Estrategia', 'META ADS', 'Contenido Orgánico', 'CopyWriting', 'Ventas', 'Energía', 'Planificación', 'Identidad Visual', 'Diseño', 'Redes Sociales', 'Google ADS', 'Herramientas y Software'];
+
 export async function cargarBoxMentor() {
   if (getCurrentRole() !== 'mentor') return;
   const uid = auth.currentUser ? auth.currentUser.uid : null;
@@ -646,11 +648,19 @@ export async function cargarBoxMentor() {
     bloque.style.cssText = 'padding:14px 0; border-bottom:0.5px solid var(--border);';
     bloque.innerHTML = `
       <strong>${p.alumnoNombre || 'Alumno'}</strong> <span class="text-soft" style="font-size:12px;">— ${fecha}</span>
+      ${p.respuesta && p.respuesta.tema ? `<span class="badge badge--activo" style="margin-left:6px; font-size:10px;">${p.respuesta.tema}</span>` : ''}
       <p style="margin:6px 0;">${p.pregunta}</p>
       ${renderRespuestaExistente(p.respuesta)}
       ${!p.respuesta ? `
         <div style="margin-top:10px;">
           <textarea class="box-respuesta-texto" placeholder="Escribe tu respuesta (opcional si adjuntas audio o imagen)..." style="min-height:60px;"></textarea>
+          <div class="field mb-16" style="max-width:260px; margin-top:8px;">
+            <label>Temática</label>
+            <select class="box-respuesta-tema">
+              <option value="">Selecciona...</option>
+              ${TEMAS_BOX.map(t => `<option value="${t}">${t}</option>`).join('')}
+            </select>
+          </div>
           <div style="display:flex; align-items:center; gap:8px; margin-top:8px; flex-wrap:wrap;">
             <button type="button" class="btn btn--ghost btn-adjuntar-audio" style="font-size:11px; padding:4px 8px;">🎤 Adjuntar Audio</button>
             <input type="file" class="input-respuesta-audio hidden" accept="audio/*">
@@ -692,8 +702,13 @@ export async function cargarBoxMentor() {
     bloque.querySelector('.btn-enviar-respuesta').addEventListener('click', async (ev) => {
       const btn = ev.target;
       const texto = bloque.querySelector('.box-respuesta-texto').value.trim();
+      const tema = bloque.querySelector('.box-respuesta-tema').value;
       if (!texto && !archivoSeleccionado) {
         alert('Escribe una respuesta o adjunta un audio/imagen.');
+        return;
+      }
+      if (!tema) {
+        alert('Selecciona una temática para esta respuesta.');
         return;
       }
       btn.disabled = true;
@@ -706,7 +721,7 @@ export async function cargarBoxMentor() {
           archivoUrl = await getDownloadURL(archivoRef);
         }
         await update(ref(db, `box/${uid}/${preguntaId}`), {
-          respuesta: { texto: texto || null, archivoUrl, archivoTipo: archivoUrl ? tipoArchivoSeleccionado : null, respondidoEn: Date.now() }
+          respuesta: { texto: texto || null, archivoUrl, archivoTipo: archivoUrl ? tipoArchivoSeleccionado : null, tema, respondidoEn: Date.now() }
         });
         await cargarBoxMentor();
       } catch (err) {
