@@ -342,6 +342,22 @@ a { color: inherit; }
 .field textarea { resize: vertical; min-height: 70px; }
 textarea { max-width: 100%; box-sizing: border-box; resize: vertical; }
 
+.mentor-card-bloqueado {
+  filter: grayscale(100%);
+  opacity: 0.55;
+  border-color: #F5C6C6 !important;
+  background: #FDF3F3 !important;
+  position: relative;
+}
+.mentor-card-bloqueado::after {
+  content: "🔒 Bloqueado";
+  display: block;
+  font-size: 11px;
+  color: #C0392B;
+  margin-top: 6px;
+  font-weight: 600;
+}
+
 .btn {
   border: none;
   border-radius: var(--radius-sm);

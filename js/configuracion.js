@@ -18,6 +18,8 @@ export async function cargarConfiguracion() {
 
   document.getElementById('config-comunidad-hotmart').value = c.comunidadHotmartUrl || '';
   document.getElementById('config-correo-soporte').value = c.correoSoporte || '';
+  document.getElementById('config-whatsapp-soporte').value = c.whatsappSoporte || '';
+  document.getElementById('config-form-soporte-embed').value = c.formSoporteEmbed || '';
   document.getElementById('config-contenido-begin').value = c.contenidoHotmartBegin || '';
   document.getElementById('config-contenido-next').value = c.contenidoHotmartNext || '';
   document.getElementById('config-contenido-exit').value = c.contenidoHotmartExit || '';
@@ -35,6 +37,8 @@ if (btnGuardarConfiguracion) {
       await set(ref(db, 'configuracion/general'), {
         comunidadHotmartUrl: document.getElementById('config-comunidad-hotmart').value.trim(),
         correoSoporte: document.getElementById('config-correo-soporte').value.trim(),
+        whatsappSoporte: document.getElementById('config-whatsapp-soporte').value.trim(),
+        formSoporteEmbed: document.getElementById('config-form-soporte-embed').value,
         contenidoHotmartBegin: document.getElementById('config-contenido-begin').value.trim(),
         contenidoHotmartNext: document.getElementById('config-contenido-next').value.trim(),
         contenidoHotmartExit: document.getElementById('config-contenido-exit').value.trim(),

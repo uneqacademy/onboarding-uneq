@@ -159,18 +159,47 @@ export async function cargarDashboardAlumno(alumnoId) {
     bienvenidaEl.textContent = `${saludo} a UNEQ Mentoring ${alumno.nombre || ''},`.trim();
   }
 
-  // --- Stepper del programa (Begin → Next → eXIT), el actual destacado ---
+  // --- Stepper del programa (Begin → Next → eXIT), como línea de tiempo ---
   const stepperEl = document.getElementById('alumno-stepper-programa');
   if (stepperEl) {
     const programaActual = ciclo ? ciclo.programa : null;
     const PROGRAMAS_ORDEN = [['begin', 'BEGIN'], ['next', 'NEXT'], ['exit', 'EXIT']];
     stepperEl.innerHTML = `
-      <div style="display:flex; align-items:center; gap:10px;">
-        ${PROGRAMAS_ORDEN.map(([clave, label], idx) => `
-          <span style="font-weight:700; font-size:15px; letter-spacing:0.5px; opacity:${clave === programaActual ? '1' : '0.35'};">${label}</span>
-          ${idx < PROGRAMAS_ORDEN.length - 1 ? '<span style="flex:1; height:2px; background:var(--border); min-width:24px;"></span>' : ''}
-        `).join('')}
+      <div style="display:flex; align-items:center;">
+        ${PROGRAMAS_ORDEN.map(([clave, label], idx) => {
+          const activo = clave === programaActual;
+          return `
+          <div style="display:flex; flex-direction:column; align-items:center; opacity:${activo ? '1' : '0.35'};">
+            <span style="font-weight:700; font-size:14px; letter-spacing:0.5px; margin-bottom:6px;">${label}</span>
+            <span style="width:14px; height:14px; border-radius:50%; background:${activo ? 'var(--color-accent, #2563EB)' : 'transparent'}; border:2px solid ${activo ? 'var(--color-accent, #2563EB)' : 'var(--border)'};"></span>
+          </div>
+          ${idx < PROGRAMAS_ORDEN.length - 1 ? `<span style="flex:1; height:2px; background:var(--border); min-width:24px; margin:0 4px 22px;"></span>` : ''}`;
+        }).join('')}
       </div>`;
+  }
+
+  // --- Aviso de atraso de pago (lo activa el director en la ficha) ---
+  const avisoAtrasoEl = document.getElementById('alumno-aviso-atraso');
+  if (avisoAtrasoEl) {
+    if (alumno.cicloActualId) {
+      const acuerdoSnap = await get(ref(db, `acuerdosPago/${alumno.cicloActualId}`));
+      const acuerdo = acuerdoSnap.exists() ? acuerdoSnap.val() : null;
+      if (acuerdo && acuerdo.atrasoPago) {
+        avisoAtrasoEl.classList.remove('hidden');
+        avisoAtrasoEl.innerHTML = `
+          <div class="panel" style="background:#FDEDED; border-color:#F5C6C6;">
+            <div class="panel__body" style="display:flex; align-items:center; gap:10px;">
+              <span style="font-size:20px;">⚠️</span>
+              <p style="margin:0; color:#8A2E2E;">Tienes un pago atrasado según tu acuerdo. Por favor contacta a <strong>Soporte Alumnos</strong> para resolverlo y obtener más información.</p>
+            </div>
+          </div>`;
+      } else {
+        avisoAtrasoEl.classList.add('hidden');
+        avisoAtrasoEl.innerHTML = '';
+      }
+    } else {
+      avisoAtrasoEl.classList.add('hidden');
+    }
   }
 
   // --- Accesos Directos ---
@@ -190,8 +219,12 @@ export async function cargarDashboardAlumno(alumnoId) {
       const coachSnap = await get(ref(db, `usuarios/${ciclo.coachId}`));
       coach = coachSnap.exists() ? coachSnap.val() : null;
     }
-    const fase = FASE_LABELS[ciclo ? ciclo.faseMetodologia : ''] || 'Sin definir';
-    const whatsappCoachUrl = coach && coach.telefono ? `https://wa.me/${coach.telefono.replace(/[^0-9]/g, '')}` : '';
+    const numeroFase = (ciclo && ciclo.faseMetodologia && /\d/.test(ciclo.faseMetodologia)) ? ciclo.faseMetodologia.match(/\d/)[0] : null;
+    const fraseFase = numeroFase
+      ? `Actualmente te encuentras en la Fase ${numeroFase} de la Metodología 2E`
+      : 'Tu fase actual aún no está definida — pronto tu coach la va a actualizar.';
+    const mensajeCoach = coach ? encodeURIComponent(`Hola ${coach.nombre || ''}, necesito tu ayuda por favor`) : '';
+    const whatsappCoachUrl = coach && coach.telefono ? `https://wa.me/${coach.telefono.replace(/[^0-9]/g, '')}?text=${mensajeCoach}` : '';
 
     accesosEl.innerHTML = `
       <div style="display:flex; flex-wrap:wrap; gap:10px; margin-bottom:18px;">
@@ -199,14 +232,12 @@ export async function cargarDashboardAlumno(alumnoId) {
         ${config.comunidadHotmartUrl ? `<a href="${config.comunidadHotmartUrl}" target="_blank" rel="noopener" class="btn btn--accent">Comunidad Hotmart</a>` : ''}
         ${contenidoUrl ? `<a href="${contenidoUrl}" target="_blank" rel="noopener" class="btn btn--accent">Contenidos en Hotmart</a>` : ''}
         ${whatsappUrl ? `<a href="${whatsappUrl}" target="_blank" rel="noopener" class="btn" style="background:#25D366; color:#fff;">Grupo WhatsApp Exclusivo</a>` : ''}
-        ${whatsappCoachUrl ? `<a href="${whatsappCoachUrl}" target="_blank" rel="noopener" class="btn" style="background:#25D366; color:#fff;">💬 Escribir a mi Coach</a>` : ''}
       </div>
-      <div style="display:grid; grid-template-columns: repeat(2, 1fr); gap:10px 20px; font-size:13px;">
-        <div><strong>Coach:</strong> ${coach ? (coach.nombre || '—') : '—'}</div>
-        <div><strong>Contacto Coach:</strong> ${coach ? [coach.email, coach.telefono].filter(Boolean).join(' · ') || '—' : '—'}</div>
-        <div><strong>Fase Actual:</strong> ${fase}</div>
-        <div><strong>Correo de Soporte:</strong> ${config.correoSoporte || '—'}</div>
-      </div>`;
+      <p style="margin-bottom:10px;">
+        ${coach ? `Tu Coach es <strong>${coach.nombre || '—'}</strong>` : 'Aún no tienes coach asignado'}
+        ${whatsappCoachUrl ? ` <a href="${whatsappCoachUrl}" target="_blank" rel="noopener" class="btn" style="background:#25D366; color:#fff; padding:4px 12px; font-size:12px;">💬 WhatsApp</a>` : ''}
+      </p>
+      <p style="margin:0;">${fraseFase}</p>`;
 
     const btnPreguntarMentores = document.getElementById('btn-acceso-preguntar-mentores');
     if (btnPreguntarMentores) {
@@ -324,10 +355,7 @@ export async function cargarAcuerdoAlumno() {
 }
 
 document.querySelectorAll('.nav-item[data-nav="ficha-alumno-propia"]').forEach(item => {
-  item.addEventListener('click', cargarFichaAlumnoPropia);
-});
-document.querySelectorAll('.nav-item[data-nav="acuerdo-alumno"]').forEach(item => {
-  item.addEventListener('click', cargarAcuerdoAlumno);
+  item.addEventListener('click', () => { cargarFichaAlumnoPropia(); cargarAcuerdoAlumno(); });
 });
 
 function renderKpiTest(test) {
@@ -340,6 +368,55 @@ function renderKpiTest(test) {
       <div class="kpi-card"><div class="kpi-card__label">Fase 2: Cliente Soñado</div><div class="kpi-card__value accent">${p.fase2 ?? '—'}</div></div>
       <div class="kpi-card"><div class="kpi-card__label">Fase 3: Oferta y Método</div><div class="kpi-card__value accent">${p.fase3 ?? '—'}</div></div>
       <div class="kpi-card"><div class="kpi-card__label">Fase 4: Acción y Sistemas</div><div class="kpi-card__value accent">${p.fase4 ?? '—'}</div></div>
+    </div>`;
+}
+
+const LABELS_SABOTEADORES = [
+  { id: 'sab_perfeccionista', label: 'Perfeccionista' },
+  { id: 'sab_procrastinador', label: 'Procrastinador' },
+  { id: 'sab_comparador', label: 'Comparador' },
+  { id: 'sab_disperso', label: 'Disperso' },
+  { id: 'sab_controlador', label: 'Controlador' },
+  { id: 'sab_victima', label: 'Víctima' }
+];
+const LABELS_BLOQUEOS_VENTA = [
+  { id: 'bv_rogar', label: 'Miedo a "rogar"' },
+  { id: 'bv_dinero', label: 'Culpa por el dinero' },
+  { id: 'bv_expectativas', label: 'Miedo a no cumplir' },
+  { id: 'bv_perseguir', label: 'Rechazo a "perseguir"' },
+  { id: 'bv_aburrir', label: 'Miedo a aburrir' }
+];
+
+function renderBarrasAlumno(respuestas, lista) {
+  return lista.map(item => {
+    const valor = respuestas ? respuestas[item.id] : undefined;
+    if (valor === undefined) return '';
+    const nivel = valor <= 3 ? 'level-low' : valor <= 6 ? 'level-mid' : 'level-high';
+    return `
+      <div class="bar-chart-row">
+        <div class="bar-label">${item.label}</div>
+        <div class="bar-track"><div class="bar-fill ${nivel}" style="width:${valor * 10}%"></div></div>
+        <div class="bar-value">${valor}</div>
+      </div>`;
+  }).join('');
+}
+
+function renderDetalleCompletoTest(test) {
+  return `
+    ${renderKpiTest(test)}
+    <div class="panel mb-16" style="margin-top:16px;">
+      <div class="panel__body">
+        <div class="result-panel-title">Saboteadores Internos</div>
+        <div class="result-panel-sub">0 = no me afecta · 10 = me bloquea constantemente</div>
+        ${renderBarrasAlumno(test.respuestas, LABELS_SABOTEADORES)}
+      </div>
+    </div>
+    <div class="panel">
+      <div class="panel__body">
+        <div class="result-panel-title">Bloqueos de Venta</div>
+        <div class="result-panel-sub">0 = no me afecta · 10 = me bloquea constantemente</div>
+        ${renderBarrasAlumno(test.respuestas, LABELS_BLOQUEOS_VENTA)}
+      </div>
     </div>`;
 }
 
@@ -364,7 +441,9 @@ export async function cargarBitacoraAlumnoCompleta() {
     : '<p class="text-soft">Aún no hay entradas en tu bitácora.</p>';
 }
 
-/* --- Mi Test Brújula, historial completo (página propia) --- */
+/* --- Mi Test Brújula, historial completo (página propia): el último
+       queda abierto con todo el detalle (fases + saboteadores + bloqueos
+       de venta); los anteriores quedan colapsados, clic para expandir. --- */
 export async function cargarTestAlumnoCompleto() {
   const el = document.getElementById('alumno-test-completo');
   if (!el || !alumnoIdActual) return;
@@ -375,12 +454,45 @@ export async function cargarTestAlumnoCompleto() {
     return;
   }
   const testsSnap = await get(ref(db, `ciclos/${alumno.cicloActualId}/tests`));
-  const tests = testsSnap.exists() ? Object.values(testsSnap.val()) : [];
-  el.innerHTML = tests.length
-    ? tests.sort((a, b) => b.completadoAt - a.completadoAt)
-        .map(t => `<div style="padding-bottom:20px; margin-bottom:20px; border-bottom:0.5px solid var(--border);">${renderKpiTest(t)}</div>`)
-        .join('')
-    : '<p class="text-soft">Aún no has completado el Test Brújula — tu coach te va a guiar en eso.</p>';
+  const testsObj = testsSnap.exists() ? testsSnap.val() : {};
+  const tests = Object.values(testsObj).sort((a, b) => b.completadoAt - a.completadoAt);
+
+  if (!tests.length) {
+    el.innerHTML = '<p class="text-soft">Aún no has completado el Test Brújula — tu coach te va a guiar en eso.</p>';
+    return;
+  }
+
+  const [ultimo, ...anteriores] = tests;
+  el.innerHTML = `
+    <div style="margin-bottom:24px;">
+      <p class="text-soft mb-16"><strong>Tu test más reciente</strong></p>
+      ${renderDetalleCompletoTest(ultimo)}
+    </div>
+    ${anteriores.length ? `
+      <div style="border-top:0.5px solid var(--border); padding-top:16px;">
+        <p class="text-soft mb-16">Tests anteriores — haz clic para ver el detalle</p>
+        <div id="alumno-tests-anteriores"></div>
+      </div>` : ''}`;
+
+  if (anteriores.length) {
+    const contenedorAnteriores = document.getElementById('alumno-tests-anteriores');
+    anteriores.forEach(t => {
+      const fecha = new Intl.DateTimeFormat('es-CL', { day: '2-digit', month: 'long', year: 'numeric' }).format(new Date(t.completadoAt));
+      const fila = document.createElement('div');
+      fila.className = 'panel mb-16';
+      fila.style.cssText = 'padding:14px; cursor:pointer;';
+      fila.innerHTML = `<strong>${fecha}</strong> <span class="text-soft" style="font-size:12px;">— clic para ver el detalle</span><div class="hidden" style="margin-top:12px;"></div>`;
+      contenedorAnteriores.appendChild(fila);
+
+      const detalleDiv = fila.querySelector('div');
+      let expandido = false;
+      fila.addEventListener('click', () => {
+        expandido = !expandido;
+        if (expandido && !detalleDiv.innerHTML) detalleDiv.innerHTML = renderDetalleCompletoTest(t);
+        detalleDiv.classList.toggle('hidden', !expandido);
+      });
+    });
+  }
 }
 
 document.querySelectorAll('.nav-item[data-nav="bitacora-alumno"]').forEach(item => {
@@ -438,7 +550,7 @@ export async function cargarBoxAlumno() {
   const entradas = (await Promise.all(
     Object.entries(indice).map(async ([preguntaId, mentorId]) => {
       const snap = await get(ref(db, `box/${mentorId}/${preguntaId}`));
-      return snap.exists() ? snap.val() : null;
+      return snap.exists() ? { ...snap.val(), preguntaId } : null;
     })
   )).filter(Boolean);
 
@@ -457,12 +569,13 @@ export async function cargarBoxAlumno() {
     const yaPreguntado = mentoresPreguntadosEstaSemana.has(uid);
     const bloqueado = yaPreguntado || preguntasRestantes <= 0;
     const tarjeta = document.createElement('div');
-    tarjeta.className = 'panel';
+    tarjeta.className = 'panel' + (bloqueado ? ' mentor-card-bloqueado' : '');
     tarjeta.style.cssText = 'padding:16px; text-align:center;';
+    if (yaPreguntado) tarjeta.title = 'Ya le preguntaste esta semana';
+    else if (preguntasRestantes <= 0) tarjeta.title = 'Ya usaste tus 3 preguntas de esta semana';
     tarjeta.innerHTML = `
       <img src="${m.fotoUrl || PLACEHOLDER_FOTO_ALUMNO}" alt="" style="width:64px; height:64px; border-radius:50%; object-fit:cover; margin-bottom:10px;">
-      <p style="font-weight:600; margin-bottom:2px;">${m.nombre || m.email}</p>
-      ${yaPreguntado ? '<p class="text-soft" style="font-size:11px; margin-bottom:8px;">Ya le preguntaste esta semana</p>' : '<div style="margin-bottom:8px;"></div>'}
+      <p style="font-weight:600; margin-bottom:8px;">${m.nombre || m.email}</p>
       <div style="display:flex; flex-direction:column; gap:6px;">
         <button type="button" class="btn btn--primary btn-hacer-pregunta" style="font-size:12px;" ${bloqueado ? 'disabled' : ''}>Hacer Pregunta</button>
         <button type="button" class="btn btn--ghost btn-detalles-mentor" style="font-size:12px;">Detalles Mentor</button>
@@ -496,12 +609,34 @@ export async function cargarBoxAlumno() {
         const mentorNombre = usuarios[e.mentorId] ? (usuarios[e.mentorId].nombre || usuarios[e.mentorId].email) : 'Mentor';
         return `
           <div class="panel mb-16" style="padding:14px;">
-            <strong>Para ${mentorNombre}</strong> <span class="text-soft" style="font-size:12px;">— ${formatFecha(new Date(e.createdAt).toISOString().slice(0, 10))}</span>
+            <div class="flex-between">
+              <strong>Para ${mentorNombre}</strong>
+              ${!e.respuesta ? `<button type="button" class="btn btn--ghost btn-eliminar-pregunta" data-pregunta-id="${e.preguntaId}" data-mentor-id="${e.mentorId}" style="font-size:11px; padding:2px 8px;">Eliminar</button>` : ''}
+            </div>
+            <span class="text-soft" style="font-size:12px;">${formatFecha(new Date(e.createdAt).toISOString().slice(0, 10))}</span>
             <p style="margin:6px 0;">${linkify(e.pregunta)}</p>
             ${renderRespuestaBox(e.respuesta)}
           </div>`;
       }).join('')
     : '<p class="text-soft">Aún no has enviado ninguna consulta.</p>';
+
+  listadoEl.querySelectorAll('.btn-eliminar-pregunta').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const confirmado = confirm('¿Eliminar esta pregunta? Recuperas el cupo de esta semana.');
+      if (!confirmado) return;
+      btn.disabled = true;
+      try {
+        await update(ref(db), {
+          [`box/${btn.dataset.mentorId}/${btn.dataset.preguntaId}`]: null,
+          [`boxIndice/${alumnoIdActual}/${btn.dataset.preguntaId}`]: null
+        });
+        await cargarBoxAlumno();
+      } catch (err) {
+        alert('No se pudo eliminar. Intenta de nuevo.');
+        btn.disabled = false;
+      }
+    });
+  });
 }
 
 const btnCerrarFormPregunta = document.getElementById('btn-cerrar-form-pregunta');
@@ -615,4 +750,32 @@ export async function cargarPreguntasComunidad() {
 
 document.querySelectorAll('.nav-item[data-nav="preguntas-comunidad"]').forEach(item => {
   item.addEventListener('click', cargarPreguntasComunidad);
+});
+
+/* ============================================================
+   Soporte Alumnos: correo, WhatsApp de soporte, y el formulario
+   embebido que el director pega en Configuración.
+   ============================================================ */
+export async function cargarSoporteAlumnos() {
+  const contactoEl = document.getElementById('soporte-alumnos-contacto');
+  const embedEl = document.getElementById('soporte-alumnos-form-embed');
+  if (!contactoEl) return;
+
+  const configSnap = await get(ref(db, 'configuracion/general'));
+  const config = configSnap.exists() ? configSnap.val() : {};
+  const whatsappSoporteUrl = config.whatsappSoporte ? `https://wa.me/${config.whatsappSoporte.replace(/[^0-9]/g, '')}` : '';
+
+  contactoEl.innerHTML = `
+    <div style="display:flex; flex-wrap:wrap; gap:14px; align-items:center;">
+      ${config.correoSoporte ? `<span>Correo: <strong>${config.correoSoporte}</strong></span>` : '<span class="text-soft">El correo de soporte aún no está configurado.</span>'}
+      ${whatsappSoporteUrl ? `<a href="${whatsappSoporteUrl}" target="_blank" rel="noopener" class="btn" style="background:#25D366; color:#fff;">💬 WhatsApp Soporte</a>` : ''}
+    </div>`;
+
+  if (embedEl) {
+    embedEl.innerHTML = config.formSoporteEmbed || '<p class="text-soft">El formulario de contacto aún no está configurado.</p>';
+  }
+}
+
+document.querySelectorAll('.nav-item[data-nav="soporte-alumnos"]').forEach(item => {
+  item.addEventListener('click', cargarSoporteAlumnos);
 });

@@ -127,6 +127,13 @@ export async function cargarAcuerdoParaCiclo(cicloId) {
     btnEliminarEl.classList.toggle('hidden', !acuerdo.pdfFirmadoUrl);
   }
 
+  const btnAtraso = document.getElementById('pago-toggle-atraso');
+  if (btnAtraso) {
+    const enAtraso = !!acuerdo.atrasoPago;
+    btnAtraso.textContent = enAtraso ? '⚠️ Atraso registrado — clic para quitarlo' : 'Sin atraso registrado';
+    btnAtraso.style.cssText = enAtraso ? 'background:#FDEDED; color:#C0392B; border-color:#F5C6C6;' : '';
+  }
+
   tbody.innerHTML = '';
   const cuotas = acuerdo.cuotas ? Object.values(acuerdo.cuotas).sort((a, b) => (a.fecha || '').localeCompare(b.fecha || '')) : [];
   cuotas.forEach(agregarFilaCuota);
@@ -217,6 +224,21 @@ if (btnEliminarAcuerdoFirmado) {
       await cargarAcuerdoParaCiclo(cicloIdActual);
     } finally {
       btnEliminarAcuerdoFirmado.disabled = false;
+    }
+  });
+}
+
+const btnToggleAtraso = document.getElementById('pago-toggle-atraso');
+if (btnToggleAtraso) {
+  btnToggleAtraso.addEventListener('click', async () => {
+    if (!cicloIdActual) return;
+    const enAtrasoActual = btnToggleAtraso.textContent.includes('Atraso registrado');
+    btnToggleAtraso.disabled = true;
+    try {
+      await update(ref(db, `acuerdosPago/${cicloIdActual}`), { atrasoPago: !enAtrasoActual });
+      await cargarAcuerdoParaCiclo(cicloIdActual);
+    } finally {
+      btnToggleAtraso.disabled = false;
     }
   });
 }

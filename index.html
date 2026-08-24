@@ -81,7 +81,7 @@
         <li class="nav-item" data-role="alumno" data-nav="test-alumno">Test Brújula</li>
         <li class="nav-item hidden" data-nav="box-consultas">BOX de Consultas</li>
         <li class="nav-item" data-role="alumno" data-nav="preguntas-comunidad">Preguntas de la Comunidad</li>
-        <li class="nav-item" data-role="alumno" data-nav="acuerdo-alumno">Acuerdo Alumno</li>
+        <li class="nav-item" data-role="alumno" data-nav="soporte-alumnos">Soporte Alumnos</li>
       </div>
     </nav>
 
@@ -496,6 +496,11 @@
                 <button class="btn btn--ghost" id="btn-subir-acuerdo-firmado">Subir Acuerdo Firmado</button>
                 <button class="btn btn--danger hidden" id="btn-eliminar-acuerdo-firmado">Eliminar Acuerdo</button>
                 <input type="file" id="input-acuerdo-firmado" accept=".pdf" class="hidden">
+              </div>
+
+              <div data-role="director" style="border-top:0.5px solid var(--border); margin-top:16px; padding-top:14px;">
+                <p class="text-soft mb-16">Si marcas esto, al alumno le va a aparecer un aviso en su Dashboard recordándole que tiene un pago atrasado y que contacte a Soporte Alumnos.</p>
+                <button type="button" class="btn btn--ghost" id="pago-toggle-atraso">Sin atraso registrado</button>
               </div>
 
               <div class="flex-between" style="margin-top:16px;">
@@ -949,6 +954,7 @@
            ====================================================== -->
       <section id="view-dashboard-alumno" class="view hidden">
         <div id="alumno-stepper-programa" class="mb-24"></div>
+        <div id="alumno-aviso-atraso" class="hidden mb-24"></div>
         <h2 id="alumno-bienvenida" style="margin-bottom:20px;">Bienvenido,</h2>
         <div class="panel mb-24">
           <div class="panel__header"><h3>Accesos Directos</h3></div>
@@ -968,18 +974,26 @@
            ====================================================== -->
       <section id="view-ficha-alumno-propia" class="view hidden">
         <div class="flex-between mb-16"><h2>Mi Ficha Alumno</h2></div>
-        <div class="panel">
+        <div class="panel mb-24">
           <div class="panel__body" id="alumno-mi-ficha"></div>
+        </div>
+        <div class="panel">
+          <div class="panel__header"><h3>Mi Acuerdo</h3></div>
+          <div class="panel__body" id="alumno-mi-acuerdo"></div>
         </div>
       </section>
 
       <!-- ======================================================
-           ACUERDO ALUMNO — página propia, descarga directa
+           SOPORTE ALUMNOS — página propia
            ====================================================== -->
-      <section id="view-acuerdo-alumno" class="view hidden">
-        <div class="flex-between mb-16"><h2>Acuerdo Alumno</h2></div>
+      <section id="view-soporte-alumnos" class="view hidden">
+        <div class="flex-between mb-16"><h2>Soporte Alumnos</h2></div>
+        <div class="panel mb-24">
+          <div class="panel__body" id="soporte-alumnos-contacto"></div>
+        </div>
         <div class="panel">
-          <div class="panel__body" id="alumno-mi-acuerdo"></div>
+          <div class="panel__header"><h3>Formulario de Contacto</h3></div>
+          <div class="panel__body" id="soporte-alumnos-form-embed"></div>
         </div>
       </section>
 
@@ -1036,6 +1050,11 @@
             <div class="field-grid mb-16">
               <div class="field"><label>Link Comunidad Hotmart (único, para todos)</label><input id="config-comunidad-hotmart" placeholder="https://..."></div>
               <div class="field"><label>Correo de Soporte</label><input type="email" id="config-correo-soporte" placeholder="soporte@agenciauneq.com"></div>
+              <div class="field"><label>WhatsApp de Soporte</label><input id="config-whatsapp-soporte" placeholder="+56 9 1234 5678"></div>
+            </div>
+            <div class="field" style="margin-top:14px;">
+              <label>Código embed del formulario de contacto (HTML de Typeform, Google Forms, etc.)</label>
+              <textarea id="config-form-soporte-embed" placeholder="Pega aquí el código embed del formulario..." style="min-height:100px;"></textarea>
             </div>
           </div>
         </div>
