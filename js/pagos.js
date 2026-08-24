@@ -13,7 +13,7 @@
 
 import { db, storage } from './firebase-config.js';
 import { ref, get, set, update } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-database.js";
-import { ref as storageRef, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-storage.js";
+import { ref as storageRef, uploadBytes, getDownloadURL, deleteObject } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-storage.js";
 import { getCurrentRole } from './main.js';
 
 let cicloIdActual = null;
@@ -120,6 +120,12 @@ export async function cargarAcuerdoParaCiclo(cicloId) {
       ? `<a href="${acuerdo.pdfFirmadoUrl}" target="_blank" rel="noopener">Ver PDF firmado ↗</a>`
       : 'Aún no subido';
   }
+  const btnSubirEl = document.getElementById('btn-subir-acuerdo-firmado');
+  const btnEliminarEl = document.getElementById('btn-eliminar-acuerdo-firmado');
+  if (btnSubirEl && btnEliminarEl) {
+    btnSubirEl.classList.toggle('hidden', !!acuerdo.pdfFirmadoUrl);
+    btnEliminarEl.classList.toggle('hidden', !acuerdo.pdfFirmadoUrl);
+  }
 
   tbody.innerHTML = '';
   const cuotas = acuerdo.cuotas ? Object.values(acuerdo.cuotas).sort((a, b) => (a.fecha || '').localeCompare(b.fecha || '')) : [];
@@ -192,6 +198,25 @@ if (btnSubirAcuerdoFirmado && inputAcuerdoFirmado) {
       btnSubirAcuerdoFirmado.disabled = false;
       btnSubirAcuerdoFirmado.textContent = textoOriginal;
       inputAcuerdoFirmado.value = '';
+    }
+  });
+}
+
+const btnEliminarAcuerdoFirmado = document.getElementById('btn-eliminar-acuerdo-firmado');
+if (btnEliminarAcuerdoFirmado) {
+  btnEliminarAcuerdoFirmado.addEventListener('click', async () => {
+    if (!cicloIdActual) return;
+    const confirmado = confirm('¿Eliminar el acuerdo firmado? El alumno ya no va a poder descargarlo desde su portal hasta que subas uno nuevo.');
+    if (!confirmado) return;
+
+    btnEliminarAcuerdoFirmado.disabled = true;
+    try {
+      const archivoRef = storageRef(storage, `acuerdos-firmados/${cicloIdActual}`);
+      try { await deleteObject(archivoRef); } catch (err) { /* si ya no existe el archivo, seguimos igual */ }
+      await update(ref(db, `acuerdosPago/${cicloIdActual}`), { pdfFirmadoUrl: null });
+      await cargarAcuerdoParaCiclo(cicloIdActual);
+    } finally {
+      btnEliminarAcuerdoFirmado.disabled = false;
     }
   });
 }

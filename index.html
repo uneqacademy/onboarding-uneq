@@ -393,6 +393,10 @@
               <div style="border-top:0.5px solid var(--border); margin-top:20px; padding-top:16px;">
                 <p class="text-soft mb-16">Acceso del alumno a su propio portal (ficha, test y bitácora de solo lectura).</p>
                 <button class="btn btn--ghost" id="btn-crear-acceso-alumno">🔑 Crear Acceso para el Alumno</button>
+                <div class="hidden" id="bloque-acceso-alumno-existente">
+                  <p style="margin-bottom:10px;">✓ Ya tiene acceso a su portal</p>
+                  <button class="btn btn--ghost" id="btn-restablecer-password-alumno">Restablecer Contraseña</button>
+                </div>
                 <div class="panel mb-16 hidden" id="panel-acceso-alumno-creado" style="margin-top:16px;">
                   <div class="panel__body">
                     <p style="margin-bottom:12px;"><strong>✓ Acceso creado</strong> — cópialo y compártelo con el alumno.</p>
@@ -480,6 +484,7 @@
                 <p class="text-soft mb-16">Una vez que el acuerdo esté firmado (fuera de la app), súbelo aquí para que el alumno lo pueda descargar desde su portal.</p>
                 <p style="margin-bottom:12px;">Acuerdo firmado: <strong id="pago-estado-pdf-firmado">—</strong></p>
                 <button class="btn btn--ghost" id="btn-subir-acuerdo-firmado">Subir Acuerdo Firmado</button>
+                <button class="btn btn--danger hidden" id="btn-eliminar-acuerdo-firmado">Eliminar Acuerdo</button>
                 <input type="file" id="input-acuerdo-firmado" accept=".pdf" class="hidden">
               </div>
 

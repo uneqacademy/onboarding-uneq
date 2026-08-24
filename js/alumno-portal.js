@@ -13,7 +13,7 @@ import { db, auth, storage, firebaseConfig } from './firebase-config.js';
 import { ref as storageRef, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-storage.js";
 import { ref, get, set, update } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-database.js";
 import { initializeApp, deleteApp } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-app.js";
-import { getAuth, createUserWithEmailAndPassword, signOut as signOutSecundaria } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-auth.js";
+import { getAuth, createUserWithEmailAndPassword, signOut as signOutSecundaria, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-auth.js";
 import { programaLabel } from './ciclos.js';
 
 function generarPassword() {
@@ -59,6 +59,8 @@ if (btnCrearAccesoAlumno) {
       document.getElementById('acceso-alumno-password').value = password;
       document.getElementById('panel-acceso-alumno-creado').classList.remove('hidden');
       btnCrearAccesoAlumno.classList.add('hidden');
+      const bloqueExistente = document.getElementById('bloque-acceso-alumno-existente');
+      if (bloqueExistente) bloqueExistente.classList.remove('hidden');
     } catch (err) {
       alert(err.code === 'auth/email-already-in-use'
         ? 'Ese correo ya tiene una cuenta creada en el sistema (puede que ya sea coach o mentor).'
@@ -91,6 +93,31 @@ export function actualizarBotonAccesoAlumno(alumnoId, yaTieneAcceso) {
   btnCrearAccesoAlumno.dataset.alumnoId = alumnoId;
   btnCrearAccesoAlumno.classList.toggle('hidden', yaTieneAcceso);
   btnCrearAccesoAlumno.textContent = '🔑 Crear Acceso para el Alumno';
+
+  const bloqueExistente = document.getElementById('bloque-acceso-alumno-existente');
+  if (bloqueExistente) bloqueExistente.classList.toggle('hidden', !yaTieneAcceso);
+  const btnResetPasswordAlumno = document.getElementById('btn-restablecer-password-alumno');
+  if (btnResetPasswordAlumno) btnResetPasswordAlumno.dataset.alumnoId = alumnoId;
+}
+
+const btnRestablecerPasswordAlumno = document.getElementById('btn-restablecer-password-alumno');
+if (btnRestablecerPasswordAlumno) {
+  btnRestablecerPasswordAlumno.addEventListener('click', async () => {
+    const email = document.getElementById('datos-email').value.trim();
+    if (!email) return;
+    btnRestablecerPasswordAlumno.disabled = true;
+    const textoOriginal = btnRestablecerPasswordAlumno.textContent;
+    btnRestablecerPasswordAlumno.textContent = 'Enviando...';
+    try {
+      await sendPasswordResetEmail(auth, email);
+      alert(`Listo — le mandamos un correo a ${email} con un link para elegir una nueva contraseña.`);
+    } catch (err) {
+      alert('No se pudo enviar el correo. Revisa que el email esté bien escrito.');
+    } finally {
+      btnRestablecerPasswordAlumno.disabled = false;
+      btnRestablecerPasswordAlumno.textContent = textoOriginal;
+    }
+  });
 }
 
 /* ============================================================
