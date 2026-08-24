@@ -474,8 +474,16 @@
                 <tbody id="tabla-cuotas-ficha-body"></tbody>
               </table>
               <button class="btn btn--ghost" id="btn-agregar-cuota-ficha">+ Agregar Cuota</button>
-              <p class="text-soft" style="margin-top:16px;">Documento del acuerdo: <strong id="pago-estado-pdf">—</strong></p>
-              <div class="flex-between" style="margin-top:8px;">
+              <p class="text-soft" style="margin-top:16px;">Documento del acuerdo (borrador): <strong id="pago-estado-pdf">—</strong></p>
+
+              <div data-role="director" style="border-top:0.5px solid var(--border); margin-top:16px; padding-top:14px;">
+                <p class="text-soft mb-16">Una vez que el acuerdo esté firmado (fuera de la app), súbelo aquí para que el alumno lo pueda descargar desde su portal.</p>
+                <p style="margin-bottom:12px;">Acuerdo firmado: <strong id="pago-estado-pdf-firmado">—</strong></p>
+                <button class="btn btn--ghost" id="btn-subir-acuerdo-firmado">Subir Acuerdo Firmado</button>
+                <input type="file" id="input-acuerdo-firmado" accept=".pdf" class="hidden">
+              </div>
+
+              <div class="flex-between" style="margin-top:16px;">
                 <span></span>
                 <button class="btn btn--primary" id="btn-guardar-acuerdo">Guardar Acuerdo</button>
               </div>

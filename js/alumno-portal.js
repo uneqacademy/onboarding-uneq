@@ -9,7 +9,8 @@
    queda para la próxima entrega, es su propio bloque de trabajo.
    ============================================================ */
 
-import { db, firebaseConfig } from './firebase-config.js';
+import { db, auth, storage, firebaseConfig } from './firebase-config.js';
+import { ref as storageRef, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-storage.js";
 import { ref, get, set, update } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-database.js";
 import { initializeApp, deleteApp } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-app.js";
 import { getAuth, createUserWithEmailAndPassword, signOut as signOutSecundaria } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-auth.js";
@@ -114,10 +115,12 @@ export async function cargarDashboardAlumno(alumnoId) {
   if (fichaEl) {
     fichaEl.innerHTML = `
       <div style="display:flex; align-items:center; gap:14px; margin-bottom:16px;">
-        <img src="${alumno.fotoUrl || ''}" alt="" style="width:56px; height:56px; border-radius:50%; object-fit:cover; background:#E4E7EC;">
+        <img id="alumno-foto-preview" src="${alumno.fotoUrl || ''}" alt="" style="width:56px; height:56px; border-radius:50%; object-fit:cover; background:#E4E7EC;">
         <div>
           <strong style="font-size:16px;">${alumno.nombre || ''} ${alumno.apellido || ''}</strong>
           <p class="text-soft" style="margin:2px 0 0;">${ciclo ? programaLabel(ciclo.programa) : '—'}</p>
+          <button type="button" class="btn btn--ghost" id="btn-cambiar-foto-alumno" style="font-size:11px; padding:4px 10px; margin-top:6px;">Cambiar Foto</button>
+          <input type="file" id="alumno-foto-input" accept="image/*" class="hidden">
         </div>
       </div>
       <div style="display:grid; grid-template-columns: repeat(2, 1fr); gap:10px 20px; font-size:13px;">
@@ -128,17 +131,43 @@ export async function cargarDashboardAlumno(alumnoId) {
         <div><strong>Fecha de Ingreso:</strong> ${formatFecha(ciclo ? ciclo.fechaIngreso : null)}</div>
         <div><strong>Fecha de Egreso:</strong> ${formatFecha(ciclo ? ciclo.fechaEgreso : null)}</div>
       </div>`;
+
+    const btnCambiarFotoAlumno = document.getElementById('btn-cambiar-foto-alumno');
+    const inputFotoAlumno = document.getElementById('alumno-foto-input');
+    if (btnCambiarFotoAlumno && inputFotoAlumno) {
+      btnCambiarFotoAlumno.addEventListener('click', () => inputFotoAlumno.click());
+      inputFotoAlumno.addEventListener('change', async () => {
+        const file = inputFotoAlumno.files[0];
+        if (!file) return;
+        btnCambiarFotoAlumno.disabled = true;
+        const textoOriginal = btnCambiarFotoAlumno.textContent;
+        btnCambiarFotoAlumno.textContent = 'Subiendo...';
+        try {
+          const archivoRef = storageRef(storage, `fotos-alumnos/${alumnoId}`);
+          await uploadBytes(archivoRef, file);
+          const url = await getDownloadURL(archivoRef);
+          await set(ref(db, `alumnos/${alumnoId}/fotoUrl`), url);
+          document.getElementById('alumno-foto-preview').src = url;
+        } catch (err) {
+          alert('No se pudo subir la foto. Intenta de nuevo.');
+        } finally {
+          btnCambiarFotoAlumno.disabled = false;
+          btnCambiarFotoAlumno.textContent = textoOriginal;
+          inputFotoAlumno.value = '';
+        }
+      });
+    }
   }
 
-  // --- Mi Acuerdo (PDF) ---
+  // --- Mi Acuerdo Firmado (PDF) — lo sube el director una vez firmado ---
   const acuerdoEl = document.getElementById('alumno-mi-acuerdo');
   if (acuerdoEl) {
     if (alumno.cicloActualId) {
       const acuerdoSnap = await get(ref(db, `acuerdosPago/${alumno.cicloActualId}`));
       const acuerdo = acuerdoSnap.exists() ? acuerdoSnap.val() : null;
-      acuerdoEl.innerHTML = acuerdo && acuerdo.pdfUrl
-        ? `<a href="${acuerdo.pdfUrl}" target="_blank" rel="noopener" class="btn btn--primary">Descargar mi Acuerdo (PDF)</a>`
-        : '<p class="text-soft">Tu acuerdo todavía no está generado — pronto lo vas a poder descargar aquí.</p>';
+      acuerdoEl.innerHTML = acuerdo && acuerdo.pdfFirmadoUrl
+        ? `<a href="${acuerdo.pdfFirmadoUrl}" target="_blank" rel="noopener" class="btn btn--primary">Descargar mi Acuerdo Firmado (PDF)</a>`
+        : '<p class="text-soft">Tu acuerdo firmado todavía no está disponible — tu director lo va a subir apenas esté listo.</p>';
     } else {
       acuerdoEl.innerHTML = '<p class="text-soft">Aún no hay un ciclo asociado.</p>';
     }

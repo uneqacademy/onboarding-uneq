@@ -11,8 +11,9 @@
    director puede desbloquearla con el ícono 🔓 si se equivocó.
    ============================================================ */
 
-import { db } from './firebase-config.js';
+import { db, storage } from './firebase-config.js';
 import { ref, get, set, update } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-database.js";
+import { ref as storageRef, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-storage.js";
 import { getCurrentRole } from './main.js';
 
 let cicloIdActual = null;
@@ -113,6 +114,13 @@ export async function cargarAcuerdoParaCiclo(cicloId) {
       : 'Aún no generado';
   }
 
+  const estadoPdfFirmadoEl = document.getElementById('pago-estado-pdf-firmado');
+  if (estadoPdfFirmadoEl) {
+    estadoPdfFirmadoEl.innerHTML = acuerdo.pdfFirmadoUrl
+      ? `<a href="${acuerdo.pdfFirmadoUrl}" target="_blank" rel="noopener">Ver PDF firmado ↗</a>`
+      : 'Aún no subido';
+  }
+
   tbody.innerHTML = '';
   const cuotas = acuerdo.cuotas ? Object.values(acuerdo.cuotas).sort((a, b) => (a.fecha || '').localeCompare(b.fecha || '')) : [];
   cuotas.forEach(agregarFilaCuota);
@@ -157,6 +165,33 @@ if (btnGuardarAcuerdo) {
     } finally {
       btnGuardarAcuerdo.disabled = false;
       btnGuardarAcuerdo.textContent = 'Guardar Acuerdo';
+    }
+  });
+}
+
+/* --- Subir acuerdo firmado (director) — el alumno lo descarga desde su portal --- */
+const btnSubirAcuerdoFirmado = document.getElementById('btn-subir-acuerdo-firmado');
+const inputAcuerdoFirmado = document.getElementById('input-acuerdo-firmado');
+if (btnSubirAcuerdoFirmado && inputAcuerdoFirmado) {
+  btnSubirAcuerdoFirmado.addEventListener('click', () => inputAcuerdoFirmado.click());
+  inputAcuerdoFirmado.addEventListener('change', async () => {
+    const file = inputAcuerdoFirmado.files[0];
+    if (!file || !cicloIdActual) return;
+    btnSubirAcuerdoFirmado.disabled = true;
+    const textoOriginal = btnSubirAcuerdoFirmado.textContent;
+    btnSubirAcuerdoFirmado.textContent = 'Subiendo...';
+    try {
+      const archivoRef = storageRef(storage, `acuerdos-firmados/${cicloIdActual}`);
+      await uploadBytes(archivoRef, file);
+      const url = await getDownloadURL(archivoRef);
+      await update(ref(db, `acuerdosPago/${cicloIdActual}`), { pdfFirmadoUrl: url });
+      await cargarAcuerdoParaCiclo(cicloIdActual);
+    } catch (err) {
+      alert('No se pudo subir el acuerdo firmado. Intenta de nuevo.');
+    } finally {
+      btnSubirAcuerdoFirmado.disabled = false;
+      btnSubirAcuerdoFirmado.textContent = textoOriginal;
+      inputAcuerdoFirmado.value = '';
     }
   });
 }
