@@ -19,7 +19,7 @@ import {
 import { ref, get } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-database.js";
 import { applyRole, showLogin } from './main.js';
 import { initAlumnosModule } from './alumnos.js';
-import { cargarDashboardAlumno } from './alumno-portal.js';
+import { cargarDashboardAlumno, cargarBoxAlumno } from './alumno-portal.js';
 
 const inputEmail = document.getElementById('login-email');
 const inputPass = document.getElementById('login-pass');
@@ -173,6 +173,7 @@ onAuthStateChanged(auth, async (user) => {
         inputPass.value = '';
         applyRole('alumno', `${datosAlumno.nombre || ''} ${datosAlumno.apellido || ''}`.trim() || user.email, ['alumno']);
         await cargarDashboardAlumno(alumnoId);
+        await cargarBoxAlumno();
         return;
       }
 

@@ -41,6 +41,10 @@ export function applyRole(role, nombre, rolesDisponibles) {
   const navAlumnos = document.querySelector('.nav-item[data-nav="alumnos"]');
   if (navAlumnos) navAlumnos.classList.toggle('hidden', role === 'alumno');
 
+  // "BOX de Consultas" existe para mentor (responde) y alumno (pregunta).
+  const navBox = document.querySelector('.nav-item[data-nav="box-consultas"]');
+  if (navBox) navBox.classList.toggle('hidden', !(role === 'mentor' || role === 'alumno'));
+
   const tabPago = document.querySelector('.tab[data-tab="pago"]');
   if (tabPago) tabPago.classList.toggle('hidden', role !== 'director');
 
@@ -131,7 +135,7 @@ export function setNav(section) {
     showView('view-mentores');
     document.getElementById('topbar-title').textContent = 'Mentores';
   } else if (section === 'box-consultas') {
-    showView('view-box-mentor');
+    showView(currentRole === 'alumno' ? 'view-box-alumno' : 'view-box-mentor');
     document.getElementById('topbar-title').textContent = 'BOX de Consultas';
   } else if (section === 'configuracion') {
     showView('view-configuracion');

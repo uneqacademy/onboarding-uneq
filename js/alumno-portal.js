@@ -11,7 +11,7 @@
 
 import { db, auth, storage, firebaseConfig } from './firebase-config.js';
 import { ref as storageRef, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-storage.js";
-import { ref, get, set, update } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-database.js";
+import { ref, get, set, update, push } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-database.js";
 import { initializeApp, deleteApp } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-app.js";
 import { getAuth, createUserWithEmailAndPassword, signOut as signOutSecundaria, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-auth.js";
 import { programaLabel } from './ciclos.js';
@@ -318,4 +318,102 @@ document.querySelectorAll('.nav-item[data-nav="bitacora-alumno"]').forEach(item 
 });
 document.querySelectorAll('.nav-item[data-nav="test-alumno"]').forEach(item => {
   item.addEventListener('click', cargarTestAlumnoCompleto);
+});
+
+/* ============================================================
+   BOX de Consultas (alumno): elige mentor, pregunta, y ve sus
+   propias consultas con la respuesta (texto/audio/imagen).
+   ============================================================ */
+function renderRespuestaBox(respuesta) {
+  if (!respuesta) return '<p class="text-soft" style="margin:6px 0 0;">Aún sin responder.</p>';
+  let html = '<div style="margin-top:8px; padding-top:8px; border-top:0.5px solid var(--border);"><strong style="font-size:12px;">Respuesta:</strong>';
+  if (respuesta.texto) html += `<p style="margin:4px 0;">${respuesta.texto}</p>`;
+  if (respuesta.archivoUrl && respuesta.archivoTipo === 'audio') {
+    html += `<audio controls src="${respuesta.archivoUrl}" style="width:100%; margin-top:4px;"></audio>`;
+  } else if (respuesta.archivoUrl && respuesta.archivoTipo === 'imagen') {
+    html += `<img src="${respuesta.archivoUrl}" alt="" style="max-width:220px; border-radius:8px; margin-top:4px; display:block;">`;
+  }
+  html += '</div>';
+  return html;
+}
+
+export async function cargarBoxAlumno() {
+  const selectMentor = document.getElementById('box-alumno-mentor-select');
+  const listadoEl = document.getElementById('box-alumno-listado');
+  if (!selectMentor || !listadoEl || !alumnoIdActual) return;
+
+  // --- Selector de mentores ---
+  const usuariosSnap = await get(ref(db, 'usuarios'));
+  const usuarios = usuariosSnap.exists() ? usuariosSnap.val() : {};
+  const mentores = Object.entries(usuarios).filter(([, u]) => {
+    const roles = (u.roles && typeof u.roles === 'object') ? u.roles : (u.rol ? { [u.rol]: true } : {});
+    return !!roles.mentor;
+  });
+  selectMentor.innerHTML = mentores.length
+    ? mentores.map(([uid, m]) => `<option value="${uid}">${m.nombre || m.email}</option>`).join('')
+    : '<option value="">No hay mentores disponibles</option>';
+
+  // --- Mis consultas ---
+  const indiceSnap = await get(ref(db, `boxIndice/${alumnoIdActual}`));
+  const indice = indiceSnap.exists() ? indiceSnap.val() : {};
+  const entradas = await Promise.all(
+    Object.entries(indice).map(async ([preguntaId, mentorId]) => {
+      const snap = await get(ref(db, `box/${mentorId}/${preguntaId}`));
+      return snap.exists() ? snap.val() : null;
+    })
+  );
+  const validas = entradas.filter(Boolean).sort((a, b) => b.createdAt - a.createdAt);
+
+  listadoEl.innerHTML = validas.length
+    ? validas.map(e => {
+        const mentorNombre = usuarios[e.mentorId] ? (usuarios[e.mentorId].nombre || usuarios[e.mentorId].email) : 'Mentor';
+        return `
+          <div style="padding:10px 0; border-bottom:0.5px solid var(--border); font-size:13px;">
+            <strong>Para ${mentorNombre}</strong> <span class="text-soft">— ${formatFecha(new Date(e.createdAt).toISOString().slice(0, 10))}</span>
+            <p style="margin:4px 0;">${e.pregunta}</p>
+            ${renderRespuestaBox(e.respuesta)}
+          </div>`;
+      }).join('')
+    : '<p class="text-soft">Aún no has enviado ninguna consulta.</p>';
+}
+
+const btnEnviarPreguntaAlumno = document.getElementById('btn-enviar-pregunta-alumno');
+if (btnEnviarPreguntaAlumno) {
+  btnEnviarPreguntaAlumno.addEventListener('click', async () => {
+    const errorEl = document.getElementById('box-alumno-error');
+    errorEl.classList.add('hidden');
+    const mentorId = document.getElementById('box-alumno-mentor-select').value;
+    const pregunta = document.getElementById('box-alumno-pregunta').value.trim();
+
+    if (!mentorId || !pregunta || !alumnoIdActual) {
+      errorEl.textContent = 'Elige un mentor y escribe tu pregunta.';
+      errorEl.classList.remove('hidden');
+      return;
+    }
+
+    btnEnviarPreguntaAlumno.disabled = true;
+    try {
+      const preguntaId = push(ref(db, `box/${mentorId}`)).key;
+      const alumnoSnap = await get(ref(db, `alumnos/${alumnoIdActual}`));
+      const alumno = alumnoSnap.exists() ? alumnoSnap.val() : {};
+      const nombreAlumno = `${alumno.nombre || ''} ${alumno.apellido || ''}`.trim();
+
+      await update(ref(db), {
+        [`box/${mentorId}/${preguntaId}`]: { alumnoId: alumnoIdActual, alumnoNombre: nombreAlumno, mentorId, pregunta, createdAt: Date.now(), respuesta: null },
+        [`boxIndice/${alumnoIdActual}/${preguntaId}`]: mentorId
+      });
+
+      document.getElementById('box-alumno-pregunta').value = '';
+      await cargarBoxAlumno();
+    } catch (err) {
+      errorEl.textContent = 'No se pudo enviar. Intenta de nuevo.';
+      errorEl.classList.remove('hidden');
+    } finally {
+      btnEnviarPreguntaAlumno.disabled = false;
+    }
+  });
+}
+
+document.querySelectorAll('.nav-item[data-nav="box-consultas"]').forEach(item => {
+  item.addEventListener('click', cargarBoxAlumno);
 });

@@ -24,7 +24,7 @@ import { cargarBitacoraParaCiclo } from './bitacora.js';
 import { generarPdfAcuerdo } from './pdf-acuerdo.js';
 import './respaldo.js';
 import { cargarMiEvaluacionCoach } from './coaches.js';
-import { cargarDashboardMentor, cargarAlumnosMentor, cargarPerfilMentor, cargarMentoriasView } from './mentores.js';
+import { cargarDashboardMentor, cargarAlumnosMentor, cargarPerfilMentor, cargarMentoriasView, cargarBoxMentor } from './mentores.js';
 import { actualizarBotonAccesoAlumno } from './alumno-portal.js';
 import './configuracion.js';
 
@@ -1124,6 +1124,7 @@ export async function initAlumnosModule() {
     await cargarAlumnosMentor();
     await cargarPerfilMentor();
     await cargarMentoriasView();
+    await cargarBoxMentor();
   }
 }
 

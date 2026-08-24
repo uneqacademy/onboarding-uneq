@@ -74,7 +74,7 @@
         <li class="nav-item" data-role="director" data-nav="configuracion">Configuración</li>
         <li class="nav-item" data-role="alumno" data-nav="bitacora-alumno">Bitácora</li>
         <li class="nav-item" data-role="alumno" data-nav="test-alumno">Test Brújula</li>
-        <li class="nav-item" data-role="mentor" data-nav="box-consultas">BOX de Consultas</li>
+        <li class="nav-item hidden" data-nav="box-consultas">BOX de Consultas</li>
       </div>
     </nav>
 
@@ -886,8 +886,36 @@
       <section id="view-box-mentor" class="view hidden">
         <div class="flex-between mb-16"><h2>BOX de Consultas</h2></div>
         <div class="panel">
+          <div class="panel__body" id="box-mentor-contenido">
+            <p class="text-soft">Cargando...</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- ======================================================
+           BOX DE CONSULTAS — vista ALUMNO
+           ====================================================== -->
+      <section id="view-box-alumno" class="view hidden">
+        <div class="flex-between mb-16"><h2>BOX de Consultas</h2></div>
+        <div class="panel mb-24">
+          <div class="panel__header"><h3>Nueva Consulta</h3></div>
           <div class="panel__body">
-            <p class="text-soft">Aún no hay preguntas — esta sección se activa cuando los alumnos tengan su propia cuenta (Fase 2), y podrán escribirte consultas que respondas desde aquí.</p>
+            <div class="field mb-16">
+              <label>¿A quién quieres preguntarle?</label>
+              <select id="box-alumno-mentor-select"></select>
+            </div>
+            <div class="field mb-16">
+              <label>Tu pregunta</label>
+              <textarea id="box-alumno-pregunta" placeholder="Escribe tu consulta..."></textarea>
+            </div>
+            <p id="box-alumno-error" class="hidden" style="color:#C0392B; margin-bottom:12px;"></p>
+            <button class="btn btn--primary" id="btn-enviar-pregunta-alumno">Enviar Pregunta</button>
+          </div>
+        </div>
+        <div class="panel">
+          <div class="panel__header"><h3>Mis Consultas</h3></div>
+          <div class="panel__body" id="box-alumno-listado">
+            <p class="text-soft">Cargando...</p>
           </div>
         </div>
       </section>

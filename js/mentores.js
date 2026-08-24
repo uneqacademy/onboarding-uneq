@@ -606,3 +606,118 @@ document.querySelectorAll('.nav-item[data-nav="dashboard"]').forEach(item => {
 });
 
 export { cargarMentoriasView };
+
+/* ============================================================
+   MENTOR: BOX de Consultas — recibe preguntas de alumnos y
+   responde con texto, audio o imagen.
+   ============================================================ */
+function renderRespuestaExistente(respuesta) {
+  if (!respuesta) return '';
+  let html = '<div style="margin-top:8px; padding:8px; background:#F7F8FA; border-radius:8px;"><strong style="font-size:12px;">Tu respuesta:</strong>';
+  if (respuesta.texto) html += `<p style="margin:4px 0;">${respuesta.texto}</p>`;
+  if (respuesta.archivoUrl && respuesta.archivoTipo === 'audio') {
+    html += `<audio controls src="${respuesta.archivoUrl}" style="width:100%; margin-top:4px;"></audio>`;
+  } else if (respuesta.archivoUrl && respuesta.archivoTipo === 'imagen') {
+    html += `<img src="${respuesta.archivoUrl}" alt="" style="max-width:220px; border-radius:8px; margin-top:4px; display:block;">`;
+  }
+  html += '</div>';
+  return html;
+}
+
+export async function cargarBoxMentor() {
+  if (getCurrentRole() !== 'mentor') return;
+  const uid = auth.currentUser ? auth.currentUser.uid : null;
+  const contenedor = document.getElementById('box-mentor-contenido');
+  if (!uid || !contenedor) return;
+
+  const snap = await get(ref(db, `box/${uid}`));
+  const preguntas = snap.exists() ? Object.entries(snap.val()) : [];
+  preguntas.sort((a, b) => b[1].createdAt - a[1].createdAt);
+
+  if (!preguntas.length) {
+    contenedor.innerHTML = '<p class="text-soft">Aún no tienes preguntas de alumnos.</p>';
+    return;
+  }
+
+  contenedor.innerHTML = '';
+  preguntas.forEach(([preguntaId, p]) => {
+    const fecha = new Intl.DateTimeFormat('es-CL', { day: '2-digit', month: 'short', year: 'numeric' }).format(new Date(p.createdAt));
+    const bloque = document.createElement('div');
+    bloque.style.cssText = 'padding:14px 0; border-bottom:0.5px solid var(--border);';
+    bloque.innerHTML = `
+      <strong>${p.alumnoNombre || 'Alumno'}</strong> <span class="text-soft" style="font-size:12px;">— ${fecha}</span>
+      <p style="margin:6px 0;">${p.pregunta}</p>
+      ${renderRespuestaExistente(p.respuesta)}
+      ${!p.respuesta ? `
+        <div style="margin-top:10px;">
+          <textarea class="box-respuesta-texto" placeholder="Escribe tu respuesta (opcional si adjuntas audio o imagen)..." style="min-height:60px;"></textarea>
+          <div style="display:flex; align-items:center; gap:8px; margin-top:8px; flex-wrap:wrap;">
+            <button type="button" class="btn btn--ghost btn-adjuntar-audio" style="font-size:11px; padding:4px 8px;">🎤 Adjuntar Audio</button>
+            <input type="file" class="input-respuesta-audio hidden" accept="audio/*">
+            <button type="button" class="btn btn--ghost btn-adjuntar-imagen" style="font-size:11px; padding:4px 8px;">🖼️ Adjuntar Imagen</button>
+            <input type="file" class="input-respuesta-imagen hidden" accept="image/*">
+            <span class="archivo-adjunto-nombre text-soft" style="font-size:12px;"></span>
+          </div>
+          <button class="btn btn--primary btn-enviar-respuesta" style="margin-top:10px;">Enviar Respuesta</button>
+        </div>` : ''}
+    `;
+    contenedor.appendChild(bloque);
+
+    if (p.respuesta) return;
+
+    let archivoSeleccionado = null;
+    let tipoArchivoSeleccionado = null;
+    const spanArchivo = bloque.querySelector('.archivo-adjunto-nombre');
+
+    const inputAudio = bloque.querySelector('.input-respuesta-audio');
+    bloque.querySelector('.btn-adjuntar-audio').addEventListener('click', () => inputAudio.click());
+    inputAudio.addEventListener('change', () => {
+      if (inputAudio.files[0]) {
+        archivoSeleccionado = inputAudio.files[0];
+        tipoArchivoSeleccionado = 'audio';
+        spanArchivo.textContent = `🎤 ${archivoSeleccionado.name}`;
+      }
+    });
+
+    const inputImagen = bloque.querySelector('.input-respuesta-imagen');
+    bloque.querySelector('.btn-adjuntar-imagen').addEventListener('click', () => inputImagen.click());
+    inputImagen.addEventListener('change', () => {
+      if (inputImagen.files[0]) {
+        archivoSeleccionado = inputImagen.files[0];
+        tipoArchivoSeleccionado = 'imagen';
+        spanArchivo.textContent = `🖼️ ${archivoSeleccionado.name}`;
+      }
+    });
+
+    bloque.querySelector('.btn-enviar-respuesta').addEventListener('click', async (ev) => {
+      const btn = ev.target;
+      const texto = bloque.querySelector('.box-respuesta-texto').value.trim();
+      if (!texto && !archivoSeleccionado) {
+        alert('Escribe una respuesta o adjunta un audio/imagen.');
+        return;
+      }
+      btn.disabled = true;
+      btn.textContent = 'Enviando...';
+      try {
+        let archivoUrl = null;
+        if (archivoSeleccionado) {
+          const archivoRef = storageRef(storage, `box-respuestas/${uid}/${preguntaId}`);
+          await uploadBytes(archivoRef, archivoSeleccionado);
+          archivoUrl = await getDownloadURL(archivoRef);
+        }
+        await update(ref(db, `box/${uid}/${preguntaId}`), {
+          respuesta: { texto: texto || null, archivoUrl, archivoTipo: archivoUrl ? tipoArchivoSeleccionado : null, respondidoEn: Date.now() }
+        });
+        await cargarBoxMentor();
+      } catch (err) {
+        alert('No se pudo enviar la respuesta. Intenta de nuevo.');
+        btn.disabled = false;
+        btn.textContent = 'Enviar Respuesta';
+      }
+    });
+  });
+}
+
+document.querySelectorAll('.nav-item[data-nav="box-consultas"]').forEach(item => {
+  item.addEventListener('click', cargarBoxMentor);
+});
