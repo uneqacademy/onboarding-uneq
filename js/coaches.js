@@ -341,6 +341,7 @@ if (btnCrearCoach) {
     document.getElementById('panel-coach-creado').classList.add('hidden');
     const nombre = document.getElementById('nuevo-coach-nombre').value.trim();
     const email = document.getElementById('nuevo-coach-email').value.trim();
+    const telefono = document.getElementById('nuevo-coach-telefono').value.trim();
     const tambienMentor = document.getElementById('nuevo-coach-tambien-mentor').checked;
 
     if (!nombre || !email) {
@@ -363,10 +364,11 @@ if (btnCrearCoach) {
         const [uidExistente, datosExistente] = existente;
         const rolesNuevos = { ...normalizarRoles(datosExistente), coach: true };
         if (tambienMentor) rolesNuevos.mentor = true;
-        await update(ref(db, `usuarios/${uidExistente}`), { roles: rolesNuevos, rol: null });
+        await update(ref(db, `usuarios/${uidExistente}`), { roles: rolesNuevos, rol: null, telefono: telefono || datosExistente.telefono || '' });
 
         document.getElementById('nuevo-coach-nombre').value = '';
         document.getElementById('nuevo-coach-email').value = '';
+        document.getElementById('nuevo-coach-telefono').value = '';
         document.getElementById('nuevo-coach-tambien-mentor').checked = false;
         alert(`${datosExistente.nombre || email} ya tenía una cuenta — se le agregó el rol de Coach${tambienMentor ? ' y Mentor' : ''} a la misma cuenta, sin generar contraseña nueva.`);
         await cargarCoachesView();
@@ -384,10 +386,11 @@ if (btnCrearCoach) {
 
         const roles = { coach: true };
         if (tambienMentor) roles.mentor = true;
-        await set(ref(db, `usuarios/${nuevoUid}`), { nombre, email, roles, activo: true });
+        await set(ref(db, `usuarios/${nuevoUid}`), { nombre, email, telefono, roles, activo: true });
 
         document.getElementById('nuevo-coach-nombre').value = '';
         document.getElementById('nuevo-coach-email').value = '';
+        document.getElementById('nuevo-coach-telefono').value = '';
         document.getElementById('nuevo-coach-tambien-mentor').checked = false;
 
         document.getElementById('coach-creado-email').value = email;

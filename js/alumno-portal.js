@@ -28,6 +28,9 @@ function formatFecha(fechaStr) {
   return new Intl.DateTimeFormat('es-CL', { day: '2-digit', month: 'short', year: 'numeric' }).format(new Date(fechaStr + 'T00:00:00'));
 }
 
+const FASE_LABELS = { fase1: 'Fase 1', fase2: 'Fase 2', fase3: 'Fase 3', fase4: 'Fase 4' };
+let alumnoIdActual = null;
+
 /* ============================================================
    Crear acceso del alumno (desde la ficha, director o coach)
    ============================================================ */
@@ -124,6 +127,7 @@ if (btnRestablecerPasswordAlumno) {
    Dashboard del alumno (solo lectura)
    ============================================================ */
 export async function cargarDashboardAlumno(alumnoId) {
+  alumnoIdActual = alumnoId;
   const alumnoSnap = await get(ref(db, `alumnos/${alumnoId}`));
   if (!alumnoSnap.exists()) return;
   const alumno = alumnoSnap.val();
@@ -200,41 +204,118 @@ export async function cargarDashboardAlumno(alumnoId) {
     }
   }
 
-  // --- Mi Test Brújula (histórico) ---
-  const testEl = document.getElementById('alumno-mi-test');
-  if (testEl) {
+  // --- Accesos Directos ---
+  const accesosEl = document.getElementById('alumno-accesos-directos');
+  if (accesosEl) {
+    const configSnap = await get(ref(db, 'configuracion/general'));
+    const config = configSnap.exists() ? configSnap.val() : {};
+    const programa = ciclo ? ciclo.programa : null;
+    const contenidoUrl = programa === 'begin' ? config.contenidoHotmartBegin
+      : programa === 'next' ? config.contenidoHotmartNext
+      : programa === 'exit' ? config.contenidoHotmartExit : '';
+    const whatsappUrl = programa === 'begin' ? config.whatsappBegin
+      : (programa === 'next' || programa === 'exit') ? config.whatsappNextExit : '';
+
+    let coach = null;
+    if (ciclo && ciclo.coachId) {
+      const coachSnap = await get(ref(db, `usuarios/${ciclo.coachId}`));
+      coach = coachSnap.exists() ? coachSnap.val() : null;
+    }
+    const fase = FASE_LABELS[ciclo ? ciclo.faseMetodologia : ''] || 'Sin definir';
+
+    accesosEl.innerHTML = `
+      <div style="display:flex; flex-wrap:wrap; gap:10px; margin-bottom:18px;">
+        ${config.comunidadHotmartUrl ? `<a href="${config.comunidadHotmartUrl}" target="_blank" rel="noopener" class="btn btn--primary">Comunidad Hotmart</a>` : ''}
+        ${contenidoUrl ? `<a href="${contenidoUrl}" target="_blank" rel="noopener" class="btn btn--primary">Contenido del Programa</a>` : ''}
+        ${whatsappUrl ? `<a href="${whatsappUrl}" target="_blank" rel="noopener" class="btn btn--accent">Grupo de WhatsApp</a>` : ''}
+      </div>
+      <div style="display:grid; grid-template-columns: repeat(2, 1fr); gap:10px 20px; font-size:13px;">
+        <div><strong>Coach:</strong> ${coach ? (coach.nombre || '—') : '—'}</div>
+        <div><strong>Contacto Coach:</strong> ${coach ? [coach.email, coach.telefono].filter(Boolean).join(' · ') || '—' : '—'}</div>
+        <div><strong>Fase Actual:</strong> ${fase}</div>
+        <div><strong>Correo de Soporte:</strong> ${config.correoSoporte || '—'}</div>
+      </div>`;
+  }
+
+  // --- Mi Último Test Brújula (visual) — el historial completo vive en su propia página ---
+  const ultimoTestEl = document.getElementById('alumno-ultimo-test');
+  if (ultimoTestEl) {
     if (alumno.cicloActualId) {
       const testsSnap = await get(ref(db, `ciclos/${alumno.cicloActualId}/tests`));
       const tests = testsSnap.exists() ? Object.values(testsSnap.val()) : [];
-      testEl.innerHTML = tests.length
-        ? tests.sort((a, b) => b.completadoAt - a.completadoAt).map(t => {
-            const fecha = new Intl.DateTimeFormat('es-CL', { day: '2-digit', month: 'long', year: 'numeric' }).format(new Date(t.completadoAt));
-            const p = t.promedios || {};
-            return `<div style="padding:8px 0; border-bottom:0.5px solid var(--border); font-size:13px;">
-              <strong>${fecha}</strong> — Fase 1: ${p.fase1 ?? '—'} · Fase 2: ${p.fase2 ?? '—'} · Fase 3: ${p.fase3 ?? '—'} · Fase 4: ${p.fase4 ?? '—'}
-            </div>`;
-          }).join('')
-        : '<p class="text-soft">Aún no has completado el Test Brújula — tu coach te va a guiar en eso.</p>';
+      if (tests.length) {
+        const ultimo = tests.sort((a, b) => b.completadoAt - a.completadoAt)[0];
+        ultimoTestEl.innerHTML = renderKpiTest(ultimo);
+      } else {
+        ultimoTestEl.innerHTML = '<p class="text-soft">Aún no has completado el Test Brújula — tu coach te va a guiar en eso.</p>';
+      }
     } else {
-      testEl.innerHTML = '<p class="text-soft">Aún no hay un ciclo asociado.</p>';
+      ultimoTestEl.innerHTML = '<p class="text-soft">Aún no hay un ciclo asociado.</p>';
     }
   }
 
-  // --- Mi Bitácora ---
-  const bitacoraEl = document.getElementById('alumno-mi-bitacora');
-  if (bitacoraEl) {
-    if (alumno.cicloActualId) {
-      const bitacoraSnap = await get(ref(db, `bitacora/${alumno.cicloActualId}`));
-      const entradas = bitacoraSnap.exists() ? Object.values(bitacoraSnap.val()) : [];
-      bitacoraEl.innerHTML = entradas.length
-        ? entradas.sort((a, b) => b.createdAt - a.createdAt).map(e => `
-            <div style="padding:8px 0; border-bottom:0.5px solid var(--border); font-size:13px;">
-              <strong>${e.titulo || ''}</strong> <span class="text-soft">— ${formatFecha(e.fecha)} · ${e.canal || ''}</span>
-              <p style="margin:4px 0 0;">${e.notas || ''}</p>
-            </div>`).join('')
-        : '<p class="text-soft">Aún no hay entradas en tu bitácora.</p>';
-    } else {
-      bitacoraEl.innerHTML = '<p class="text-soft">Aún no hay un ciclo asociado.</p>';
-    }
+  const btnVerHistorialTest = document.getElementById('btn-ver-historial-test-alumno');
+  if (btnVerHistorialTest) {
+    btnVerHistorialTest.onclick = () => document.querySelector('.nav-item[data-nav="test-alumno"]')?.click();
   }
 }
+
+function renderKpiTest(test) {
+  const p = test.promedios || {};
+  const fecha = new Intl.DateTimeFormat('es-CL', { day: '2-digit', month: 'long', year: 'numeric' }).format(new Date(test.completadoAt));
+  return `
+    <p class="text-soft mb-16">${fecha}</p>
+    <div class="kpi-grid">
+      <div class="kpi-card"><div class="kpi-card__label">Fase 1: Claridad y Fundamentos</div><div class="kpi-card__value accent">${p.fase1 ?? '—'}</div></div>
+      <div class="kpi-card"><div class="kpi-card__label">Fase 2: Cliente Soñado</div><div class="kpi-card__value accent">${p.fase2 ?? '—'}</div></div>
+      <div class="kpi-card"><div class="kpi-card__label">Fase 3: Oferta y Método</div><div class="kpi-card__value accent">${p.fase3 ?? '—'}</div></div>
+      <div class="kpi-card"><div class="kpi-card__label">Fase 4: Acción y Sistemas</div><div class="kpi-card__value accent">${p.fase4 ?? '—'}</div></div>
+    </div>`;
+}
+
+/* --- Mi Bitácora (página propia) --- */
+export async function cargarBitacoraAlumnoCompleta() {
+  const el = document.getElementById('alumno-bitacora-completa');
+  if (!el || !alumnoIdActual) return;
+  const alumnoSnap = await get(ref(db, `alumnos/${alumnoIdActual}`));
+  const alumno = alumnoSnap.exists() ? alumnoSnap.val() : null;
+  if (!alumno || !alumno.cicloActualId) {
+    el.innerHTML = '<p class="text-soft">Aún no hay un ciclo asociado.</p>';
+    return;
+  }
+  const bitacoraSnap = await get(ref(db, `bitacora/${alumno.cicloActualId}`));
+  const entradas = bitacoraSnap.exists() ? Object.values(bitacoraSnap.val()) : [];
+  el.innerHTML = entradas.length
+    ? entradas.sort((a, b) => b.createdAt - a.createdAt).map(e => `
+        <div style="padding:10px 0; border-bottom:0.5px solid var(--border); font-size:13px;">
+          <strong>${e.titulo || ''}</strong> <span class="text-soft">— ${formatFecha(e.fecha)} · ${e.canal || ''}</span>
+          <p style="margin:4px 0 0;">${e.notas || ''}</p>
+        </div>`).join('')
+    : '<p class="text-soft">Aún no hay entradas en tu bitácora.</p>';
+}
+
+/* --- Mi Test Brújula, historial completo (página propia) --- */
+export async function cargarTestAlumnoCompleto() {
+  const el = document.getElementById('alumno-test-completo');
+  if (!el || !alumnoIdActual) return;
+  const alumnoSnap = await get(ref(db, `alumnos/${alumnoIdActual}`));
+  const alumno = alumnoSnap.exists() ? alumnoSnap.val() : null;
+  if (!alumno || !alumno.cicloActualId) {
+    el.innerHTML = '<p class="text-soft">Aún no hay un ciclo asociado.</p>';
+    return;
+  }
+  const testsSnap = await get(ref(db, `ciclos/${alumno.cicloActualId}/tests`));
+  const tests = testsSnap.exists() ? Object.values(testsSnap.val()) : [];
+  el.innerHTML = tests.length
+    ? tests.sort((a, b) => b.completadoAt - a.completadoAt)
+        .map(t => `<div style="padding-bottom:20px; margin-bottom:20px; border-bottom:0.5px solid var(--border);">${renderKpiTest(t)}</div>`)
+        .join('')
+    : '<p class="text-soft">Aún no has completado el Test Brújula — tu coach te va a guiar en eso.</p>';
+}
+
+document.querySelectorAll('.nav-item[data-nav="bitacora-alumno"]').forEach(item => {
+  item.addEventListener('click', cargarBitacoraAlumnoCompleta);
+});
+document.querySelectorAll('.nav-item[data-nav="test-alumno"]').forEach(item => {
+  item.addEventListener('click', cargarTestAlumnoCompleto);
+});

@@ -71,6 +71,9 @@
         <li class="nav-item" data-nav="alumnos">Alumnos</li>
         <li class="nav-item" data-role="director" data-nav="coaches">Coaches</li>
         <li class="nav-item" data-role="director" data-nav="mentores">Mentores</li>
+        <li class="nav-item" data-role="director" data-nav="configuracion">Configuración</li>
+        <li class="nav-item" data-role="alumno" data-nav="bitacora-alumno">Bitácora</li>
+        <li class="nav-item" data-role="alumno" data-nav="test-alumno">Test Brújula</li>
         <li class="nav-item" data-role="mentor" data-nav="box-consultas">BOX de Consultas</li>
       </div>
     </nav>
@@ -688,6 +691,7 @@
             <div class="field-grid mb-16">
               <div class="field"><label>Nombre completo</label><input id="nuevo-coach-nombre" placeholder="Nombre y apellido" autocomplete="off"></div>
               <div class="field"><label>Correo</label><input type="email" id="nuevo-coach-email" placeholder="nombre@agenciauneq.com" autocomplete="off"></div>
+              <div class="field"><label>Teléfono</label><input id="nuevo-coach-telefono" placeholder="+56 9 1234 5678" autocomplete="off"></div>
             </div>
             <label style="display:flex; align-items:center; gap:8px; margin-bottom:16px; font-weight:400;">
               <input type="checkbox" id="nuevo-coach-tambien-mentor" style="width:auto;"> ¿También es Mentor?
@@ -893,6 +897,10 @@
            ====================================================== -->
       <section id="view-dashboard-alumno" class="view hidden">
         <div class="panel mb-24">
+          <div class="panel__header"><h3>Accesos Directos</h3></div>
+          <div class="panel__body" id="alumno-accesos-directos"></div>
+        </div>
+        <div class="panel mb-24">
           <div class="panel__header"><h3>Mi Ficha</h3></div>
           <div class="panel__body" id="alumno-mi-ficha"></div>
         </div>
@@ -900,14 +908,70 @@
           <div class="panel__header"><h3>Mi Acuerdo</h3></div>
           <div class="panel__body" id="alumno-mi-acuerdo"></div>
         </div>
-        <div class="panel mb-24">
-          <div class="panel__header"><h3>Mi Test Brújula</h3></div>
-          <div class="panel__body" id="alumno-mi-test"></div>
-        </div>
         <div class="panel">
-          <div class="panel__header"><h3>Mi Bitácora</h3></div>
-          <div class="panel__body" id="alumno-mi-bitacora"></div>
+          <div class="panel__header flex-between">
+            <h3>Mi Último Test Brújula</h3>
+            <button class="btn btn--ghost" id="btn-ver-historial-test-alumno" style="font-size:12px;">Ver historial completo →</button>
+          </div>
+          <div class="panel__body" id="alumno-ultimo-test"></div>
         </div>
+      </section>
+
+      <!-- ======================================================
+           BITÁCORA — vista ALUMNO (página propia, solo lectura)
+           ====================================================== -->
+      <section id="view-bitacora-alumno" class="view hidden">
+        <div class="flex-between mb-16"><h2>Mi Bitácora</h2></div>
+        <div class="panel">
+          <div class="panel__body" id="alumno-bitacora-completa"></div>
+        </div>
+      </section>
+
+      <!-- ======================================================
+           TEST BRÚJULA — vista ALUMNO (página propia, historial)
+           ====================================================== -->
+      <section id="view-test-alumno" class="view hidden">
+        <div class="flex-between mb-16"><h2>Mi Test Brújula</h2></div>
+        <div class="panel">
+          <div class="panel__body" id="alumno-test-completo"></div>
+        </div>
+      </section>
+
+      <!-- ======================================================
+           CONFIGURACIÓN (solo Director)
+           ====================================================== -->
+      <section id="view-configuracion" class="view hidden">
+        <div class="flex-between mb-16"><h2>Configuración</h2></div>
+        <div class="panel mb-24">
+          <div class="panel__header"><h3>Comunidad y Soporte</h3></div>
+          <div class="panel__body">
+            <div class="field-grid mb-16">
+              <div class="field"><label>Link Comunidad Hotmart (único, para todos)</label><input id="config-comunidad-hotmart" placeholder="https://..."></div>
+              <div class="field"><label>Correo de Soporte</label><input type="email" id="config-correo-soporte" placeholder="soporte@agenciauneq.com"></div>
+            </div>
+          </div>
+        </div>
+        <div class="panel mb-24">
+          <div class="panel__header"><h3>Contenido del Programa en Hotmart (por nivel)</h3></div>
+          <div class="panel__body">
+            <div class="field-grid">
+              <div class="field"><label>Begin</label><input id="config-contenido-begin" placeholder="https://..."></div>
+              <div class="field"><label>Next</label><input id="config-contenido-next" placeholder="https://..."></div>
+              <div class="field"><label>eXIT</label><input id="config-contenido-exit" placeholder="https://..."></div>
+            </div>
+          </div>
+        </div>
+        <div class="panel mb-24">
+          <div class="panel__header"><h3>Grupos de WhatsApp</h3></div>
+          <div class="panel__body">
+            <div class="field-grid">
+              <div class="field"><label>Begin</label><input id="config-whatsapp-begin" placeholder="https://chat.whatsapp.com/..."></div>
+              <div class="field"><label>Next + eXIT (grupo combinado)</label><input id="config-whatsapp-nextexit" placeholder="https://chat.whatsapp.com/..."></div>
+            </div>
+          </div>
+        </div>
+        <p id="configuracion-error" class="hidden" style="color:#C0392B; margin-bottom:12px;"></p>
+        <button class="btn btn--primary" id="btn-guardar-configuracion">Guardar Configuración</button>
       </section>
 
     </div>

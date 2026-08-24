@@ -133,6 +133,15 @@ export function setNav(section) {
   } else if (section === 'box-consultas') {
     showView('view-box-mentor');
     document.getElementById('topbar-title').textContent = 'BOX de Consultas';
+  } else if (section === 'configuracion') {
+    showView('view-configuracion');
+    document.getElementById('topbar-title').textContent = 'Configuración';
+  } else if (section === 'bitacora-alumno') {
+    showView('view-bitacora-alumno');
+    document.getElementById('topbar-title').textContent = 'Mi Bitácora';
+  } else if (section === 'test-alumno') {
+    showView('view-test-alumno');
+    document.getElementById('topbar-title').textContent = 'Mi Test Brújula';
   }
 }
 
