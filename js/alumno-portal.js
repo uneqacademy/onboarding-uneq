@@ -178,13 +178,18 @@ export async function cargarDashboardAlumno(alumnoId) {
       </div>`;
   }
 
-  // --- Aviso de atraso de pago (lo activa el director en la ficha) ---
+  // --- Aviso de atraso de pago (automático: alguna cuota vencida y no pagada) ---
   const avisoAtrasoEl = document.getElementById('alumno-aviso-atraso');
   if (avisoAtrasoEl) {
     if (alumno.cicloActualId) {
       const acuerdoSnap = await get(ref(db, `acuerdosPago/${alumno.cicloActualId}`));
       const acuerdo = acuerdoSnap.exists() ? acuerdoSnap.val() : null;
-      if (acuerdo && acuerdo.atrasoPago) {
+      const hoy = new Date(); hoy.setHours(0, 0, 0, 0);
+      const atrasado = acuerdo && acuerdo.cuotas && Object.values(acuerdo.cuotas).some(c => {
+        if (!c.fecha || c.estado === 'pagada') return false;
+        return new Date(c.fecha + 'T00:00:00') <= hoy;
+      });
+      if (atrasado) {
         avisoAtrasoEl.classList.remove('hidden');
         avisoAtrasoEl.innerHTML = `
           <div class="panel" style="background:#FDEDED; border-color:#F5C6C6;">
@@ -245,12 +250,14 @@ export async function cargarDashboardAlumno(alumnoId) {
         ${contenidoUrl ? `<a href="${contenidoUrl}" target="_blank" rel="noopener" class="btn btn--accent">Contenidos en Hotmart</a>` : ''}
         ${whatsappUrl ? `<a href="${whatsappUrl}" target="_blank" rel="noopener" class="btn" style="background:#25D366; color:#fff;">Grupo WhatsApp Exclusivo</a>` : ''}
       </div>
-      <p style="margin-bottom:10px;">
-        ${coach ? `Tu Coach es <strong>${coach.nombre || '—'}</strong>` : 'Aún no tienes coach asignado'}
-        ${whatsappCoachUrl ? ` <a href="${whatsappCoachUrl}" target="_blank" rel="noopener" class="btn" style="background:#25D366; color:#fff; padding:4px 12px; font-size:12px;">💬 WhatsApp</a>` : ''}
-      </p>
-      <p style="margin:0;">${fraseFase}</p>
-      ${fraseDiasRestantes}`;
+      <div style="line-height:1.6;">
+        <p style="margin:0 0 8px;">
+          ${coach ? `Tu Coach es <strong>${coach.nombre || '—'}</strong>` : 'Aún no tienes coach asignado'}
+          ${whatsappCoachUrl ? ` <a href="${whatsappCoachUrl}" target="_blank" rel="noopener" class="btn" style="background:#25D366; color:#fff; padding:4px 12px; font-size:12px;">💬 WhatsApp</a>` : ''}
+        </p>
+        <p style="margin:0 0 8px;">${fraseFase}</p>
+        ${fraseDiasRestantes.replace('margin:6px 0 0;', 'margin:0 0 8px;')}
+      </div>`;
 
     const btnPreguntarMentores = document.getElementById('btn-acceso-preguntar-mentores');
     if (btnPreguntarMentores) {
@@ -314,7 +321,7 @@ export async function cargarFichaAlumnoPropia() {
     <div style="display:grid; grid-template-columns: repeat(2, 1fr); gap:10px 20px; font-size:13px;">
       <div><strong>Correo:</strong> ${alumno.email || '—'}</div>
       <div><strong>Teléfono:</strong> ${alumno.telefono || '—'}</div>
-      <div><strong>Ocupación:</strong> ${alumno.ocupacion || '—'}</div>
+      <div><strong>Ocupación:</strong> ${alumno.ocupacion || '—'}${alumno.ocupacionEspecialidad ? `, ${alumno.ocupacionEspecialidad}` : ''}</div>
       <div><strong>Dirección:</strong> ${direccionTexto}</div>
       <div><strong>Fecha de Ingreso:</strong> ${formatFecha(ciclo ? ciclo.fechaIngreso : null)}</div>
       <div><strong>Fecha de Egreso:</strong> ${formatFecha(ciclo ? ciclo.fechaEgreso : null)}</div>

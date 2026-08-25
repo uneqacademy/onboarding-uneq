@@ -75,6 +75,7 @@
         <li class="nav-item" data-nav="alumnos">Alumnos</li>
         <li class="nav-item" data-role="director" data-nav="coaches">Coaches</li>
         <li class="nav-item" data-role="director" data-nav="mentores">Mentores</li>
+        <li class="nav-item hidden" data-nav="mis-datos">Mis Datos</li>
         <li class="nav-item" data-role="director" data-nav="configuracion">Configuración</li>
         <li class="nav-item" data-role="alumno" data-nav="ficha-alumno-propia">Mi Ficha Alumno</li>
         <li class="nav-item" data-role="alumno" data-nav="bitacora-alumno">Bitácora</li>
@@ -476,6 +477,10 @@
         <div class="tab-panel" data-panel="pago" data-role="director">
           <div class="panel">
             <div class="panel__body">
+              <div class="flex-between mb-16">
+                <span class="badge" id="pago-badge-estado">—</span>
+                <button class="btn btn--ghost hidden" id="btn-editar-acuerdo">✏️ Editar</button>
+              </div>
               <p class="text-soft mb-16">Moneda: <strong id="pago-moneda">—</strong> (definida al crear el alumno, no editable aquí)</p>
               <div class="field-grid mb-16">
                 <div class="field"><label>Monto Total</label><input id="pago-monto-total"></div>
@@ -497,11 +502,6 @@
                 <button class="btn btn--ghost" id="btn-subir-acuerdo-firmado">Subir Acuerdo Firmado</button>
                 <button class="btn btn--danger hidden" id="btn-eliminar-acuerdo-firmado">Eliminar Acuerdo</button>
                 <input type="file" id="input-acuerdo-firmado" accept=".pdf" class="hidden">
-              </div>
-
-              <div data-role="director" style="border-top:0.5px solid var(--border); margin-top:16px; padding-top:14px;">
-                <p class="text-soft mb-16">Si marcas esto, al alumno le va a aparecer un aviso en su Dashboard recordándole que tiene un pago atrasado y que contacte a Soporte Alumnos.</p>
-                <button type="button" class="btn btn--ghost" id="pago-toggle-atraso">Sin atraso registrado</button>
               </div>
 
               <div class="flex-between" style="margin-top:16px;">
@@ -833,9 +833,13 @@
         </div>
 
         <div class="panel mb-24">
-          <div class="panel__header"><h3>Mis Temáticas</h3></div>
+          <div class="panel__header flex-between">
+            <h3>Mis Temáticas</h3>
+            <button class="btn btn--ghost hidden" id="btn-editar-temas-mentor">✏️ Editar</button>
+          </div>
           <div class="panel__body">
             <p class="text-soft mb-16">Elige las temáticas que dominas — los alumnos las van a ver en "Preguntas en Vivo" y en tu perfil del BOX.</p>
+            <p id="mentor-temas-lista" class="hidden"></p>
             <div id="mentor-temas-checkboxes" style="display:flex; flex-wrap:wrap; gap:10px 20px; margin-bottom:16px;"></div>
             <button class="btn btn--primary" id="btn-guardar-temas-mentor">Guardar Temáticas</button>
           </div>
@@ -1111,6 +1115,46 @@
       <!-- ======================================================
            CONFIGURACIÓN (solo Director)
            ====================================================== -->
+      <!-- ======================================================
+           MIS DATOS (Director / Coach / Mentor)
+           ====================================================== -->
+      <section id="view-mis-datos" class="view hidden">
+        <div class="flex-between mb-16"><h2>Mis Datos</h2></div>
+        <div class="panel mb-24">
+          <div class="panel__body" style="display:flex; align-items:center; gap:20px; flex-wrap:wrap;">
+            <div style="display:flex; flex-direction:column; align-items:center; gap:8px;">
+              <img id="mis-datos-foto-preview" src="" alt="" style="width:80px; height:80px; border-radius:50%; object-fit:cover;">
+              <input type="file" id="mis-datos-foto-input" accept="image/*" class="hidden">
+              <button type="button" class="btn btn--ghost" id="btn-cambiar-foto-mis-datos" style="font-size:11px; padding:4px 10px;">Cambiar Foto</button>
+            </div>
+            <div style="flex:1; min-width:200px;">
+              <p style="margin:0 0 4px; font-size:15px;" id="mis-datos-nombre"><strong>—</strong></p>
+              <p class="text-soft" style="margin:0; font-size:12px;" id="mis-datos-rol">—</p>
+            </div>
+          </div>
+        </div>
+        <div class="panel mb-24">
+          <div class="panel__header"><h3>Contacto</h3></div>
+          <div class="panel__body">
+            <div class="field-grid mb-16">
+              <div class="field"><label>Correo</label><input type="email" id="mis-datos-email"></div>
+              <div class="field"><label>Teléfono</label><input id="mis-datos-telefono"></div>
+            </div>
+            <button class="btn btn--primary" id="btn-guardar-mis-datos">Guardar</button>
+            <p class="text-soft" style="margin-top:10px; font-size:12px;">El correo aquí es solo el dato de contacto que ven los demás — no cambia el correo con el que inicias sesión.</p>
+          </div>
+        </div>
+        <div class="panel hidden" data-role="director" id="panel-mis-roles-director">
+          <div class="panel__header"><h3>Mis Roles Adicionales</h3></div>
+          <div class="panel__body">
+            <p class="text-soft mb-16">Actívalos si también vas a trabajar como Coach o Mentor. Después de guardar, cierra sesión y vuelve a entrar para ver el selector "Viendo como" actualizado.</p>
+            <label style="font-weight:400; display:flex; align-items:center; gap:8px; margin-bottom:10px;"><input type="checkbox" id="chk-rol-propio-coach" style="width:auto;"> También soy Coach</label>
+            <label style="font-weight:400; display:flex; align-items:center; gap:8px; margin-bottom:16px;"><input type="checkbox" id="chk-rol-propio-mentor" style="width:auto;"> También soy Mentor</label>
+            <button class="btn btn--primary" id="btn-guardar-roles-propios">Guardar Roles</button>
+          </div>
+        </div>
+      </section>
+
       <section id="view-configuracion" class="view hidden">
         <div class="flex-between mb-16"><h2>Configuración</h2></div>
         <div class="panel mb-24">

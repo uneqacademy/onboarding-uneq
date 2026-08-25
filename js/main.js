@@ -45,6 +45,9 @@ export function applyRole(role, nombre, rolesDisponibles) {
   const navBox = document.querySelector('.nav-item[data-nav="box-consultas"]');
   if (navBox) navBox.classList.toggle('hidden', !(role === 'mentor' || role === 'alumno'));
 
+  const navMisDatos = document.querySelector('.nav-item[data-nav="mis-datos"]');
+  if (navMisDatos) navMisDatos.classList.toggle('hidden', role === 'alumno');
+
   const tabPago = document.querySelector('.tab[data-tab="pago"]');
   if (tabPago) tabPago.classList.toggle('hidden', role !== 'director');
 
@@ -137,6 +140,9 @@ export function setNav(section) {
   } else if (section === 'box-consultas') {
     showView(currentRole === 'alumno' ? 'view-box-alumno' : 'view-box-mentor');
     document.getElementById('topbar-title').textContent = 'BOX de Consultas';
+  } else if (section === 'mis-datos') {
+    showView('view-mis-datos');
+    document.getElementById('topbar-title').textContent = 'Mis Datos';
   } else if (section === 'configuracion') {
     showView('view-configuracion');
     document.getElementById('topbar-title').textContent = 'Configuración';

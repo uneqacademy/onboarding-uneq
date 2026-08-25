@@ -27,6 +27,7 @@ import { cargarMiEvaluacionCoach } from './coaches.js';
 import { cargarDashboardMentor, cargarAlumnosMentor, cargarPerfilMentor, cargarMentoriasView, cargarBoxMentor } from './mentores.js';
 import { actualizarBotonAccesoAlumno } from './alumno-portal.js';
 import './configuracion.js';
+import './mis-datos.js';
 
 let coachesMap = {};       // uid -> nombre, solo se llena para el director
 let currentAlumnoId = null;

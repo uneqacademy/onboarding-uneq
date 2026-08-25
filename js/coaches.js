@@ -191,6 +191,7 @@ async function cargarCoachesView() {
           <button class="btn btn--ghost btn-copiar-medio" style="font-size:11px; padding:4px 8px;">Link Medio</button>
           <button class="btn btn--ghost btn-copiar-final" style="font-size:11px; padding:4px 8px;">Link Final</button>
           <button class="btn btn--ghost btn-gestionar-roles" style="font-size:11px; padding:4px 8px;">Roles</button>
+          <button class="btn btn--ghost btn-editar-datos-coach" style="font-size:11px; padding:4px 8px;">Editar Datos</button>
           <button class="btn btn--ghost btn-restablecer-password" style="font-size:11px; padding:4px 8px;">Restablecer Contraseña</button>
           <button class="btn btn--ghost btn-eliminar-coach" style="font-size:11px; padding:4px 8px;">Eliminar</button>
         </td>`;
@@ -200,6 +201,31 @@ async function cargarCoachesView() {
       tr.querySelector('.btn-copiar-final').addEventListener('click', () => copiarLink(uid, nombreCoach, 'final'));
       tr.querySelector('.btn-eliminar-coach').addEventListener('click', () => eliminarCoach(uid, nombreCoach, vigentes));
       tr.querySelector('.btn-restablecer-password').addEventListener('click', (ev) => enviarResetPassword(coach.email, ev.target));
+
+      let filaEditarDatos = null;
+      tr.querySelector('.btn-editar-datos-coach').addEventListener('click', () => {
+        if (filaEditarDatos) { filaEditarDatos.remove(); filaEditarDatos = null; return; }
+        filaEditarDatos = document.createElement('tr');
+        filaEditarDatos.innerHTML = `
+          <td colspan="6" style="background:#F7F8FA; padding:14px 16px;">
+            <div class="field-grid mb-16">
+              <div class="field"><label>Nombre</label><input class="edit-nombre-coach" value="${coach.nombre || ''}"></div>
+              <div class="field"><label>Correo</label><input class="edit-email-coach" type="email" value="${coach.email || ''}"></div>
+              <div class="field"><label>Teléfono</label><input class="edit-telefono-coach" value="${coach.telefono || ''}"></div>
+            </div>
+            <button class="btn btn--primary btn-guardar-datos-coach" style="font-size:11px; padding:4px 10px;">Guardar</button>
+          </td>`;
+        tr.insertAdjacentElement('afterend', filaEditarDatos);
+
+        filaEditarDatos.querySelector('.btn-guardar-datos-coach').addEventListener('click', async () => {
+          await update(ref(db, `usuarios/${uid}`), {
+            nombre: filaEditarDatos.querySelector('.edit-nombre-coach').value.trim(),
+            email: filaEditarDatos.querySelector('.edit-email-coach').value.trim(),
+            telefono: filaEditarDatos.querySelector('.edit-telefono-coach').value.trim()
+          });
+          await cargarCoachesView();
+        });
+      });
 
       let filaRoles = null;
       tr.querySelector('.btn-gestionar-roles').addEventListener('click', () => {

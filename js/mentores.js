@@ -87,12 +87,38 @@ async function cargarMentoresView() {
         <td>${npsTexto}</td>
         <td style="display:flex; gap:6px; flex-wrap:wrap;">
           <button class="btn btn--ghost btn-gestionar-roles-mentor" style="font-size:11px; padding:4px 8px;">Roles</button>
+          <button class="btn btn--ghost btn-editar-datos-mentor" style="font-size:11px; padding:4px 8px;">Editar Datos</button>
           <button class="btn btn--ghost btn-restablecer-password-mentor" style="font-size:11px; padding:4px 8px;">Restablecer Contraseña</button>
           <button class="btn btn--ghost btn-eliminar-mentor" style="font-size:11px; padding:4px 8px;">Eliminar</button>
         </td>`;
       tbody.appendChild(tr);
 
       tr.querySelector('.btn-restablecer-password-mentor').addEventListener('click', (ev) => enviarResetPasswordMentor(mentor.email, ev.target));
+
+      let filaEditarDatosMentor = null;
+      tr.querySelector('.btn-editar-datos-mentor').addEventListener('click', () => {
+        if (filaEditarDatosMentor) { filaEditarDatosMentor.remove(); filaEditarDatosMentor = null; return; }
+        filaEditarDatosMentor = document.createElement('tr');
+        filaEditarDatosMentor.innerHTML = `
+          <td colspan="5" style="background:#F7F8FA; padding:14px 16px;">
+            <div class="field-grid mb-16">
+              <div class="field"><label>Nombre</label><input class="edit-nombre-mentor" value="${mentor.nombre || ''}"></div>
+              <div class="field"><label>Correo</label><input class="edit-email-mentor" type="email" value="${mentor.email || ''}"></div>
+              <div class="field"><label>Teléfono</label><input class="edit-telefono-mentor" value="${mentor.telefono || ''}"></div>
+            </div>
+            <button class="btn btn--primary btn-guardar-datos-mentor" style="font-size:11px; padding:4px 10px;">Guardar</button>
+          </td>`;
+        tr.insertAdjacentElement('afterend', filaEditarDatosMentor);
+
+        filaEditarDatosMentor.querySelector('.btn-guardar-datos-mentor').addEventListener('click', async () => {
+          await update(ref(db, `usuarios/${uid}`), {
+            nombre: filaEditarDatosMentor.querySelector('.edit-nombre-mentor').value.trim(),
+            email: filaEditarDatosMentor.querySelector('.edit-email-mentor').value.trim(),
+            telefono: filaEditarDatosMentor.querySelector('.edit-telefono-mentor').value.trim()
+          });
+          await cargarMentoresView();
+        });
+      });
 
       let filaRolesMentor = null;
       tr.querySelector('.btn-gestionar-roles-mentor').addEventListener('click', () => {
@@ -430,13 +456,35 @@ export async function cargarPerfilMentor() {
   }
 
   const temasCont = document.getElementById('mentor-temas-checkboxes');
+  const temasListaEl = document.getElementById('mentor-temas-lista');
+  const btnEditarTemas = document.getElementById('btn-editar-temas-mentor');
+  const btnGuardarTemasEl = document.getElementById('btn-guardar-temas-mentor');
   if (temasCont) {
     const temasGuardados = datos.temas || {};
     temasCont.innerHTML = TEMAS_BOX.map(t => `
       <label style="font-weight:400; display:flex; align-items:center; gap:6px;">
         <input type="checkbox" class="chk-tema-mentor" value="${t}" ${temasGuardados[t] ? 'checked' : ''}> ${t}
       </label>`).join('');
+
+    const hayTemasGuardados = Object.keys(temasGuardados).length > 0;
+    if (temasListaEl) {
+      temasListaEl.textContent = Object.keys(temasGuardados).join(', ') || 'Sin temáticas elegidas aún.';
+      temasListaEl.classList.toggle('hidden', !hayTemasGuardados);
+    }
+    temasCont.classList.toggle('hidden', hayTemasGuardados);
+    if (btnGuardarTemasEl) btnGuardarTemasEl.classList.toggle('hidden', hayTemasGuardados);
+    if (btnEditarTemas) btnEditarTemas.classList.toggle('hidden', !hayTemasGuardados);
   }
+}
+
+const btnEditarTemasMentor = document.getElementById('btn-editar-temas-mentor');
+if (btnEditarTemasMentor) {
+  btnEditarTemasMentor.addEventListener('click', () => {
+    document.getElementById('mentor-temas-lista').classList.add('hidden');
+    document.getElementById('mentor-temas-checkboxes').classList.remove('hidden');
+    document.getElementById('btn-guardar-temas-mentor').classList.remove('hidden');
+    btnEditarTemasMentor.classList.add('hidden');
+  });
 }
 
 const btnGuardarTemasMentor = document.getElementById('btn-guardar-temas-mentor');
@@ -449,7 +497,7 @@ if (btnGuardarTemasMentor) {
       const temas = {};
       document.querySelectorAll('.chk-tema-mentor:checked').forEach(chk => { temas[chk.value] = true; });
       await update(ref(db, `usuarios/${uid}`), { temas });
-      alert('Temáticas guardadas.');
+      await cargarPerfilMentor();
     } finally {
       btnGuardarTemasMentor.disabled = false;
     }
@@ -563,14 +611,18 @@ async function cargarMentoriasView() {
         <td><button class="btn btn--ghost btn-ver-preguntas-vivo" style="font-size:11px; padding:4px 8px;">Ver Preguntas</button></td>
         <td><button class="btn btn--ghost btn-copiar-link-nps-mentoria" style="font-size:11px; padding:4px 8px;">Copiar Link NPS</button></td>
         <td>
-          <button class="btn btn--ghost btn-toggle-no-dictada" style="font-size:11px; padding:4px 8px; ${noDictada ? 'color:#C0392B;' : ''}">${noDictada ? '✓ No Dictada' : 'Marcar No Dictada'}</button>
+          <button class="btn btn--ghost btn-toggle-no-dictada" style="font-size:11px; padding:4px 8px; ${noDictada ? 'color:#C0392B;' : ''}" ${noDictada ? 'disabled' : ''}>${noDictada ? '✓ No Dictada' : 'Marcar No Dictada'}</button>
         </td>`;
       tbody.appendChild(tr);
 
-      tr.querySelector('.btn-toggle-no-dictada').addEventListener('click', async () => {
-        await update(ref(db, `mentorias/${uid}/${mentoriaId}`), { estado: noDictada ? 'dictada' : 'no_dictada' });
-        await cargarMentoriasView();
-      });
+      if (!noDictada) {
+        tr.querySelector('.btn-toggle-no-dictada').addEventListener('click', async () => {
+          const confirmado = confirm('¿Marcar esta sesión como "No Dictada"? Esta acción no se puede deshacer — si necesitas agendarla de nuevo, tendrás que crear una mentoría nueva.');
+          if (!confirmado) return;
+          await update(ref(db, `mentorias/${uid}/${mentoriaId}`), { estado: 'no_dictada' });
+          await cargarMentoriasView();
+        });
+      }
 
       let filaPreguntasVivo = null;
       tr.querySelector('.btn-ver-preguntas-vivo').addEventListener('click', async () => {

@@ -19,6 +19,31 @@ import { getCurrentRole } from './main.js';
 let cicloIdActual = null;
 let monedaActual = 'CLP';
 
+/* Atrasado = alguna cuota con fecha ya pasada y estado distinto de "pagada" */
+function calcularEstadoPago(cuotas) {
+  if (!cuotas) return false;
+  const hoy = new Date(); hoy.setHours(0, 0, 0, 0);
+  return Object.values(cuotas).some(c => {
+    if (!c.fecha || c.estado === 'pagada') return false;
+    return new Date(c.fecha + 'T00:00:00') <= hoy;
+  });
+}
+
+function aplicarBloqueoAcuerdo(bloqueado) {
+  ['pago-monto-total', 'pago-descuento', 'pago-abono', 'btn-agregar-cuota-ficha', 'btn-subir-acuerdo-firmado', 'btn-eliminar-acuerdo-firmado']
+    .forEach(id => { const el = document.getElementById(id); if (el) el.disabled = bloqueado; });
+  document.querySelectorAll('#tabla-cuotas-ficha-body input, #tabla-cuotas-ficha-body select, #tabla-cuotas-ficha-body button')
+    .forEach(el => { el.disabled = bloqueado; });
+}
+
+const btnEditarAcuerdoGlobal = document.getElementById('btn-editar-acuerdo');
+if (btnEditarAcuerdoGlobal) {
+  btnEditarAcuerdoGlobal.addEventListener('click', () => {
+    aplicarBloqueoAcuerdo(false);
+    btnEditarAcuerdoGlobal.classList.add('hidden');
+  });
+}
+
 function crearSelectEstado(celda, estadoInicial) {
   const select = document.createElement('select');
   select.className = 'cuota-estado-select';
@@ -127,11 +152,18 @@ export async function cargarAcuerdoParaCiclo(cicloId) {
     btnEliminarEl.classList.toggle('hidden', !acuerdo.pdfFirmadoUrl);
   }
 
-  const btnAtraso = document.getElementById('pago-toggle-atraso');
-  if (btnAtraso) {
-    const enAtraso = !!acuerdo.atrasoPago;
-    btnAtraso.textContent = enAtraso ? '⚠️ Atraso registrado — clic para quitarlo' : 'Sin atraso registrado';
-    btnAtraso.style.cssText = enAtraso ? 'background:#FDEDED; color:#C0392B; border-color:#F5C6C6;' : '';
+  const badgeEstadoEl = document.getElementById('pago-badge-estado');
+  if (badgeEstadoEl) {
+    const atrasado = calcularEstadoPago(acuerdo.cuotas);
+    badgeEstadoEl.textContent = atrasado ? 'Pago Atrasado' : 'Al día';
+    badgeEstadoEl.className = 'badge ' + (atrasado ? 'badge--impaga' : 'badge--activo');
+  }
+
+  const yaGuardado = !!(acuerdo.montoTotal || (acuerdo.cuotas && Object.keys(acuerdo.cuotas).length));
+  const btnEditarAcuerdo = document.getElementById('btn-editar-acuerdo');
+  if (btnEditarAcuerdo) {
+    aplicarBloqueoAcuerdo(yaGuardado);
+    btnEditarAcuerdo.classList.toggle('hidden', !yaGuardado);
   }
 
   tbody.innerHTML = '';
@@ -224,21 +256,6 @@ if (btnEliminarAcuerdoFirmado) {
       await cargarAcuerdoParaCiclo(cicloIdActual);
     } finally {
       btnEliminarAcuerdoFirmado.disabled = false;
-    }
-  });
-}
-
-const btnToggleAtraso = document.getElementById('pago-toggle-atraso');
-if (btnToggleAtraso) {
-  btnToggleAtraso.addEventListener('click', async () => {
-    if (!cicloIdActual) return;
-    const enAtrasoActual = btnToggleAtraso.textContent.includes('Atraso registrado');
-    btnToggleAtraso.disabled = true;
-    try {
-      await update(ref(db, `acuerdosPago/${cicloIdActual}`), { atrasoPago: !enAtrasoActual });
-      await cargarAcuerdoParaCiclo(cicloIdActual);
-    } finally {
-      btnToggleAtraso.disabled = false;
     }
   });
 }
