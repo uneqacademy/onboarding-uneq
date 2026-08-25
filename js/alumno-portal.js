@@ -233,6 +233,8 @@ export async function cargarDashboardAlumno(alumnoId) {
       const diasRestantes = Math.ceil((egreso.getTime() - hoy.getTime()) / (1000 * 60 * 60 * 24));
       if (diasRestantes > 0) {
         fraseDiasRestantes = `<p style="margin:6px 0 0;">¡Te quedan ${diasRestantes} día${diasRestantes === 1 ? '' : 's'} de acceso al acompañamiento, estamos aquí para acompañarte, no te detengas!</p>`;
+      } else {
+        fraseDiasRestantes = `<p style="margin:6px 0 0; color:#B8860B; font-weight:600;">Tu acceso está en período de gracia</p>`;
       }
     }
 
@@ -1080,13 +1082,28 @@ export async function cargarPreguntasVivo() {
   });
 
   const ahora = Date.now();
-  sesiones = sesiones.filter(s => (s.inicio.getTime() + 60 * 60 * 1000) > ahora);
+  sesiones = sesiones.filter(s => (s.inicio.getTime() + 60 * 60 * 1000) > ahora && s.estado !== 'no_dictada');
   sesiones.sort((a, b) => a.inicio - b.inicio);
 
   if (!sesiones.length) {
     listadoEl.innerHTML = '<p class="text-soft">No hay sesiones en vivo próximas por ahora.</p>';
     return;
   }
+
+  // --- Límite: 1 pregunta en vivo por mentor, por semana ---
+  const mentorUidsEnSesiones = [...new Set(sesiones.map(s => s.mentorUid))];
+  const preguntasVivoPorMentorSnaps = await Promise.all(mentorUidsEnSesiones.map(uid => get(ref(db, `preguntasVivo/${uid}`))));
+  const inicioSemanaVivo = inicioSemanaActual();
+  const mentoresConPreguntaEstaSemana = new Set();
+  preguntasVivoPorMentorSnaps.forEach((snap, idx) => {
+    if (!snap.exists()) return;
+    const mentorUid = mentorUidsEnSesiones[idx];
+    Object.values(snap.val()).forEach(preguntasDeMentoria => {
+      Object.values(preguntasDeMentoria).forEach(p => {
+        if (p.alumnoId === alumnoIdActual && p.createdAt >= inicioSemanaVivo) mentoresConPreguntaEstaSemana.add(mentorUid);
+      });
+    });
+  });
 
   listadoEl.innerHTML = sesiones.map((s, idx) => {
     const temasMentor = Object.keys(s.mentorDatos.temas || {}).join(', ') || 'Temáticas no definidas aún';
@@ -1097,13 +1114,14 @@ export async function cargarPreguntasVivo() {
         <img src="${s.mentorDatos.fotoUrl || PLACEHOLDER_FOTO_ALUMNO}" alt="" style="width:56px; height:56px; border-radius:50%; object-fit:cover; flex-shrink:0;">
         <div style="flex:1; min-width:220px;">
           <strong>${s.mentorDatos.nombre || s.mentorDatos.email}</strong>
+          <span class="pv-badge-en-vivo hidden" style="background:#C0392B; color:#fff; font-size:10px; font-weight:700; letter-spacing:0.5px; padding:2px 8px; border-radius:4px; margin-left:6px; vertical-align:middle;">● EN VIVO</span>
           <p class="text-soft" style="margin:2px 0; font-size:12px;">${temasMentor}</p>
           <p style="margin:6px 0 2px;"><strong>${s.tema || ''}</strong></p>
           <p class="text-soft" style="margin:0; font-size:12px;">${fechaLarga} · ${s.hora}</p>
           ${s.link ? `<a href="${s.link}" target="_blank" rel="noopener" style="font-size:13px;">Ir al link de acceso</a>` : ''}
           <p class="pv-countdown text-soft" style="margin-top:8px; font-size:12px; font-weight:600;"></p>
         </div>
-        <button type="button" class="btn btn--primary pv-btn-preguntar" style="font-size:12px;">Enviar Pregunta</button>
+        <button type="button" class="btn btn--primary pv-btn-preguntar" style="font-size:12px;" ${mentoresConPreguntaEstaSemana.has(s.mentorUid) ? 'disabled' : ''}>Enviar Pregunta</button>
       </div>
       <div class="panel__body hidden pv-form-panel" style="border-top:0.5px solid var(--border);">
         <div class="field mb-16">
@@ -1124,12 +1142,22 @@ export async function cargarPreguntasVivo() {
   function actualizarCountdowns() {
     cards.forEach((card, idx) => {
       const s = sesiones[idx];
-      const limite = s.inicio.getTime() - 12 * 60 * 60 * 1000;
+      const inicioMs = s.inicio.getTime();
+      const limite = inicioMs - 12 * 60 * 60 * 1000;
       const restante = limite - Date.now();
       const countdownEl = card.querySelector('.pv-countdown');
       const btnPreguntar = card.querySelector('.pv-btn-preguntar');
-      if (restante <= 0) {
-        countdownEl.textContent = '⏱️ El plazo para dejar tu pregunta ya cerró (12h antes de la sesión).';
+      const enVivoAhora = Date.now() >= inicioMs && Date.now() < (inicioMs + 60 * 60 * 1000);
+
+      const badgeEl = card.querySelector('.pv-badge-en-vivo');
+      if (badgeEl) badgeEl.classList.toggle('hidden', !enVivoAhora);
+
+      if (mentoresConPreguntaEstaSemana.has(s.mentorUid)) {
+        countdownEl.textContent = 'Ya le enviaste una pregunta en vivo a este mentor esta semana.';
+        btnPreguntar.disabled = true;
+        btnPreguntar.title = 'Ya le enviaste una pregunta en vivo a este mentor esta semana.';
+      } else if (restante <= 0) {
+        countdownEl.textContent = 'El plazo para dejar tu pregunta se cerró (12 horas antes de la sesión). De todas maneras te esperamos en vivo, para que participes junto a tus compañeros y si queda tiempo, puedas preguntar en vivo.';
         btnPreguntar.disabled = true;
         btnPreguntar.title = 'El plazo para preguntar ya cerró.';
       } else {

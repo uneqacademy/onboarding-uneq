@@ -548,6 +548,7 @@ async function cargarMentoriasView() {
         : '—';
 
       const tr = document.createElement('tr');
+      const noDictada = m.estado === 'no_dictada';
       tr.innerHTML = `
         <td>${m.tema || ''}</td>
         <td>${formatFechaCorta(m.fecha)}</td>
@@ -560,8 +561,16 @@ async function cargarMentoriasView() {
           <input type="file" class="input-resumen-mentoria hidden" accept=".doc,.docx">
         </td>
         <td><button class="btn btn--ghost btn-ver-preguntas-vivo" style="font-size:11px; padding:4px 8px;">Ver Preguntas</button></td>
-        <td><button class="btn btn--ghost btn-copiar-link-nps-mentoria" style="font-size:11px; padding:4px 8px;">Copiar Link NPS</button></td>`;
+        <td><button class="btn btn--ghost btn-copiar-link-nps-mentoria" style="font-size:11px; padding:4px 8px;">Copiar Link NPS</button></td>
+        <td>
+          <button class="btn btn--ghost btn-toggle-no-dictada" style="font-size:11px; padding:4px 8px; ${noDictada ? 'color:#C0392B;' : ''}">${noDictada ? '✓ No Dictada' : 'Marcar No Dictada'}</button>
+        </td>`;
       tbody.appendChild(tr);
+
+      tr.querySelector('.btn-toggle-no-dictada').addEventListener('click', async () => {
+        await update(ref(db, `mentorias/${uid}/${mentoriaId}`), { estado: noDictada ? 'dictada' : 'no_dictada' });
+        await cargarMentoriasView();
+      });
 
       let filaPreguntasVivo = null;
       tr.querySelector('.btn-ver-preguntas-vivo').addEventListener('click', async () => {
@@ -571,7 +580,7 @@ async function cargarMentoriasView() {
         const preguntas = Object.entries(preguntasObj).sort((a, b) => a[1].createdAt - b[1].createdAt);
         filaPreguntasVivo = document.createElement('tr');
         filaPreguntasVivo.innerHTML = `
-          <td colspan="8" style="background:#F7F8FA; padding:14px 16px;">
+          <td colspan="9" style="background:#F7F8FA; padding:14px 16px;">
             ${preguntas.length ? preguntas.map(([preguntaId, p]) => `
               <div class="pregunta-vivo-item" data-pregunta-id="${preguntaId}" style="padding:8px 0; border-bottom:0.5px solid var(--border); font-size:13px;">
                 <strong>${p.alumnoNombre || 'Alumno'}</strong>
