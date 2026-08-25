@@ -253,7 +253,7 @@ export async function cargarDashboardAlumno(alumnoId) {
       const tests = testsSnap.exists() ? Object.values(testsSnap.val()) : [];
       if (tests.length) {
         const ultimo = tests.sort((a, b) => b.completadoAt - a.completadoAt)[0];
-        ultimoTestEl.innerHTML = renderKpiTest(ultimo);
+        ultimoTestEl.innerHTML = renderDetalleCompletoTest(ultimo);
       } else {
         ultimoTestEl.innerHTML = '<p class="text-soft">Aún no has completado el Test Brújula — tu coach te va a guiar en eso.</p>';
       }
@@ -843,11 +843,49 @@ async function cargarMisPreguntasVivo(card, s) {
   if (!cont) return;
   const snap = await get(ref(db, `preguntasVivo/${s.mentorUid}/${s.mentoriaId}`));
   if (!snap.exists()) { cont.innerHTML = ''; return; }
-  const propias = Object.values(snap.val()).filter(p => p.alumnoId === alumnoIdActual);
-  cont.innerHTML = propias.length
-    ? '<strong style="font-size:12px;">Tus preguntas para esta sesión:</strong>' +
-      propias.map(p => `<div style="margin-top:6px; font-size:13px;"><p style="margin:0;">${linkify(p.texto || '')}</p>${renderImagenesPregunta(p.imagenes)}</div>`).join('')
-    : '';
+  const propias = Object.entries(snap.val()).filter(([, p]) => p.alumnoId === alumnoIdActual);
+
+  if (!propias.length) { cont.innerHTML = ''; return; }
+
+  cont.innerHTML = '<strong style="font-size:12px; display:block; margin-bottom:6px;">Tus preguntas para esta sesión:</strong>' +
+    propias.map(([preguntaId, p]) => `
+      <div class="pv-pregunta-propia" data-pregunta-id="${preguntaId}" style="margin-top:8px; font-size:13px; padding:8px; background:#fff; border-radius:8px;">
+        <p class="pv-pregunta-propia-texto" style="margin:0;">${linkify(p.texto || '')}</p>
+        ${renderImagenesPregunta(p.imagenes)}
+        ${p.revisada
+          ? '<p class="text-soft" style="margin:6px 0 0; font-size:11px;">✓ El Mentor ya ha revisado tu pregunta.</p>'
+          : `<button type="button" class="btn btn--ghost btn-editar-pregunta-vivo" style="font-size:11px; padding:3px 8px; margin-top:6px;">Editar</button>`}
+      </div>`).join('');
+
+  cont.querySelectorAll('.btn-editar-pregunta-vivo').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const bloque = btn.closest('.pv-pregunta-propia');
+      const preguntaId = bloque.dataset.preguntaId;
+      const [, datosPregunta] = propias.find(([id]) => id === preguntaId);
+      const textoActual = datosPregunta.texto || '';
+
+      bloque.innerHTML = `
+        <textarea class="pv-editar-texto" style="min-height:60px;">${textoActual}</textarea>
+        <div style="margin-top:6px; display:flex; gap:8px;">
+          <button type="button" class="btn btn--primary btn-guardar-edicion-vivo" style="font-size:11px; padding:3px 10px;">Guardar</button>
+          <button type="button" class="btn btn--ghost btn-cancelar-edicion-vivo" style="font-size:11px; padding:3px 10px;">Cancelar</button>
+        </div>`;
+
+      bloque.querySelector('.btn-cancelar-edicion-vivo').addEventListener('click', () => cargarMisPreguntasVivo(card, s));
+      bloque.querySelector('.btn-guardar-edicion-vivo').addEventListener('click', async (ev) => {
+        const nuevoTexto = bloque.querySelector('.pv-editar-texto').value.trim();
+        if (!nuevoTexto) { alert('La pregunta no puede quedar vacía.'); return; }
+        ev.target.disabled = true;
+        try {
+          await update(ref(db, `preguntasVivo/${s.mentorUid}/${s.mentoriaId}/${preguntaId}`), { texto: nuevoTexto });
+          await cargarMisPreguntasVivo(card, s);
+        } catch (err) {
+          alert('No se pudo guardar — puede que el mentor ya haya revisado tu pregunta.');
+          await cargarMisPreguntasVivo(card, s);
+        }
+      });
+    });
+  });
 }
 
 function bindSesionVivo(card, s) {
@@ -957,7 +995,7 @@ export async function cargarPreguntasVivo() {
         <div class="pv-imagenes-preview" style="display:flex; gap:6px; flex-wrap:wrap; margin:8px 0;"></div>
         <button type="button" class="btn btn--primary pv-btn-enviar" style="font-size:12px;">Enviar</button>
       </div>
-      <div class="panel__body pv-mis-preguntas" style="border-top:0.5px solid var(--border);"></div>
+      <div class="panel__body pv-mis-preguntas" style="border-top:2px solid var(--border); background:#F7F8FA; margin-top:4px;"></div>
     </div>`;
   }).join('');
 
@@ -984,6 +1022,32 @@ export async function cargarPreguntasVivo() {
   }
   actualizarCountdowns();
   intervaloPreguntasVivo = setInterval(actualizarCountdowns, 1000);
+
+  // --- Historial permanente: todas mis preguntas en vivo, aunque la sesión ya haya desaparecido del listado ---
+  const historialEl = document.getElementById('preguntas-vivo-historial');
+  if (historialEl) {
+    const preguntasVivoSnaps = await Promise.all(mentores.map(([uid]) => get(ref(db, `preguntasVivo/${uid}`))));
+    let historial = [];
+    preguntasVivoSnaps.forEach((snap, idx) => {
+      if (!snap.exists()) return;
+      const [mentorUid, mentorDatos] = mentores[idx];
+      Object.entries(snap.val()).forEach(([mentoriaId, preguntas]) => {
+        Object.values(preguntas).forEach(p => {
+          if (p.alumnoId === alumnoIdActual) historial.push({ ...p, mentorNombre: mentorDatos.nombre || mentorDatos.email });
+        });
+      });
+    });
+    historial.sort((a, b) => b.createdAt - a.createdAt);
+
+    historialEl.innerHTML = historial.length
+      ? historial.map(p => `
+          <div class="panel mb-16" style="padding:12px; font-size:13px;">
+            <strong>Para ${p.mentorNombre}</strong> <span class="text-soft" style="font-size:11px;">— ${formatFecha(new Date(p.createdAt).toISOString().slice(0, 10))}</span>
+            <p style="margin:6px 0 0;">${linkify(p.texto || '')}</p>
+            ${renderImagenesPregunta(p.imagenes)}
+          </div>`).join('')
+      : '<p class="text-soft">Aún no has enviado preguntas para sesiones en vivo.</p>';
+  }
 }
 
 document.querySelectorAll('.nav-item[data-nav="preguntas-vivo"]').forEach(item => {

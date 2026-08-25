@@ -567,18 +567,37 @@ async function cargarMentoriasView() {
       tr.querySelector('.btn-ver-preguntas-vivo').addEventListener('click', async () => {
         if (filaPreguntasVivo) { filaPreguntasVivo.remove(); filaPreguntasVivo = null; return; }
         const snap = await get(ref(db, `preguntasVivo/${uid}/${mentoriaId}`));
-        const preguntas = snap.exists() ? Object.values(snap.val()).sort((a, b) => a.createdAt - b.createdAt) : [];
+        const preguntasObj = snap.exists() ? snap.val() : {};
+        const preguntas = Object.entries(preguntasObj).sort((a, b) => a[1].createdAt - b[1].createdAt);
         filaPreguntasVivo = document.createElement('tr');
         filaPreguntasVivo.innerHTML = `
           <td colspan="8" style="background:#F7F8FA; padding:14px 16px;">
-            ${preguntas.length ? preguntas.map(p => `
-              <div style="padding:8px 0; border-bottom:0.5px solid var(--border); font-size:13px;">
+            ${preguntas.length ? preguntas.map(([preguntaId, p]) => `
+              <div class="pregunta-vivo-item" data-pregunta-id="${preguntaId}" style="padding:8px 0; border-bottom:0.5px solid var(--border); font-size:13px;">
                 <strong>${p.alumnoNombre || 'Alumno'}</strong>
                 <p style="margin:4px 0;">${p.texto || ''}</p>
                 ${(p.imagenes || []).map(url => `<img src="${url}" alt="" style="max-width:120px; border-radius:6px; margin:4px 4px 0 0;">`).join('')}
+                ${p.revisada
+                  ? '<span class="badge badge--activo" style="font-size:10px;">✓ Revisada</span>'
+                  : '<button type="button" class="btn btn--ghost btn-marcar-revisada" style="font-size:11px; padding:3px 8px;">Marcar Revisada</button>'}
               </div>`).join('') : '<p class="text-soft" style="font-size:13px;">Aún no hay preguntas para esta sesión.</p>'}
           </td>`;
         tr.insertAdjacentElement('afterend', filaPreguntasVivo);
+
+        filaPreguntasVivo.querySelectorAll('.btn-marcar-revisada').forEach(btn => {
+          btn.addEventListener('click', async () => {
+            const item = btn.closest('.pregunta-vivo-item');
+            const preguntaId = item.dataset.preguntaId;
+            btn.disabled = true;
+            try {
+              await update(ref(db, `preguntasVivo/${uid}/${mentoriaId}/${preguntaId}`), { revisada: true });
+              btn.outerHTML = '<span class="badge badge--activo" style="font-size:10px;">✓ Revisada</span>';
+            } catch (err) {
+              alert('No se pudo marcar. Intenta de nuevo.');
+              btn.disabled = false;
+            }
+          });
+        });
       });
 
       const btnSubirResumen = tr.querySelector('.btn-subir-resumen');
