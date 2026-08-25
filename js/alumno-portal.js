@@ -226,6 +226,16 @@ export async function cargarDashboardAlumno(alumnoId) {
     const mensajeCoach = coach ? encodeURIComponent(`Hola ${coach.nombre || ''}, necesito tu ayuda por favor`) : '';
     const whatsappCoachUrl = coach && coach.telefono ? `https://wa.me/${coach.telefono.replace(/[^0-9]/g, '')}?text=${mensajeCoach}` : '';
 
+    let fraseDiasRestantes = '';
+    if (ciclo && ciclo.fechaEgreso) {
+      const hoy = new Date(); hoy.setHours(0, 0, 0, 0);
+      const egreso = new Date(ciclo.fechaEgreso + 'T00:00:00');
+      const diasRestantes = Math.ceil((egreso.getTime() - hoy.getTime()) / (1000 * 60 * 60 * 24));
+      if (diasRestantes > 0) {
+        fraseDiasRestantes = `<p style="margin:6px 0 0;">¡Te quedan ${diasRestantes} día${diasRestantes === 1 ? '' : 's'} de acceso al acompañamiento, estamos aquí para acompañarte, no te detengas!</p>`;
+      }
+    }
+
     accesosEl.innerHTML = `
       <div style="display:flex; flex-wrap:wrap; gap:10px; margin-bottom:18px;">
         <button type="button" class="btn btn--primary" id="btn-acceso-preguntar-mentores">Pregunta a los Mentores</button>
@@ -237,7 +247,8 @@ export async function cargarDashboardAlumno(alumnoId) {
         ${coach ? `Tu Coach es <strong>${coach.nombre || '—'}</strong>` : 'Aún no tienes coach asignado'}
         ${whatsappCoachUrl ? ` <a href="${whatsappCoachUrl}" target="_blank" rel="noopener" class="btn" style="background:#25D366; color:#fff; padding:4px 12px; font-size:12px;">💬 WhatsApp</a>` : ''}
       </p>
-      <p style="margin:0;">${fraseFase}</p>`;
+      <p style="margin:0;">${fraseFase}</p>
+      ${fraseDiasRestantes}`;
 
     const btnPreguntarMentores = document.getElementById('btn-acceso-preguntar-mentores');
     if (btnPreguntarMentores) {
@@ -621,40 +632,76 @@ export async function cargarBoxAlumno() {
 
   // --- Mis consultas (historial, separadas y con respuesta destacada) ---
   const validas = entradas.slice().sort((a, b) => b.createdAt - a.createdAt);
-  listadoEl.innerHTML = validas.length
-    ? validas.map(e => {
-        const mentorNombre = usuarios[e.mentorId] ? (usuarios[e.mentorId].nombre || usuarios[e.mentorId].email) : 'Mentor';
-        return `
-          <div class="panel mb-16" style="padding:14px;">
-            <div class="flex-between">
-              <strong>Para ${mentorNombre}</strong>
-              ${!e.respuesta ? `<button type="button" class="btn btn--ghost btn-eliminar-pregunta" data-pregunta-id="${e.preguntaId}" data-mentor-id="${e.mentorId}" style="font-size:11px; padding:2px 8px;">Eliminar</button>` : ''}
-            </div>
-            <span class="text-soft" style="font-size:12px;">${formatFecha(new Date(e.createdAt).toISOString().slice(0, 10))}</span>
-            <p style="margin:6px 0;">${linkify(e.pregunta)}</p>
-            ${renderImagenesPregunta(e.imagenes)}
-            ${renderRespuestaBox(e.respuesta)}
-          </div>`;
-      }).join('')
-    : '<p class="text-soft">Aún no has enviado ninguna consulta.</p>';
 
-  listadoEl.querySelectorAll('.btn-eliminar-pregunta').forEach(btn => {
-    btn.addEventListener('click', async () => {
-      const confirmado = confirm('¿Eliminar esta pregunta? Recuperas el cupo de esta semana.');
-      if (!confirmado) return;
-      btn.disabled = true;
-      try {
-        await update(ref(db), {
-          [`box/${btn.dataset.mentorId}/${btn.dataset.preguntaId}`]: null,
-          [`boxIndice/${alumnoIdActual}/${btn.dataset.preguntaId}`]: null
-        });
-        await cargarBoxAlumno();
-      } catch (err) {
-        alert('No se pudo eliminar. Intenta de nuevo.');
-        btn.disabled = false;
-      }
+  const filtroMentorBoxEl = document.getElementById('box-alumno-filtro-mentor');
+  const filtroDesdeBoxEl = document.getElementById('box-alumno-filtro-desde');
+  const filtroHastaBoxEl = document.getElementById('box-alumno-filtro-hasta');
+  if (filtroMentorBoxEl && !filtroMentorBoxEl.dataset.cargado) {
+    const mentoresConConsultas = [...new Map(validas.map(e => [e.mentorId, usuarios[e.mentorId] ? (usuarios[e.mentorId].nombre || usuarios[e.mentorId].email) : 'Mentor'])).entries()];
+    filtroMentorBoxEl.innerHTML = '<option value="">Todos</option>' + mentoresConConsultas.map(([uid, nombre]) => `<option value="${uid}">${nombre}</option>`).join('');
+    filtroMentorBoxEl.dataset.cargado = '1';
+  }
+
+  const LIMITE_INICIAL = 3;
+  let mostrarTodas = false;
+
+  function renderMisConsultas() {
+    const fMentor = filtroMentorBoxEl ? filtroMentorBoxEl.value : '';
+    const fDesde = filtroDesdeBoxEl && filtroDesdeBoxEl.value ? new Date(filtroDesdeBoxEl.value + 'T00:00:00').getTime() : null;
+    const fHasta = filtroHastaBoxEl && filtroHastaBoxEl.value ? new Date(filtroHastaBoxEl.value + 'T23:59:59').getTime() : null;
+
+    const filtradas = validas.filter(e =>
+      (!fMentor || e.mentorId === fMentor) &&
+      (!fDesde || e.createdAt >= fDesde) &&
+      (!fHasta || e.createdAt <= fHasta)
+    );
+    const visibles = mostrarTodas ? filtradas : filtradas.slice(0, LIMITE_INICIAL);
+
+    listadoEl.innerHTML = (visibles.length
+      ? visibles.map(e => {
+          const mentorNombre = usuarios[e.mentorId] ? (usuarios[e.mentorId].nombre || usuarios[e.mentorId].email) : 'Mentor';
+          return `
+            <div class="panel mb-16" style="padding:14px;">
+              <div class="flex-between">
+                <strong>Para ${mentorNombre}</strong>
+                ${!e.respuesta ? `<button type="button" class="btn btn--ghost btn-eliminar-pregunta" data-pregunta-id="${e.preguntaId}" data-mentor-id="${e.mentorId}" style="font-size:11px; padding:2px 8px;">Eliminar</button>` : ''}
+              </div>
+              <span class="text-soft" style="font-size:12px;">${formatFecha(new Date(e.createdAt).toISOString().slice(0, 10))}</span>
+              <p style="margin:6px 0;">${linkify(e.pregunta)}</p>
+              ${renderImagenesPregunta(e.imagenes)}
+              ${renderRespuestaBox(e.respuesta)}
+            </div>`;
+        }).join('')
+      : '<p class="text-soft">Aún no has enviado ninguna consulta con ese filtro.</p>');
+
+    if (!mostrarTodas && filtradas.length > LIMITE_INICIAL) {
+      listadoEl.innerHTML += `<button type="button" class="btn btn--ghost" id="btn-ver-todas-consultas">Ver todas (${filtradas.length})</button>`;
+      document.getElementById('btn-ver-todas-consultas').addEventListener('click', () => { mostrarTodas = true; renderMisConsultas(); });
+    }
+
+    listadoEl.querySelectorAll('.btn-eliminar-pregunta').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const confirmado = confirm('¿Eliminar esta pregunta? Recuperas el cupo de esta semana.');
+        if (!confirmado) return;
+        btn.disabled = true;
+        try {
+          await update(ref(db), {
+            [`box/${btn.dataset.mentorId}/${btn.dataset.preguntaId}`]: null,
+            [`boxIndice/${alumnoIdActual}/${btn.dataset.preguntaId}`]: null
+          });
+          await cargarBoxAlumno();
+        } catch (err) {
+          alert('No se pudo eliminar. Intenta de nuevo.');
+          btn.disabled = false;
+        }
+      });
     });
-  });
+  }
+
+  renderMisConsultas();
+  if (filtroMentorBoxEl) filtroMentorBoxEl.onchange = renderMisConsultas;
+  if (filtroDesdeBoxEl) filtroDesdeBoxEl.onchange = renderMisConsultas;
+  if (filtroHastaBoxEl) filtroHastaBoxEl.onchange = renderMisConsultas;
 }
 
 const btnCerrarFormPregunta = document.getElementById('btn-cerrar-form-pregunta');
@@ -734,6 +781,8 @@ export async function cargarPreguntasComunidad() {
   const listadoEl = document.getElementById('comunidad-listado');
   const filtroMentorEl = document.getElementById('comunidad-filtro-mentor');
   const filtroTemaEl = document.getElementById('comunidad-filtro-tema');
+  const filtroDesdeEl = document.getElementById('comunidad-filtro-desde');
+  const filtroHastaEl = document.getElementById('comunidad-filtro-hasta');
   if (!listadoEl) return;
 
   const usuariosSnap = await get(ref(db, 'usuarios'));
@@ -759,17 +808,28 @@ export async function cargarPreguntasComunidad() {
     const [mentorUid] = mentores[idx];
     Object.values(snap.val()).forEach(p => { if (p.respuesta) todas.push(p); });
   });
-  todas.sort((a, b) => b.createdAt - a.createdAt);
+  todas.sort((a, b) => b.createdAt - a.createdAt); // más reciente primero
+
+  const PAGE_SIZE = 10;
+  let cantidadVisible = PAGE_SIZE;
 
   function render() {
     const filtroMentor = filtroMentorEl ? filtroMentorEl.value : '';
     const filtroTema = filtroTemaEl ? filtroTemaEl.value : '';
+    const fDesde = filtroDesdeEl && filtroDesdeEl.value ? new Date(filtroDesdeEl.value + 'T00:00:00').getTime() : null;
+    const fHasta = filtroHastaEl && filtroHastaEl.value ? new Date(filtroHastaEl.value + 'T23:59:59').getTime() : null;
+
     const filtradas = todas.filter(p =>
       (!filtroMentor || p.mentorId === filtroMentor) &&
-      (!filtroTema || (p.respuesta && p.respuesta.tema === filtroTema))
+      (!filtroTema || (p.respuesta && p.respuesta.tema === filtroTema)) &&
+      (!fDesde || p.createdAt >= fDesde) &&
+      (!fHasta || p.createdAt <= fHasta)
     );
-    listadoEl.innerHTML = filtradas.length
-      ? filtradas.map(p => {
+
+    const visibles = filtradas.slice(0, cantidadVisible);
+
+    listadoEl.innerHTML = (visibles.length
+      ? visibles.map(p => {
           const mentorNombre = usuarios[p.mentorId] ? (usuarios[p.mentorId].nombre || usuarios[p.mentorId].email) : 'Mentor';
           return `
             <div class="panel mb-16" style="padding:14px;">
@@ -780,12 +840,27 @@ export async function cargarPreguntasComunidad() {
               ${renderRespuestaBox(p.respuesta)}
             </div>`;
         }).join('')
-      : '<p class="text-soft">No hay preguntas respondidas con ese filtro todavía.</p>';
+      : '<p class="text-soft">No hay preguntas respondidas con ese filtro todavía.</p>');
+
+    if (filtradas.length > cantidadVisible) {
+      listadoEl.innerHTML += `<button type="button" class="btn btn--ghost" id="btn-ver-mas-comunidad">Ver 10 más (${filtradas.length - cantidadVisible} restantes)</button>`;
+      document.getElementById('btn-ver-mas-comunidad').addEventListener('click', () => {
+        cantidadVisible += PAGE_SIZE;
+        render();
+      });
+    }
   }
 
-  render();
-  if (filtroMentorEl) filtroMentorEl.onchange = render;
-  if (filtroTemaEl) filtroTemaEl.onchange = render;
+  function resetYRender() {
+    cantidadVisible = PAGE_SIZE;
+    render();
+  }
+
+  resetYRender();
+  if (filtroMentorEl) filtroMentorEl.onchange = resetYRender;
+  if (filtroTemaEl) filtroTemaEl.onchange = resetYRender;
+  if (filtroDesdeEl) filtroDesdeEl.onchange = resetYRender;
+  if (filtroHastaEl) filtroHastaEl.onchange = resetYRender;
 }
 
 document.querySelectorAll('.nav-item[data-nav="preguntas-comunidad"]').forEach(item => {
@@ -863,27 +938,71 @@ async function cargarMisPreguntasVivo(card, s) {
       const preguntaId = bloque.dataset.preguntaId;
       const [, datosPregunta] = propias.find(([id]) => id === preguntaId);
       const textoActual = datosPregunta.texto || '';
+      let imagenesActuales = [...(datosPregunta.imagenes || [])];
+      let imagenesNuevas = [];
 
-      bloque.innerHTML = `
-        <textarea class="pv-editar-texto" style="min-height:60px;">${textoActual}</textarea>
-        <div style="margin-top:6px; display:flex; gap:8px;">
-          <button type="button" class="btn btn--primary btn-guardar-edicion-vivo" style="font-size:11px; padding:3px 10px;">Guardar</button>
-          <button type="button" class="btn btn--ghost btn-cancelar-edicion-vivo" style="font-size:11px; padding:3px 10px;">Cancelar</button>
-        </div>`;
+      function renderEdicion() {
+        bloque.innerHTML = `
+          <textarea class="pv-editar-texto">${textoActual}</textarea>
+          <div class="pv-editar-imagenes-actuales" style="display:flex; gap:6px; flex-wrap:wrap; margin-top:8px;"></div>
+          <button type="button" class="btn btn--ghost btn-adjuntar-editar-vivo" style="font-size:11px; padding:3px 8px; margin-top:8px;">🖼️ Adjuntar más Imágenes</button>
+          <input type="file" class="pv-input-editar-imagenes hidden" accept="image/*" multiple>
+          <div class="pv-editar-imagenes-nuevas" style="display:flex; gap:6px; flex-wrap:wrap; margin-top:6px;"></div>
+          <div style="margin-top:10px; display:flex; gap:8px;">
+            <button type="button" class="btn btn--primary btn-guardar-edicion-vivo" style="font-size:11px; padding:3px 10px;">Guardar</button>
+            <button type="button" class="btn btn--ghost btn-cancelar-edicion-vivo" style="font-size:11px; padding:3px 10px;">Cancelar</button>
+          </div>`;
+        bloque.querySelector('.pv-editar-texto').value = textoActual;
 
-      bloque.querySelector('.btn-cancelar-edicion-vivo').addEventListener('click', () => cargarMisPreguntasVivo(card, s));
-      bloque.querySelector('.btn-guardar-edicion-vivo').addEventListener('click', async (ev) => {
-        const nuevoTexto = bloque.querySelector('.pv-editar-texto').value.trim();
-        if (!nuevoTexto) { alert('La pregunta no puede quedar vacía.'); return; }
-        ev.target.disabled = true;
-        try {
-          await update(ref(db, `preguntasVivo/${s.mentorUid}/${s.mentoriaId}/${preguntaId}`), { texto: nuevoTexto });
-          await cargarMisPreguntasVivo(card, s);
-        } catch (err) {
-          alert('No se pudo guardar — puede que el mentor ya haya revisado tu pregunta.');
-          await cargarMisPreguntasVivo(card, s);
-        }
-      });
+        const contActuales = bloque.querySelector('.pv-editar-imagenes-actuales');
+        contActuales.innerHTML = imagenesActuales.map((url, idx) => `
+          <div style="position:relative;">
+            <img src="${url}" alt="" style="width:60px; height:60px; object-fit:cover; border-radius:6px;">
+            <button type="button" class="btn-quitar-imagen-actual" data-idx="${idx}" style="position:absolute; top:-6px; right:-6px; background:#C0392B; color:#fff; border:none; border-radius:50%; width:18px; height:18px; font-size:11px; cursor:pointer; line-height:1;">✕</button>
+          </div>`).join('');
+        contActuales.querySelectorAll('.btn-quitar-imagen-actual').forEach(x => {
+          x.addEventListener('click', () => {
+            imagenesActuales.splice(Number(x.dataset.idx), 1);
+            renderEdicion();
+          });
+        });
+
+        const contNuevas = bloque.querySelector('.pv-editar-imagenes-nuevas');
+        contNuevas.innerHTML = imagenesNuevas.map(f => `<span class="text-soft" style="font-size:11px; background:#F0F1F3; padding:3px 8px; border-radius:6px;">🖼️ ${f.name}</span>`).join('');
+
+        const btnAdjuntar = bloque.querySelector('.btn-adjuntar-editar-vivo');
+        const inputAdjuntar = bloque.querySelector('.pv-input-editar-imagenes');
+        btnAdjuntar.addEventListener('click', () => inputAdjuntar.click());
+        inputAdjuntar.addEventListener('change', () => {
+          imagenesNuevas = imagenesNuevas.concat(Array.from(inputAdjuntar.files));
+          renderEdicion();
+        });
+
+        bloque.querySelector('.btn-cancelar-edicion-vivo').addEventListener('click', () => cargarMisPreguntasVivo(card, s));
+        bloque.querySelector('.btn-guardar-edicion-vivo').addEventListener('click', async (ev) => {
+          const nuevoTexto = bloque.querySelector('.pv-editar-texto').value.trim();
+          if (!nuevoTexto && !imagenesActuales.length && !imagenesNuevas.length) {
+            alert('La pregunta no puede quedar vacía.');
+            return;
+          }
+          ev.target.disabled = true;
+          try {
+            const urlsNuevas = imagenesNuevas.length
+              ? await subirImagenesPregunta(`preguntas-vivo/${s.mentorUid}/${s.mentoriaId}/${preguntaId}`, imagenesNuevas)
+              : [];
+            await update(ref(db, `preguntasVivo/${s.mentorUid}/${s.mentoriaId}/${preguntaId}`), {
+              texto: nuevoTexto,
+              imagenes: [...imagenesActuales, ...urlsNuevas]
+            });
+            await cargarMisPreguntasVivo(card, s);
+          } catch (err) {
+            alert('No se pudo guardar — puede que el mentor ya haya revisado tu pregunta.');
+            await cargarMisPreguntasVivo(card, s);
+          }
+        });
+      }
+
+      renderEdicion();
     });
   });
 }
@@ -1033,20 +1152,54 @@ export async function cargarPreguntasVivo() {
       const [mentorUid, mentorDatos] = mentores[idx];
       Object.entries(snap.val()).forEach(([mentoriaId, preguntas]) => {
         Object.values(preguntas).forEach(p => {
-          if (p.alumnoId === alumnoIdActual) historial.push({ ...p, mentorNombre: mentorDatos.nombre || mentorDatos.email });
+          if (p.alumnoId === alumnoIdActual) historial.push({ ...p, mentorUid, mentorNombre: mentorDatos.nombre || mentorDatos.email });
         });
       });
     });
     historial.sort((a, b) => b.createdAt - a.createdAt);
 
-    historialEl.innerHTML = historial.length
-      ? historial.map(p => `
-          <div class="panel mb-16" style="padding:12px; font-size:13px;">
-            <strong>Para ${p.mentorNombre}</strong> <span class="text-soft" style="font-size:11px;">— ${formatFecha(new Date(p.createdAt).toISOString().slice(0, 10))}</span>
-            <p style="margin:6px 0 0;">${linkify(p.texto || '')}</p>
-            ${renderImagenesPregunta(p.imagenes)}
-          </div>`).join('')
-      : '<p class="text-soft">Aún no has enviado preguntas para sesiones en vivo.</p>';
+    const filtroMentorEl = document.getElementById('historial-vivo-filtro-mentor');
+    const filtroDesdeEl = document.getElementById('historial-vivo-filtro-desde');
+    const filtroHastaEl = document.getElementById('historial-vivo-filtro-hasta');
+    if (filtroMentorEl) {
+      const mentoresConPreguntas = [...new Map(historial.map(p => [p.mentorUid, p.mentorNombre])).entries()];
+      filtroMentorEl.innerHTML = '<option value="">Todos</option>' + mentoresConPreguntas.map(([uid, nombre]) => `<option value="${uid}">${nombre}</option>`).join('');
+    }
+
+    function renderHistorial() {
+      const fMentor = filtroMentorEl ? filtroMentorEl.value : '';
+      const fDesde = filtroDesdeEl && filtroDesdeEl.value ? new Date(filtroDesdeEl.value + 'T00:00:00').getTime() : null;
+      const fHasta = filtroHastaEl && filtroHastaEl.value ? new Date(filtroHastaEl.value + 'T23:59:59').getTime() : null;
+
+      const filtradas = historial.filter(p =>
+        (!fMentor || p.mentorUid === fMentor) &&
+        (!fDesde || p.createdAt >= fDesde) &&
+        (!fHasta || p.createdAt <= fHasta)
+      );
+
+      historialEl.innerHTML = filtradas.length
+        ? filtradas.map(p => `
+            <div class="panel mb-16" style="padding:12px; font-size:13px;">
+              <strong>Para ${p.mentorNombre}</strong> <span class="text-soft" style="font-size:11px;">— ${formatFecha(new Date(p.createdAt).toISOString().slice(0, 10))}</span>
+              <p style="margin:6px 0 0;">${linkify(p.texto || '')}</p>
+              ${renderImagenesPregunta(p.imagenes)}
+            </div>`).join('')
+        : '<p class="text-soft">No hay preguntas con ese filtro.</p>';
+    }
+
+    renderHistorial();
+    if (filtroMentorEl) filtroMentorEl.onchange = renderHistorial;
+    if (filtroDesdeEl) filtroDesdeEl.onchange = renderHistorial;
+    if (filtroHastaEl) filtroHastaEl.onchange = renderHistorial;
+  }
+
+  const btnMinimizarHistorialVivo = document.getElementById('btn-minimizar-historial-vivo');
+  if (btnMinimizarHistorialVivo) {
+    btnMinimizarHistorialVivo.onclick = () => {
+      const cont = document.getElementById('preguntas-vivo-historial-contenedor');
+      const minimizado = cont.classList.toggle('hidden');
+      btnMinimizarHistorialVivo.textContent = minimizado ? 'Mostrar ▼' : 'Minimizar ▲';
+    };
   }
 }
 

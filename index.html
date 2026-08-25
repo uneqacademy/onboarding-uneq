@@ -958,6 +958,20 @@
 
         <div class="panel">
           <div class="panel__header"><h3>Mis Consultas</h3></div>
+          <div class="panel__body" style="display:flex; gap:16px; flex-wrap:wrap; border-bottom:0.5px solid var(--border);">
+            <div class="field" style="flex:1; min-width:180px;">
+              <label>Filtrar por Mentor</label>
+              <select id="box-alumno-filtro-mentor"><option value="">Todos</option></select>
+            </div>
+            <div class="field" style="min-width:150px;">
+              <label>Desde</label>
+              <input type="date" id="box-alumno-filtro-desde">
+            </div>
+            <div class="field" style="min-width:150px;">
+              <label>Hasta</label>
+              <input type="date" id="box-alumno-filtro-hasta">
+            </div>
+          </div>
           <div class="panel__body" id="box-alumno-listado">
             <p class="text-soft">Cargando...</p>
           </div>
@@ -1023,8 +1037,27 @@
         <div id="preguntas-vivo-listado"></div>
 
         <div class="panel" style="margin-top:24px;">
-          <div class="panel__header"><h3>Historial de mis Preguntas en Vivo</h3></div>
-          <div class="panel__body" id="preguntas-vivo-historial"></div>
+          <div class="panel__header flex-between">
+            <h3>Historial de mis Preguntas en Vivo</h3>
+            <button type="button" class="btn btn--ghost" id="btn-minimizar-historial-vivo" style="font-size:12px;">Minimizar ▲</button>
+          </div>
+          <div id="preguntas-vivo-historial-contenedor">
+            <div class="panel__body" style="display:flex; gap:16px; flex-wrap:wrap; border-bottom:0.5px solid var(--border);">
+              <div class="field" style="flex:1; min-width:180px;">
+                <label>Filtrar por Mentor</label>
+                <select id="historial-vivo-filtro-mentor"><option value="">Todos</option></select>
+              </div>
+              <div class="field" style="min-width:150px;">
+                <label>Desde</label>
+                <input type="date" id="historial-vivo-filtro-desde">
+              </div>
+              <div class="field" style="min-width:150px;">
+                <label>Hasta</label>
+                <input type="date" id="historial-vivo-filtro-hasta">
+              </div>
+            </div>
+            <div class="panel__body" id="preguntas-vivo-historial"></div>
+          </div>
         </div>
       </section>
 
@@ -1039,6 +1072,14 @@
             <div class="field" style="flex:1; min-width:200px;">
               <label>Filtrar por Temática</label>
               <select id="comunidad-filtro-tema"><option value="">Todas</option></select>
+            </div>
+            <div class="field" style="min-width:150px;">
+              <label>Desde</label>
+              <input type="date" id="comunidad-filtro-desde">
+            </div>
+            <div class="field" style="min-width:150px;">
+              <label>Hasta</label>
+              <input type="date" id="comunidad-filtro-hasta">
             </div>
           </div>
         </div>
