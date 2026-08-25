@@ -76,7 +76,7 @@ function renderSelectorRol() {
 
   cont.classList.remove('hidden');
   const opciones = currentRolesDisponibles
-    .map(r => `<option value="${r}" ${r === currentRole ? 'selected' : ''}>${NOMBRES_ROL[r] || r}</option>`)
+    .map(r => `<option value="${r}" style="color:#1B2A4A; background:#fff;" ${r === currentRole ? 'selected' : ''}>${NOMBRES_ROL[r] || r}</option>`)
     .join('');
   cont.innerHTML = `
     <label style="display:block; font-size:11px; color:rgba(255,255,255,0.45); margin-bottom:4px;">Viendo como</label>
@@ -149,6 +149,9 @@ export function setNav(section) {
   } else if (section === 'ficha-alumno-propia') {
     showView('view-ficha-alumno-propia');
     document.getElementById('topbar-title').textContent = 'Mi Ficha Alumno';
+  } else if (section === 'preguntas-vivo') {
+    showView('view-preguntas-vivo');
+    document.getElementById('topbar-title').textContent = 'Preguntas en Vivo';
   } else if (section === 'soporte-alumnos') {
     showView('view-soporte-alumnos');
     document.getElementById('topbar-title').textContent = 'Soporte Alumnos';

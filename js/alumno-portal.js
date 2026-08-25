@@ -532,6 +532,23 @@ function renderRespuestaBox(respuesta) {
   return html;
 }
 
+function renderImagenesPregunta(imagenes) {
+  if (!imagenes || !imagenes.length) return '';
+  return `<div style="display:flex; gap:6px; flex-wrap:wrap; margin-top:6px;">
+    ${imagenes.map(url => `<img src="${url}" alt="" style="max-width:120px; border-radius:8px;">`).join('')}
+  </div>`;
+}
+
+async function subirImagenesPregunta(rutaBase, files) {
+  const urls = [];
+  for (let i = 0; i < files.length; i++) {
+    const archivoRef = storageRef(storage, `${rutaBase}/${i}_${Date.now()}`);
+    await uploadBytes(archivoRef, files[i]);
+    urls.push(await getDownloadURL(archivoRef));
+  }
+  return urls;
+}
+
 export async function cargarBoxAlumno() {
   const gridEl = document.getElementById('box-alumno-mentores-grid');
   const listadoEl = document.getElementById('box-alumno-listado');
@@ -615,6 +632,7 @@ export async function cargarBoxAlumno() {
             </div>
             <span class="text-soft" style="font-size:12px;">${formatFecha(new Date(e.createdAt).toISOString().slice(0, 10))}</span>
             <p style="margin:6px 0;">${linkify(e.pregunta)}</p>
+            ${renderImagenesPregunta(e.imagenes)}
             ${renderRespuestaBox(e.respuesta)}
           </div>`;
       }).join('')
@@ -645,6 +663,20 @@ if (btnCerrarFormPregunta) btnCerrarFormPregunta.addEventListener('click', () =>
 const btnCerrarDetalleMentor = document.getElementById('btn-cerrar-detalle-mentor');
 if (btnCerrarDetalleMentor) btnCerrarDetalleMentor.addEventListener('click', () => document.getElementById('box-alumno-detalle-panel').classList.add('hidden'));
 
+let imagenesSeleccionadasPregunta = [];
+const btnAdjuntarImagenesPregunta = document.getElementById('btn-adjuntar-imagenes-pregunta');
+const inputImagenesPregunta = document.getElementById('input-imagenes-pregunta');
+if (btnAdjuntarImagenesPregunta && inputImagenesPregunta) {
+  btnAdjuntarImagenesPregunta.addEventListener('click', () => inputImagenesPregunta.click());
+  inputImagenesPregunta.addEventListener('change', () => {
+    imagenesSeleccionadasPregunta = Array.from(inputImagenesPregunta.files);
+    const previewEl = document.getElementById('box-alumno-imagenes-preview');
+    previewEl.innerHTML = imagenesSeleccionadasPregunta
+      .map(f => `<span class="text-soft" style="font-size:11px; background:#F0F1F3; padding:3px 8px; border-radius:6px;">🖼️ ${f.name}</span>`)
+      .join('');
+  });
+}
+
 const btnEnviarPreguntaAlumno = document.getElementById('btn-enviar-pregunta-alumno');
 if (btnEnviarPreguntaAlumno) {
   btnEnviarPreguntaAlumno.addEventListener('click', async () => {
@@ -653,8 +685,8 @@ if (btnEnviarPreguntaAlumno) {
     const mentorId = btnEnviarPreguntaAlumno.dataset.mentorId;
     const pregunta = document.getElementById('box-alumno-pregunta').value.trim();
 
-    if (!mentorId || !pregunta || !alumnoIdActual) {
-      errorEl.textContent = 'Escribe tu pregunta antes de enviar.';
+    if (!mentorId || (!pregunta && !imagenesSeleccionadasPregunta.length) || !alumnoIdActual) {
+      errorEl.textContent = 'Escribe tu pregunta o adjunta al menos una imagen.';
       errorEl.classList.remove('hidden');
       return;
     }
@@ -666,12 +698,19 @@ if (btnEnviarPreguntaAlumno) {
       const alumno = alumnoSnap.exists() ? alumnoSnap.val() : {};
       const nombreAlumno = `${alumno.nombre || ''} ${alumno.apellido || ''}`.trim();
 
+      const imagenes = imagenesSeleccionadasPregunta.length
+        ? await subirImagenesPregunta(`box-preguntas/${mentorId}/${preguntaId}`, imagenesSeleccionadasPregunta)
+        : [];
+
       await update(ref(db), {
-        [`box/${mentorId}/${preguntaId}`]: { alumnoId: alumnoIdActual, alumnoNombre: nombreAlumno, mentorId, pregunta, createdAt: Date.now(), respuesta: null },
+        [`box/${mentorId}/${preguntaId}`]: { alumnoId: alumnoIdActual, alumnoNombre: nombreAlumno, mentorId, pregunta, imagenes, createdAt: Date.now(), respuesta: null },
         [`boxIndice/${alumnoIdActual}/${preguntaId}`]: mentorId
       });
 
       document.getElementById('box-alumno-pregunta').value = '';
+      document.getElementById('box-alumno-imagenes-preview').innerHTML = '';
+      inputImagenesPregunta.value = '';
+      imagenesSeleccionadasPregunta = [];
       document.getElementById('box-alumno-form-panel').classList.add('hidden');
       await cargarBoxAlumno();
     } catch (err) {
@@ -737,6 +776,7 @@ export async function cargarPreguntasComunidad() {
               <span class="badge badge--activo" style="font-size:10px;">${p.respuesta.tema || 'Sin tema'}</span>
               <p class="text-soft" style="font-size:12px; margin:6px 0 2px;">Pregunta para ${mentorNombre} — ${formatFecha(new Date(p.createdAt).toISOString().slice(0, 10))}</p>
               <p style="margin:4px 0;">${linkify(p.pregunta)}</p>
+              ${renderImagenesPregunta(p.imagenes)}
               ${renderRespuestaBox(p.respuesta)}
             </div>`;
         }).join('')
@@ -778,4 +818,174 @@ export async function cargarSoporteAlumnos() {
 
 document.querySelectorAll('.nav-item[data-nav="soporte-alumnos"]').forEach(item => {
   item.addEventListener('click', cargarSoporteAlumnos);
+});
+
+/* ============================================================
+   Preguntas en Vivo: lista las próximas sesiones en vivo de
+   todos los mentores. El botón "Enviar Pregunta" se bloquea
+   automáticamente 12h antes del inicio; la sesión desaparece
+   1h después de haber comenzado. Cuenta regresiva en vivo.
+   ============================================================ */
+function formatearDuracion(ms) {
+  const totalSegundos = Math.max(0, Math.floor(ms / 1000));
+  const dias = Math.floor(totalSegundos / 86400);
+  const horas = Math.floor((totalSegundos % 86400) / 3600);
+  const minutos = Math.floor((totalSegundos % 3600) / 60);
+  const segundos = totalSegundos % 60;
+  if (dias > 0) return `${dias}d ${horas}h ${minutos}m`;
+  return `${String(horas).padStart(2, '0')}:${String(minutos).padStart(2, '0')}:${String(segundos).padStart(2, '0')}`;
+}
+
+let intervaloPreguntasVivo = null;
+
+async function cargarMisPreguntasVivo(card, s) {
+  const cont = card.querySelector('.pv-mis-preguntas');
+  if (!cont) return;
+  const snap = await get(ref(db, `preguntasVivo/${s.mentorUid}/${s.mentoriaId}`));
+  if (!snap.exists()) { cont.innerHTML = ''; return; }
+  const propias = Object.values(snap.val()).filter(p => p.alumnoId === alumnoIdActual);
+  cont.innerHTML = propias.length
+    ? '<strong style="font-size:12px;">Tus preguntas para esta sesión:</strong>' +
+      propias.map(p => `<div style="margin-top:6px; font-size:13px;"><p style="margin:0;">${linkify(p.texto || '')}</p>${renderImagenesPregunta(p.imagenes)}</div>`).join('')
+    : '';
+}
+
+function bindSesionVivo(card, s) {
+  let imagenesSel = [];
+  const btnPreguntar = card.querySelector('.pv-btn-preguntar');
+  const formPanel = card.querySelector('.pv-form-panel');
+  btnPreguntar.addEventListener('click', () => { if (!btnPreguntar.disabled) formPanel.classList.toggle('hidden'); });
+
+  const btnAdjuntar = card.querySelector('.pv-btn-adjuntar');
+  const inputImagenes = card.querySelector('.pv-input-imagenes');
+  btnAdjuntar.addEventListener('click', () => inputImagenes.click());
+  inputImagenes.addEventListener('change', () => {
+    imagenesSel = Array.from(inputImagenes.files);
+    card.querySelector('.pv-imagenes-preview').innerHTML = imagenesSel
+      .map(f => `<span class="text-soft" style="font-size:11px; background:#F0F1F3; padding:3px 8px; border-radius:6px;">🖼️ ${f.name}</span>`).join('');
+  });
+
+  card.querySelector('.pv-btn-enviar').addEventListener('click', async (ev) => {
+    const btn = ev.target;
+    const texto = card.querySelector('.pv-pregunta-texto').value.trim();
+    if (!texto && !imagenesSel.length) { alert('Escribe tu pregunta o adjunta una imagen.'); return; }
+    btn.disabled = true;
+    try {
+      const preguntaId = push(ref(db, `preguntasVivo/${s.mentorUid}/${s.mentoriaId}`)).key;
+      const alumnoSnap = await get(ref(db, `alumnos/${alumnoIdActual}`));
+      const alumno = alumnoSnap.exists() ? alumnoSnap.val() : {};
+      const nombreAlumno = `${alumno.nombre || ''} ${alumno.apellido || ''}`.trim();
+      const imagenes = imagenesSel.length
+        ? await subirImagenesPregunta(`preguntas-vivo/${s.mentorUid}/${s.mentoriaId}/${preguntaId}`, imagenesSel)
+        : [];
+      await set(ref(db, `preguntasVivo/${s.mentorUid}/${s.mentoriaId}/${preguntaId}`), {
+        alumnoId: alumnoIdActual, alumnoNombre: nombreAlumno, texto, imagenes, createdAt: Date.now()
+      });
+      card.querySelector('.pv-pregunta-texto').value = '';
+      card.querySelector('.pv-imagenes-preview').innerHTML = '';
+      inputImagenes.value = '';
+      imagenesSel = [];
+      formPanel.classList.add('hidden');
+      await cargarMisPreguntasVivo(card, s);
+    } catch (err) {
+      alert('No se pudo enviar. Intenta de nuevo.');
+    } finally {
+      btn.disabled = false;
+    }
+  });
+
+  cargarMisPreguntasVivo(card, s);
+}
+
+export async function cargarPreguntasVivo() {
+  const listadoEl = document.getElementById('preguntas-vivo-listado');
+  if (!listadoEl || !alumnoIdActual) return;
+  if (intervaloPreguntasVivo) clearInterval(intervaloPreguntasVivo);
+
+  const usuariosSnap = await get(ref(db, 'usuarios'));
+  const usuarios = usuariosSnap.exists() ? usuariosSnap.val() : {};
+  const mentores = Object.entries(usuarios).filter(([, u]) => {
+    const roles = (u.roles && typeof u.roles === 'object') ? u.roles : (u.rol ? { [u.rol]: true } : {});
+    return !!roles.mentor;
+  });
+
+  const mentoriasSnaps = await Promise.all(mentores.map(([uid]) => get(ref(db, `mentorias/${uid}`))));
+  let sesiones = [];
+  mentoriasSnaps.forEach((snap, idx) => {
+    if (!snap.exists()) return;
+    const [mentorUid, mentorDatos] = mentores[idx];
+    Object.entries(snap.val()).forEach(([mentoriaId, m]) => {
+      if (!m.fecha || !m.hora) return;
+      const inicio = new Date(`${m.fecha}T${m.hora}`);
+      if (isNaN(inicio.getTime())) return;
+      sesiones.push({ mentorUid, mentorDatos, mentoriaId, ...m, inicio });
+    });
+  });
+
+  const ahora = Date.now();
+  sesiones = sesiones.filter(s => (s.inicio.getTime() + 60 * 60 * 1000) > ahora);
+  sesiones.sort((a, b) => a.inicio - b.inicio);
+
+  if (!sesiones.length) {
+    listadoEl.innerHTML = '<p class="text-soft">No hay sesiones en vivo próximas por ahora.</p>';
+    return;
+  }
+
+  listadoEl.innerHTML = sesiones.map((s, idx) => {
+    const temasMentor = Object.keys(s.mentorDatos.temas || {}).join(', ') || 'Temáticas no definidas aún';
+    const fechaLarga = new Intl.DateTimeFormat('es-CL', { day: '2-digit', month: 'long', year: 'numeric' }).format(s.inicio);
+    return `
+    <div class="panel mb-16" data-sesion-idx="${idx}">
+      <div class="panel__body" style="display:flex; gap:16px; align-items:flex-start; flex-wrap:wrap;">
+        <img src="${s.mentorDatos.fotoUrl || PLACEHOLDER_FOTO_ALUMNO}" alt="" style="width:56px; height:56px; border-radius:50%; object-fit:cover; flex-shrink:0;">
+        <div style="flex:1; min-width:220px;">
+          <strong>${s.mentorDatos.nombre || s.mentorDatos.email}</strong>
+          <p class="text-soft" style="margin:2px 0; font-size:12px;">${temasMentor}</p>
+          <p style="margin:6px 0 2px;"><strong>${s.tema || ''}</strong></p>
+          <p class="text-soft" style="margin:0; font-size:12px;">${fechaLarga} · ${s.hora}</p>
+          ${s.link ? `<a href="${s.link}" target="_blank" rel="noopener" style="font-size:13px;">Ir al link de acceso</a>` : ''}
+          <p class="pv-countdown text-soft" style="margin-top:8px; font-size:12px; font-weight:600;"></p>
+        </div>
+        <button type="button" class="btn btn--primary pv-btn-preguntar" style="font-size:12px;">Enviar Pregunta</button>
+      </div>
+      <div class="panel__body hidden pv-form-panel" style="border-top:0.5px solid var(--border);">
+        <div class="field mb-16">
+          <textarea class="pv-pregunta-texto" placeholder="Escribe tu pregunta para esta sesión... (puedes incluir links)"></textarea>
+        </div>
+        <button type="button" class="btn btn--ghost pv-btn-adjuntar" style="font-size:11px;">🖼️ Adjuntar Imágenes</button>
+        <input type="file" class="pv-input-imagenes hidden" accept="image/*" multiple>
+        <div class="pv-imagenes-preview" style="display:flex; gap:6px; flex-wrap:wrap; margin:8px 0;"></div>
+        <button type="button" class="btn btn--primary pv-btn-enviar" style="font-size:12px;">Enviar</button>
+      </div>
+      <div class="panel__body pv-mis-preguntas" style="border-top:0.5px solid var(--border);"></div>
+    </div>`;
+  }).join('');
+
+  const cards = Array.from(listadoEl.querySelectorAll('[data-sesion-idx]'));
+  cards.forEach((card, idx) => bindSesionVivo(card, sesiones[idx]));
+
+  function actualizarCountdowns() {
+    cards.forEach((card, idx) => {
+      const s = sesiones[idx];
+      const limite = s.inicio.getTime() - 12 * 60 * 60 * 1000;
+      const restante = limite - Date.now();
+      const countdownEl = card.querySelector('.pv-countdown');
+      const btnPreguntar = card.querySelector('.pv-btn-preguntar');
+      if (restante <= 0) {
+        countdownEl.textContent = '⏱️ El plazo para dejar tu pregunta ya cerró (12h antes de la sesión).';
+        btnPreguntar.disabled = true;
+        btnPreguntar.title = 'El plazo para preguntar ya cerró.';
+      } else {
+        countdownEl.textContent = `Deja tu pregunta antes de: ${formatearDuracion(restante)}`;
+        btnPreguntar.disabled = false;
+        btnPreguntar.title = '';
+      }
+    });
+  }
+  actualizarCountdowns();
+  intervaloPreguntasVivo = setInterval(actualizarCountdowns, 1000);
+}
+
+document.querySelectorAll('.nav-item[data-nav="preguntas-vivo"]').forEach(item => {
+  item.addEventListener('click', cargarPreguntasVivo);
 });

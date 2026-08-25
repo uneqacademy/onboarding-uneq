@@ -81,6 +81,7 @@
         <li class="nav-item" data-role="alumno" data-nav="test-alumno">Test Brújula</li>
         <li class="nav-item hidden" data-nav="box-consultas">BOX de Consultas</li>
         <li class="nav-item" data-role="alumno" data-nav="preguntas-comunidad">Preguntas de la Comunidad</li>
+        <li class="nav-item" data-role="alumno" data-nav="preguntas-vivo">Preguntas en Vivo</li>
         <li class="nav-item" data-role="alumno" data-nav="soporte-alumnos">Soporte Alumnos</li>
       </div>
     </nav>
@@ -831,6 +832,15 @@
           </div>
         </div>
 
+        <div class="panel mb-24">
+          <div class="panel__header"><h3>Mis Temáticas</h3></div>
+          <div class="panel__body">
+            <p class="text-soft mb-16">Elige las temáticas que dominas — los alumnos las van a ver en "Preguntas en Vivo" y en tu perfil del BOX.</p>
+            <div id="mentor-temas-checkboxes" style="display:flex; flex-wrap:wrap; gap:10px 20px; margin-bottom:16px;"></div>
+            <button class="btn btn--primary" id="btn-guardar-temas-mentor">Guardar Temáticas</button>
+          </div>
+        </div>
+
         <div class="panel">
           <div class="panel__header"><h3>Mis Mentorías</h3></div>
           <div class="panel__body">
@@ -842,7 +852,7 @@
             </div>
             <button class="btn btn--accent" id="btn-agregar-mentoria">+ Agregar Mentoría</button>
             <table class="data-table mb-16" style="margin-top:16px;">
-              <thead><tr><th>Tema</th><th>Fecha</th><th>Hora</th><th>Acceso</th><th>NPS de la sesión</th><th>Resumen IA</th><th></th></tr></thead>
+              <thead><tr><th>Tema</th><th>Fecha</th><th>Hora</th><th>Acceso</th><th>NPS de la sesión</th><th>Resumen IA</th><th>Preguntas</th><th></th></tr></thead>
               <tbody id="tabla-mentorias-body"></tbody>
             </table>
           </div>
@@ -926,7 +936,12 @@
           <div class="panel__body">
             <p class="mb-16">Tu pregunta va dirigida a <strong id="box-alumno-mentor-nombre-form">—</strong>.</p>
             <div class="field mb-16">
-              <textarea id="box-alumno-pregunta" placeholder="Escribe tu consulta..."></textarea>
+              <textarea id="box-alumno-pregunta" placeholder="Escribe tu consulta... (puedes incluir links)"></textarea>
+            </div>
+            <div style="margin-bottom:12px;">
+              <button type="button" class="btn btn--ghost" id="btn-adjuntar-imagenes-pregunta" style="font-size:12px;">🖼️ Adjuntar Imágenes</button>
+              <input type="file" id="input-imagenes-pregunta" accept="image/*" multiple class="hidden">
+              <div id="box-alumno-imagenes-preview" style="display:flex; gap:8px; flex-wrap:wrap; margin-top:8px;"></div>
             </div>
             <p id="box-alumno-error" class="hidden" style="color:#C0392B; margin-bottom:12px;"></p>
             <button class="btn btn--primary" id="btn-enviar-pregunta-alumno">Enviar Pregunta</button>
@@ -1000,6 +1015,14 @@
       <!-- ======================================================
            PREGUNTAS DE LA COMUNIDAD — página propia
            ====================================================== -->
+      <!-- ======================================================
+           PREGUNTAS EN VIVO — página propia
+           ====================================================== -->
+      <section id="view-preguntas-vivo" class="view hidden">
+        <div class="flex-between mb-16"><h2>Preguntas en Vivo</h2></div>
+        <div id="preguntas-vivo-listado"></div>
+      </section>
+
       <section id="view-preguntas-comunidad" class="view hidden">
         <div class="flex-between mb-16"><h2>Preguntas de la Comunidad</h2></div>
         <div class="panel mb-24">

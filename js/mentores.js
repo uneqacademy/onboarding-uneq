@@ -33,6 +33,7 @@ function tieneRol(perfil, rol) {
 }
 
 const FASE_LABELS = { fase1: 'Fase 1', fase2: 'Fase 2', fase3: 'Fase 3', fase4: 'Fase 4' };
+const TEMAS_BOX = ['Mentalidad', 'Estrategia', 'META ADS', 'Contenido Orgánico', 'CopyWriting', 'Ventas', 'Energía', 'Planificación', 'Identidad Visual', 'Diseño', 'Redes Sociales', 'Google ADS', 'Herramientas y Software'];
 const URL_REDES = {
   Instagram: u => `https://instagram.com/${u.replace(/^@/, '')}`,
   Facebook: u => `https://facebook.com/${u.replace(/^@/, '')}`,
@@ -427,6 +428,32 @@ export async function cargarPerfilMentor() {
     if (btnGuardarBio) btnGuardarBio.classList.toggle('hidden', tieneBio);
     if (btnEditarBio) btnEditarBio.classList.toggle('hidden', !tieneBio);
   }
+
+  const temasCont = document.getElementById('mentor-temas-checkboxes');
+  if (temasCont) {
+    const temasGuardados = datos.temas || {};
+    temasCont.innerHTML = TEMAS_BOX.map(t => `
+      <label style="font-weight:400; display:flex; align-items:center; gap:6px;">
+        <input type="checkbox" class="chk-tema-mentor" value="${t}" ${temasGuardados[t] ? 'checked' : ''}> ${t}
+      </label>`).join('');
+  }
+}
+
+const btnGuardarTemasMentor = document.getElementById('btn-guardar-temas-mentor');
+if (btnGuardarTemasMentor) {
+  btnGuardarTemasMentor.addEventListener('click', async () => {
+    const uid = auth.currentUser ? auth.currentUser.uid : null;
+    if (!uid) return;
+    btnGuardarTemasMentor.disabled = true;
+    try {
+      const temas = {};
+      document.querySelectorAll('.chk-tema-mentor:checked').forEach(chk => { temas[chk.value] = true; });
+      await update(ref(db, `usuarios/${uid}`), { temas });
+      alert('Temáticas guardadas.');
+    } finally {
+      btnGuardarTemasMentor.disabled = false;
+    }
+  });
 }
 
 const btnGuardarBioMentor = document.getElementById('btn-guardar-bio-mentor');
@@ -532,8 +559,27 @@ async function cargarMentoriasView() {
           <button class="btn btn--ghost btn-subir-resumen" style="font-size:11px; padding:4px 8px; margin-top:4px;">${m.resumenUrl ? 'Reemplazar' : 'Subir Resumen'}</button>
           <input type="file" class="input-resumen-mentoria hidden" accept=".doc,.docx">
         </td>
+        <td><button class="btn btn--ghost btn-ver-preguntas-vivo" style="font-size:11px; padding:4px 8px;">Ver Preguntas</button></td>
         <td><button class="btn btn--ghost btn-copiar-link-nps-mentoria" style="font-size:11px; padding:4px 8px;">Copiar Link NPS</button></td>`;
       tbody.appendChild(tr);
+
+      let filaPreguntasVivo = null;
+      tr.querySelector('.btn-ver-preguntas-vivo').addEventListener('click', async () => {
+        if (filaPreguntasVivo) { filaPreguntasVivo.remove(); filaPreguntasVivo = null; return; }
+        const snap = await get(ref(db, `preguntasVivo/${uid}/${mentoriaId}`));
+        const preguntas = snap.exists() ? Object.values(snap.val()).sort((a, b) => a.createdAt - b.createdAt) : [];
+        filaPreguntasVivo = document.createElement('tr');
+        filaPreguntasVivo.innerHTML = `
+          <td colspan="8" style="background:#F7F8FA; padding:14px 16px;">
+            ${preguntas.length ? preguntas.map(p => `
+              <div style="padding:8px 0; border-bottom:0.5px solid var(--border); font-size:13px;">
+                <strong>${p.alumnoNombre || 'Alumno'}</strong>
+                <p style="margin:4px 0;">${p.texto || ''}</p>
+                ${(p.imagenes || []).map(url => `<img src="${url}" alt="" style="max-width:120px; border-radius:6px; margin:4px 4px 0 0;">`).join('')}
+              </div>`).join('') : '<p class="text-soft" style="font-size:13px;">Aún no hay preguntas para esta sesión.</p>'}
+          </td>`;
+        tr.insertAdjacentElement('afterend', filaPreguntasVivo);
+      });
 
       const btnSubirResumen = tr.querySelector('.btn-subir-resumen');
       const inputResumen = tr.querySelector('.input-resumen-mentoria');
@@ -624,7 +670,7 @@ function renderRespuestaExistente(respuesta) {
   return html;
 }
 
-const TEMAS_BOX = ['Mentalidad', 'Estrategia', 'META ADS', 'Contenido Orgánico', 'CopyWriting', 'Ventas', 'Energía', 'Planificación', 'Identidad Visual', 'Diseño', 'Redes Sociales', 'Google ADS', 'Herramientas y Software'];
+/* (TEMAS_BOX ahora se define arriba, cerca del resto de constantes) */
 
 export async function cargarBoxMentor() {
   if (getCurrentRole() !== 'mentor') return;
