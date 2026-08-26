@@ -30,8 +30,10 @@
 
 * { box-sizing: border-box; }
 
+html { overflow-x: hidden; }
 body {
   margin: 0;
+  overflow-x: hidden;
   font-family: var(--font-body);
   background: var(--color-bg);
   color: var(--color-ink);
@@ -563,12 +565,16 @@ textarea { width: 100%; max-width: 100%; box-sizing: border-box; resize: vertica
   .data-table { display: block; overflow-x: auto; white-space: nowrap; -webkit-overflow-scrolling: touch; }
   .data-table th, .data-table td { padding: 10px; }
 
-  /* Filas de filtros (contienen .field) pasan a columna, ordenadas y sin apretarse */
+  /* Filas de filtros (contienen .field) pasan a columna, ordenadas y sin apretarse.
+     Cubre tanto cuando .panel__body mismo tiene el flex inline, como cuando hay
+     un div hijo con ese estilo. */
+  .panel__body[style*="display:flex"]:has(.field),
   .panel__body > div[style*="display:flex"]:has(.field) {
     flex-direction: column !important;
     align-items: stretch !important;
     gap: 12px !important;
   }
+  .panel__body[style*="display:flex"]:has(.field) .field,
   .panel__body > div[style*="display:flex"]:has(.field) .field {
     width: 100% !important;
     min-width: 0 !important;

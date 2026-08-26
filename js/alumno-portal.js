@@ -858,15 +858,30 @@ export async function cargarPreguntasComunidad() {
       ? visibles.map(p => {
           const mentorNombre = usuarios[p.mentorId] ? (usuarios[p.mentorId].nombre || usuarios[p.mentorId].email) : 'Mentor';
           return `
-            <div class="panel mb-16" style="padding:14px;">
-              <span class="badge badge--activo" style="font-size:10px;">${p.respuesta.tema || 'Sin tema'}</span>
+            <div class="panel mb-16" style="padding:14px; cursor:pointer;" data-fila-comunidad>
+              <div class="flex-between">
+                <span class="badge badge--activo" style="font-size:10px;">${p.respuesta.tema || 'Sin tema'}</span>
+                <span class="text-soft" style="font-size:16px;" data-flecha-comunidad>▾</span>
+              </div>
               <p class="text-soft" style="font-size:12px; margin:6px 0 2px;">Pregunta para ${mentorNombre} — ${formatFecha(new Date(p.createdAt).toISOString().slice(0, 10))}</p>
               <p style="margin:4px 0;">${linkify(p.pregunta)}</p>
-              ${renderImagenesPregunta(p.imagenes)}
-              ${renderRespuestaBox(p.respuesta)}
+              <div class="hidden" data-detalle-comunidad>
+                ${renderImagenesPregunta(p.imagenes)}
+                ${renderRespuestaBox(p.respuesta)}
+              </div>
             </div>`;
         }).join('')
       : '<p class="text-soft">No hay preguntas respondidas con ese filtro todavía.</p>');
+
+    listadoEl.querySelectorAll('[data-fila-comunidad]').forEach(fila => {
+      fila.addEventListener('click', (ev) => {
+        if (ev.target.closest('a')) return;
+        const detalle = fila.querySelector('[data-detalle-comunidad]');
+        const flecha = fila.querySelector('[data-flecha-comunidad]');
+        const ahoraOculto = detalle.classList.toggle('hidden');
+        flecha.textContent = ahoraOculto ? '▾' : '▴';
+      });
+    });
 
     if (filtradas.length > cantidadVisible) {
       listadoEl.innerHTML += `<button type="button" class="btn btn--ghost" id="btn-ver-mas-comunidad">Ver 10 más (${filtradas.length - cantidadVisible} restantes)</button>`;
