@@ -438,7 +438,22 @@ export async function cargarPerfilMentor() {
   if (previewIA) previewIA.src = datos.fotoIA || PLACEHOLDER_FOTO_PERFIL;
 
   const instruccionesEl = document.getElementById('mentor-instrucciones-estilo');
-  if (instruccionesEl) instruccionesEl.value = datos.instruccionesEstilo || '';
+  const instruccionesTextoEl = document.getElementById('mentor-instrucciones-texto');
+  const campoInstruccionesEl = document.getElementById('campo-instrucciones-estilo');
+  const btnGuardarInstruccionesEl = document.getElementById('btn-guardar-instrucciones-mentor');
+  const btnEditarInstruccionesEl = document.getElementById('btn-editar-instrucciones-mentor');
+  if (instruccionesEl) {
+    const valorInstrucciones = datos.instruccionesEstilo || '';
+    instruccionesEl.value = valorInstrucciones;
+    const hayInstrucciones = !!valorInstrucciones.trim();
+    if (instruccionesTextoEl) {
+      instruccionesTextoEl.textContent = valorInstrucciones;
+      instruccionesTextoEl.classList.toggle('hidden', !hayInstrucciones);
+    }
+    if (campoInstruccionesEl) campoInstruccionesEl.classList.toggle('hidden', hayInstrucciones);
+    if (btnGuardarInstruccionesEl) btnGuardarInstruccionesEl.classList.toggle('hidden', hayInstrucciones);
+    if (btnEditarInstruccionesEl) btnEditarInstruccionesEl.classList.toggle('hidden', !hayInstrucciones);
+  }
 
   const { promedio, total } = calcularNpsResumenMentor(npsSnap.exists() ? npsSnap.val() : null);
   const npsEl = document.getElementById('mentor-nps-resumen');
@@ -604,7 +619,6 @@ async function cargarMentoriasView() {
       const tr = document.createElement('tr');
       const noDictada = m.estado === 'no_dictada';
       tr.innerHTML = `
-        <td>${m.tema || ''}</td>
         <td>${formatFechaCorta(m.fecha)}</td>
         <td>${m.hora || '—'}</td>
         <td>${m.link ? `<a href="${m.link}" target="_blank" rel="noopener">Ir al link</a>` : '—'}</td>
@@ -638,7 +652,7 @@ async function cargarMentoriasView() {
         const preguntas = Object.entries(preguntasObj).sort((a, b) => a[1].createdAt - b[1].createdAt);
         filaPreguntasVivo = document.createElement('tr');
         filaPreguntasVivo.innerHTML = `
-          <td colspan="9" style="background:#F7F8FA; padding:14px 16px;">
+          <td colspan="8" style="background:#F7F8FA; padding:14px 16px;">
             ${preguntas.length ? preguntas.map(([preguntaId, p]) => `
               <div class="pregunta-vivo-item" data-pregunta-id="${preguntaId}" style="padding:8px 0; border-bottom:0.5px solid var(--border); font-size:13px;">
                 <strong>${p.alumnoNombre || 'Alumno'}</strong>
@@ -690,7 +704,7 @@ async function cargarMentoriasView() {
       });
 
       tr.querySelector('.btn-copiar-link-nps-mentoria').addEventListener('click', () => {
-        const url = construirLinkNpsMentoria(uid, mentoriaId, m.tema || '');
+        const url = construirLinkNpsMentoria(uid, mentoriaId, '');
         if (navigator.clipboard && navigator.clipboard.writeText) {
           navigator.clipboard.writeText(url)
             .then(() => alert('Link copiado — mándalo a los asistentes al terminar la sesión.'))
@@ -706,22 +720,20 @@ const btnAgregarMentoria = document.getElementById('btn-agregar-mentoria');
 if (btnAgregarMentoria) {
   btnAgregarMentoria.addEventListener('click', async () => {
     const uid = auth.currentUser ? auth.currentUser.uid : null;
-    const tema = document.getElementById('mentoria-tema').value.trim();
     const fecha = document.getElementById('mentoria-fecha').value;
     const hora = document.getElementById('mentoria-hora').value;
     const link = document.getElementById('mentoria-link').value.trim();
 
-    if (!uid || !tema || !fecha) {
-      alert('Completa al menos el Tema y la Fecha.');
+    if (!uid || !fecha) {
+      alert('Completa al menos la Fecha.');
       return;
     }
 
     btnAgregarMentoria.disabled = true;
     try {
       const nuevaRef = push(ref(db, `mentorias/${uid}`));
-      await set(nuevaRef, { tema, fecha, hora, link, createdAt: Date.now() });
+      await set(nuevaRef, { fecha, hora, link, createdAt: Date.now() });
 
-      document.getElementById('mentoria-tema').value = '';
       document.getElementById('mentoria-fecha').value = '';
       document.getElementById('mentoria-hora').value = '';
       document.getElementById('mentoria-link').value = '';
@@ -840,7 +852,7 @@ export async function cargarBoxMentor() {
           const contenedorRespuesta = bloque.querySelector('.acciones-revision').parentElement;
           const textoActual = p.respuesta.texto || '';
           contenedorRespuesta.innerHTML = `
-            <textarea class="texto-edicion-respuesta">${textoActual}</textarea>
+            <textarea class="texto-edicion-respuesta" style="min-height:220px;">${textoActual}</textarea>
             <div style="margin-top:8px; display:flex; gap:8px;">
               <button type="button" class="btn btn--primary btn-guardar-complemento" style="font-size:11px; padding:4px 10px;">Guardar</button>
               <button type="button" class="btn btn--ghost btn-cancelar-complemento" style="font-size:11px; padding:4px 10px;">Cancelar</button>
@@ -914,16 +926,25 @@ const btnGuardarInstruccionesMentor = document.getElementById('btn-guardar-instr
 if (btnGuardarInstruccionesMentor) {
   btnGuardarInstruccionesMentor.addEventListener('click', async () => {
     const uid = auth.currentUser ? auth.currentUser.uid : null;
-    if (!uid) return;
+    const texto = document.getElementById('mentor-instrucciones-estilo').value.trim();
+    if (!uid || !texto) { alert('Escribe algo antes de guardar.'); return; }
     btnGuardarInstruccionesMentor.disabled = true;
     try {
-      await update(ref(db, `usuarios/${uid}`), {
-        instruccionesEstilo: document.getElementById('mentor-instrucciones-estilo').value.trim()
-      });
-      alert('Instrucciones guardadas.');
+      await update(ref(db, `usuarios/${uid}`), { instruccionesEstilo: texto });
+      await cargarPerfilMentor();
     } finally {
       btnGuardarInstruccionesMentor.disabled = false;
     }
+  });
+}
+
+const btnEditarInstruccionesMentor = document.getElementById('btn-editar-instrucciones-mentor');
+if (btnEditarInstruccionesMentor) {
+  btnEditarInstruccionesMentor.addEventListener('click', () => {
+    document.getElementById('mentor-instrucciones-texto').classList.add('hidden');
+    document.getElementById('campo-instrucciones-estilo').classList.remove('hidden');
+    document.getElementById('btn-guardar-instrucciones-mentor').classList.remove('hidden');
+    btnEditarInstruccionesMentor.classList.add('hidden');
   });
 }
 

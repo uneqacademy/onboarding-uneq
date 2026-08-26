@@ -1140,8 +1140,7 @@ export async function cargarPreguntasVivo() {
           <strong>${s.mentorDatos.nombre || s.mentorDatos.email}</strong>
           <span class="pv-badge-en-vivo hidden" style="background:#C0392B; color:#fff; font-size:10px; font-weight:700; letter-spacing:0.5px; padding:2px 8px; border-radius:4px; margin-left:6px; vertical-align:middle;">● EN VIVO</span>
           <p class="text-soft" style="margin:2px 0; font-size:12px;">${temasMentor}</p>
-          <p style="margin:6px 0 2px;"><strong>${s.tema || ''}</strong></p>
-          <p class="text-soft" style="margin:0; font-size:12px;">${fechaLarga} · ${s.hora}</p>
+          <p class="text-soft" style="margin:6px 0 2px; font-size:12px;">${fechaLarga} · ${s.hora}</p>
           ${s.link ? `<a href="${s.link}" target="_blank" rel="noopener" style="font-size:13px;">Ir al link de acceso</a>` : ''}
           <p class="pv-countdown text-soft" style="margin-top:8px; font-size:12px; font-weight:600;"></p>
         </div>

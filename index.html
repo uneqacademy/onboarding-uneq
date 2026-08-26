@@ -111,22 +111,7 @@
       <button class="btn-hamburger" id="btn-hamburger" aria-label="Abrir menú">☰</button>
       <div class="topbar__title" id="topbar-title">Dashboard</div>
       <div class="topbar__right" style="display:flex; align-items:center; gap:8px; position:relative;">
-        <button class="btn btn--ghost" id="btn-cambiar-password">Cambiar Contraseña</button>
         <button class="btn btn--ghost" id="btn-logout">Cerrar sesión</button>
-
-        <div class="panel hidden" id="panel-cambiar-password" style="position:absolute; top:44px; right:0; width:300px; z-index:1000; box-shadow:0 4px 20px rgba(0,0,0,0.15);">
-          <div class="panel__header flex-between">
-            <h3 style="margin:0; font-size:14px;">Cambiar Contraseña</h3>
-            <button class="btn btn--ghost" id="btn-cerrar-cambiar-password" style="padding:2px 8px;">✕</button>
-          </div>
-          <div class="panel__body">
-            <div class="field mb-16"><label>Contraseña Actual</label><input type="password" id="password-actual"></div>
-            <div class="field mb-16"><label>Nueva Contraseña</label><input type="password" id="password-nueva"></div>
-            <div class="field mb-16"><label>Confirmar Nueva Contraseña</label><input type="password" id="password-confirmar"></div>
-            <p id="cambiar-password-error" class="hidden" style="color:#C0392B; margin-bottom:12px; font-size:13px;"></p>
-            <button class="btn btn--primary" id="btn-guardar-password" style="width:100%;">Guardar</button>
-          </div>
-        </div>
       </div>
     </header>
 
@@ -857,10 +842,14 @@
         </div>
 
         <div class="panel mb-24">
-          <div class="panel__header"><h3>Instrucciones de mi Mentor IA</h3></div>
+          <div class="panel__header flex-between">
+            <h3>Instrucciones de mi Mentor IA</h3>
+            <button class="btn btn--ghost hidden" id="btn-editar-instrucciones-mentor">✏️ Editar</button>
+          </div>
           <div class="panel__body">
             <p class="text-soft mb-16">Cuéntale a tu Mentor IA cómo quieres que hable — tono, expresiones que uses seguido, cosas que evites. Esto se aplica a todas sus respuestas.</p>
-            <div class="field mb-16">
+            <p id="mentor-instrucciones-texto" class="hidden" style="white-space:pre-wrap; margin:0 0 16px;"></p>
+            <div class="field mb-16" id="campo-instrucciones-estilo">
               <textarea id="mentor-instrucciones-estilo" placeholder="Ej: Sé cercana y directa, usa 'oye' y 'mira' seguido, nunca digas 'debes', prefiere 'te invito a', cierra siempre con algo motivador..."></textarea>
             </div>
             <button class="btn btn--primary" id="btn-guardar-instrucciones-mentor">Guardar Instrucciones</button>
@@ -893,14 +882,13 @@
           <div class="panel__header"><h3>Mis Mentorías</h3></div>
           <div class="panel__body">
             <div class="field-grid mb-16">
-              <div class="field"><label>Tema</label><input id="mentoria-tema" placeholder="Ej: Copywriting"></div>
               <div class="field"><label>Fecha</label><input type="date" id="mentoria-fecha"></div>
               <div class="field"><label>Hora</label><input type="time" id="mentoria-hora"></div>
               <div class="field"><label>Link de Acceso (Zoom, etc.)</label><input id="mentoria-link" placeholder="https://..."></div>
             </div>
             <button class="btn btn--accent" id="btn-agregar-mentoria">+ Agregar Mentoría</button>
             <table class="data-table mb-16" style="margin-top:16px;">
-              <thead><tr><th>Tema</th><th>Fecha</th><th>Hora</th><th>Acceso</th><th>NPS de la sesión</th><th>Resumen IA</th><th>Preguntas</th><th></th><th>Estado</th></tr></thead>
+              <thead><tr><th>Fecha</th><th>Hora</th><th>Acceso</th><th>NPS de la sesión</th><th>Resumen IA</th><th>Preguntas</th><th></th><th>Estado</th></tr></thead>
               <tbody id="tabla-mentorias-body"></tbody>
             </table>
           </div>
@@ -1084,9 +1072,21 @@
         <div class="panel mb-24">
           <div class="panel__body" id="alumno-mi-ficha"></div>
         </div>
-        <div class="panel">
+        <div class="panel mb-24">
           <div class="panel__header"><h3>Mi Acuerdo</h3></div>
           <div class="panel__body" id="alumno-mi-acuerdo"></div>
+        </div>
+        <div class="panel">
+          <div class="panel__header"><h3>Cambiar Contraseña</h3></div>
+          <div class="panel__body">
+            <div class="field-grid mb-16">
+              <div class="field"><label>Contraseña Actual</label><input type="password" id="password-actual-alumno"></div>
+              <div class="field"><label>Nueva Contraseña</label><input type="password" id="password-nueva-alumno"></div>
+              <div class="field"><label>Confirmar Nueva Contraseña</label><input type="password" id="password-confirmar-alumno"></div>
+            </div>
+            <p id="cambiar-password-error-alumno" class="hidden" style="color:#C0392B; margin-bottom:12px; font-size:13px;"></p>
+            <button class="btn btn--primary" id="btn-guardar-password-alumno">Guardar Contraseña</button>
+          </div>
         </div>
       </section>
 
@@ -1208,7 +1208,10 @@
           </div>
         </div>
         <div class="panel mb-24">
-          <div class="panel__header"><h3>Contacto</h3></div>
+          <div class="panel__header flex-between">
+            <h3>Contacto</h3>
+            <button class="btn btn--ghost hidden" id="btn-editar-mis-datos">✏️ Editar</button>
+          </div>
           <div class="panel__body">
             <div class="field-grid mb-16">
               <div class="field"><label>Correo</label><input type="email" id="mis-datos-email"></div>
@@ -1216,6 +1219,18 @@
             </div>
             <button class="btn btn--primary" id="btn-guardar-mis-datos">Guardar</button>
             <p class="text-soft" style="margin-top:10px; font-size:12px;">El correo aquí es solo el dato de contacto que ven los demás — no cambia el correo con el que inicias sesión.</p>
+          </div>
+        </div>
+        <div class="panel mb-24">
+          <div class="panel__header"><h3>Cambiar Contraseña</h3></div>
+          <div class="panel__body">
+            <div class="field-grid mb-16">
+              <div class="field"><label>Contraseña Actual</label><input type="password" id="password-actual"></div>
+              <div class="field"><label>Nueva Contraseña</label><input type="password" id="password-nueva"></div>
+              <div class="field"><label>Confirmar Nueva Contraseña</label><input type="password" id="password-confirmar"></div>
+            </div>
+            <p id="cambiar-password-error" class="hidden" style="color:#C0392B; margin-bottom:12px; font-size:13px;"></p>
+            <button class="btn btn--primary" id="btn-guardar-password">Guardar Contraseña</button>
           </div>
         </div>
         <div class="panel hidden" data-role="director" id="panel-mis-roles-director">

@@ -29,6 +29,14 @@ export async function cargarMisDatos() {
   document.getElementById('mis-datos-email').value = datos.email || '';
   document.getElementById('mis-datos-telefono').value = datos.telefono || '';
 
+  const hayContacto = !!(datos.email && datos.telefono);
+  const btnEditarMisDatos = document.getElementById('btn-editar-mis-datos');
+  const btnGuardarMisDatosEl = document.getElementById('btn-guardar-mis-datos');
+  document.getElementById('mis-datos-email').disabled = hayContacto;
+  document.getElementById('mis-datos-telefono').disabled = hayContacto;
+  if (btnGuardarMisDatosEl) btnGuardarMisDatosEl.classList.toggle('hidden', hayContacto);
+  if (btnEditarMisDatos) btnEditarMisDatos.classList.toggle('hidden', !hayContacto);
+
   const panelRoles = document.getElementById('panel-mis-roles-director');
   if (panelRoles) {
     const roles = (datos.roles && typeof datos.roles === 'object') ? datos.roles : (datos.rol ? { [datos.rol]: true } : {});
@@ -65,17 +73,26 @@ const btnGuardarMisDatos = document.getElementById('btn-guardar-mis-datos');
 if (btnGuardarMisDatos) {
   btnGuardarMisDatos.addEventListener('click', async () => {
     const uid = auth.currentUser ? auth.currentUser.uid : null;
-    if (!uid) return;
+    const email = document.getElementById('mis-datos-email').value.trim();
+    const telefono = document.getElementById('mis-datos-telefono').value.trim();
+    if (!uid || !email || !telefono) { alert('Completa correo y teléfono.'); return; }
     btnGuardarMisDatos.disabled = true;
     try {
-      await update(ref(db, `usuarios/${uid}`), {
-        email: document.getElementById('mis-datos-email').value.trim(),
-        telefono: document.getElementById('mis-datos-telefono').value.trim()
-      });
-      alert('Datos guardados.');
+      await update(ref(db, `usuarios/${uid}`), { email, telefono });
+      await cargarMisDatos();
     } finally {
       btnGuardarMisDatos.disabled = false;
     }
+  });
+}
+
+const btnEditarMisDatosGlobal = document.getElementById('btn-editar-mis-datos');
+if (btnEditarMisDatosGlobal) {
+  btnEditarMisDatosGlobal.addEventListener('click', () => {
+    document.getElementById('mis-datos-email').disabled = false;
+    document.getElementById('mis-datos-telefono').disabled = false;
+    document.getElementById('btn-guardar-mis-datos').classList.remove('hidden');
+    btnEditarMisDatosGlobal.classList.add('hidden');
   });
 }
 

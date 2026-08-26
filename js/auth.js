@@ -88,26 +88,19 @@ if (linkOlvidePassword) {
   });
 }
 
-/* --- Cambiar contraseña dentro de la sesión (los 3 roles) --- */
-const btnCambiarPassword = document.getElementById('btn-cambiar-password');
-const panelCambiarPassword = document.getElementById('panel-cambiar-password');
-if (btnCambiarPassword && panelCambiarPassword) {
-  btnCambiarPassword.addEventListener('click', () => panelCambiarPassword.classList.toggle('hidden'));
-}
+/* --- Cambiar contraseña dentro de la sesión (los 4 roles) ---
+       Vive en 2 lugares con IDs distintos: "Mis Datos" (director/
+       coach/mentor) y "Mi Ficha Alumno" (alumno) — misma lógica. */
+function configurarCambiarPassword(sufijo) {
+  const btnGuardarPassword = document.getElementById(`btn-guardar-password${sufijo}`);
+  if (!btnGuardarPassword) return;
 
-const btnCerrarCambiarPassword = document.getElementById('btn-cerrar-cambiar-password');
-if (btnCerrarCambiarPassword) {
-  btnCerrarCambiarPassword.addEventListener('click', () => panelCambiarPassword.classList.add('hidden'));
-}
-
-const btnGuardarPassword = document.getElementById('btn-guardar-password');
-if (btnGuardarPassword) {
   btnGuardarPassword.addEventListener('click', async () => {
-    const errorEl = document.getElementById('cambiar-password-error');
+    const errorEl = document.getElementById(`cambiar-password-error${sufijo}`);
     errorEl.classList.add('hidden');
-    const actual = document.getElementById('password-actual').value;
-    const nueva = document.getElementById('password-nueva').value;
-    const confirmar = document.getElementById('password-confirmar').value;
+    const actual = document.getElementById(`password-actual${sufijo}`).value;
+    const nueva = document.getElementById(`password-nueva${sufijo}`).value;
+    const confirmar = document.getElementById(`password-confirmar${sufijo}`).value;
 
     if (!actual || !nueva || !confirmar) {
       errorEl.textContent = 'Completa los 3 campos.';
@@ -132,10 +125,9 @@ if (btnGuardarPassword) {
       await reauthenticateWithCredential(user, credencial);
       await updatePassword(user, nueva);
 
-      document.getElementById('password-actual').value = '';
-      document.getElementById('password-nueva').value = '';
-      document.getElementById('password-confirmar').value = '';
-      panelCambiarPassword.classList.add('hidden');
+      document.getElementById(`password-actual${sufijo}`).value = '';
+      document.getElementById(`password-nueva${sufijo}`).value = '';
+      document.getElementById(`password-confirmar${sufijo}`).value = '';
       alert('Contraseña actualizada correctamente.');
     } catch (err) {
       errorEl.textContent = (err.code === 'auth/wrong-password' || err.code === 'auth/invalid-credential')
@@ -147,6 +139,9 @@ if (btnGuardarPassword) {
     }
   });
 }
+
+configurarCambiarPassword('');
+configurarCambiarPassword('-alumno');
 
 onAuthStateChanged(auth, async (user) => {
   if (!user) {
