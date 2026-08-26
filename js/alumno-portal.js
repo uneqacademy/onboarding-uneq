@@ -541,7 +541,10 @@ function inicioSemanaActual() {
 
 function renderRespuestaBox(respuesta) {
   if (!respuesta) return '<p class="text-soft" style="margin:6px 0 0;">Aún sin responder.</p>';
-  let html = '<div style="margin-top:8px; padding:10px; background:#EFF6FF; border-radius:8px;"><strong style="font-size:12px;">Respuesta:</strong>';
+  let html = '<div style="margin-top:8px; padding:10px; background:#EFF6FF; border-radius:8px;">';
+  if (respuesta.estadoRevision === 'intervenida') {
+    html += '<p class="text-soft" style="margin:0 0 6px; font-size:11px; font-style:italic;">Respuesta complementaria de Mentor</p>';
+  }
   if (respuesta.texto) html += `<p style="margin:4px 0;">${linkify(respuesta.texto)}</p>`;
   if (respuesta.archivoUrl && respuesta.archivoTipo === 'audio') {
     html += `<audio controls src="${respuesta.archivoUrl}" style="width:100%; margin-top:4px;"></audio>`;
@@ -594,25 +597,24 @@ export async function cargarBoxAlumno() {
   const inicioSemana = inicioSemanaActual();
   const deEstaSemana = entradas.filter(e => e.createdAt >= inicioSemana);
   const mentoresPreguntadosEstaSemana = new Set(deEstaSemana.map(e => e.mentorId));
-  const preguntasRestantes = Math.max(0, 3 - deEstaSemana.length);
 
   const contadorEl = document.getElementById('box-alumno-contador');
-  if (contadorEl) contadorEl.textContent = `Te quedan ${preguntasRestantes} preguntas esta semana`;
+  if (contadorEl) contadorEl.textContent = '1 pregunta por Mentor IA por semana';
 
   // --- Tarjetas de mentor ---
   gridEl.innerHTML = mentores.length ? '' : '<p class="text-soft">No hay mentores disponibles por ahora.</p>';
   gridEl.style.cssText = 'display:grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap:14px;';
   mentores.forEach(([uid, m]) => {
     const yaPreguntado = mentoresPreguntadosEstaSemana.has(uid);
-    const bloqueado = yaPreguntado || preguntasRestantes <= 0;
+    const bloqueado = yaPreguntado;
     const tarjeta = document.createElement('div');
     tarjeta.className = 'panel' + (bloqueado ? ' mentor-card-bloqueado' : '');
     tarjeta.style.cssText = 'padding:16px; text-align:center;';
-    if (yaPreguntado) tarjeta.title = 'Ya le preguntaste esta semana';
-    else if (preguntasRestantes <= 0) tarjeta.title = 'Ya usaste tus 3 preguntas de esta semana';
+    if (yaPreguntado) tarjeta.title = 'Ya le preguntaste a este Mentor IA esta semana';
     tarjeta.innerHTML = `
-      <img src="${m.fotoUrl || PLACEHOLDER_FOTO_ALUMNO}" alt="" style="width:64px; height:64px; border-radius:50%; object-fit:cover; margin-bottom:10px;">
-      <p style="font-weight:600; margin-bottom:8px;">${m.nombre || m.email}</p>
+      <img src="${m.fotoIA || m.fotoUrl || PLACEHOLDER_FOTO_ALUMNO}" alt="" style="width:64px; height:64px; border-radius:50%; object-fit:cover; margin-bottom:10px;">
+      <p style="font-weight:600; margin-bottom:2px;">${m.nombre || m.email}</p>
+      <p class="text-soft" style="font-size:10px; margin-bottom:8px;">Mentor IA</p>
       <div style="display:flex; flex-direction:column; gap:6px;">
         <button type="button" class="btn btn--primary btn-hacer-pregunta" style="font-size:12px;" ${bloqueado ? 'disabled' : ''}>Hacer Pregunta</button>
         <button type="button" class="btn btn--ghost btn-detalles-mentor" style="font-size:12px;">Detalles Mentor</button>
@@ -622,7 +624,7 @@ export async function cargarBoxAlumno() {
     tarjeta.querySelector('.btn-hacer-pregunta').addEventListener('click', () => {
       document.getElementById('box-alumno-detalle-panel').classList.add('hidden');
       document.getElementById('box-alumno-form-panel').classList.remove('hidden');
-      document.getElementById('box-alumno-mentor-nombre-form').textContent = m.nombre || m.email;
+      document.getElementById('box-alumno-mentor-nombre-form').textContent = `${m.nombre || m.email} (Mentor IA)`;
       document.getElementById('btn-enviar-pregunta-alumno').dataset.mentorId = uid;
       document.getElementById('box-alumno-form-panel').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     });

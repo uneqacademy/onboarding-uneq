@@ -143,6 +143,9 @@ export function setNav(section) {
   } else if (section === 'mis-datos') {
     showView('view-mis-datos');
     document.getElementById('topbar-title').textContent = 'Mis Datos';
+  } else if (section === 'rendimiento-ia') {
+    showView('view-rendimiento-ia');
+    document.getElementById('topbar-title').textContent = 'Rendimiento IA';
   } else if (section === 'configuracion') {
     showView('view-configuracion');
     document.getElementById('topbar-title').textContent = 'Configuración';

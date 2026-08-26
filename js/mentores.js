@@ -743,20 +743,27 @@ export { cargarMentoriasView };
    MENTOR: BOX de Consultas — recibe preguntas de alumnos y
    responde con texto, audio o imagen.
    ============================================================ */
-function renderRespuestaExistente(respuesta) {
-  if (!respuesta) return '';
-  let html = '<div style="margin-top:8px; padding:8px; background:#F7F8FA; border-radius:8px;"><strong style="font-size:12px;">Tu respuesta:</strong>';
-  if (respuesta.texto) html += `<p style="margin:4px 0;">${respuesta.texto}</p>`;
-  if (respuesta.archivoUrl && respuesta.archivoTipo === 'audio') {
-    html += `<audio controls src="${respuesta.archivoUrl}" style="width:100%; margin-top:4px;"></audio>`;
-  } else if (respuesta.archivoUrl && respuesta.archivoTipo === 'imagen') {
-    html += `<img src="${respuesta.archivoUrl}" alt="" style="max-width:220px; border-radius:8px; margin-top:4px; display:block;">`;
-  }
-  html += '</div>';
-  return html;
-}
+function renderRespuestaMentorIA(preguntaId, p, mentorId) {
+  const r = p.respuesta;
+  if (!r) return '<p class="text-soft" style="font-size:13px;">El Mentor IA todavía no responde esta pregunta.</p>';
 
-/* (TEMAS_BOX ahora se define arriba, cerca del resto de constantes) */
+  const ESTADO_LABELS = { sin_revisar: 'Sin Revisar', confirmada: 'Confirmada', intervenida: 'Intervenida' };
+  const ESTADO_CLASES = { sin_revisar: 'badge--impaga', confirmada: 'badge--activo', intervenida: 'badge--activo' };
+  const estado = r.estadoRevision || 'sin_revisar';
+
+  return `
+    <div style="margin-top:8px; padding:10px; background:#F7F8FA; border-radius:8px;">
+      <div class="flex-between" style="margin-bottom:6px;">
+        <strong style="font-size:12px;">Respuesta del Mentor IA</strong>
+        <span class="badge ${ESTADO_CLASES[estado]}" style="font-size:10px;">${ESTADO_LABELS[estado]}</span>
+      </div>
+      <p class="respuesta-texto-actual" style="margin:4px 0;">${r.texto || ''}</p>
+      <div class="acciones-revision" style="display:flex; gap:8px; margin-top:8px; flex-wrap:wrap;">
+        <button type="button" class="btn btn--ghost btn-confirmar-respuesta" style="font-size:11px; padding:4px 8px;">✓ Confirmar sin cambios</button>
+        <button type="button" class="btn btn--ghost btn-complementar-respuesta" style="font-size:11px; padding:4px 8px;">✏️ Complementar / Editar</button>
+      </div>
+    </div>`;
+}
 
 export async function cargarBoxMentor() {
   if (getCurrentRole() !== 'mentor') return;
@@ -768,101 +775,104 @@ export async function cargarBoxMentor() {
   const preguntas = snap.exists() ? Object.entries(snap.val()) : [];
   preguntas.sort((a, b) => b[1].createdAt - a[1].createdAt);
 
-  if (!preguntas.length) {
-    contenedor.innerHTML = '<p class="text-soft">Aún no tienes preguntas de alumnos.</p>';
-    return;
+  const filtroEstadoEl = document.getElementById('box-mentor-filtro-estado');
+  const filtroAlumnoEl = document.getElementById('box-mentor-filtro-alumno');
+  const filtroDesdeEl = document.getElementById('box-mentor-filtro-desde');
+  const filtroHastaEl = document.getElementById('box-mentor-filtro-hasta');
+
+  if (filtroAlumnoEl && !filtroAlumnoEl.dataset.cargado) {
+    const alumnos = [...new Map(preguntas.map(([, p]) => [p.alumnoId, p.alumnoNombre || 'Alumno'])).entries()];
+    filtroAlumnoEl.innerHTML = '<option value="">Todos</option>' + alumnos.map(([id, nombre]) => `<option value="${id}">${nombre}</option>`).join('');
+    filtroAlumnoEl.dataset.cargado = '1';
   }
 
-  contenedor.innerHTML = '';
-  preguntas.forEach(([preguntaId, p]) => {
-    const fecha = new Intl.DateTimeFormat('es-CL', { day: '2-digit', month: 'short', year: 'numeric' }).format(new Date(p.createdAt));
-    const bloque = document.createElement('div');
-    bloque.style.cssText = 'padding:14px 0; border-bottom:0.5px solid var(--border);';
-    bloque.innerHTML = `
-      <strong>${p.alumnoNombre || 'Alumno'}</strong> <span class="text-soft" style="font-size:12px;">— ${fecha}</span>
-      ${p.respuesta && p.respuesta.tema ? `<span class="badge badge--activo" style="margin-left:6px; font-size:10px;">${p.respuesta.tema}</span>` : ''}
-      <p style="margin:6px 0;">${p.pregunta}</p>
-      ${renderRespuestaExistente(p.respuesta)}
-      ${!p.respuesta ? `
-        <div style="margin-top:10px;">
-          <textarea class="box-respuesta-texto" placeholder="Escribe tu respuesta (opcional si adjuntas audio o imagen)..." style="min-height:60px;"></textarea>
-          <div class="field mb-16" style="max-width:260px; margin-top:8px;">
-            <label>Temática</label>
-            <select class="box-respuesta-tema">
-              <option value="">Selecciona...</option>
-              ${TEMAS_BOX.map(t => `<option value="${t}">${t}</option>`).join('')}
-            </select>
-          </div>
-          <div style="display:flex; align-items:center; gap:8px; margin-top:8px; flex-wrap:wrap;">
-            <button type="button" class="btn btn--ghost btn-adjuntar-audio" style="font-size:11px; padding:4px 8px;">🎤 Adjuntar Audio</button>
-            <input type="file" class="input-respuesta-audio hidden" accept="audio/*">
-            <button type="button" class="btn btn--ghost btn-adjuntar-imagen" style="font-size:11px; padding:4px 8px;">🖼️ Adjuntar Imagen</button>
-            <input type="file" class="input-respuesta-imagen hidden" accept="image/*">
-            <span class="archivo-adjunto-nombre text-soft" style="font-size:12px;"></span>
-          </div>
-          <button class="btn btn--primary btn-enviar-respuesta" style="margin-top:10px;">Enviar Respuesta</button>
-        </div>` : ''}
-    `;
-    contenedor.appendChild(bloque);
+  function render() {
+    const fEstado = filtroEstadoEl ? filtroEstadoEl.value : '';
+    const fAlumno = filtroAlumnoEl ? filtroAlumnoEl.value : '';
+    const fDesde = filtroDesdeEl && filtroDesdeEl.value ? new Date(filtroDesdeEl.value + 'T00:00:00').getTime() : null;
+    const fHasta = filtroHastaEl && filtroHastaEl.value ? new Date(filtroHastaEl.value + 'T23:59:59').getTime() : null;
 
-    if (p.respuesta) return;
-
-    let archivoSeleccionado = null;
-    let tipoArchivoSeleccionado = null;
-    const spanArchivo = bloque.querySelector('.archivo-adjunto-nombre');
-
-    const inputAudio = bloque.querySelector('.input-respuesta-audio');
-    bloque.querySelector('.btn-adjuntar-audio').addEventListener('click', () => inputAudio.click());
-    inputAudio.addEventListener('change', () => {
-      if (inputAudio.files[0]) {
-        archivoSeleccionado = inputAudio.files[0];
-        tipoArchivoSeleccionado = 'audio';
-        spanArchivo.textContent = `🎤 ${archivoSeleccionado.name}`;
-      }
+    const filtradas = preguntas.filter(([, p]) => {
+      const estado = (p.respuesta && p.respuesta.estadoRevision) || 'sin_revisar';
+      return (!fEstado || estado === fEstado) &&
+        (!fAlumno || p.alumnoId === fAlumno) &&
+        (!fDesde || p.createdAt >= fDesde) &&
+        (!fHasta || p.createdAt <= fHasta) &&
+        !!p.respuesta; // solo mostramos las que ya tienen respuesta del Mentor IA
     });
 
-    const inputImagen = bloque.querySelector('.input-respuesta-imagen');
-    bloque.querySelector('.btn-adjuntar-imagen').addEventListener('click', () => inputImagen.click());
-    inputImagen.addEventListener('change', () => {
-      if (inputImagen.files[0]) {
-        archivoSeleccionado = inputImagen.files[0];
-        tipoArchivoSeleccionado = 'imagen';
-        spanArchivo.textContent = `🖼️ ${archivoSeleccionado.name}`;
-      }
-    });
+    if (!filtradas.length) {
+      contenedor.innerHTML = '<p class="text-soft">No hay preguntas con ese filtro.</p>';
+      return;
+    }
 
-    bloque.querySelector('.btn-enviar-respuesta').addEventListener('click', async (ev) => {
-      const btn = ev.target;
-      const texto = bloque.querySelector('.box-respuesta-texto').value.trim();
-      const tema = bloque.querySelector('.box-respuesta-tema').value;
-      if (!texto && !archivoSeleccionado) {
-        alert('Escribe una respuesta o adjunta un audio/imagen.');
-        return;
-      }
-      if (!tema) {
-        alert('Selecciona una temática para esta respuesta.');
-        return;
-      }
-      btn.disabled = true;
-      btn.textContent = 'Enviando...';
-      try {
-        let archivoUrl = null;
-        if (archivoSeleccionado) {
-          const archivoRef = storageRef(storage, `box-respuestas/${uid}/${preguntaId}`);
-          await uploadBytes(archivoRef, archivoSeleccionado);
-          archivoUrl = await getDownloadURL(archivoRef);
-        }
-        await update(ref(db, `box/${uid}/${preguntaId}`), {
-          respuesta: { texto: texto || null, archivoUrl, archivoTipo: archivoUrl ? tipoArchivoSeleccionado : null, tema, respondidoEn: Date.now() }
+    contenedor.innerHTML = '';
+    filtradas.forEach(([preguntaId, p]) => {
+      const fecha = new Intl.DateTimeFormat('es-CL', { day: '2-digit', month: 'short', year: 'numeric' }).format(new Date(p.createdAt));
+      const bloque = document.createElement('div');
+      bloque.style.cssText = 'padding:14px 0; border-bottom:0.5px solid var(--border);';
+      bloque.innerHTML = `
+        <strong>${p.alumnoNombre || 'Alumno'}</strong> <span class="text-soft" style="font-size:12px;">— ${fecha}</span>
+        <p style="margin:6px 0;">${p.pregunta || ''}</p>
+        ${(p.imagenes || []).map(url => `<img src="${url}" alt="" style="max-width:120px; border-radius:6px; margin:0 4px 6px 0;">`).join('')}
+        ${renderRespuestaMentorIA(preguntaId, p, uid)}
+      `;
+      contenedor.appendChild(bloque);
+
+      const btnConfirmar = bloque.querySelector('.btn-confirmar-respuesta');
+      const btnComplementar = bloque.querySelector('.btn-complementar-respuesta');
+
+      if (btnConfirmar) {
+        btnConfirmar.addEventListener('click', async () => {
+          btnConfirmar.disabled = true;
+          try {
+            await update(ref(db, `box/${uid}/${preguntaId}/respuesta`), { estadoRevision: 'confirmada', revisadoEn: Date.now() });
+            await cargarBoxMentor();
+          } catch (err) {
+            alert('No se pudo confirmar. Intenta de nuevo.');
+            btnConfirmar.disabled = false;
+          }
         });
-        await cargarBoxMentor();
-      } catch (err) {
-        alert('No se pudo enviar la respuesta. Intenta de nuevo.');
-        btn.disabled = false;
-        btn.textContent = 'Enviar Respuesta';
+      }
+
+      if (btnComplementar) {
+        btnComplementar.addEventListener('click', () => {
+          const contenedorRespuesta = bloque.querySelector('.acciones-revision').parentElement;
+          const textoActual = p.respuesta.texto || '';
+          contenedorRespuesta.innerHTML = `
+            <textarea class="texto-edicion-respuesta">${textoActual}</textarea>
+            <div style="margin-top:8px; display:flex; gap:8px;">
+              <button type="button" class="btn btn--primary btn-guardar-complemento" style="font-size:11px; padding:4px 10px;">Guardar</button>
+              <button type="button" class="btn btn--ghost btn-cancelar-complemento" style="font-size:11px; padding:4px 10px;">Cancelar</button>
+            </div>`;
+
+          contenedorRespuesta.querySelector('.btn-cancelar-complemento').addEventListener('click', () => cargarBoxMentor());
+          contenedorRespuesta.querySelector('.btn-guardar-complemento').addEventListener('click', async (ev) => {
+            const nuevoTexto = contenedorRespuesta.querySelector('.texto-edicion-respuesta').value.trim();
+            if (!nuevoTexto) { alert('La respuesta no puede quedar vacía.'); return; }
+            ev.target.disabled = true;
+            try {
+              await update(ref(db, `box/${uid}/${preguntaId}/respuesta`), {
+                texto: nuevoTexto,
+                estadoRevision: 'intervenida',
+                revisadoEn: Date.now()
+              });
+              await cargarBoxMentor();
+            } catch (err) {
+              alert('No se pudo guardar. Intenta de nuevo.');
+              ev.target.disabled = false;
+            }
+          });
+        });
       }
     });
-  });
+  }
+
+  render();
+  if (filtroEstadoEl) filtroEstadoEl.onchange = render;
+  if (filtroAlumnoEl) filtroAlumnoEl.onchange = render;
+  if (filtroDesdeEl) filtroDesdeEl.onchange = render;
+  if (filtroHastaEl) filtroHastaEl.onchange = render;
 }
 
 document.querySelectorAll('.nav-item[data-nav="box-consultas"]').forEach(item => {

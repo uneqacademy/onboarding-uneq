@@ -76,6 +76,7 @@
         <li class="nav-item" data-role="director" data-nav="coaches">Coaches</li>
         <li class="nav-item" data-role="director" data-nav="mentores">Mentores</li>
         <li class="nav-item hidden" data-nav="mis-datos">Mis Datos</li>
+        <li class="nav-item" data-role="director" data-nav="rendimiento-ia">Rendimiento IA</li>
         <li class="nav-item" data-role="director" data-nav="configuracion">Configuración</li>
         <li class="nav-item" data-role="alumno" data-nav="ficha-alumno-propia">Mi Ficha Alumno</li>
         <li class="nav-item" data-role="alumno" data-nav="bitacora-alumno">Bitácora</li>
@@ -950,7 +951,32 @@
            cuenta propia, eso es la Fase 2)
            ====================================================== -->
       <section id="view-box-mentor" class="view hidden">
-        <div class="flex-between mb-16"><h2>BOX de Consultas</h2></div>
+        <div class="flex-between mb-16"><h2>BOX de Consultas — Mentor IA</h2></div>
+        <div class="panel mb-24">
+          <div class="panel__body" style="display:flex; gap:16px; flex-wrap:wrap;">
+            <div class="field" style="flex:1; min-width:160px;">
+              <label>Estado</label>
+              <select id="box-mentor-filtro-estado">
+                <option value="">Todos</option>
+                <option value="sin_revisar">Sin Revisar</option>
+                <option value="confirmada">Confirmada</option>
+                <option value="intervenida">Intervenida</option>
+              </select>
+            </div>
+            <div class="field" style="flex:1; min-width:160px;">
+              <label>Alumno</label>
+              <select id="box-mentor-filtro-alumno"><option value="">Todos</option></select>
+            </div>
+            <div class="field" style="min-width:150px;">
+              <label>Desde</label>
+              <input type="date" id="box-mentor-filtro-desde">
+            </div>
+            <div class="field" style="min-width:150px;">
+              <label>Hasta</label>
+              <input type="date" id="box-mentor-filtro-hasta">
+            </div>
+          </div>
+        </div>
         <div class="panel">
           <div class="panel__body" id="box-mentor-contenido">
             <p class="text-soft">Cargando...</p>
@@ -965,6 +991,11 @@
         <div class="flex-between mb-16">
           <h2>BOX de Consultas</h2>
           <span class="badge badge--activo" id="box-alumno-contador">—</span>
+        </div>
+        <div class="panel mb-24" style="background:#EFF6FF; border-color:#BFDBFE;">
+          <div class="panel__body" style="font-size:13px;">
+            Aquí respondes con el <strong>Mentor IA</strong> de cada mentor — entrenado con su contenido real, responde al instante. Si prefieres hablar con el mentor humano en vivo, ve a <strong>Preguntas en Vivo</strong>.
+          </div>
         </div>
 
         <div class="panel mb-24">
@@ -1191,6 +1222,29 @@
             <label style="font-weight:400; display:flex; align-items:center; gap:8px; margin-bottom:10px;"><input type="checkbox" id="chk-rol-propio-coach" style="width:auto;"> También soy Coach</label>
             <label style="font-weight:400; display:flex; align-items:center; gap:8px; margin-bottom:16px;"><input type="checkbox" id="chk-rol-propio-mentor" style="width:auto;"> También soy Mentor</label>
             <button class="btn btn--primary" id="btn-guardar-roles-propios">Guardar Roles</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- ======================================================
+           RENDIMIENTO IA (solo Director)
+           ====================================================== -->
+      <section id="view-rendimiento-ia" class="view hidden">
+        <div class="flex-between mb-16"><h2>Rendimiento IA</h2></div>
+        <div class="panel">
+          <div class="panel__body" style="padding:0;">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th class="th-orden-ia" data-campo="nombre" style="cursor:pointer;">Mentor</th>
+                  <th class="th-orden-ia" data-campo="puntaje" style="cursor:pointer;">Puntaje Total ▼</th>
+                  <th class="th-orden-ia" data-campo="confirmadas" style="cursor:pointer;">Confirmadas</th>
+                  <th class="th-orden-ia" data-campo="intervenidas" style="cursor:pointer;">Intervenidas</th>
+                  <th class="th-orden-ia" data-campo="sinRevisar" style="cursor:pointer;">No Revisadas</th>
+                </tr>
+              </thead>
+              <tbody id="tabla-rendimiento-ia-body"></tbody>
+            </table>
           </div>
         </div>
       </section>
