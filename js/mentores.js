@@ -434,6 +434,12 @@ export async function cargarPerfilMentor() {
   const datos = usuarioSnap.exists() ? usuarioSnap.val() : {};
   preview.src = datos.fotoUrl || PLACEHOLDER_FOTO_PERFIL;
 
+  const previewIA = document.getElementById('mentor-foto-ia-preview');
+  if (previewIA) previewIA.src = datos.fotoIA || PLACEHOLDER_FOTO_PERFIL;
+
+  const instruccionesEl = document.getElementById('mentor-instrucciones-estilo');
+  if (instruccionesEl) instruccionesEl.value = datos.instruccionesEstilo || '';
+
   const { promedio, total } = calcularNpsResumenMentor(npsSnap.exists() ? npsSnap.val() : null);
   const npsEl = document.getElementById('mentor-nps-resumen');
   if (npsEl) npsEl.textContent = promedio !== null ? `${promedio.toFixed(1)} ★ (${total})` : 'Aún sin evaluaciones';
@@ -861,4 +867,139 @@ export async function cargarBoxMentor() {
 
 document.querySelectorAll('.nav-item[data-nav="box-consultas"]').forEach(item => {
   item.addEventListener('click', cargarBoxMentor);
+});
+
+/* ============================================================
+   Mentor IA — foto exclusiva, instrucciones de estilo, y
+   conocimiento adicional (texto libre o archivos). Todo esto
+   alimenta al Mentor IA del BOX de Consultas junto con lo
+   automático (resúmenes, respuestas validadas, presentación,
+   temáticas).
+   ============================================================ */
+const btnCambiarFotoIaMentor = document.getElementById('btn-cambiar-foto-ia-mentor');
+const inputFotoIaMentor = document.getElementById('mentor-foto-ia-input');
+if (btnCambiarFotoIaMentor && inputFotoIaMentor) {
+  btnCambiarFotoIaMentor.addEventListener('click', () => inputFotoIaMentor.click());
+  inputFotoIaMentor.addEventListener('change', async () => {
+    const file = inputFotoIaMentor.files[0];
+    const uid = auth.currentUser ? auth.currentUser.uid : null;
+    if (!file || !uid) return;
+    btnCambiarFotoIaMentor.disabled = true;
+    try {
+      const archivoRef = storageRef(storage, `fotos-perfil-ia/${uid}`);
+      await uploadBytes(archivoRef, file);
+      const url = await getDownloadURL(archivoRef);
+      await update(ref(db, `usuarios/${uid}`), { fotoIA: url });
+      document.getElementById('mentor-foto-ia-preview').src = url;
+    } catch (err) {
+      alert('No se pudo subir la foto. Intenta de nuevo.');
+    } finally {
+      btnCambiarFotoIaMentor.disabled = false;
+      inputFotoIaMentor.value = '';
+    }
+  });
+}
+
+const btnGuardarInstruccionesMentor = document.getElementById('btn-guardar-instrucciones-mentor');
+if (btnGuardarInstruccionesMentor) {
+  btnGuardarInstruccionesMentor.addEventListener('click', async () => {
+    const uid = auth.currentUser ? auth.currentUser.uid : null;
+    if (!uid) return;
+    btnGuardarInstruccionesMentor.disabled = true;
+    try {
+      await update(ref(db, `usuarios/${uid}`), {
+        instruccionesEstilo: document.getElementById('mentor-instrucciones-estilo').value.trim()
+      });
+      alert('Instrucciones guardadas.');
+    } finally {
+      btnGuardarInstruccionesMentor.disabled = false;
+    }
+  });
+}
+
+/* --- Conocimiento Adicional: texto libre o archivo, con título --- */
+let archivoConocimientoSeleccionado = null;
+const btnAdjuntarArchivoConocimiento = document.getElementById('btn-adjuntar-archivo-conocimiento');
+const inputArchivoConocimiento = document.getElementById('input-archivo-conocimiento');
+if (btnAdjuntarArchivoConocimiento && inputArchivoConocimiento) {
+  btnAdjuntarArchivoConocimiento.addEventListener('click', () => inputArchivoConocimiento.click());
+  inputArchivoConocimiento.addEventListener('change', () => {
+    archivoConocimientoSeleccionado = inputArchivoConocimiento.files[0] || null;
+    document.getElementById('conocimiento-archivo-nombre').textContent = archivoConocimientoSeleccionado ? `📄 ${archivoConocimientoSeleccionado.name}` : '';
+  });
+}
+
+async function cargarConocimientoMentor() {
+  const uid = auth.currentUser ? auth.currentUser.uid : null;
+  const listadoEl = document.getElementById('conocimiento-listado');
+  if (!uid || !listadoEl) return;
+
+  const snap = await get(ref(db, `conocimientoMentor/${uid}`));
+  const entradas = snap.exists() ? Object.entries(snap.val()) : [];
+  entradas.sort((a, b) => b[1].createdAt - a[1].createdAt);
+
+  listadoEl.innerHTML = entradas.length
+    ? entradas.map(([entradaId, e]) => `
+        <div class="panel mb-16" style="padding:12px;">
+          <div class="flex-between">
+            <strong style="font-size:13px;">${e.titulo || '(sin título)'}</strong>
+            <button type="button" class="btn btn--ghost btn-eliminar-conocimiento" data-id="${entradaId}" style="font-size:11px; padding:2px 8px;">Eliminar</button>
+          </div>
+          ${e.texto ? `<p style="margin:6px 0 0; font-size:13px;">${e.texto}</p>` : ''}
+          ${e.archivoUrl ? `<a href="${e.archivoUrl}" target="_blank" rel="noopener" style="font-size:12px;">📄 ${e.archivoNombre || 'Ver archivo'}</a>` : ''}
+        </div>`).join('')
+    : '<p class="text-soft">Aún no has agregado conocimiento adicional.</p>';
+
+  listadoEl.querySelectorAll('.btn-eliminar-conocimiento').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const confirmado = confirm('¿Eliminar este contenido? Tu Mentor IA ya no lo va a usar.');
+      if (!confirmado) return;
+      await set(ref(db, `conocimientoMentor/${uid}/${btn.dataset.id}`), null);
+      await cargarConocimientoMentor();
+    });
+  });
+}
+
+const btnAgregarConocimiento = document.getElementById('btn-agregar-conocimiento');
+if (btnAgregarConocimiento) {
+  btnAgregarConocimiento.addEventListener('click', async () => {
+    const uid = auth.currentUser ? auth.currentUser.uid : null;
+    const titulo = document.getElementById('conocimiento-titulo').value.trim();
+    const texto = document.getElementById('conocimiento-texto').value.trim();
+    if (!uid || !titulo || (!texto && !archivoConocimientoSeleccionado)) {
+      alert('Escribe un título, y al menos texto o un archivo.');
+      return;
+    }
+    btnAgregarConocimiento.disabled = true;
+    try {
+      const entradaId = push(ref(db, `conocimientoMentor/${uid}`)).key;
+      let archivoUrl = null;
+      let archivoNombre = null;
+      if (archivoConocimientoSeleccionado) {
+        const archivoRef = storageRef(storage, `conocimiento-mentor/${uid}/${entradaId}`);
+        await uploadBytes(archivoRef, archivoConocimientoSeleccionado);
+        archivoUrl = await getDownloadURL(archivoRef);
+        archivoNombre = archivoConocimientoSeleccionado.name;
+      }
+      await set(ref(db, `conocimientoMentor/${uid}/${entradaId}`), {
+        titulo, texto: texto || null, archivoUrl, archivoNombre, createdAt: Date.now()
+      });
+
+      document.getElementById('conocimiento-titulo').value = '';
+      document.getElementById('conocimiento-texto').value = '';
+      document.getElementById('conocimiento-archivo-nombre').textContent = '';
+      inputArchivoConocimiento.value = '';
+      archivoConocimientoSeleccionado = null;
+
+      await cargarConocimientoMentor();
+    } catch (err) {
+      alert('No se pudo agregar. Intenta de nuevo.');
+    } finally {
+      btnAgregarConocimiento.disabled = false;
+    }
+  });
+}
+
+document.querySelectorAll('.nav-item[data-nav="dashboard"]').forEach(item => {
+  item.addEventListener('click', cargarConocimientoMentor);
 });

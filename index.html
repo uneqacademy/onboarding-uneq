@@ -807,6 +807,13 @@
               <img id="mentor-foto-preview" src="" alt="" style="width:72px; height:72px; border-radius:50%; object-fit:cover;">
               <input type="file" id="mentor-foto-input" accept="image/*" class="hidden">
               <button type="button" class="btn btn--ghost" id="btn-cambiar-foto-mentor" style="font-size:11px; padding:4px 10px;">Cambiar Foto</button>
+              <span class="text-soft" style="font-size:10px;">Foto real (Preguntas en Vivo)</span>
+            </div>
+            <div style="display:flex; flex-direction:column; align-items:center; gap:8px;">
+              <img id="mentor-foto-ia-preview" src="" alt="" style="width:72px; height:72px; border-radius:50%; object-fit:cover; border:2px solid var(--color-accent, #2563EB);">
+              <input type="file" id="mentor-foto-ia-input" accept="image/*" class="hidden">
+              <button type="button" class="btn btn--ghost" id="btn-cambiar-foto-ia-mentor" style="font-size:11px; padding:4px 10px;">Cambiar Foto</button>
+              <span class="text-soft" style="font-size:10px;">Foto del Mentor IA (BOX de Consultas)</span>
             </div>
             <div>
               <p style="margin:0 0 4px;">Mi NPS resumido</p>
@@ -842,6 +849,39 @@
             <p id="mentor-temas-lista" class="hidden"></p>
             <div id="mentor-temas-checkboxes" style="display:flex; flex-wrap:wrap; gap:10px 20px; margin-bottom:16px;"></div>
             <button class="btn btn--primary" id="btn-guardar-temas-mentor">Guardar Temáticas</button>
+          </div>
+        </div>
+
+        <div class="panel mb-24">
+          <div class="panel__header"><h3>Instrucciones de mi Mentor IA</h3></div>
+          <div class="panel__body">
+            <p class="text-soft mb-16">Cuéntale a tu Mentor IA cómo quieres que hable — tono, expresiones que uses seguido, cosas que evites. Esto se aplica a todas sus respuestas.</p>
+            <div class="field mb-16">
+              <textarea id="mentor-instrucciones-estilo" placeholder="Ej: Sé cercana y directa, usa 'oye' y 'mira' seguido, nunca digas 'debes', prefiere 'te invito a', cierra siempre con algo motivador..."></textarea>
+            </div>
+            <button class="btn btn--primary" id="btn-guardar-instrucciones-mentor">Guardar Instrucciones</button>
+          </div>
+        </div>
+
+        <div class="panel mb-24">
+          <div class="panel__header"><h3>Conocimiento Adicional para mi Mentor IA</h3></div>
+          <div class="panel__body">
+            <p class="text-soft mb-16">Agrega texto libre o sube archivos (Word/texto) con cualquier cosa que quieras que tu Mentor IA sepa — además de lo que ya suma solo con tus resúmenes de sesión y respuestas confirmadas.</p>
+            <div class="field mb-16">
+              <label>Título</label>
+              <input id="conocimiento-titulo" placeholder="Ej: Cómo manejo objeciones de precio">
+            </div>
+            <div class="field mb-16">
+              <label>Texto (opcional si subes un archivo)</label>
+              <textarea id="conocimiento-texto" placeholder="Escribe aquí lo que quieras agregar..."></textarea>
+            </div>
+            <button type="button" class="btn btn--ghost" id="btn-adjuntar-archivo-conocimiento" style="font-size:12px;">📄 Adjuntar Archivo (Word/texto)</button>
+            <input type="file" id="input-archivo-conocimiento" accept=".doc,.docx,.txt" class="hidden">
+            <span id="conocimiento-archivo-nombre" class="text-soft" style="font-size:12px; margin-left:8px;"></span>
+            <div style="margin-top:16px;">
+              <button class="btn btn--primary" id="btn-agregar-conocimiento">+ Agregar</button>
+            </div>
+            <div id="conocimiento-listado" style="margin-top:20px;"></div>
           </div>
         </div>
 
@@ -1157,6 +1197,15 @@
 
       <section id="view-configuracion" class="view hidden">
         <div class="flex-between mb-16"><h2>Configuración</h2></div>
+        <div class="panel mb-24">
+          <div class="panel__header"><h3>Metodología Base para Mentores IA</h3></div>
+          <div class="panel__body">
+            <p class="text-soft mb-16">Este contenido se aplica automáticamente a <strong>todos</strong> los Mentores IA — es la capa compartida (metodología 2E, paso a paso), sobre la cual cada mentor suma su propio conocimiento individual.</p>
+            <div class="field mb-16">
+              <textarea id="config-metodologia-base" placeholder="Pega o escribe aquí la metodología base que todos los Mentores IA deben conocer..." style="min-height:180px;"></textarea>
+            </div>
+          </div>
+        </div>
         <div class="panel mb-24">
           <div class="panel__header"><h3>Comunidad y Soporte</h3></div>
           <div class="panel__body">

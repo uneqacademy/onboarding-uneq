@@ -17,6 +17,7 @@ export async function cargarConfiguracion() {
   const c = snap.exists() ? snap.val() : {};
 
   document.getElementById('config-comunidad-hotmart').value = c.comunidadHotmartUrl || '';
+  document.getElementById('config-metodologia-base').value = c.metodologiaBase || '';
   document.getElementById('config-correo-soporte').value = c.correoSoporte || '';
   document.getElementById('config-whatsapp-soporte').value = c.whatsappSoporte || '';
   document.getElementById('config-form-soporte-embed').value = c.formSoporteEmbed || '';
@@ -36,6 +37,7 @@ if (btnGuardarConfiguracion) {
     try {
       await set(ref(db, 'configuracion/general'), {
         comunidadHotmartUrl: document.getElementById('config-comunidad-hotmart').value.trim(),
+        metodologiaBase: document.getElementById('config-metodologia-base').value,
         correoSoporte: document.getElementById('config-correo-soporte').value.trim(),
         whatsappSoporte: document.getElementById('config-whatsapp-soporte').value.trim(),
         formSoporteEmbed: document.getElementById('config-form-soporte-embed').value,
