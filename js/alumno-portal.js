@@ -672,18 +672,33 @@ export async function cargarBoxAlumno() {
       ? visibles.map(e => {
           const mentorNombre = usuarios[e.mentorId] ? (usuarios[e.mentorId].nombre || usuarios[e.mentorId].email) : 'Mentor';
           return `
-            <div class="panel mb-16" style="padding:14px;">
+            <div class="panel mb-16" style="padding:14px; cursor:pointer;" data-fila-consulta>
               <div class="flex-between">
                 <strong>Para ${mentorNombre}</strong>
-                ${!e.respuesta ? `<button type="button" class="btn btn--ghost btn-eliminar-pregunta" data-pregunta-id="${e.preguntaId}" data-mentor-id="${e.mentorId}" style="font-size:11px; padding:2px 8px;">Eliminar</button>` : ''}
+                <div style="display:flex; align-items:center; gap:8px;">
+                  ${!e.respuesta ? `<button type="button" class="btn btn--ghost btn-eliminar-pregunta" data-pregunta-id="${e.preguntaId}" data-mentor-id="${e.mentorId}" style="font-size:11px; padding:2px 8px;">Eliminar</button>` : ''}
+                  <span class="text-soft" style="font-size:16px;" data-flecha-consulta>▾</span>
+                </div>
               </div>
               <span class="text-soft" style="font-size:12px;">${formatFecha(new Date(e.createdAt).toISOString().slice(0, 10))}</span>
               <p style="margin:6px 0;">${linkify(e.pregunta)}</p>
-              ${renderImagenesPregunta(e.imagenes)}
-              ${renderRespuestaBox(e.respuesta)}
+              <div class="hidden" data-detalle-consulta>
+                ${renderImagenesPregunta(e.imagenes)}
+                ${renderRespuestaBox(e.respuesta)}
+              </div>
             </div>`;
         }).join('')
       : '<p class="text-soft">Aún no has enviado ninguna consulta con ese filtro.</p>');
+
+    listadoEl.querySelectorAll('[data-fila-consulta]').forEach(fila => {
+      fila.addEventListener('click', (ev) => {
+        if (ev.target.closest('.btn-eliminar-pregunta') || ev.target.closest('a')) return;
+        const detalle = fila.querySelector('[data-detalle-consulta]');
+        const flecha = fila.querySelector('[data-flecha-consulta]');
+        const ahoraOculto = detalle.classList.toggle('hidden');
+        flecha.textContent = ahoraOculto ? '▾' : '▴';
+      });
+    });
 
     if (!mostrarTodas && filtradas.length > LIMITE_INICIAL) {
       listadoEl.innerHTML += `<button type="button" class="btn btn--ghost" id="btn-ver-todas-consultas">Ver todas (${filtradas.length})</button>`;
