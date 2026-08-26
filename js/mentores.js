@@ -757,7 +757,7 @@ function renderRespuestaMentorIA(preguntaId, p, mentorId) {
         <strong style="font-size:12px;">Respuesta del Mentor IA</strong>
         <span class="badge ${ESTADO_CLASES[estado]}" style="font-size:10px;">${ESTADO_LABELS[estado]}</span>
       </div>
-      <p class="respuesta-texto-actual" style="margin:4px 0;">${r.texto || ''}</p>
+      <p class="respuesta-texto-actual" style="margin:4px 0; white-space:pre-wrap;">${r.texto || ''}</p>
       <div class="acciones-revision" style="display:flex; gap:8px; margin-top:8px; flex-wrap:wrap;">
         <button type="button" class="btn btn--ghost btn-confirmar-respuesta" style="font-size:11px; padding:4px 8px;">✓ Confirmar sin cambios</button>
         <button type="button" class="btn btn--ghost btn-complementar-respuesta" style="font-size:11px; padding:4px 8px;">✏️ Complementar / Editar</button>

@@ -545,7 +545,7 @@ function renderRespuestaBox(respuesta) {
   if (respuesta.estadoRevision === 'intervenida') {
     html += '<p class="text-soft" style="margin:0 0 6px; font-size:11px; font-style:italic;">Respuesta complementaria de Mentor</p>';
   }
-  if (respuesta.texto) html += `<p style="margin:4px 0;">${linkify(respuesta.texto)}</p>`;
+  if (respuesta.texto) html += `<p style="margin:4px 0; white-space:pre-wrap;">${linkify(respuesta.texto)}</p>`;
   if (respuesta.archivoUrl && respuesta.archivoTipo === 'audio') {
     html += `<audio controls src="${respuesta.archivoUrl}" style="width:100%; margin-top:4px;"></audio>`;
   } else if (respuesta.archivoUrl && respuesta.archivoTipo === 'imagen') {
