@@ -344,6 +344,20 @@ a { color: inherit; }
 .field textarea { resize: vertical; min-height: 70px; }
 textarea { width: 100%; max-width: 100%; box-sizing: border-box; resize: vertical; }
 
+/* input[type="date"] en iOS/Safari trae su propio alto y centra el valor,
+   ignorando el padding de arriba — por eso se ve más alto y descuadrado
+   que los select/input de al lado. Forzamos alto consistente y alineamos
+   el valor a la izquierda igual que el resto de los campos. */
+.field input[type="date"] {
+  height: 38px;
+  padding-top: 0;
+  padding-bottom: 0;
+}
+.field input[type="date"]::-webkit-date-and-time-value {
+  text-align: left;
+  margin: 0;
+}
+
 .mentor-card-bloqueado {
   filter: grayscale(100%);
   opacity: 0.55;

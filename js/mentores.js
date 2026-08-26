@@ -755,12 +755,15 @@ export { cargarMentoriasView };
    MENTOR: BOX de Consultas — recibe preguntas de alumnos y
    responde con texto, audio o imagen.
    ============================================================ */
+const ESTADO_LABELS_BOX = { sin_revisar: 'Sin Revisar', confirmada: 'Confirmada', intervenida: 'Intervenida' };
+const ESTADO_CLASES_BOX = { sin_revisar: 'badge--impaga', confirmada: 'badge--activo', intervenida: 'badge--activo' };
+
 function renderRespuestaMentorIA(preguntaId, p, mentorId) {
   const r = p.respuesta;
   if (!r) return '<p class="text-soft" style="font-size:13px;">El Mentor IA todavía no responde esta pregunta.</p>';
 
-  const ESTADO_LABELS = { sin_revisar: 'Sin Revisar', confirmada: 'Confirmada', intervenida: 'Intervenida' };
-  const ESTADO_CLASES = { sin_revisar: 'badge--impaga', confirmada: 'badge--activo', intervenida: 'badge--activo' };
+  const ESTADO_LABELS = ESTADO_LABELS_BOX;
+  const ESTADO_CLASES = ESTADO_CLASES_BOX;
   const estado = r.estadoRevision || 'sin_revisar';
 
   return `
@@ -821,15 +824,35 @@ export async function cargarBoxMentor() {
     contenedor.innerHTML = '';
     filtradas.forEach(([preguntaId, p]) => {
       const fecha = new Intl.DateTimeFormat('es-CL', { day: '2-digit', month: 'short', year: 'numeric' }).format(new Date(p.createdAt));
+      const estado = (p.respuesta && p.respuesta.estadoRevision) || 'sin_revisar';
       const bloque = document.createElement('div');
-      bloque.style.cssText = 'padding:14px 0; border-bottom:0.5px solid var(--border);';
+      bloque.style.cssText = 'padding:14px 0; border-bottom:0.5px solid var(--border); cursor:pointer;';
+      bloque.setAttribute('data-fila-box-mentor', '');
       bloque.innerHTML = `
-        <strong>${p.alumnoNombre || 'Alumno'}</strong> <span class="text-soft" style="font-size:12px;">— ${fecha}</span>
-        <p style="margin:6px 0;">${p.pregunta || ''}</p>
-        ${(p.imagenes || []).map(url => `<img src="${url}" alt="" style="max-width:120px; border-radius:6px; margin:0 4px 6px 0;">`).join('')}
-        ${renderRespuestaMentorIA(preguntaId, p, uid)}
+        <div class="flex-between" style="align-items:flex-start; gap:10px;">
+          <div style="flex:1; min-width:0;">
+            <strong>${p.alumnoNombre || 'Alumno'}</strong> <span class="text-soft" style="font-size:12px;">— ${fecha}</span>
+            <p style="margin:6px 0 0;">${p.pregunta || ''}</p>
+          </div>
+          <div style="display:flex; align-items:center; gap:8px; flex-shrink:0;">
+            <span class="badge ${ESTADO_CLASES_BOX[estado]}" style="font-size:10px; white-space:nowrap;">${ESTADO_LABELS_BOX[estado]}</span>
+            <span class="text-soft" style="font-size:16px;" data-flecha-box-mentor>▾</span>
+          </div>
+        </div>
+        <div class="hidden" style="margin-top:10px;" data-detalle-box-mentor>
+          ${(p.imagenes || []).map(url => `<img src="${url}" alt="" style="max-width:120px; border-radius:6px; margin:0 4px 6px 0;">`).join('')}
+          ${renderRespuestaMentorIA(preguntaId, p, uid)}
+        </div>
       `;
       contenedor.appendChild(bloque);
+
+      bloque.addEventListener('click', (ev) => {
+        if (ev.target.closest('[data-detalle-box-mentor]')) return;
+        const detalle = bloque.querySelector('[data-detalle-box-mentor]');
+        const flecha = bloque.querySelector('[data-flecha-box-mentor]');
+        const ahoraOculto = detalle.classList.toggle('hidden');
+        flecha.textContent = ahoraOculto ? '▾' : '▴';
+      });
 
       const btnConfirmar = bloque.querySelector('.btn-confirmar-respuesta');
       const btnComplementar = bloque.querySelector('.btn-complementar-respuesta');
