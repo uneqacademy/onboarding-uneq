@@ -110,6 +110,32 @@ export function showView(id) {
   if (target) target.classList.remove('hidden');
 }
 
+/* --- Menú lateral en celular (cajón deslizante) --- */
+function cerrarSidebarMovil() {
+  const sidebar = document.getElementById('sidebar');
+  const overlay = document.getElementById('sidebar-overlay');
+  if (sidebar) sidebar.classList.remove('is-open');
+  if (overlay) overlay.classList.remove('is-visible');
+}
+
+const btnHamburger = document.getElementById('btn-hamburger');
+if (btnHamburger) {
+  btnHamburger.addEventListener('click', () => {
+    const sidebar = document.getElementById('sidebar');
+    const overlay = document.getElementById('sidebar-overlay');
+    if (sidebar) sidebar.classList.add('is-open');
+    if (overlay) overlay.classList.add('is-visible');
+  });
+}
+
+const sidebarOverlay = document.getElementById('sidebar-overlay');
+if (sidebarOverlay) sidebarOverlay.addEventListener('click', cerrarSidebarMovil);
+
+// Cierra el menú solo al elegir una sección — así en celular no queda tapando la pantalla
+document.querySelectorAll('.nav-item[data-nav]').forEach(item => {
+  item.addEventListener('click', cerrarSidebarMovil);
+});
+
 export function marcarNavActivo(section) {
   document.querySelectorAll('.nav-item[data-nav]').forEach(i =>
     i.classList.toggle('is-active', i.dataset.nav === section));

@@ -340,7 +340,7 @@ a { color: inherit; }
   color: var(--color-ink);
 }
 .field textarea { resize: vertical; min-height: 70px; }
-textarea { max-width: 100%; box-sizing: border-box; resize: vertical; }
+textarea { width: 100%; max-width: 100%; box-sizing: border-box; resize: vertical; }
 
 .mentor-card-bloqueado {
   filter: grayscale(100%);
@@ -501,3 +501,72 @@ textarea { max-width: 100%; box-sizing: border-box; resize: vertical; }
 .mb-16 { margin-bottom: 16px; }
 .mb-24 { margin-bottom: 24px; }
 .flex-between { display: flex; align-items: center; justify-content: space-between; }
+
+/* ============================================
+   RESPONSIVE (celular / pantallas angostas)
+   El sidebar pasa a ser un menú tipo cajón (drawer)
+   que se abre con el botón hamburguesa; las tablas
+   anchas quedan con scroll horizontal propio.
+   ============================================ */
+.btn-hamburger {
+  display: none;
+  background: transparent;
+  border: none;
+  font-size: 22px;
+  line-height: 1;
+  cursor: pointer;
+  color: var(--color-ink);
+  padding: 6px 10px;
+  border-radius: var(--radius-sm);
+}
+.btn-hamburger:hover { background: var(--color-surface-alt); }
+
+.sidebar-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  z-index: 999;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease;
+}
+.sidebar-overlay.is-visible { opacity: 1; pointer-events: auto; }
+
+@media (max-width: 900px) {
+  .app-shell { grid-template-columns: 1fr; }
+
+  .sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 100vh;
+    width: 260px;
+    max-width: 82vw;
+    z-index: 1000;
+    transform: translateX(-100%);
+    transition: transform 0.25s ease;
+    overflow-y: auto;
+  }
+  .sidebar.is-open { transform: translateX(0); }
+
+  .sidebar-overlay { display: block; }
+  .btn-hamburger { display: inline-flex; align-items: center; justify-content: center; }
+
+  .topbar { padding: 0 14px; }
+  .topbar__title { font-size: 15px; }
+  .content { padding: 16px; }
+
+  .panel__header { padding: 12px 14px; }
+  .panel__body { padding: 14px; }
+
+  .data-table { display: block; overflow-x: auto; white-space: nowrap; -webkit-overflow-scrolling: touch; }
+  .data-table th, .data-table td { padding: 10px; }
+}
+
+@media (max-width: 480px) {
+  .kpi-card__value { font-size: 20px; }
+  .kpi-card { padding: 12px 14px; }
+  .btn { font-size: 13px; padding: 8px 12px; }
+  h2 { font-size: 18px; }
+}

@@ -55,8 +55,10 @@
      ============================================================ -->
 <div id="app-shell" class="app-shell hidden">
 
+  <div class="sidebar-overlay" id="sidebar-overlay"></div>
+
   <!-- SIDEBAR -->
-  <aside class="sidebar">
+  <aside class="sidebar" id="sidebar">
     <div class="brand">
       <div class="brand__mark" style="width:26px; height:26px;" data-brand-mark></div>
       <div>
@@ -106,6 +108,7 @@
   <!-- MAIN -->
   <div class="main">
     <header class="topbar">
+      <button class="btn-hamburger" id="btn-hamburger" aria-label="Abrir menú">☰</button>
       <div class="topbar__title" id="topbar-title">Dashboard</div>
       <div class="topbar__right" style="display:flex; align-items:center; gap:8px; position:relative;">
         <button class="btn btn--ghost" id="btn-cambiar-password">Cambiar Contraseña</button>
