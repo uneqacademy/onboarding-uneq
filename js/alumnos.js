@@ -321,7 +321,8 @@ async function cargarCoaches() {
   coachesMap = {};
   if (snap.exists()) {
     Object.entries(snap.val()).forEach(([uid, u]) => {
-      if (u.rol === 'coach') coachesMap[uid] = u.nombre || u.email;
+      const tieneRolCoach = (u.roles && typeof u.roles === 'object') ? u.roles.coach === true : u.rol === 'coach';
+      if (tieneRolCoach) coachesMap[uid] = u.nombre || u.email;
     });
   }
   const selectNuevoAlumno = document.getElementById('nuevo-alumno-coach');
@@ -343,7 +344,9 @@ function crearFilaAlumno(alumnoId, alumno, ciclo, columnas, acuerdo) {
   tr.className = 'row-alumno';
 
   const nombreCompleto = `${alumno.nombre || ''} ${alumno.apellido || ''}`.trim() || '(sin nombre)';
-  const coachNombre = ciclo ? (coachesMap[ciclo.coachId] || '—') : '—';
+  const coachNombre = ciclo
+    ? (ciclo.coachId ? (coachesMap[ciclo.coachId] || '—') : (ciclo.programa === 'begin' ? '🚩 Coach de Cabecera' : '—'))
+    : '—';
   const programa = ciclo ? programaLabel(ciclo.programa) : '—';
   const estadoProceso = ciclo ? estadoProcesoLabel(ciclo.estadoProceso) : '—';
   const estadoAlumno = ciclo ? ciclo.estadoAlumno : 'activo';
@@ -380,6 +383,16 @@ export async function cargarListasAlumnos() {
   const acuerdos = (acuerdosSnap && acuerdosSnap.exists()) ? acuerdosSnap.val() : {};
   const uid = auth.currentUser ? auth.currentUser.uid : null;
 
+  // --- Si soy coach, reviso si tengo el flag de Coach de Cabecera (BEGIN):
+  //     me hace ver también, en mi LISTA de alumnos, a todos los de BEGIN
+  //     (aunque no tengan coach individual asignado). El conteo/KPI de
+  //     arriba NO se toca con esto — se queda solo con Next/eXIT. ---
+  let esCoachCabeceraBegin = false;
+  if (role === 'coach' && uid) {
+    const cabeceraSnap = await get(ref(db, `usuarios/${uid}/coachCabeceraBegin`));
+    esCoachCabeceraBegin = cabeceraSnap.exists() && cabeceraSnap.val() === true;
+  }
+
   const tbodyDashDirector = document.getElementById('tabla-alumnos-dashboard-director');
   const tbodyDashCoach = document.getElementById('tabla-alumnos-dashboard-coach');
   const tbodyDirector = document.getElementById('tabla-alumnos-director');
@@ -394,7 +407,9 @@ export async function cargarListasAlumnos() {
       if (tbodyDashDirector) tbodyDashDirector.appendChild(crearFilaAlumno(alumnoId, alumno, ciclo, { coach: true, fechas: false, pago: true }, acuerdo));
       if (tbodyDirector) tbodyDirector.appendChild(crearFilaAlumno(alumnoId, alumno, ciclo, { coach: true, fechas: true, pago: false }));
     } else if (role === 'coach') {
-      if (!ciclo || ciclo.coachId !== uid) return;
+      const esMio = ciclo && ciclo.coachId === uid;
+      const esBeginDeCabecera = ciclo && ciclo.programa === 'begin' && esCoachCabeceraBegin;
+      if (!ciclo || !(esMio || esBeginDeCabecera)) return;
       if (tbodyDashCoach) tbodyDashCoach.appendChild(crearFilaAlumno(alumnoId, alumno, ciclo, { coach: false, fase: true, fechas: false, pago: false }));
       if (tbodyCoach) tbodyCoach.appendChild(crearFilaAlumno(alumnoId, alumno, ciclo, { coach: false, fase: true, fechas: true, pago: false }));
     }
@@ -648,7 +663,7 @@ async function abrirFicha(alumnoId) {
   document.getElementById('ficha-rut').textContent = alumno.rut || '—';
   document.getElementById('ficha-programa').textContent = ciclo ? programaLabel(ciclo.programa) : '—';
   document.getElementById('ficha-coach-nombre').textContent = ciclo
-    ? (role === 'coach' ? getCurrentUserNombre() : (coachesMap[ciclo.coachId] || '—'))
+    ? (role === 'coach' ? getCurrentUserNombre() : (ciclo.coachId ? (coachesMap[ciclo.coachId] || '—') : (ciclo.programa === 'begin' ? '🚩 Coach de Cabecera' : '—')))
     : '—';
 
   const badge = document.getElementById('ficha-badge-estado');
@@ -711,6 +726,7 @@ async function abrirFicha(alumnoId) {
     document.getElementById('ciclo-fase-metodologia').value = ciclo.faseMetodologia || '';
     actualizarBotonWhatsapp(!!ciclo.enGrupoWhatsapp);
   }
+  actualizarCampoCoachSegunPrograma('ciclo-programa', 'campo-ciclo-coach', 'aviso-ciclo-begin-sin-coach');
 
   const estadoProceso = ciclo ? ciclo.estadoProceso : 'asignado';
   estadoProcesoActual = estadoProceso;
@@ -721,6 +737,7 @@ async function abrirFicha(alumnoId) {
   document.getElementById('panel-nuevo-ciclo').classList.toggle('hidden', !(role === 'director' && estadoAlumnoActual === 'egresado'));
   if (role === 'director' && estadoAlumnoActual === 'egresado') {
     poblarSelectCoaches(document.getElementById('nuevo-ciclo-coach'), null);
+    actualizarCampoCoachSegunPrograma('nuevo-ciclo-programa', 'campo-nuevo-ciclo-coach', 'aviso-nuevo-ciclo-begin-sin-coach');
   }
 
   await renderHistorialCiclos(alumno.ciclosAnteriores);
@@ -788,13 +805,13 @@ if (btnCrearAlumno) {
     const nombre = document.getElementById('nuevo-alumno-nombre').value.trim();
     const apellido = document.getElementById('nuevo-alumno-apellido').value.trim();
     const programa = document.getElementById('nuevo-alumno-programa').value;
-    const coachId = document.getElementById('nuevo-alumno-coach').value;
+    const coachId = programa === 'begin' ? null : document.getElementById('nuevo-alumno-coach').value;
     const monto = document.getElementById('nuevo-alumno-monto').value.trim();
     const moneda = document.getElementById('nuevo-alumno-moneda').value;
     const descuento = document.getElementById('nuevo-alumno-descuento').value.trim();
     const abono = document.getElementById('nuevo-alumno-abono').value.trim();
 
-    if (!nombre || !apellido || !coachId) {
+    if (!nombre || !apellido || (programa !== 'begin' && !coachId)) {
       errorEl.textContent = 'Completa nombre, apellido y coach asignado.';
       errorEl.classList.remove('hidden');
       return;
@@ -931,7 +948,8 @@ if (btnGuardarCiclo) {
     btnGuardarCiclo.disabled = true;
     try {
       if (getCurrentRole() === 'director') {
-        datos.coachId = document.getElementById('ciclo-coach').value;
+        const programaActualCiclo = document.getElementById('ciclo-programa').value;
+        datos.coachId = programaActualCiclo === 'begin' ? null : document.getElementById('ciclo-coach').value;
         const fechaIngresoManual = document.getElementById('ciclo-fecha-ingreso').value;
         const fechaEgresoManual = document.getElementById('ciclo-fecha-egreso').value;
         if (fechaIngresoManual) datos.fechaIngreso = fechaIngresoManual;
@@ -1007,6 +1025,19 @@ if (btnToggleCandado) {
 /* --- Autocompleta el Monto Total según el programa elegido.
        CLP: usa el precio base directo. USD: usa el tipo de cambio manual
        que ingresa el director (precioClp / tipoCambio). --- */
+/* --- BEGIN no lleva coach individual (lo ve el Coach de Cabecera) —
+       oculta el campo "Coach Asignado" cuando el programa elegido es
+       Begin, en los 3 lugares donde se elige programa + coach. --- */
+function actualizarCampoCoachSegunPrograma(selectProgramaId, campoCoachId, avisoId) {
+  const selectPrograma = document.getElementById(selectProgramaId);
+  const campoCoach = document.getElementById(campoCoachId);
+  if (!selectPrograma || !campoCoach) return;
+  const esBegin = selectPrograma.value === 'begin';
+  campoCoach.classList.toggle('hidden', esBegin);
+  const aviso = avisoId ? document.getElementById(avisoId) : null;
+  if (aviso) aviso.classList.toggle('hidden', !esBegin);
+}
+
 function autocompletarMontoNuevoAlumno() {
   const selectPrograma = document.getElementById('nuevo-alumno-programa');
   const selectMoneda = document.getElementById('nuevo-alumno-moneda');
@@ -1032,10 +1063,14 @@ function autocompletarMontoNuevoAlumno() {
 const selectNuevoAlumnoPrograma = document.getElementById('nuevo-alumno-programa');
 const selectNuevoAlumnoMoneda = document.getElementById('nuevo-alumno-moneda');
 const inputNuevoAlumnoTipoCambio = document.getElementById('nuevo-alumno-tipo-cambio');
-if (selectNuevoAlumnoPrograma) selectNuevoAlumnoPrograma.addEventListener('change', autocompletarMontoNuevoAlumno);
+if (selectNuevoAlumnoPrograma) {
+  selectNuevoAlumnoPrograma.addEventListener('change', autocompletarMontoNuevoAlumno);
+  selectNuevoAlumnoPrograma.addEventListener('change', () => actualizarCampoCoachSegunPrograma('nuevo-alumno-programa', 'campo-nuevo-alumno-coach', 'aviso-nuevo-alumno-begin-sin-coach'));
+}
 if (selectNuevoAlumnoMoneda) selectNuevoAlumnoMoneda.addEventListener('change', autocompletarMontoNuevoAlumno);
 if (inputNuevoAlumnoTipoCambio) inputNuevoAlumnoTipoCambio.addEventListener('input', autocompletarMontoNuevoAlumno);
 autocompletarMontoNuevoAlumno(); // prefill inicial (Begin · CLP por defecto)
+actualizarCampoCoachSegunPrograma('nuevo-alumno-programa', 'campo-nuevo-alumno-coach', 'aviso-nuevo-alumno-begin-sin-coach');
 
 const btnEliminarAlumno = document.getElementById('btn-eliminar-alumno');
 if (btnEliminarAlumno) {
@@ -1093,7 +1128,10 @@ function autocompletarMontoNuevoCiclo() {
 }
 const selectNuevoCicloPrograma = document.getElementById('nuevo-ciclo-programa');
 const selectNuevoCicloMoneda = document.getElementById('nuevo-ciclo-moneda');
-if (selectNuevoCicloPrograma) selectNuevoCicloPrograma.addEventListener('change', autocompletarMontoNuevoCiclo);
+if (selectNuevoCicloPrograma) {
+  selectNuevoCicloPrograma.addEventListener('change', autocompletarMontoNuevoCiclo);
+  selectNuevoCicloPrograma.addEventListener('change', () => actualizarCampoCoachSegunPrograma('nuevo-ciclo-programa', 'campo-nuevo-ciclo-coach', 'aviso-nuevo-ciclo-begin-sin-coach'));
+}
 if (selectNuevoCicloMoneda) selectNuevoCicloMoneda.addEventListener('change', autocompletarMontoNuevoCiclo);
 
 const btnCrearNuevoCiclo = document.getElementById('btn-crear-nuevo-ciclo');
@@ -1101,11 +1139,11 @@ if (btnCrearNuevoCiclo) {
   btnCrearNuevoCiclo.addEventListener('click', async () => {
     if (!currentAlumnoId || !currentCicloId) return;
     const programa = document.getElementById('nuevo-ciclo-programa').value;
-    const coachId = document.getElementById('nuevo-ciclo-coach').value;
+    const coachId = programa === 'begin' ? null : document.getElementById('nuevo-ciclo-coach').value;
     const monto = document.getElementById('nuevo-ciclo-monto').value.trim();
     const moneda = document.getElementById('nuevo-ciclo-moneda').value;
 
-    if (!coachId) { alert('Selecciona un coach.'); return; }
+    if (programa !== 'begin' && !coachId) { alert('Selecciona un coach.'); return; }
 
     btnCrearNuevoCiclo.disabled = true;
     try {

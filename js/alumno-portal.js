@@ -148,9 +148,8 @@ export async function cargarDashboardAlumno(alumnoId) {
     ciclo = cicloSnap.exists() ? cicloSnap.val() : null;
   }
 
-  // --- BEGIN no tiene acceso al BOX de Consultas / Mentor IA por ahora ---
-  const navBox = document.querySelector('.nav-item[data-nav="box-consultas"]');
-  if (navBox) navBox.classList.toggle('hidden', ciclo && ciclo.programa === 'begin');
+  // --- El BOX de Consultas ahora sí es visible para BEGIN — ve un canal
+  //     distinto (ver cargarBoxAlumno), no el de Mentor IA por especialidad.
 
   // --- Foto grande sobre el menú lateral ---
   const fotoSidebar = document.getElementById('sidebar-foto-alumno');
@@ -224,9 +223,16 @@ export async function cargarDashboardAlumno(alumnoId) {
       : (programa === 'next' || programa === 'exit') ? config.whatsappNextExit : '';
 
     let coach = null;
+    let esCoachCabeceraMsg = false;
     if (ciclo && ciclo.coachId) {
       const coachSnap = await get(ref(db, `usuarios/${ciclo.coachId}`));
       coach = coachSnap.exists() ? coachSnap.val() : null;
+    } else if (ciclo && ciclo.programa === 'begin') {
+      const usuariosSnapCabecera = await get(ref(db, 'usuarios'));
+      if (usuariosSnapCabecera.exists()) {
+        coach = Object.values(usuariosSnapCabecera.val()).find(u => u.coachCabeceraBegin === true) || null;
+        esCoachCabeceraMsg = !!coach;
+      }
     }
     const numeroFase = (ciclo && ciclo.faseMetodologia && /\d/.test(ciclo.faseMetodologia)) ? ciclo.faseMetodologia.match(/\d/)[0] : null;
     const fraseFase = numeroFase
@@ -256,7 +262,7 @@ export async function cargarDashboardAlumno(alumnoId) {
       </div>
       <div style="line-height:1.6;">
         <p style="margin:0 0 8px; line-height:1.6;">
-          ${coach ? `Tu Coach es <strong>${coach.nombre || '—'}</strong>` : 'Aún no tienes coach asignado'}
+          ${coach ? `Tu Coach es <strong>${coach.nombre || '—'}</strong>${esCoachCabeceraMsg ? ' <span style="font-size:11px;">🚩 Coach de Cabecera</span>' : ''}` : 'Aún no tienes coach asignado'}
           ${whatsappCoachUrl ? ` <a href="${whatsappCoachUrl}" target="_blank" rel="noopener" class="btn" style="background:#25D366; color:#fff; padding:4px 12px; font-size:12px;">💬 WhatsApp</a>` : ''}
         </p>
         <p style="margin:0 0 8px; line-height:1.6;">${fraseFase}</p>
@@ -577,9 +583,35 @@ async function subirImagenesPregunta(rutaBase, files) {
 }
 
 export async function cargarBoxAlumno() {
+  if (!alumnoIdActual) return;
+
+  // --- BEGIN usa un canal distinto: sin elegir mentor, sin IA,
+  //     respuesta manual de "un mentor disponible". Ver más abajo
+  //     cargarBoxBeginAlumno(). ---
+  const alumnoSnapBox = await get(ref(db, `alumnos/${alumnoIdActual}`));
+  const alumnoDatosBox = alumnoSnapBox.exists() ? alumnoSnapBox.val() : {};
+  let programaBox = null;
+  if (alumnoDatosBox.cicloActualId) {
+    const cicloSnapBox = await get(ref(db, `ciclos/${alumnoDatosBox.cicloActualId}`));
+    programaBox = cicloSnapBox.exists() ? (cicloSnapBox.val().programa || null) : null;
+  }
+  const contMentorIA = document.getElementById('box-alumno-mentor-ia-contenedor');
+  const contBegin = document.getElementById('box-alumno-begin-contenedor');
+  const contadorEl = document.getElementById('box-alumno-contador');
+
+  if (programaBox === 'begin') {
+    if (contMentorIA) contMentorIA.classList.add('hidden');
+    if (contBegin) contBegin.classList.remove('hidden');
+    if (contadorEl) contadorEl.textContent = 'Tienes hasta 2 preguntas por semana';
+    await cargarBoxBeginAlumno();
+    return;
+  }
+  if (contMentorIA) contMentorIA.classList.remove('hidden');
+  if (contBegin) contBegin.classList.add('hidden');
+
   const gridEl = document.getElementById('box-alumno-mentores-grid');
   const listadoEl = document.getElementById('box-alumno-listado');
-  if (!gridEl || !listadoEl || !alumnoIdActual) return;
+  if (!gridEl || !listadoEl) return;
 
   const usuariosSnap = await get(ref(db, 'usuarios'));
   const usuarios = usuariosSnap.exists() ? usuariosSnap.val() : {};
@@ -602,7 +634,6 @@ export async function cargarBoxAlumno() {
   const deEstaSemana = entradas.filter(e => e.createdAt >= inicioSemana);
   const mentoresPreguntadosEstaSemana = new Set(deEstaSemana.map(e => e.mentorId));
 
-  const contadorEl = document.getElementById('box-alumno-contador');
   if (contadorEl) contadorEl.textContent = 'Tienes 1 pregunta por cada Mentor IA por semana';
 
   // --- Tarjetas de mentor ---
@@ -817,6 +848,138 @@ if (btnActualizarMisConsultas) {
         btnDeNuevo.disabled = false;
         btnDeNuevo.textContent = textoOriginal;
       }
+    }
+  });
+}
+
+/* ============================================================
+   BOX — ALUMNO BEGIN: canal único de preguntas por temática,
+   sin elegir mentor, respondidas a mano por "un Mentor disponible".
+   Límite: 2 preguntas por semana (total, no por mentor).
+   ============================================================ */
+async function cargarBoxBeginAlumno() {
+  const listadoEl = document.getElementById('box-begin-listado');
+  const selectTematica = document.getElementById('box-begin-tematica');
+  if (!listadoEl || !selectTematica || !alumnoIdActual) return;
+
+  const tematicasSnap = await get(ref(db, 'configuracion/tematicasBoxBegin'));
+  const tematicas = tematicasSnap.exists() ? tematicasSnap.val() : {};
+  const valorPrevio = selectTematica.value;
+  selectTematica.innerHTML = Object.values(tematicas).map(t => `<option value="${t}">${t}</option>`).join('');
+  if (valorPrevio && Object.values(tematicas).includes(valorPrevio)) selectTematica.value = valorPrevio;
+
+  const campoOtra = document.getElementById('box-begin-tematica-otra-campo');
+  const actualizarCampoOtra = () => { if (campoOtra) campoOtra.classList.toggle('hidden', selectTematica.value !== 'Otra'); };
+  selectTematica.onchange = actualizarCampoOtra;
+  actualizarCampoOtra();
+
+  const boxBeginSnap = await get(ref(db, 'boxBegin'));
+  const todas = boxBeginSnap.exists() ? Object.entries(boxBeginSnap.val()) : [];
+  const propias = todas.filter(([, p]) => p.alumnoId === alumnoIdActual).sort((a, b) => b[1].createdAt - a[1].createdAt);
+
+  const inicioSemana = inicioSemanaActual();
+  const estaSemana = propias.filter(([, p]) => p.createdAt >= inicioSemana);
+  const puedePreguntar = estaSemana.length < 2;
+
+  const btnEnviar = document.getElementById('btn-enviar-pregunta-box-begin');
+  if (btnEnviar) {
+    btnEnviar.disabled = !puedePreguntar;
+    btnEnviar.title = puedePreguntar ? '' : 'Ya usaste tus 2 preguntas de esta semana — vuelve la próxima semana.';
+  }
+
+  listadoEl.innerHTML = propias.length
+    ? propias.map(([, p]) => `
+        <div class="panel mb-16" style="padding:14px;">
+          <span class="badge badge--activo" style="font-size:10px;">${p.tematica || 'Sin temática'}</span>
+          <p style="margin:8px 0 0;">${linkify(p.pregunta || '')}</p>
+          ${renderImagenesPregunta(p.imagenes)}
+          ${p.respuesta
+            ? `<div style="margin-top:10px; padding:10px; background:#F7F8FA; border-radius:8px;">
+                 <strong style="font-size:12px;">Respuesta${p.respuesta.mentorNombre ? ` de ${p.respuesta.mentorNombre}` : ''}</strong>
+                 <p style="margin:4px 0 0; white-space:pre-wrap;">${linkify(p.respuesta.texto || '')}</p>
+               </div>`
+            : '<p class="text-soft" style="margin-top:8px; font-size:12px;">Aún sin responder — puede tardar hasta 3 días hábiles.</p>'}
+        </div>`).join('')
+    : '<p class="text-soft">Todavía no has enviado ninguna pregunta.</p>';
+}
+
+let imagenesSelBoxBegin = [];
+const btnAdjuntarBoxBegin = document.getElementById('btn-adjuntar-imagenes-box-begin');
+const inputImagenesBoxBegin = document.getElementById('input-imagenes-box-begin');
+if (btnAdjuntarBoxBegin && inputImagenesBoxBegin) {
+  btnAdjuntarBoxBegin.addEventListener('click', () => inputImagenesBoxBegin.click());
+  inputImagenesBoxBegin.addEventListener('change', () => {
+    imagenesSelBoxBegin = Array.from(inputImagenesBoxBegin.files);
+    document.getElementById('box-begin-imagenes-preview').innerHTML = imagenesSelBoxBegin
+      .map(f => `<span class="text-soft" style="font-size:11px; background:#F0F1F3; padding:3px 8px; border-radius:6px;">🖼️ ${f.name}</span>`).join('');
+  });
+}
+
+const btnEnviarBoxBegin = document.getElementById('btn-enviar-pregunta-box-begin');
+if (btnEnviarBoxBegin) {
+  btnEnviarBoxBegin.addEventListener('click', async () => {
+    const errorEl = document.getElementById('box-begin-error');
+    errorEl.classList.add('hidden');
+
+    const selectTematica = document.getElementById('box-begin-tematica');
+    let tematica = selectTematica.value;
+    if (tematica === 'Otra') {
+      const libre = document.getElementById('box-begin-tematica-otra-texto').value.trim();
+      if (!libre) {
+        errorEl.textContent = 'Escribe de qué se trata tu temática.';
+        errorEl.classList.remove('hidden');
+        return;
+      }
+      tematica = `Otra: ${libre}`;
+    }
+
+    const pregunta = document.getElementById('box-begin-pregunta').value.trim();
+    if (!pregunta && !imagenesSelBoxBegin.length) {
+      errorEl.textContent = 'Escribe tu pregunta o adjunta una imagen.';
+      errorEl.classList.remove('hidden');
+      return;
+    }
+
+    btnEnviarBoxBegin.disabled = true;
+    try {
+      const preguntaId = push(ref(db, 'boxBegin')).key;
+      const alumnoSnap = await get(ref(db, `alumnos/${alumnoIdActual}`));
+      const alumno = alumnoSnap.exists() ? alumnoSnap.val() : {};
+      const nombreAlumno = `${alumno.nombre || ''} ${alumno.apellido || ''}`.trim();
+      const imagenes = imagenesSelBoxBegin.length
+        ? await subirImagenesPregunta(`box-begin/${preguntaId}`, imagenesSelBoxBegin)
+        : [];
+      await set(ref(db, `boxBegin/${preguntaId}`), {
+        alumnoId: alumnoIdActual, alumnoNombre: nombreAlumno, tematica, pregunta, imagenes, createdAt: Date.now()
+      });
+
+      document.getElementById('box-begin-pregunta').value = '';
+      document.getElementById('box-begin-imagenes-preview').innerHTML = '';
+      inputImagenesBoxBegin.value = '';
+      imagenesSelBoxBegin = [];
+      const campoOtraReset = document.getElementById('box-begin-tematica-otra-campo');
+      const inputOtraReset = document.getElementById('box-begin-tematica-otra-texto');
+      if (campoOtraReset) campoOtraReset.classList.add('hidden');
+      if (inputOtraReset) inputOtraReset.value = '';
+
+      await cargarBoxBeginAlumno();
+    } catch (err) {
+      errorEl.textContent = 'No se pudo enviar. Intenta de nuevo.';
+      errorEl.classList.remove('hidden');
+    } finally {
+      btnEnviarBoxBegin.disabled = false;
+    }
+  });
+}
+
+const btnActualizarBoxBegin = document.getElementById('btn-actualizar-box-begin');
+if (btnActualizarBoxBegin) {
+  btnActualizarBoxBegin.addEventListener('click', async () => {
+    btnActualizarBoxBegin.disabled = true;
+    try {
+      await cargarBoxBeginAlumno();
+    } finally {
+      btnActualizarBoxBegin.disabled = false;
     }
   });
 }

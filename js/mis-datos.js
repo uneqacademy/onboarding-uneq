@@ -25,7 +25,8 @@ export async function cargarMisDatos() {
   document.getElementById('mis-datos-foto-preview').src = datos.fotoUrl || PLACEHOLDER_FOTO_MIS_DATOS;
   document.getElementById('mis-datos-nombre').innerHTML = `<strong>${datos.nombre || '—'}</strong>`;
   const rolActivo = getCurrentRole();
-  document.getElementById('mis-datos-rol').textContent = NOMBRES_ROL_MIS_DATOS[rolActivo] || rolActivo || '';
+  document.getElementById('mis-datos-rol').textContent =
+    (NOMBRES_ROL_MIS_DATOS[rolActivo] || rolActivo || '') + (datos.coachCabeceraBegin === true ? ' 🚩 Coach de Cabecera (BEGIN)' : '');
   document.getElementById('mis-datos-email').value = datos.email || '';
   document.getElementById('mis-datos-telefono').value = datos.telefono || '';
 
@@ -42,7 +43,22 @@ export async function cargarMisDatos() {
     const roles = (datos.roles && typeof datos.roles === 'object') ? datos.roles : (datos.rol ? { [datos.rol]: true } : {});
     document.getElementById('chk-rol-propio-coach').checked = !!roles.coach;
     document.getElementById('chk-rol-propio-mentor').checked = !!roles.mentor;
+    aplicarBloqueoRolesPropios(true);
   }
+}
+
+/* --- Igual que el bloqueo de Correo/Teléfono: tras guardar, los checkbox
+       quedan bloqueados y aparece "Editar"; el botón Guardar solo se ve
+       mientras se está editando. --- */
+function aplicarBloqueoRolesPropios(bloqueado) {
+  const chkCoach = document.getElementById('chk-rol-propio-coach');
+  const chkMentor = document.getElementById('chk-rol-propio-mentor');
+  const btnGuardar = document.getElementById('btn-guardar-roles-propios');
+  const btnEditar = document.getElementById('btn-editar-roles-propios');
+  if (chkCoach) chkCoach.disabled = bloqueado;
+  if (chkMentor) chkMentor.disabled = bloqueado;
+  if (btnGuardar) btnGuardar.classList.toggle('hidden', bloqueado);
+  if (btnEditar) btnEditar.classList.toggle('hidden', !bloqueado);
 }
 
 const btnCambiarFotoMisDatos = document.getElementById('btn-cambiar-foto-mis-datos');
@@ -112,11 +128,17 @@ if (btnGuardarRolesPropios) {
         mentor: document.getElementById('chk-rol-propio-mentor').checked
       };
       await update(ref(db, `usuarios/${uid}`), { roles: nuevosRoles, rol: null });
+      aplicarBloqueoRolesPropios(true);
       alert('Roles actualizados — cierra sesión y vuelve a entrar para ver el selector "Viendo como" con los cambios.');
     } finally {
       btnGuardarRolesPropios.disabled = false;
     }
   });
+}
+
+const btnEditarRolesPropios = document.getElementById('btn-editar-roles-propios');
+if (btnEditarRolesPropios) {
+  btnEditarRolesPropios.addEventListener('click', () => aplicarBloqueoRolesPropios(false));
 }
 
 document.querySelectorAll('.nav-item[data-nav="mis-datos"]').forEach(item => {

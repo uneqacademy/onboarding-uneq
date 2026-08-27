@@ -917,6 +917,139 @@ document.querySelectorAll('.nav-item[data-nav="box-consultas"]').forEach(item =>
 });
 
 /* ============================================================
+   BOX BEGIN — bandeja compartida: cualquier mentor puede
+   responder cualquier pregunta (primero en escribir, gana).
+   Sin IA, respuesta 100% manual.
+   ============================================================ */
+async function cargarBoxBeginMentor() {
+  const listadoEl = document.getElementById('box-begin-mentor-listado');
+  if (!listadoEl) return;
+  const uid = auth.currentUser ? auth.currentUser.uid : null;
+  if (!uid) return;
+
+  const snap = await get(ref(db, 'boxBegin'));
+  const todas = snap.exists() ? Object.entries(snap.val()) : [];
+
+  const filtroEstadoEl = document.getElementById('box-begin-mentor-filtro-estado');
+  const filtroTematicaEl = document.getElementById('box-begin-mentor-filtro-tematica');
+  const filtroAlumnoEl = document.getElementById('box-begin-mentor-filtro-alumno');
+  const filtroRespondioEl = document.getElementById('box-begin-mentor-filtro-respondio');
+  const filtroDesdeEl = document.getElementById('box-begin-mentor-filtro-desde');
+  const filtroHastaEl = document.getElementById('box-begin-mentor-filtro-hasta');
+
+  if (filtroTematicaEl) {
+    const tematicas = [...new Set(todas.map(([, p]) => p.tematica).filter(Boolean))].sort();
+    const valorPrevio = filtroTematicaEl.value;
+    filtroTematicaEl.innerHTML = '<option value="">Todas</option>' + tematicas.map(t => `<option value="${t}">${t}</option>`).join('');
+    if (tematicas.includes(valorPrevio)) filtroTematicaEl.value = valorPrevio;
+  }
+  if (filtroAlumnoEl) {
+    const alumnos = [...new Map(todas.map(([, p]) => [p.alumnoId, p.alumnoNombre])).entries()];
+    const valorPrevio = filtroAlumnoEl.value;
+    filtroAlumnoEl.innerHTML = '<option value="">Todos</option>' + alumnos.map(([id, nombre]) => `<option value="${id}">${nombre}</option>`).join('');
+    filtroAlumnoEl.value = valorPrevio;
+  }
+  if (filtroRespondioEl) {
+    const mentoresQueRespondieron = [...new Map(
+      todas.filter(([, p]) => p.respuesta).map(([, p]) => [p.respuesta.mentorId, p.respuesta.mentorNombre])
+    ).entries()];
+    const valorPrevio = filtroRespondioEl.value;
+    filtroRespondioEl.innerHTML = '<option value="">Todos</option>' + mentoresQueRespondieron.map(([id, nombre]) => `<option value="${id}">${nombre}</option>`).join('');
+    filtroRespondioEl.value = valorPrevio;
+  }
+
+  function render() {
+    const fEstado = filtroEstadoEl ? filtroEstadoEl.value : 'pendientes';
+    const fTematica = filtroTematicaEl ? filtroTematicaEl.value : '';
+    const fAlumno = filtroAlumnoEl ? filtroAlumnoEl.value : '';
+    const fRespondio = filtroRespondioEl ? filtroRespondioEl.value : '';
+    const fDesde = filtroDesdeEl && filtroDesdeEl.value ? new Date(filtroDesdeEl.value + 'T00:00:00').getTime() : null;
+    const fHasta = filtroHastaEl && filtroHastaEl.value ? new Date(filtroHastaEl.value + 'T23:59:59').getTime() : null;
+
+    const filtradas = todas
+      .filter(([, p]) => {
+        if (fEstado === 'pendientes' && p.respuesta) return false;
+        if (fEstado === 'respondidas' && !p.respuesta) return false;
+        if (fTematica && p.tematica !== fTematica) return false;
+        if (fAlumno && p.alumnoId !== fAlumno) return false;
+        if (fRespondio && (!p.respuesta || p.respuesta.mentorId !== fRespondio)) return false;
+        if (fDesde && p.createdAt < fDesde) return false;
+        if (fHasta && p.createdAt > fHasta) return false;
+        return true;
+      })
+      .sort((a, b) => b[1].createdAt - a[1].createdAt);
+
+    listadoEl.innerHTML = '';
+    if (!filtradas.length) {
+      listadoEl.innerHTML = '<p class="text-soft">No hay preguntas con ese filtro.</p>';
+      return;
+    }
+
+    filtradas.forEach(([preguntaId, p]) => {
+      const fecha = new Intl.DateTimeFormat('es-CL', { day: '2-digit', month: 'short', year: 'numeric' }).format(new Date(p.createdAt));
+      const bloque = document.createElement('div');
+      bloque.style.cssText = 'padding:14px 0; border-bottom:0.5px solid var(--border); cursor:pointer;';
+      bloque.innerHTML = `
+        <div class="flex-between" style="align-items:flex-start; gap:10px;">
+          <div style="flex:1; min-width:0;">
+            <strong>${p.alumnoNombre || 'Alumno'}</strong> <span class="text-soft" style="font-size:12px;">— ${fecha}</span>
+            <span class="badge badge--activo" style="font-size:10px; margin-left:6px;">${p.tematica || 'Sin temática'}</span>
+            <p style="margin:6px 0 0;">${p.pregunta || ''}</p>
+            ${p.respuesta ? `<p class="text-soft" style="margin:4px 0 0; font-size:11px;">Respondida por ${p.respuesta.mentorNombre || 'un mentor'}</p>` : ''}
+          </div>
+          <span class="badge ${p.respuesta ? 'badge--activo' : 'badge--impaga'}" style="font-size:10px; white-space:nowrap;">${p.respuesta ? '✓ Respondida — solo lectura' : 'No respondida — puedes responder'}</span>
+        </div>
+        <div class="hidden" style="margin-top:10px;" data-detalle-box-begin></div>`;
+      listadoEl.appendChild(bloque);
+
+      bloque.addEventListener('click', (ev) => {
+        if (ev.target.closest('[data-detalle-box-begin]')) return;
+        const detalle = bloque.querySelector('[data-detalle-box-begin]');
+        const quedaOculto = detalle.classList.toggle('hidden');
+        if (quedaOculto || detalle.dataset.cargado) return;
+        detalle.dataset.cargado = '1';
+        detalle.innerHTML = `
+          ${(p.imagenes || []).map(url => `<img src="${url}" alt="" style="max-width:120px; border-radius:6px; margin:0 4px 6px 0;">`).join('')}
+          ${p.respuesta
+            ? `<div style="padding:10px; background:#F7F8FA; border-radius:8px;"><strong style="font-size:12px;">Respuesta de ${p.respuesta.mentorNombre || 'un mentor'}</strong><p style="margin:4px 0 0; white-space:pre-wrap;">${p.respuesta.texto || ''}</p></div>`
+            : `<textarea class="box-begin-textarea-respuesta" placeholder="Escribe la respuesta..." style="min-height:120px; width:100%;"></textarea>
+               <button type="button" class="btn btn--primary btn-responder-box-begin" style="font-size:12px; margin-top:8px;">Enviar Respuesta</button>`}
+        `;
+        const btnResponder = detalle.querySelector('.btn-responder-box-begin');
+        if (btnResponder) {
+          btnResponder.addEventListener('click', async () => {
+            const texto = detalle.querySelector('.box-begin-textarea-respuesta').value.trim();
+            if (!texto) { alert('Escribe una respuesta antes de enviar.'); return; }
+            btnResponder.disabled = true;
+            try {
+              const mentorSnap = await get(ref(db, `usuarios/${uid}`));
+              const mentorDatos = mentorSnap.exists() ? mentorSnap.val() : {};
+              await update(ref(db, `boxBegin/${preguntaId}`), {
+                respuesta: { texto, mentorId: uid, mentorNombre: mentorDatos.nombre || mentorDatos.email || 'Mentor', createdAt: Date.now() }
+              });
+              await cargarBoxBeginMentor();
+            } catch (err) {
+              alert('No se pudo enviar — alguien más ya la había respondido justo antes que tú.');
+              btnResponder.disabled = false;
+              await cargarBoxBeginMentor();
+            }
+          });
+        }
+      });
+    });
+  }
+
+  render();
+  [filtroEstadoEl, filtroTematicaEl, filtroAlumnoEl, filtroRespondioEl, filtroDesdeEl, filtroHastaEl].forEach(el => {
+    if (el) el.onchange = render;
+  });
+}
+
+document.querySelectorAll('.nav-item[data-nav="box-consultas"]').forEach(item => {
+  item.addEventListener('click', cargarBoxBeginMentor);
+});
+
+/* ============================================================
    Mentor IA — foto exclusiva, instrucciones de estilo, y
    conocimiento adicional (texto libre o archivos). Todo esto
    alimenta al Mentor IA del BOX de Consultas junto con lo

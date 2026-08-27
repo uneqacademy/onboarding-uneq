@@ -165,6 +165,7 @@ async function cargarCoachesView() {
     .filter(([, u]) => tieneRol(u, 'coach'))
     .forEach(([uid, coach]) => {
       const nombreCoach = coach.nombre || coach.email;
+      const esCabeceraBegin = coach.coachCabeceraBegin === true;
       const alumnosDeCoach = Object.entries(alumnos).filter(([, al]) => {
         const ciclo = al.cicloActualId ? ciclos[al.cicloActualId] : null;
         return ciclo && ciclo.coachId === uid;
@@ -181,7 +182,7 @@ async function cargarCoachesView() {
 
       const tr = document.createElement('tr');
       tr.innerHTML = `
-        <td>${nombreCoach}</td>
+        <td>${nombreCoach}${esCabeceraBegin ? ' <span title="Coach de Cabecera — ve a todos los alumnos BEGIN">🚩</span>' : ''}</td>
         <td>${coach.email || ''}</td>
         <td>${alumnosDeCoach.length}</td>
         <td><span class="badge ${coach.activo === false ? 'badge--impaga' : 'badge--activo'}">${coach.activo === false ? 'Inactivo' : 'Activo'}</span></td>
@@ -261,7 +262,18 @@ async function cargarCoachesView() {
             alert('Para ser Coach de Cabecera (BEGIN) primero debe tener el rol Coach activo.');
             return;
           }
-          await update(ref(db, `usuarios/${uid}`), { roles: nuevosRoles, rol: null, coachCabeceraBegin });
+
+          // --- Solo puede haber 1 Coach de Cabecera (BEGIN) a la vez: si se
+          //     activa acá, se le quita automáticamente a quien lo tuviera. ---
+          const cambios = { [`usuarios/${uid}/roles`]: nuevosRoles, [`usuarios/${uid}/rol`]: null, [`usuarios/${uid}/coachCabeceraBegin`]: coachCabeceraBegin };
+          if (coachCabeceraBegin) {
+            Object.entries(usuarios).forEach(([otroUid, otroUsuario]) => {
+              if (otroUid !== uid && otroUsuario.coachCabeceraBegin === true) {
+                cambios[`usuarios/${otroUid}/coachCabeceraBegin`] = false;
+              }
+            });
+          }
+          await update(ref(db), cambios);
           await cargarCoachesView();
         });
       });

@@ -62,7 +62,7 @@ const BENEFICIOS = {
   begin: {
     items: [
       'Contenido pregrabado de ejecución práctica — Nivel Inicial, para las 4 fases de la metodología 2E (acceso: 1 año)',
-      'BOX de consultas sobre el contenido, con mentor de cabecera que conoce la metodología completa y responde todas las temáticas (tiempo de respuesta: hasta 3 días hábiles) — vigente durante el programa: 3 meses',
+      'BOX de consultas por temática, respondido por un Mentor disponible de UNEQ (tiempo de respuesta: hasta 3 días hábiles, máximo 2 preguntas por semana) — vigente durante el programa: 3 meses',
       'Comunidad UNEQ Mentoring en Hotmart (acceso: 6 meses)',
       'Sesiones semanales grupales con coach (vigente durante el programa: 3 meses)',
       '1 sesión mensual grupal con Maca y Felipe (vigente durante el programa: 3 meses)',
@@ -147,6 +147,9 @@ export async function generarPdfAcuerdo(alumnoId, cicloId) {
     const coachSnap = await get(ref(db, `usuarios/${ciclo.coachId}/nombre`));
     if (coachSnap.exists()) nombreCoach = coachSnap.val();
   }
+  const clausulaCoach = ciclo.programa === 'begin'
+    ? 'El Alumno/a será acompañado/a durante este proceso por el Coach de Cabecera del programa BEGIN.'
+    : `El Alumno/a será acompañado/a durante este proceso por su coach asignado/a, ${nombreCoach}.`;
 
   const doc = new jsPDF();
   let y = 22;
@@ -234,7 +237,7 @@ export async function generarPdfAcuerdo(alumnoId, cicloId) {
   parrafo(
     `UNEQ se compromete a prestar al Alumno/a servicios de mentoría bajo el programa ${programaLabel(ciclo.programa)}, basado en la metodología propia 2E, con fecha de inicio el ${formatFechaLarga(fechaIngresoEstimada)} y fecha de término estimada el ${formatFechaLarga(fechaEgresoEstimada)}.`
   );
-  parrafo(`El Alumno/a será acompañado/a durante este proceso por su coach asignado/a, ${nombreCoach}.`);
+  parrafo(clausulaCoach);
 
   // --- SEGUNDO ---
   tituloSeccion('SEGUNDO: Condiciones Económicas');

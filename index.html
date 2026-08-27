@@ -339,7 +339,10 @@
                   <option value="exit">eXIT (6 meses · $5.000.000)</option>
                 </select>
               </div>
-              <div class="field"><label>Coach Asignado</label><select id="nuevo-ciclo-coach"></select></div>
+              <div class="field" id="campo-nuevo-ciclo-coach"><label>Coach Asignado</label><select id="nuevo-ciclo-coach"></select></div>
+            </div>
+            <p class="text-soft hidden" id="aviso-nuevo-ciclo-begin-sin-coach" style="margin-top:-8px;">🚩 BEGIN no lleva coach individual — lo ve automáticamente el Coach de Cabecera.</p>
+            <div class="field-grid mb-16">
               <div class="field"><label>Monto Total</label><input id="nuevo-ciclo-monto"></div>
               <div class="field"><label>Moneda</label><select id="nuevo-ciclo-moneda"><option>CLP</option><option>USD</option></select></div>
             </div>
@@ -455,7 +458,7 @@
                 <div class="field"><label>Programa</label><select id="ciclo-programa" disabled><option value="begin">Begin</option><option value="next">Next</option><option value="exit">eXIT</option></select></div>
                 <div class="field"><label>Fecha Ingreso</label><input type="date" id="ciclo-fecha-ingreso" placeholder="Se define al quedar Firma Procesada"></div>
                 <div class="field"><label>Fecha Egreso</label><input type="date" id="ciclo-fecha-egreso" placeholder="Se calcula sola, o corrígela a mano"></div>
-                <div class="field"><label>Coach Asignado</label><select id="ciclo-coach"></select></div>
+                <div class="field" id="campo-ciclo-coach"><label>Coach Asignado</label><select id="ciclo-coach"></select></div>
                 <div class="field">
                   <label>Fase de la Metodología</label>
                   <select id="ciclo-fase-metodologia">
@@ -474,6 +477,7 @@
                   </div>
                 </div>
               </div>
+              <p class="text-soft hidden" id="aviso-ciclo-begin-sin-coach">🚩 BEGIN no lleva coach individual — lo ve automáticamente el Coach de Cabecera.</p>
               <div class="field-grid mb-16" style="margin-top:14px;">
                 <div class="field"><label>Facturación Actual <span style="color:#C0392B;">*</span></label><input id="ciclo-facturacion-actual" placeholder="$0"></div>
                 <div class="field"><label>Objetivo Facturación Largo Plazo <span style="color:#C0392B;">*</span></label><input id="ciclo-objetivo-facturacion" placeholder="$0"></div>
@@ -662,10 +666,11 @@
                   <option value="exit">eXIT (6 meses · $5.000.000)</option>
                 </select>
               </div>
-              <div class="field"><label>Coach Asignado</label>
+              <div class="field" id="campo-nuevo-alumno-coach"><label>Coach Asignado</label>
                 <select id="nuevo-alumno-coach"><option value="">Cargando coaches...</option></select>
               </div>
             </div>
+            <p class="text-soft hidden" id="aviso-nuevo-alumno-begin-sin-coach" style="margin-top:-8px;">🚩 BEGIN no lleva coach individual — lo ve automáticamente el Coach de Cabecera.</p>
           </div>
         </div>
 
@@ -1012,6 +1017,36 @@
             <p class="text-soft">Cargando...</p>
           </div>
         </div>
+
+        <!-- ======================================================
+             BOX BEGIN — bandeja compartida entre todos los mentores,
+             respuesta manual (sin IA). Ver box-begin-mentor.js.
+             ====================================================== -->
+        <div style="margin-top:24px;">
+          <div class="flex-between mb-16"><h2>BOX BEGIN (respuesta manual)</h2></div>
+          <p class="text-soft mb-16" style="font-size:13px;">Preguntas de alumnos BEGIN, sin mentor asignado — cualquier mentor disponible puede responderlas. El alumno no sabe quién le responde.</p>
+          <div class="panel">
+            <div class="panel__header">
+              <div class="field-grid" style="width:100%;">
+                <div class="field"><label>Estado</label>
+                  <select id="box-begin-mentor-filtro-estado">
+                    <option value="pendientes">Pendientes</option>
+                    <option value="respondidas">Respondidas</option>
+                    <option value="">Todas</option>
+                  </select>
+                </div>
+                <div class="field"><label>Alumno</label><select id="box-begin-mentor-filtro-alumno"><option value="">Todos</option></select></div>
+                <div class="field"><label>Temática</label><select id="box-begin-mentor-filtro-tematica"><option value="">Todas</option></select></div>
+                <div class="field"><label>Mentor que Responde</label><select id="box-begin-mentor-filtro-respondio"><option value="">Todos</option></select></div>
+                <div class="field"><label>Desde</label><input type="date" id="box-begin-mentor-filtro-desde"></div>
+                <div class="field"><label>Hasta</label><input type="date" id="box-begin-mentor-filtro-hasta"></div>
+              </div>
+            </div>
+            <div class="panel__body" id="box-begin-mentor-listado">
+              <p class="text-soft">Cargando...</p>
+            </div>
+          </div>
+        </div>
       </section>
 
       <!-- ======================================================
@@ -1022,6 +1057,8 @@
           <h2 style="margin-bottom:4px;">BOX de Consultas</h2>
           <p class="text-soft" id="box-alumno-contador">Tienes 1 pregunta por cada Mentor IA por semana</p>
         </div>
+
+        <div id="box-alumno-mentor-ia-contenedor">
         <div class="panel mb-24" style="background:#EFF6FF; border-color:#BFDBFE;">
           <div class="panel__body" style="font-size:13px;">
             ¡Envíale tu pregunta a cualquiera de los <strong>Clones IA</strong> de nuestros Mentores!... Cada uno está entrenado por ellos mismos con su contenido y experiencia real y responden al instante. Si prefieres hablar con el <strong>Mentor Humano en vivo</strong>, ve a <strong>Preguntas en VIVO</strong>.
@@ -1082,6 +1119,55 @@
           </div>
           <div class="panel__body" id="box-alumno-listado">
             <p class="text-soft">Cargando...</p>
+          </div>
+        </div>
+        </div>
+
+        <!-- ======================================================
+             BOX — ALUMNO BEGIN: canal único de preguntas por
+             temática, respondidas a mano por un Mentor disponible
+             (sin IA, sin elegir mentor). Ver box-begin.js.
+             ====================================================== -->
+        <div id="box-alumno-begin-contenedor" class="hidden">
+          <div class="panel mb-24" style="background:#EFF6FF; border-color:#BFDBFE;">
+            <div class="panel__body" style="font-size:13px;">
+              Elige la temática de tu duda, escribe tu pregunta (puedes adjuntar imágenes) y un <strong>Mentor disponible</strong> te va a responder — no sabrás cuál de ellos hasta que llegue la respuesta. El tiempo de respuesta puede tardar hasta <strong>3 días hábiles</strong>.
+            </div>
+          </div>
+
+          <div class="panel mb-24">
+            <div class="panel__header"><h3>Nueva Pregunta</h3></div>
+            <div class="panel__body">
+              <div class="field mb-16">
+                <label>Temática</label>
+                <select id="box-begin-tematica"></select>
+              </div>
+              <div class="field mb-16 hidden" id="box-begin-tematica-otra-campo">
+                <label>Cuéntanos de qué se trata</label>
+                <input id="box-begin-tematica-otra-texto" placeholder="Escribe tu temática...">
+              </div>
+              <div class="field mb-16">
+                <label>Tu pregunta</label>
+                <textarea id="box-begin-pregunta" placeholder="Escribe tu consulta... (puedes incluir links)"></textarea>
+              </div>
+              <div style="margin-bottom:12px;">
+                <button type="button" class="btn btn--ghost" id="btn-adjuntar-imagenes-box-begin" style="font-size:12px;">🖼️ Adjuntar Imágenes</button>
+                <input type="file" id="input-imagenes-box-begin" accept="image/*" multiple class="hidden">
+                <div id="box-begin-imagenes-preview" style="display:flex; gap:8px; flex-wrap:wrap; margin-top:8px;"></div>
+              </div>
+              <p id="box-begin-error" class="hidden" style="color:#C0392B; margin-bottom:12px;"></p>
+              <button class="btn btn--primary" id="btn-enviar-pregunta-box-begin">Enviar Pregunta</button>
+            </div>
+          </div>
+
+          <div class="panel">
+            <div class="panel__header flex-between">
+              <h3>Mis Consultas</h3>
+              <button type="button" class="btn btn--ghost" id="btn-actualizar-box-begin" style="font-size:12px;">🔄 Actualizar</button>
+            </div>
+            <div class="panel__body" id="box-begin-listado">
+              <p class="text-soft">Cargando...</p>
+            </div>
           </div>
         </div>
       </section>
@@ -1282,6 +1368,7 @@
             <label style="font-weight:400; display:flex; align-items:center; gap:8px; margin-bottom:10px;"><input type="checkbox" id="chk-rol-propio-coach" style="width:auto;"> También soy Coach</label>
             <label style="font-weight:400; display:flex; align-items:center; gap:8px; margin-bottom:16px;"><input type="checkbox" id="chk-rol-propio-mentor" style="width:auto;"> También soy Mentor</label>
             <button class="btn btn--primary" id="btn-guardar-roles-propios">Guardar Roles</button>
+            <button class="btn btn--ghost hidden" id="btn-editar-roles-propios">✏️ Editar</button>
           </div>
         </div>
       </section>
@@ -1351,6 +1438,17 @@
               <div class="field"><label>Begin</label><input id="config-whatsapp-begin" placeholder="https://chat.whatsapp.com/..."></div>
               <div class="field"><label>Next + eXIT (grupo combinado)</label><input id="config-whatsapp-nextexit" placeholder="https://chat.whatsapp.com/..."></div>
             </div>
+          </div>
+        </div>
+        <div class="panel mb-24">
+          <div class="panel__header"><h3>Temáticas del BOX de Consultas — BEGIN</h3></div>
+          <div class="panel__body">
+            <p class="text-soft mb-16" style="font-size:13px;">Estas son las opciones que ve el alumno BEGIN al elegir el tema de su pregunta. Se guardan al toque, no dependen del botón "Guardar Configuración" de abajo.</p>
+            <div style="display:flex; gap:10px; margin-bottom:16px;">
+              <input id="config-nueva-tematica-begin" placeholder="Nombre de la temática..." style="flex:1;">
+              <button class="btn btn--accent" id="btn-agregar-tematica-begin">+ Agregar</button>
+            </div>
+            <div id="listado-tematicas-begin"></div>
           </div>
         </div>
         <p id="configuracion-error" class="hidden" style="color:#C0392B; margin-bottom:12px;"></p>
