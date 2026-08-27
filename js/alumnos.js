@@ -690,6 +690,16 @@ async function abrirFicha(alumnoId) {
     selectCoach.disabled = true;
   }
 
+  // --- Fecha Ingreso/Egreso: el director siempre las puede corregir a
+  //     mano (casos especiales, alumnos antiguos que se cargan con su
+  //     fecha real) — coach/mentor las ven, pero bloqueadas. Independiente
+  //     del bloqueo general de la ficha (ver aplicarBloqueoDatosCiclo). ---
+  const inputFechaIngresoCiclo = document.getElementById('ciclo-fecha-ingreso');
+  const inputFechaEgresoCiclo = document.getElementById('ciclo-fecha-egreso');
+  const puedeEditarFechasCiclo = role === 'director';
+  if (inputFechaIngresoCiclo) inputFechaIngresoCiclo.disabled = !puedeEditarFechasCiclo;
+  if (inputFechaEgresoCiclo) inputFechaEgresoCiclo.disabled = !puedeEditarFechasCiclo;
+
   if (ciclo) {
     document.getElementById('ciclo-programa').value = ciclo.programa || 'begin';
     document.getElementById('ciclo-fecha-ingreso').value = ciclo.fechaIngreso || '';
@@ -922,6 +932,10 @@ if (btnGuardarCiclo) {
     try {
       if (getCurrentRole() === 'director') {
         datos.coachId = document.getElementById('ciclo-coach').value;
+        const fechaIngresoManual = document.getElementById('ciclo-fecha-ingreso').value;
+        const fechaEgresoManual = document.getElementById('ciclo-fecha-egreso').value;
+        if (fechaIngresoManual) datos.fechaIngreso = fechaIngresoManual;
+        if (fechaEgresoManual) datos.fechaEgreso = fechaEgresoManual;
       }
       await update(ref(db, `ciclos/${currentCicloId}`), datos);
       await iniciarOnboardingSiCorresponde(currentCicloId);

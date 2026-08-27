@@ -185,6 +185,9 @@ if (btnAgregarSesionBegin) {
       document.getElementById('sesion-begin-link').value = '';
 
       await cargarSesionesBeginTabla(uid);
+    } catch (err) {
+      console.error('Error al agregar sesión BEGIN:', err);
+      alert('No se pudo agregar la sesión. Revisa tu conexión e intenta de nuevo. Si el problema sigue, avisa al director.');
     } finally {
       btnAgregarSesionBegin.disabled = false;
     }
