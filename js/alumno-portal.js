@@ -237,26 +237,26 @@ export async function cargarDashboardAlumno(alumnoId) {
       const egreso = new Date(ciclo.fechaEgreso + 'T00:00:00');
       const diasRestantes = Math.ceil((egreso.getTime() - hoy.getTime()) / (1000 * 60 * 60 * 24));
       if (diasRestantes > 0) {
-        fraseDiasRestantes = `<p style="margin:6px 0 0;">¡Te quedan ${diasRestantes} día${diasRestantes === 1 ? '' : 's'} de acceso al acompañamiento, estamos aquí para acompañarte, no te detengas!</p>`;
+        fraseDiasRestantes = `<p style="margin:0 0 8px; line-height:1.6;">¡Te quedan ${diasRestantes} día${diasRestantes === 1 ? '' : 's'} de acceso al acompañamiento, estamos aquí para acompañarte, no te detengas!</p>`;
       } else {
-        fraseDiasRestantes = `<p style="margin:6px 0 0; color:#B8860B; font-weight:600;">Tu acceso está en período de gracia</p>`;
+        fraseDiasRestantes = `<p style="margin:0 0 8px; line-height:1.6; color:#B8860B; font-weight:600;">Tu acceso está en período de gracia</p>`;
       }
     }
 
     accesosEl.innerHTML = `
-      <div style="display:flex; flex-wrap:wrap; gap:10px; margin-bottom:18px;">
+      <div class="accesos-directos-botones" style="display:flex; flex-wrap:wrap; gap:10px; margin-bottom:18px;">
         <button type="button" class="btn btn--primary" id="btn-acceso-preguntar-mentores">Pregunta a los Mentores</button>
         ${config.comunidadHotmartUrl ? `<a href="${config.comunidadHotmartUrl}" target="_blank" rel="noopener" class="btn btn--accent">Comunidad Hotmart</a>` : ''}
         ${contenidoUrl ? `<a href="${contenidoUrl}" target="_blank" rel="noopener" class="btn btn--accent">Contenidos en Hotmart</a>` : ''}
         ${whatsappUrl ? `<a href="${whatsappUrl}" target="_blank" rel="noopener" class="btn" style="background:#25D366; color:#fff;">Grupo WhatsApp Exclusivo</a>` : ''}
       </div>
       <div style="line-height:1.6;">
-        <p style="margin:0 0 8px;">
+        <p style="margin:0 0 8px; line-height:1.6;">
           ${coach ? `Tu Coach es <strong>${coach.nombre || '—'}</strong>` : 'Aún no tienes coach asignado'}
           ${whatsappCoachUrl ? ` <a href="${whatsappCoachUrl}" target="_blank" rel="noopener" class="btn" style="background:#25D366; color:#fff; padding:4px 12px; font-size:12px;">💬 WhatsApp</a>` : ''}
         </p>
-        <p style="margin:0 0 8px;">${fraseFase}</p>
-        ${fraseDiasRestantes.replace('margin:6px 0 0;', 'margin:0 0 8px;')}
+        <p style="margin:0 0 8px; line-height:1.6;">${fraseFase}</p>
+        ${fraseDiasRestantes}
       </div>`;
 
     const btnPreguntarMentores = document.getElementById('btn-acceso-preguntar-mentores');
@@ -318,7 +318,7 @@ export async function cargarFichaAlumnoPropia() {
         <input type="file" id="alumno-foto-input" accept="image/*" class="hidden">
       </div>
     </div>
-    <div style="display:grid; grid-template-columns: repeat(2, 1fr); gap:10px 20px; font-size:13px;">
+    <div class="ficha-alumno-datos" style="display:grid; grid-template-columns: repeat(2, 1fr); gap:10px 20px; font-size:13px;">
       <div><strong>Correo:</strong> ${alumno.email || '—'}</div>
       <div><strong>Teléfono:</strong> ${alumno.telefono || '—'}</div>
       <div><strong>Ocupación:</strong> ${alumno.ocupacion || '—'}${alumno.ocupacionEspecialidad ? `, ${alumno.ocupacionEspecialidad}` : ''}</div>
@@ -599,7 +599,7 @@ export async function cargarBoxAlumno() {
   const mentoresPreguntadosEstaSemana = new Set(deEstaSemana.map(e => e.mentorId));
 
   const contadorEl = document.getElementById('box-alumno-contador');
-  if (contadorEl) contadorEl.textContent = '1 pregunta por Mentor IA por semana';
+  if (contadorEl) contadorEl.textContent = 'Tienes 1 pregunta por cada Mentor IA por semana';
 
   // --- Tarjetas de mentor ---
   gridEl.innerHTML = mentores.length ? '' : '<p class="text-soft">No hay mentores disponibles por ahora.</p>';
@@ -798,6 +798,24 @@ if (btnEnviarPreguntaAlumno) {
 document.querySelectorAll('.nav-item[data-nav="box-consultas"]').forEach(item => {
   item.addEventListener('click', cargarBoxAlumno);
 });
+
+const btnActualizarMisConsultas = document.getElementById('btn-actualizar-mis-consultas');
+if (btnActualizarMisConsultas) {
+  btnActualizarMisConsultas.addEventListener('click', async () => {
+    btnActualizarMisConsultas.disabled = true;
+    const textoOriginal = btnActualizarMisConsultas.textContent;
+    btnActualizarMisConsultas.textContent = 'Actualizando...';
+    try {
+      await cargarBoxAlumno();
+    } finally {
+      const btnDeNuevo = document.getElementById('btn-actualizar-mis-consultas');
+      if (btnDeNuevo) {
+        btnDeNuevo.disabled = false;
+        btnDeNuevo.textContent = textoOriginal;
+      }
+    }
+  });
+}
 
 /* ============================================================
    Preguntas de la Comunidad: todo lo respondido, de todos los

@@ -58,6 +58,7 @@ export function applyRole(role, nombre, rolesDisponibles) {
 
   document.querySelectorAll('.btn-unlock-cuota').forEach(btn => btn.classList.toggle('hidden', role !== 'director'));
 
+  document.getElementById('view-splash').classList.add('hidden');
   document.getElementById('view-login').classList.add('hidden');
   document.getElementById('app-shell').classList.remove('hidden');
 
@@ -94,6 +95,7 @@ function renderSelectorRol() {
 }
 
 export function showLogin() {
+  document.getElementById('view-splash').classList.add('hidden');
   document.getElementById('app-shell').classList.add('hidden');
   document.getElementById('view-login').classList.remove('hidden');
   currentRole = null;

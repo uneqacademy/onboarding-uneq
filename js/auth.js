@@ -65,6 +65,17 @@ btnLogin.addEventListener('click', async () => {
   }
 });
 
+// Enter en cualquiera de los 2 campos dispara el mismo botón (funciona con
+// mouse/touch Y teclado — PC y celular con teclado en pantalla).
+[inputEmail, inputPass].forEach(input => {
+  input.addEventListener('keydown', (ev) => {
+    if (ev.key === 'Enter') {
+      ev.preventDefault();
+      btnLogin.click();
+    }
+  });
+});
+
 btnLogout.addEventListener('click', () => {
   signOut(auth);
 });

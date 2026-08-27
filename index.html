@@ -24,9 +24,20 @@
 </template>
 
 <!-- ============================================================
+     VISTA: SPLASH DE CARGA (evita el parpadeo al login mientras
+     Firebase resuelve si ya hay sesión guardada — ver auth.js)
+     ============================================================ -->
+<div id="view-splash" class="login-view">
+  <div style="display:flex; flex-direction:column; align-items:center; gap:16px;">
+    <div style="color:#fff; width:44px; height:44px;" data-brand-mark></div>
+    <div class="spinner-carga" aria-label="Cargando"></div>
+  </div>
+</div>
+
+<!-- ============================================================
      VISTA: LOGIN
      ============================================================ -->
-<div id="view-login" class="login-view">
+<div id="view-login" class="login-view hidden">
   <div class="login-card">
     <div class="brand">
       <div class="brand__mark" style="color:#1B2A4A; width:38px; height:38px;" data-brand-mark></div>
@@ -981,13 +992,13 @@
            BOX DE CONSULTAS — vista ALUMNO
            ====================================================== -->
       <section id="view-box-alumno" class="view hidden">
-        <div class="flex-between mb-16">
-          <h2>BOX de Consultas</h2>
-          <span class="badge badge--activo" id="box-alumno-contador">—</span>
+        <div class="mb-16">
+          <h2 style="margin-bottom:4px;">BOX de Consultas</h2>
+          <p class="text-soft" id="box-alumno-contador">Tienes 1 pregunta por cada Mentor IA por semana</p>
         </div>
         <div class="panel mb-24" style="background:#EFF6FF; border-color:#BFDBFE;">
           <div class="panel__body" style="font-size:13px;">
-            Aquí respondes con el <strong>Mentor IA</strong> de cada mentor — entrenado con su contenido real, responde al instante. Si prefieres hablar con el mentor humano en vivo, ve a <strong>Preguntas en Vivo</strong>.
+            ¡Envíale tu pregunta a cualquiera de los <strong>Clones IA</strong> de nuestros Mentores!... Cada uno está entrenado por ellos mismos con su contenido y experiencia real y responden al instante. Si prefieres hablar con el <strong>Mentor Humano en vivo</strong>, ve a <strong>Preguntas en VIVO</strong>.
           </div>
         </div>
 
@@ -1025,7 +1036,10 @@
         </div>
 
         <div class="panel">
-          <div class="panel__header"><h3>Mis Consultas</h3></div>
+          <div class="panel__header flex-between">
+            <h3>Mis Consultas</h3>
+            <button type="button" class="btn btn--ghost" id="btn-actualizar-mis-consultas" style="font-size:12px;">🔄 Actualizar</button>
+          </div>
           <div class="panel__body" style="display:flex; gap:16px; flex-wrap:wrap; border-bottom:0.5px solid var(--border);">
             <div class="field" style="flex:1; min-width:180px;">
               <label>Filtrar por Mentor</label>

@@ -346,9 +346,14 @@ textarea { width: 100%; max-width: 100%; box-sizing: border-box; resize: vertica
 
 /* input[type="date"] en iOS/Safari trae su propio alto y centra el valor,
    ignorando el padding de arriba — por eso se ve más alto y descuadrado
-   que los select/input de al lado. Forzamos alto consistente y alineamos
-   el valor a la izquierda igual que el resto de los campos. */
+   que los select/input de al lado. -webkit-appearance:none le quita el
+   "pill" nativo de iOS (queda con el mismo look que los demás campos,
+   sigue abriendo el selector de fecha nativo al tocarlo) y forzamos
+   alto + alineación consistentes con el resto de los campos. */
 .field input[type="date"] {
+  -webkit-appearance: none;
+  appearance: none;
+  display: block;
   height: 38px;
   padding-top: 0;
   padding-bottom: 0;
@@ -433,6 +438,15 @@ textarea { width: 100%; max-width: 100%; box-sizing: border-box; resize: vertica
   padding: 36px 34px;
   width: 340px;
 }
+.spinner-carga {
+  width: 30px;
+  height: 30px;
+  border: 3px solid rgba(255,255,255,0.25);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: girar-spinner 0.8s linear infinite;
+}
+@keyframes girar-spinner { to { transform: rotate(360deg); } }
 .login-card .brand { margin-bottom: 22px; justify-content: center; flex-direction: column; text-align: center; }
 .login-card .field { margin-bottom: 14px; }
 .login-card .btn { width: 100%; margin-top: 6px; }
@@ -604,6 +618,13 @@ textarea { width: 100%; max-width: 100%; box-sizing: border-box; resize: vertica
   .panel__header:has(.filters) .filters { width: 100%; }
   .filters { flex-direction: column !important; align-items: stretch !important; }
   .filters select, .filters input { width: 100%; box-sizing: border-box; }
+
+  /* Mi Ficha Alumno: una sola columna, apilada hacia abajo, en vez de 2 columnas */
+  .ficha-alumno-datos { grid-template-columns: 1fr !important; text-align: left; }
+
+  /* Dashboard alumno — Accesos Directos: botones uno debajo del otro, ancho completo */
+  .accesos-directos-botones { flex-direction: column !important; align-items: stretch !important; }
+  .accesos-directos-botones .btn { width: 100%; text-align: center; }
 }
 
 @media (max-width: 480px) {
