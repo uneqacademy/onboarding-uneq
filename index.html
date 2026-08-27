@@ -2,7 +2,11 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Onboarding UNEQ">
 <title>Onboarding UNEQ Mentoring</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Sora:wght@600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -224,6 +228,23 @@
                 <tr><th>Alumno</th><th>Programa</th><th>Estado Proceso</th><th>Estado Alumno</th><th>Fase</th></tr>
               </thead>
               <tbody id="tabla-alumnos-dashboard-coach"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="panel hidden" id="panel-sesiones-begin" style="margin-top:24px;">
+          <div class="panel__header"><h3>Sesiones Grupales BEGIN</h3></div>
+          <div class="panel__body">
+            <p class="text-soft mb-16" style="font-size:13px;">Como Coach de Cabecera, tus sesiones grupales las ven todos los alumnos del programa BEGIN, sin importar quién sea su coach.</p>
+            <div class="field-grid mb-16">
+              <div class="field"><label>Fecha</label><input type="date" id="sesion-begin-fecha"></div>
+              <div class="field"><label>Hora</label><input type="time" id="sesion-begin-hora"></div>
+              <div class="field"><label>Link de Acceso (Zoom, etc.)</label><input id="sesion-begin-link" placeholder="https://..."></div>
+            </div>
+            <button class="btn btn--accent" id="btn-agregar-sesion-begin">+ Agregar Sesión</button>
+            <table class="data-table mb-16" style="margin-top:16px;">
+              <thead><tr><th>Fecha</th><th>Hora</th><th>Acceso</th><th>NPS de la sesión</th><th>Resumen</th><th>Preguntas</th><th></th><th>Estado</th></tr></thead>
+              <tbody id="tabla-sesiones-begin-body"></tbody>
             </table>
           </div>
         </div>
@@ -899,6 +920,9 @@
               <div class="field"><label>Hora</label><input type="time" id="mentoria-hora"></div>
               <div class="field"><label>Link de Acceso (Zoom, etc.)</label><input id="mentoria-link" placeholder="https://..."></div>
             </div>
+            <label style="font-weight:400; display:flex; align-items:center; gap:8px; margin-bottom:14px;" title="Solo la ven y pueden preguntar los alumnos del programa BEGIN">
+              <input type="checkbox" id="mentoria-exclusiva-begin"> Sesión exclusiva para alumnos BEGIN
+            </label>
             <button class="btn btn--accent" id="btn-agregar-mentoria">+ Agregar Mentoría</button>
             <table class="data-table mb-16" style="margin-top:16px;">
               <thead><tr><th>Fecha</th><th>Hora</th><th>Acceso</th><th>NPS de la sesión</th><th>Resumen IA</th><th>Preguntas</th><th></th><th>Estado</th></tr></thead>
@@ -914,34 +938,36 @@
       <section id="view-alumnos-mentor" class="view hidden">
         <div class="flex-between mb-16"><h2>Alumnos Activos</h2></div>
         <div class="panel">
+          <div class="panel__header">
+            <div class="field-grid" style="width:100%;">
+              <div class="field"><label>Alumno</label><input id="filtro-mentor-nombre" placeholder="Buscar..."></div>
+              <div class="field">
+                <label>Programa</label>
+                <select id="filtro-mentor-programa">
+                  <option value="">Todos</option>
+                  <option value="begin">Begin</option>
+                  <option value="next">Next</option>
+                  <option value="exit">eXIT</option>
+                </select>
+              </div>
+              <div class="field">
+                <label>Fase</label>
+                <select id="filtro-mentor-fase">
+                  <option value="">Todas</option>
+                  <option value="fase1">Fase 1</option>
+                  <option value="fase2">Fase 2</option>
+                  <option value="fase3">Fase 3</option>
+                  <option value="fase4">Fase 4</option>
+                  <option value="sin-definir">Sin definir</option>
+                </select>
+              </div>
+              <div class="field"><label>Coach</label><input id="filtro-mentor-coach" placeholder="Buscar..."></div>
+            </div>
+          </div>
           <div class="panel__body" style="padding:0;">
             <table class="data-table">
               <thead>
                 <tr><th></th><th>Alumno</th><th>Programa</th><th>Fase</th><th>Coach</th><th>Matrícula</th><th></th></tr>
-                <tr>
-                  <th></th>
-                  <th><input id="filtro-mentor-nombre" placeholder="Buscar..." style="font-weight:400; width:100%;"></th>
-                  <th>
-                    <select id="filtro-mentor-programa" style="font-weight:400; width:100%;">
-                      <option value="">Todos</option>
-                      <option value="begin">Begin</option>
-                      <option value="next">Next</option>
-                      <option value="exit">eXIT</option>
-                    </select>
-                  </th>
-                  <th>
-                    <select id="filtro-mentor-fase" style="font-weight:400; width:100%;">
-                      <option value="">Todas</option>
-                      <option value="fase1">Fase 1</option>
-                      <option value="fase2">Fase 2</option>
-                      <option value="fase3">Fase 3</option>
-                      <option value="fase4">Fase 4</option>
-                      <option value="sin-definir">Sin definir</option>
-                    </select>
-                  </th>
-                  <th><input id="filtro-mentor-coach" placeholder="Buscar..." style="font-weight:400; width:100%;"></th>
-                  <th></th><th></th>
-                </tr>
               </thead>
               <tbody id="tabla-matriz-mentor"></tbody>
             </table>
@@ -1335,6 +1361,20 @@
   </div>
 </div>
 
+<script>
+  // --- Fix del bug conocido de iOS/WebKit: al abrir una web agregada a
+  //     la pantalla de inicio (modo "app") desde cero, a veces ignora el
+  //     initial-scale del viewport y carga con zoom. Este truco "reinicia"
+  //     el viewport apenas carga, sin afectar el pinch-zoom normal del
+  //     usuario después. No hace nada en navegador normal (Chrome/desktop).
+  (function () {
+    var meta = document.querySelector('meta[name="viewport"]');
+    if (!meta) return;
+    var original = meta.getAttribute('content');
+    meta.setAttribute('content', original + ', maximum-scale=1.0');
+    setTimeout(function () { meta.setAttribute('content', original); }, 300);
+  })();
+</script>
 <script type="module" src="js/auth.js"></script>
 </body>
 </html>

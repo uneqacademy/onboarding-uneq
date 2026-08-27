@@ -25,6 +25,7 @@ import { generarPdfAcuerdo } from './pdf-acuerdo.js';
 import './respaldo.js';
 import { cargarMiEvaluacionCoach } from './coaches.js';
 import { cargarDashboardMentor, cargarAlumnosMentor, cargarPerfilMentor, cargarMentoriasView, cargarBoxMentor } from './mentores.js';
+import { cargarSesionesBeginCoach } from './dashboard-coach.js';
 import { actualizarBotonAccesoAlumno } from './alumno-portal.js';
 import './configuracion.js';
 import './mis-datos.js';
@@ -1121,6 +1122,7 @@ export async function initAlumnosModule() {
   } else if (getCurrentRole() === 'coach') {
     await cargarMiEvaluacionCoach();
     await cargarListasAlumnos();
+    await cargarSesionesBeginCoach();
   } else if (getCurrentRole() === 'mentor') {
     await cargarDashboardMentor();
     await cargarAlumnosMentor();

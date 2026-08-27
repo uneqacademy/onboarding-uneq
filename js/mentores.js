@@ -619,7 +619,7 @@ async function cargarMentoriasView() {
       const tr = document.createElement('tr');
       const noDictada = m.estado === 'no_dictada';
       tr.innerHTML = `
-        <td>${formatFechaCorta(m.fecha)}</td>
+        <td>${formatFechaCorta(m.fecha)}${m.exclusivaBegin ? ' <span class="badge badge--activo" style="font-size:9px;" title="Solo la ven alumnos BEGIN">BEGIN</span>' : ''}</td>
         <td>${m.hora || '—'}</td>
         <td>${m.link ? `<a href="${m.link}" target="_blank" rel="noopener">Ir al link</a>` : '—'}</td>
         <td>${promedioTexto}</td>
@@ -723,6 +723,7 @@ if (btnAgregarMentoria) {
     const fecha = document.getElementById('mentoria-fecha').value;
     const hora = document.getElementById('mentoria-hora').value;
     const link = document.getElementById('mentoria-link').value.trim();
+    const exclusivaBegin = document.getElementById('mentoria-exclusiva-begin').checked;
 
     if (!uid || !fecha) {
       alert('Completa al menos la Fecha.');
@@ -732,11 +733,12 @@ if (btnAgregarMentoria) {
     btnAgregarMentoria.disabled = true;
     try {
       const nuevaRef = push(ref(db, `mentorias/${uid}`));
-      await set(nuevaRef, { fecha, hora, link, createdAt: Date.now() });
+      await set(nuevaRef, { fecha, hora, link, exclusivaBegin, createdAt: Date.now() });
 
       document.getElementById('mentoria-fecha').value = '';
       document.getElementById('mentoria-hora').value = '';
       document.getElementById('mentoria-link').value = '';
+      document.getElementById('mentoria-exclusiva-begin').checked = false;
 
       await cargarMentoriasView();
     } finally {

@@ -237,6 +237,9 @@ async function cargarCoachesView() {
             <div style="display:flex; align-items:center; gap:16px; flex-wrap:wrap;">
               <label style="font-weight:400;"><input type="checkbox" class="chk-rol-coach" ${rolesActuales.coach ? 'checked' : ''}> Coach</label>
               <label style="font-weight:400;"><input type="checkbox" class="chk-rol-mentor" ${rolesActuales.mentor ? 'checked' : ''}> Mentor</label>
+              <label style="font-weight:400;" title="Puede crear sesiones grupales semanales exclusivas para alumnos BEGIN">
+                <input type="checkbox" class="chk-coach-cabecera-begin" ${coach.coachCabeceraBegin ? 'checked' : ''}> Coach de Cabecera (BEGIN)
+              </label>
               <span class="text-soft" style="font-size:12px;">El rol Director se asigna aparte, en Firebase Console.</span>
               <button class="btn btn--primary btn-guardar-roles" style="font-size:11px; padding:4px 10px;">Guardar</button>
             </div>
@@ -253,7 +256,12 @@ async function cargarCoachesView() {
             alert('Debe quedar con al menos un rol activo. Para sacarle todos los accesos, usa "Eliminar".');
             return;
           }
-          await update(ref(db, `usuarios/${uid}`), { roles: nuevosRoles, rol: null });
+          const coachCabeceraBegin = filaRoles.querySelector('.chk-coach-cabecera-begin').checked;
+          if (coachCabeceraBegin && !nuevosRoles.coach) {
+            alert('Para ser Coach de Cabecera (BEGIN) primero debe tener el rol Coach activo.');
+            return;
+          }
+          await update(ref(db, `usuarios/${uid}`), { roles: nuevosRoles, rol: null, coachCabeceraBegin });
           await cargarCoachesView();
         });
       });

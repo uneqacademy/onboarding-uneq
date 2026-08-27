@@ -148,6 +148,10 @@ export async function cargarDashboardAlumno(alumnoId) {
     ciclo = cicloSnap.exists() ? cicloSnap.val() : null;
   }
 
+  // --- BEGIN no tiene acceso al BOX de Consultas / Mentor IA por ahora ---
+  const navBox = document.querySelector('.nav-item[data-nav="box-consultas"]');
+  if (navBox) navBox.classList.toggle('hidden', ciclo && ciclo.programa === 'begin');
+
   // --- Foto grande sobre el menú lateral ---
   const fotoSidebar = document.getElementById('sidebar-foto-alumno');
   if (fotoSidebar) fotoSidebar.src = alumno.fotoUrl || PLACEHOLDER_FOTO_ALUMNO;
@@ -972,10 +976,17 @@ function formatearDuracion(ms) {
 
 let intervaloPreguntasVivo = null;
 
+// Sesiones de mentor van en /preguntasVivo, sesiones grupales de un
+// coach de cabecera (BEGIN) van en /preguntasVivoBegin — mismo shape,
+// distinta raíz según s.tipo.
+function rutaPreguntas(s) {
+  return s.tipo === 'coach' ? 'preguntasVivoBegin' : 'preguntasVivo';
+}
+
 async function cargarMisPreguntasVivo(card, s) {
   const cont = card.querySelector('.pv-mis-preguntas');
   if (!cont) return;
-  const snap = await get(ref(db, `preguntasVivo/${s.mentorUid}/${s.mentoriaId}`));
+  const snap = await get(ref(db, `${rutaPreguntas(s)}/${s.mentorUid}/${s.mentoriaId}`));
   if (!snap.exists()) { cont.innerHTML = ''; return; }
   const propias = Object.entries(snap.val()).filter(([, p]) => p.alumnoId === alumnoIdActual);
 
@@ -1049,7 +1060,7 @@ async function cargarMisPreguntasVivo(card, s) {
             const urlsNuevas = imagenesNuevas.length
               ? await subirImagenesPregunta(`preguntas-vivo/${s.mentorUid}/${s.mentoriaId}/${preguntaId}`, imagenesNuevas)
               : [];
-            await update(ref(db, `preguntasVivo/${s.mentorUid}/${s.mentoriaId}/${preguntaId}`), {
+            await update(ref(db, `${rutaPreguntas(s)}/${s.mentorUid}/${s.mentoriaId}/${preguntaId}`), {
               texto: nuevoTexto,
               imagenes: [...imagenesActuales, ...urlsNuevas]
             });
@@ -1087,14 +1098,14 @@ function bindSesionVivo(card, s) {
     if (!texto && !imagenesSel.length) { alert('Escribe tu pregunta o adjunta una imagen.'); return; }
     btn.disabled = true;
     try {
-      const preguntaId = push(ref(db, `preguntasVivo/${s.mentorUid}/${s.mentoriaId}`)).key;
+      const preguntaId = push(ref(db, `${rutaPreguntas(s)}/${s.mentorUid}/${s.mentoriaId}`)).key;
       const alumnoSnap = await get(ref(db, `alumnos/${alumnoIdActual}`));
       const alumno = alumnoSnap.exists() ? alumnoSnap.val() : {};
       const nombreAlumno = `${alumno.nombre || ''} ${alumno.apellido || ''}`.trim();
       const imagenes = imagenesSel.length
         ? await subirImagenesPregunta(`preguntas-vivo/${s.mentorUid}/${s.mentoriaId}/${preguntaId}`, imagenesSel)
         : [];
-      await set(ref(db, `preguntasVivo/${s.mentorUid}/${s.mentoriaId}/${preguntaId}`), {
+      await set(ref(db, `${rutaPreguntas(s)}/${s.mentorUid}/${s.mentoriaId}/${preguntaId}`), {
         alumnoId: alumnoIdActual, alumnoNombre: nombreAlumno, texto, imagenes, createdAt: Date.now()
       });
       card.querySelector('.pv-pregunta-texto').value = '';
@@ -1118,6 +1129,16 @@ export async function cargarPreguntasVivo() {
   if (!listadoEl || !alumnoIdActual) return;
   if (intervaloPreguntasVivo) clearInterval(intervaloPreguntasVivo);
 
+  // --- Programa del alumno: determina qué sesiones puede ver ---
+  const alumnoSnapPv = await get(ref(db, `alumnos/${alumnoIdActual}`));
+  const alumnoDatosPv = alumnoSnapPv.exists() ? alumnoSnapPv.val() : {};
+  let programaAlumnoPv = null;
+  if (alumnoDatosPv.cicloActualId) {
+    const cicloSnapPv = await get(ref(db, `ciclos/${alumnoDatosPv.cicloActualId}`));
+    programaAlumnoPv = cicloSnapPv.exists() ? (cicloSnapPv.val().programa || null) : null;
+  }
+  const esBegin = programaAlumnoPv === 'begin';
+
   const usuariosSnap = await get(ref(db, 'usuarios'));
   const usuarios = usuariosSnap.exists() ? usuariosSnap.val() : {};
   const mentores = Object.entries(usuarios).filter(([, u]) => {
@@ -1125,18 +1146,41 @@ export async function cargarPreguntasVivo() {
     return !!roles.mentor;
   });
 
-  const mentoriasSnaps = await Promise.all(mentores.map(([uid]) => get(ref(db, `mentorias/${uid}`))));
   let sesiones = [];
+
+  // --- Mentorías: para BEGIN solo las marcadas "exclusiva BEGIN";
+  //     para NEXT/eXIT, todas las demás (nunca las exclusivas BEGIN) ---
+  const mentoriasSnaps = await Promise.all(mentores.map(([uid]) => get(ref(db, `mentorias/${uid}`))));
   mentoriasSnaps.forEach((snap, idx) => {
     if (!snap.exists()) return;
     const [mentorUid, mentorDatos] = mentores[idx];
     Object.entries(snap.val()).forEach(([mentoriaId, m]) => {
       if (!m.fecha || !m.hora) return;
+      if (esBegin !== !!m.exclusivaBegin) return; // filtra según programa
       const inicio = new Date(`${m.fecha}T${m.hora}`);
       if (isNaN(inicio.getTime())) return;
-      sesiones.push({ mentorUid, mentorDatos, mentoriaId, ...m, inicio });
+      sesiones.push({ tipo: 'mentor', mentorUid, mentorDatos, mentoriaId, ...m, inicio });
     });
   });
+
+  // --- BEGIN además ve las sesiones grupales de los coaches de cabecera ---
+  if (esBegin) {
+    const coachesCabecera = Object.entries(usuarios).filter(([, u]) => {
+      const roles = (u.roles && typeof u.roles === 'object') ? u.roles : (u.rol ? { [u.rol]: true } : {});
+      return !!roles.coach && u.coachCabeceraBegin === true;
+    });
+    const sesionesBeginSnaps = await Promise.all(coachesCabecera.map(([uid]) => get(ref(db, `sesionesBegin/${uid}`))));
+    sesionesBeginSnaps.forEach((snap, idx) => {
+      if (!snap.exists()) return;
+      const [coachUid, coachDatos] = coachesCabecera[idx];
+      Object.entries(snap.val()).forEach(([sesionId, s]) => {
+        if (!s.fecha || !s.hora) return;
+        const inicio = new Date(`${s.fecha}T${s.hora}`);
+        if (isNaN(inicio.getTime())) return;
+        sesiones.push({ tipo: 'coach', mentorUid: coachUid, mentorDatos: coachDatos, mentoriaId: sesionId, ...s, inicio });
+      });
+    });
+  }
 
   const ahora = Date.now();
   sesiones = sesiones.filter(s => (s.inicio.getTime() + 60 * 60 * 1000) > ahora && s.estado !== 'no_dictada');
@@ -1147,23 +1191,28 @@ export async function cargarPreguntasVivo() {
     return;
   }
 
-  // --- Límite: 1 pregunta en vivo por mentor, por semana ---
-  const mentorUidsEnSesiones = [...new Set(sesiones.map(s => s.mentorUid))];
-  const preguntasVivoPorMentorSnaps = await Promise.all(mentorUidsEnSesiones.map(uid => get(ref(db, `preguntasVivo/${uid}`))));
+  // --- Límite: 1 pregunta en vivo por responsable (mentor o coach), por semana ---
+  const responsablesEnSesiones = [...new Set(sesiones.map(s => `${s.tipo}:${s.mentorUid}`))];
+  const preguntasPorResponsableSnaps = await Promise.all(responsablesEnSesiones.map(clave => {
+    const [tipo, uid] = clave.split(':');
+    return get(ref(db, `${tipo === 'coach' ? 'preguntasVivoBegin' : 'preguntasVivo'}/${uid}`));
+  }));
   const inicioSemanaVivo = inicioSemanaActual();
   const mentoresConPreguntaEstaSemana = new Set();
-  preguntasVivoPorMentorSnaps.forEach((snap, idx) => {
+  preguntasPorResponsableSnaps.forEach((snap, idx) => {
     if (!snap.exists()) return;
-    const mentorUid = mentorUidsEnSesiones[idx];
-    Object.values(snap.val()).forEach(preguntasDeMentoria => {
-      Object.values(preguntasDeMentoria).forEach(p => {
-        if (p.alumnoId === alumnoIdActual && p.createdAt >= inicioSemanaVivo) mentoresConPreguntaEstaSemana.add(mentorUid);
+    const clave = responsablesEnSesiones[idx];
+    Object.values(snap.val()).forEach(preguntasDeSesion => {
+      Object.values(preguntasDeSesion).forEach(p => {
+        if (p.alumnoId === alumnoIdActual && p.createdAt >= inicioSemanaVivo) mentoresConPreguntaEstaSemana.add(clave);
       });
     });
   });
 
   listadoEl.innerHTML = sesiones.map((s, idx) => {
-    const temasMentor = Object.keys(s.mentorDatos.temas || {}).join(', ') || 'Temáticas no definidas aún';
+    const temasMentor = s.tipo === 'coach'
+      ? 'Sesión grupal semanal — resolución de dudas (BEGIN)'
+      : (Object.keys(s.mentorDatos.temas || {}).join(', ') || 'Temáticas no definidas aún');
     const fechaLarga = new Intl.DateTimeFormat('es-CL', { day: '2-digit', month: 'long', year: 'numeric' }).format(s.inicio);
     return `
     <div class="panel mb-16" data-sesion-idx="${idx}">
@@ -1177,7 +1226,7 @@ export async function cargarPreguntasVivo() {
           ${s.link ? `<a href="${s.link}" target="_blank" rel="noopener" style="font-size:13px;">Ir al link de acceso</a>` : ''}
           <p class="pv-countdown text-soft" style="margin-top:8px; font-size:12px; font-weight:600;"></p>
         </div>
-        <button type="button" class="btn btn--primary pv-btn-preguntar" style="font-size:12px;" ${mentoresConPreguntaEstaSemana.has(s.mentorUid) ? 'disabled' : ''}>Enviar Pregunta</button>
+        <button type="button" class="btn btn--primary pv-btn-preguntar" style="font-size:12px;" ${mentoresConPreguntaEstaSemana.has(`${s.tipo}:${s.mentorUid}`) ? 'disabled' : ''}>Enviar Pregunta</button>
       </div>
       <div class="panel__body hidden pv-form-panel" style="border-top:0.5px solid var(--border);">
         <div class="field mb-16">
@@ -1208,10 +1257,11 @@ export async function cargarPreguntasVivo() {
       const badgeEl = card.querySelector('.pv-badge-en-vivo');
       if (badgeEl) badgeEl.classList.toggle('hidden', !enVivoAhora);
 
-      if (mentoresConPreguntaEstaSemana.has(s.mentorUid)) {
-        countdownEl.textContent = 'Ya le enviaste una pregunta en vivo a este mentor esta semana.';
+      const yaPreguntoEstaSemana = mentoresConPreguntaEstaSemana.has(`${s.tipo}:${s.mentorUid}`);
+      if (yaPreguntoEstaSemana) {
+        countdownEl.textContent = 'Ya enviaste una pregunta en vivo para esta sesión esta semana.';
         btnPreguntar.disabled = true;
-        btnPreguntar.title = 'Ya le enviaste una pregunta en vivo a este mentor esta semana.';
+        btnPreguntar.title = 'Ya enviaste una pregunta en vivo para esta sesión esta semana.';
       } else if (restante <= 0) {
         countdownEl.textContent = 'El plazo para dejar tu pregunta se cerró (12 horas antes de la sesión). De todas maneras te esperamos en vivo, para que participes junto a tus compañeros y si queda tiempo, puedas preguntar en vivo.';
         btnPreguntar.disabled = true;
@@ -1229,11 +1279,23 @@ export async function cargarPreguntasVivo() {
   // --- Historial permanente: todas mis preguntas en vivo, aunque la sesión ya haya desaparecido del listado ---
   const historialEl = document.getElementById('preguntas-vivo-historial');
   if (historialEl) {
-    const preguntasVivoSnaps = await Promise.all(mentores.map(([uid]) => get(ref(db, `preguntasVivo/${uid}`))));
+    const responsablesHistorial = mentores.map(([uid, datos]) => ({ tipo: 'mentor', uid, datos }));
+    if (esBegin) {
+      Object.entries(usuarios)
+        .filter(([, u]) => {
+          const roles = (u.roles && typeof u.roles === 'object') ? u.roles : (u.rol ? { [u.rol]: true } : {});
+          return !!roles.coach && u.coachCabeceraBegin === true;
+        })
+        .forEach(([uid, datos]) => responsablesHistorial.push({ tipo: 'coach', uid, datos }));
+    }
+
+    const preguntasVivoSnaps = await Promise.all(
+      responsablesHistorial.map(r => get(ref(db, `${r.tipo === 'coach' ? 'preguntasVivoBegin' : 'preguntasVivo'}/${r.uid}`)))
+    );
     let historial = [];
     preguntasVivoSnaps.forEach((snap, idx) => {
       if (!snap.exists()) return;
-      const [mentorUid, mentorDatos] = mentores[idx];
+      const { uid: mentorUid, datos: mentorDatos } = responsablesHistorial[idx];
       Object.entries(snap.val()).forEach(([mentoriaId, preguntas]) => {
         Object.values(preguntas).forEach(p => {
           if (p.alumnoId === alumnoIdActual) historial.push({ ...p, mentorUid, mentorNombre: mentorDatos.nombre || mentorDatos.email });
