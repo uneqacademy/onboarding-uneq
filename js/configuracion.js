@@ -11,7 +11,7 @@ import { db } from './firebase-config.js';
 import { ref, get, set, push, remove } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-database.js";
 import { getCurrentRole } from './main.js';
 
-/* --- Lista inicial de temáticas del BOX BEGIN — se siembra una sola
+/* --- Lista inicial de temáticas del BUZÓN BEGIN — se siembra una sola
        vez, solo si el nodo todavía no existe (no pisa nada si el
        director ya agregó/quitó algo). "Otra" siempre queda al final
        y el alumno puede escribir libre cuando la elige. --- */

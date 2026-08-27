@@ -5,7 +5,7 @@
    (ficha, acuerdo/PDF, Test Brújula histórico, bitácora). Nada
    es editable por el alumno — todo lo sigue manejando el coach.
 
-   El BOX de Consultas (preguntas + respuestas con audio/imagen)
+   El BUZÓN de Consultas (preguntas + respuestas con audio/imagen)
    queda para la próxima entrega, es su propio bloque de trabajo.
    ============================================================ */
 
@@ -148,7 +148,7 @@ export async function cargarDashboardAlumno(alumnoId) {
     ciclo = cicloSnap.exists() ? cicloSnap.val() : null;
   }
 
-  // --- El BOX de Consultas ahora sí es visible para BEGIN — ve un canal
+  // --- El BUZÓN de Consultas ahora sí es visible para BEGIN — ve un canal
   //     distinto (ver cargarBoxAlumno), no el de Mentor IA por especialidad.
 
   // --- Foto grande sobre el menú lateral ---
@@ -533,7 +533,7 @@ document.querySelectorAll('.nav-item[data-nav="test-alumno"]').forEach(item => {
 });
 
 /* ============================================================
-   BOX de Consultas (alumno): tarjetas de mentor (foto + "Hacer
+   BUZÓN de Consultas (alumno): tarjetas de mentor (foto + "Hacer
    Pregunta" + "Detalles Mentor"), límite de 3 preguntas por
    semana (máx. 1 por mentor), reseteo los lunes 00:00.
    ============================================================ */
@@ -853,7 +853,7 @@ if (btnActualizarMisConsultas) {
 }
 
 /* ============================================================
-   BOX — ALUMNO BEGIN: canal único de preguntas por temática,
+   BUZÓN — ALUMNO BEGIN: canal único de preguntas por temática,
    sin elegir mentor, respondidas a mano por "un Mentor disponible".
    Límite: 2 preguntas por semana (total, no por mentor).
    ============================================================ */

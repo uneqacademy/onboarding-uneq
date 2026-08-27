@@ -103,7 +103,7 @@
         <li class="nav-item" data-role="alumno" data-nav="ficha-alumno-propia">Mi Ficha Alumno</li>
         <li class="nav-item" data-role="alumno" data-nav="bitacora-alumno">Bitácora</li>
         <li class="nav-item" data-role="alumno" data-nav="test-alumno">Test Brújula</li>
-        <li class="nav-item hidden" data-nav="box-consultas">BOX de Consultas</li>
+        <li class="nav-item hidden" data-nav="box-consultas">BUZÓN de Consultas</li>
         <li class="nav-item" data-role="alumno" data-nav="preguntas-comunidad">Preguntas de la Comunidad</li>
         <li class="nav-item" data-role="alumno" data-nav="preguntas-vivo">Preguntas en Vivo</li>
         <li class="nav-item" data-role="alumno" data-nav="soporte-alumnos">Soporte Alumnos</li>
@@ -846,7 +846,7 @@
               <img id="mentor-foto-ia-preview" src="" alt="" style="width:72px; height:72px; border-radius:50%; object-fit:cover; border:2px solid var(--color-accent, #2563EB);">
               <input type="file" id="mentor-foto-ia-input" accept="image/*" class="hidden">
               <button type="button" class="btn btn--ghost" id="btn-cambiar-foto-ia-mentor" style="font-size:11px; padding:4px 10px;">Cambiar Foto</button>
-              <span class="text-soft" style="font-size:10px;">Foto del Mentor IA (BOX de Consultas)</span>
+              <span class="text-soft" style="font-size:10px;">Foto del Mentor IA (BUZÓN de Consultas)</span>
             </div>
             <div>
               <p style="margin:0 0 4px;">Mi NPS resumido</p>
@@ -878,7 +878,7 @@
             <button class="btn btn--ghost hidden" id="btn-editar-temas-mentor">✏️ Editar</button>
           </div>
           <div class="panel__body">
-            <p class="text-soft mb-16">Elige las temáticas que dominas — los alumnos las van a ver en "Preguntas en Vivo" y en tu perfil del BOX.</p>
+            <p class="text-soft mb-16">Elige las temáticas que dominas — los alumnos las van a ver en "Preguntas en Vivo" y en tu perfil del BUZÓN.</p>
             <p id="mentor-temas-lista" class="hidden"></p>
             <div id="mentor-temas-checkboxes" style="display:flex; flex-wrap:wrap; gap:10px 20px; margin-bottom:16px;"></div>
             <button class="btn btn--primary" id="btn-guardar-temas-mentor">Guardar Temáticas</button>
@@ -986,12 +986,12 @@
       </section>
 
       <!-- ======================================================
-           BOX DE CONSULTAS — vista MENTOR
+           BUZÓN DE CONSULTAS — vista MENTOR
            (queda lista pero vacía: depende de que Alumnos tenga
            cuenta propia, eso es la Fase 2)
            ====================================================== -->
       <section id="view-box-mentor" class="view hidden">
-        <div class="flex-between mb-16"><h2>BOX de Consultas — Mentor IA</h2></div>
+        <div class="flex-between mb-16"><h2>BUZÓN de Consultas — Mentor IA</h2></div>
         <div class="panel mb-24">
           <div class="panel__body" style="display:flex; gap:16px; flex-wrap:wrap;">
             <div class="field" style="flex:1; min-width:160px;">
@@ -1024,11 +1024,11 @@
         </div>
 
         <!-- ======================================================
-             BOX BEGIN — bandeja compartida entre todos los mentores,
+             BUZÓN BEGIN — bandeja compartida entre todos los mentores,
              respuesta manual (sin IA). Ver box-begin-mentor.js.
              ====================================================== -->
         <div style="margin-top:24px;">
-          <div class="flex-between mb-16"><h2>BOX BEGIN (respuesta manual)</h2></div>
+          <div class="flex-between mb-16"><h2>BUZÓN BEGIN (respuesta manual)</h2></div>
           <p class="text-soft mb-16" style="font-size:13px;">Preguntas de alumnos BEGIN, sin mentor asignado — cualquier mentor disponible puede responderlas. El alumno no sabe quién le responde.</p>
           <div class="panel">
             <div class="panel__header">
@@ -1055,11 +1055,11 @@
       </section>
 
       <!-- ======================================================
-           BOX DE CONSULTAS — vista ALUMNO
+           BUZÓN DE CONSULTAS — vista ALUMNO
            ====================================================== -->
       <section id="view-box-alumno" class="view hidden">
         <div class="mb-16">
-          <h2 style="margin-bottom:4px;">BOX de Consultas</h2>
+          <h2 style="margin-bottom:4px;">BUZÓN de Consultas</h2>
           <p class="text-soft" id="box-alumno-contador">Tienes 1 pregunta por cada Mentor IA por semana</p>
         </div>
 
@@ -1129,7 +1129,7 @@
         </div>
 
         <!-- ======================================================
-             BOX — ALUMNO BEGIN: canal único de preguntas por
+             BUZÓN — ALUMNO BEGIN: canal único de preguntas por
              temática, respondidas a mano por un Mentor disponible
              (sin IA, sin elegir mentor). Ver box-begin.js.
              ====================================================== -->
@@ -1446,7 +1446,7 @@
           </div>
         </div>
         <div class="panel mb-24">
-          <div class="panel__header"><h3>Temáticas del BOX de Consultas — BEGIN</h3></div>
+          <div class="panel__header"><h3>Temáticas del BUZÓN de Consultas — BEGIN</h3></div>
           <div class="panel__body">
             <p class="text-soft mb-16" style="font-size:13px;">Estas son las opciones que ve el alumno BEGIN al elegir el tema de su pregunta. Se guardan al toque, no dependen del botón "Guardar Configuración" de abajo.</p>
             <div style="display:flex; gap:10px; margin-bottom:16px;">

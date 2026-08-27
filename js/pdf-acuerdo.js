@@ -62,9 +62,9 @@ const BENEFICIOS = {
   begin: {
     items: [
       'Contenido pregrabado de ejecución práctica — Nivel Inicial, para las 4 fases de la metodología 2E (acceso: 1 año)',
-      'BOX de consultas por temática, respondido por un Mentor disponible de UNEQ (tiempo de respuesta: hasta 3 días hábiles, máximo 2 preguntas por semana) — vigente durante el programa: 3 meses',
+      'Buzón de consultas sobre el contenido, respondida por cualquiera de nuestros mentores, quienes conocen la metodología completa y las distintas temáticas (tiempo de respuesta: hasta 3 días hábiles). Se pueden realizar hasta 2 preguntas por semana. — vigente durante el programa: 3 meses',
       'Comunidad UNEQ Mentoring en Hotmart (acceso: 6 meses)',
-      'Sesiones semanales grupales con coach (vigente durante el programa: 3 meses)',
+      'Sesiones semanales grupales con coach de cabecera capacitado para revisar avances y resolver dudas de contenidos, además de responder preguntas previamente recibidas y algunas en vivo si el tiempo lo permite (vigente durante el programa: 3 meses)',
       '1 sesión mensual grupal con Maca y Felipe (vigente durante el programa: 3 meses)',
       'Acceso a Membresía ONE, con clases todos los miércoles a las 9:00 hrs (acceso: 3 meses)',
       'Acceso al Programa de Acompañamiento Sinergia (acceso: de por vida)',
@@ -73,16 +73,16 @@ const BENEFICIOS = {
       'Grupo de WhatsApp Ex-Alumnos Begin (acceso: de por vida, una vez finalizado el programa)',
       'Plantillas prediseñadas listas para usar'
     ],
-    duracion: 'Duración del programa (sesiones en vivo y BOX de consultas): 3 meses.',
+    duracion: 'Duración del programa (sesiones en vivo y BUZÓN de consultas): 3 meses.',
     nota: null
   },
   next: {
     items: [
       'Contenido pregrabado de ejecución práctica — Nivel Inicial + Nivel Intermedio, para las 4 fases de la metodología 2E (acceso: de por vida)',
-      'BOX de consultas específica por temática, con mentor especializado distinto por área (tiempo de respuesta: máximo 48 horas) — vigente durante el programa: 6 meses',
+      'BUZÓN de consultas específicas por temática disponible 24/7, con Mentor IA, el cual es un CLON entrenado personalmente por el Mentor Humano especialista en esa temática. Las respuestas son revisadas y validadas por el mentor Humano y las complementa en caso de ser necesario (tiempo de respuesta: 10 segundos). Los alumnos podrán enviar 1 pregunta por Mentor por semana — vigente durante el programa: 6 meses',
       'Comunidad UNEQ Mentoring en Hotmart (vigente durante el programa: 6 meses)',
-      'Coach personalizado (vigente durante el programa: 6 meses)',
-      'Mentorías en vivo de lunes a viernes, con temáticas: Lunes Copywriting, Martes Mentalidad-Estrategia-Tráfico, Miércoles Identidad Visual y Redes Sociales, Jueves Ventas Energéticas, Viernes Gestión de Proyectos y Estructuración de Calendarios (vigente durante el programa: 6 meses)',
+      'Coach personalizado disponible de Lunes a viernes de 9:00 a 18:00 hrs. por whatsapp, para accountability, motivación, guía para el consumo de contenidos y resolución de dudas sobre el funcionamiento del programa. (vigente durante el programa: 6 meses)',
+      'Mentorías en vivo de lunes a viernes, con temáticas: Lunes Copywriting, Martes Mentalidad-Estrategia-Tráfico, Miércoles Identidad Visual y Redes Sociales, Jueves Ventas Energéticas, Viernes Gestión de Proyectos y Estructuración de Calendarios. Puedes enviar preguntas hasta 12 horas antes para cada sesión y serán respondidas de forma personalizada. (vigente durante el programa: 6 meses)',
       'Acceso a Membresía ONE, con clases todos los miércoles a las 9:00 hrs (acceso: 6 meses)',
       'Acceso al Programa de Acompañamiento Sinergia (acceso: de por vida)',
       'Acceso al Curso Tu Cliente Soñado (acceso: de por vida)',
@@ -94,15 +94,15 @@ const BENEFICIOS = {
       'Acceso gratuito a todos los eventos online que realice la Academia (acceso: 1 año)',
       '1 acceso general al evento presencial Sinergia on Stage'
     ],
-    duracion: 'Duración del programa (sesiones en vivo y BOX de consultas): 6 meses.',
+    duracion: 'Duración del programa (sesiones en vivo y BUZÓN de consultas): 6 meses.',
     nota: null
   },
   exit: {
     items: [
-      'Contenido pregrabado de ejecución práctica — Nivel Avanzado, para las 4 fases de la metodología 2E (acceso: de por vida)',
-      'BOX de consultas específica por temática, con mentor especializado distinto por área (tiempo de respuesta: máximo 48 horas) — vigente durante el programa: 6 meses',
+      'Contenido pregrabado de ejecución práctica — Nivel Básico, Intermedio y Avanzado, para las 4 fases de la metodología 2E (acceso: de por vida)',
+      'BUZÓN de consultas específicas por temática disponible 24/7, con Mentor IA, el cual es un CLON entrenado personalmente por el Mentor Humano especialista en esa temática. Las respuestas son revisadas y validadas por el mentor Humano y las complementa en caso de ser necesario (tiempo de respuesta: 10 segundos). Los alumnos podrán enviar 1 pregunta por Mentor por semana — vigente durante el programa: 6 meses',
       'Comunidad UNEQ Mentoring en Hotmart (vigente durante el programa: 6 meses)',
-      'Mentorías en vivo de lunes a viernes, con temáticas: Lunes Copywriting, Martes Mentalidad-Estrategia-Tráfico, Miércoles Identidad Visual y Redes Sociales, Jueves Ventas Energéticas, Viernes Gestión de Proyectos y Estructuración de Calendarios (vigente durante el programa: 6 meses)',
+      'Mentorías en vivo de lunes a viernes, con temáticas: Lunes Copywriting, Martes Mentalidad-Estrategia-Tráfico, Miércoles Identidad Visual y Redes Sociales, Jueves Ventas Energéticas, Viernes Gestión de Proyectos y Estructuración de Calendarios. Puedes enviar preguntas hasta 12 horas antes para cada sesión y serán respondidas de forma personalizada. (vigente durante el programa: 6 meses)',
       'Acceso a Membresía ONE, con clases todos los miércoles a las 9:00 hrs (acceso: 1 año)',
       'Acceso al Programa de Acompañamiento Sinergia (acceso: de por vida)',
       'Acceso al Curso Tu Cliente Soñado (acceso: de por vida)',
@@ -116,7 +116,7 @@ const BENEFICIOS = {
       'Acceso gratuito a todos los eventos online que realice la Academia (acceso: 1 año)',
       '1 acceso general al evento presencial Sinergia on Stage'
     ],
-    duracion: 'Duración del programa (sesiones en vivo y BOX de consultas): 6 meses.',
+    duracion: 'Duración del programa (sesiones en vivo y BUZÓN de consultas): 6 meses.',
     nota: '(En eXIT no se incluye Coach Personalizado; este es reemplazado por el acompañamiento directo de Maca y Felipe a través de WhatsApp privado y las sesiones personalizadas en Zoom.)'
   }
 };

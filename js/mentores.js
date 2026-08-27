@@ -754,7 +754,7 @@ document.querySelectorAll('.nav-item[data-nav="dashboard"]').forEach(item => {
 export { cargarMentoriasView };
 
 /* ============================================================
-   MENTOR: BOX de Consultas — recibe preguntas de alumnos y
+   MENTOR: BUZÓN de Consultas — recibe preguntas de alumnos y
    responde con texto, audio o imagen.
    ============================================================ */
 const ESTADO_LABELS_BOX = { sin_revisar: 'Sin Revisar', confirmada: 'Confirmada', intervenida: 'Intervenida' };
@@ -917,7 +917,7 @@ document.querySelectorAll('.nav-item[data-nav="box-consultas"]').forEach(item =>
 });
 
 /* ============================================================
-   BOX BEGIN — bandeja compartida: cualquier mentor puede
+   BUZÓN BEGIN — bandeja compartida: cualquier mentor puede
    responder cualquier pregunta (primero en escribir, gana).
    Sin IA, respuesta 100% manual.
    ============================================================ */
@@ -1052,7 +1052,7 @@ document.querySelectorAll('.nav-item[data-nav="box-consultas"]').forEach(item =>
 /* ============================================================
    Mentor IA — foto exclusiva, instrucciones de estilo, y
    conocimiento adicional (texto libre o archivos). Todo esto
-   alimenta al Mentor IA del BOX de Consultas junto con lo
+   alimenta al Mentor IA del BUZÓN de Consultas junto con lo
    automático (resúmenes, respuestas validadas, presentación,
    temáticas).
    ============================================================ */
