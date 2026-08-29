@@ -17,7 +17,7 @@ import {
   crearCiclo, iniciarOnboardingSiCorresponde, generarAcuerdoYEnviarRevision,
   marcarEnviadoParaFirma, marcarFirmaProcesada, toggleCandado, renderStepper, renderAcciones
 } from './ciclos.js';
-import { showView, marcarNavActivo, setNav, setCandado, aplicarBloqueoCamposFicha, getCurrentRole, getCurrentUserNombre, applyRole } from './main.js';
+import { showView, marcarNavActivo, setNav, setCandado, aplicarBloqueoCamposFicha, getCurrentRole, getCurrentUserNombre, getCurrentRolesDisponibles, applyRole } from './main.js';
 import { cargarTestParaCiclo, hayTestCompletado } from './test.js';
 import { cargarAcuerdoParaCiclo } from './pagos.js';
 import { cargarBitacoraParaCiclo } from './bitacora.js';
@@ -1284,11 +1284,11 @@ function salirModoDemo() {
     // director pierde el acceso a los alumnos reales para siempre.
     if (uidActual) await set(ref(db, `alumnoPorAuthUid/${uidActual}`), null);
     if (estadoDirectorAntesDeDemo) {
-      applyRole('director', estadoDirectorAntesDeDemo.nombre, ['director']);
+      applyRole(estadoDirectorAntesDeDemo.rol, estadoDirectorAntesDeDemo.nombre, estadoDirectorAntesDeDemo.roles);
       estadoDirectorAntesDeDemo = null;
     }
     setNav('dashboard');
-    cargarListasAlumnos();
+    document.dispatchEvent(new CustomEvent('rolCambiado'));
   };
   restaurar();
 }
@@ -1298,7 +1298,7 @@ async function verComoAlumnoDemo(programa) {
   const uid = auth.currentUser ? auth.currentUser.uid : null;
   if (!uid) return;
   if (!estadoDirectorAntesDeDemo) {
-    estadoDirectorAntesDeDemo = { nombre: getCurrentUserNombre() };
+    estadoDirectorAntesDeDemo = { rol: getCurrentRole(), nombre: getCurrentUserNombre(), roles: getCurrentRolesDisponibles() };
   }
   const demoId = await asegurarAlumnoDemo(programa);
   // Sin esto, las reglas de seguridad rechazarían cualquier escritura

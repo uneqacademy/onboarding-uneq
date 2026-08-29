@@ -109,6 +109,7 @@ export function showLogin() {
 
 export function getCurrentRole() { return currentRole; }
 export function getCurrentUserNombre() { return currentNombre; }
+export function getCurrentRolesDisponibles() { return currentRolesDisponibles; }
 
 // --- Router simple entre secciones del menú lateral ---
 export function showView(id) {
