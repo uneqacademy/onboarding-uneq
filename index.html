@@ -103,7 +103,7 @@
         <li class="nav-item" data-role="alumno" data-nav="ficha-alumno-propia">Mi Ficha Alumno</li>
         <li class="nav-item" data-role="alumno" data-nav="bitacora-alumno">Bitácora</li>
         <li class="nav-item" data-role="alumno" data-nav="test-alumno">Test Brújula</li>
-        <li class="nav-item hidden" data-nav="box-consultas">BUZÓN de Consultas</li>
+        <li class="nav-item hidden" data-nav="box-consultas">BOX de Consultas</li>
         <li class="nav-item" data-role="alumno" data-nav="preguntas-comunidad">Preguntas de la Comunidad</li>
         <li class="nav-item" data-role="alumno" data-nav="preguntas-vivo">Preguntas en Vivo</li>
         <li class="nav-item" data-role="alumno" data-nav="soporte-alumnos">Soporte Alumnos</li>
@@ -200,6 +200,18 @@
             </table>
           </div>
         </div>
+
+        <div class="panel" style="margin-top:24px;">
+          <div class="panel__header"><h3>🎭 Ver como Alumno (Demo)</h3></div>
+          <div class="panel__body">
+            <p class="text-soft mb-16" style="font-size:13px;">Prueba la experiencia real de un alumno sin crear datos falsos — no cuenta en ninguna estadística, y aparece marcado "(DEMO)" para que mentores y coaches no se confundan.</p>
+            <div style="display:flex; gap:10px; flex-wrap:wrap;">
+              <button type="button" class="btn btn--accent" id="btn-ver-demo-begin">Ver como Alumno BEGIN</button>
+              <button type="button" class="btn btn--accent" id="btn-ver-demo-next">Ver como Alumno NEXT</button>
+              <button type="button" class="btn btn--accent" id="btn-ver-demo-exit">Ver como Alumno eXIT</button>
+            </div>
+          </div>
+        </div>
       </section>
 
       <!-- ======================================================
@@ -230,7 +242,7 @@
           <div class="panel__body" style="padding:0;">
             <table class="data-table">
               <thead>
-                <tr><th>Alumno</th><th>Programa</th><th>Estado Proceso</th><th>Estado Alumno</th><th>Fase</th></tr>
+                <tr><th>Alumno</th><th>Programa</th><th>Estado Proceso</th><th>Estado Alumno</th><th>Fase</th><th>Fecha Ingreso</th><th>Fecha Egreso</th><th>Días Activo</th><th>Días Restantes</th></tr>
               </thead>
               <tbody id="tabla-alumnos-dashboard-coach"></tbody>
             </table>
@@ -628,7 +640,7 @@
           <div class="panel__body" style="padding:0;">
             <table class="data-table">
               <thead>
-                <tr><th>Alumno</th><th>Programa</th><th>Estado Proceso</th><th>Estado Alumno</th><th>Fase</th><th>Ingreso</th><th>Egreso</th></tr>
+                <tr><th>Alumno</th><th>Programa</th><th>Estado Proceso</th><th>Estado Alumno</th><th>Fase</th><th>Ingreso</th><th>Egreso</th><th>Días Activo</th><th>Días Restantes</th></tr>
               </thead>
               <tbody id="tabla-alumnos-coach"></tbody>
             </table>
@@ -846,7 +858,7 @@
               <img id="mentor-foto-ia-preview" src="" alt="" style="width:72px; height:72px; border-radius:50%; object-fit:cover; border:2px solid var(--color-accent, #2563EB);">
               <input type="file" id="mentor-foto-ia-input" accept="image/*" class="hidden">
               <button type="button" class="btn btn--ghost" id="btn-cambiar-foto-ia-mentor" style="font-size:11px; padding:4px 10px;">Cambiar Foto</button>
-              <span class="text-soft" style="font-size:10px;">Foto del Mentor IA (BUZÓN de Consultas)</span>
+              <span class="text-soft" style="font-size:10px;">Foto del Mentor IA (BOX Inteligente)</span>
             </div>
             <div>
               <p style="margin:0 0 4px;">Mi NPS resumido</p>
@@ -874,11 +886,27 @@
 
         <div class="panel mb-24">
           <div class="panel__header flex-between">
+            <h3>Info Privada para mi Mentor IA</h3>
+            <button class="btn btn--ghost hidden" id="btn-editar-info-privada-mentor">✏️ Editar</button>
+          </div>
+          <div class="panel__body">
+            <p class="text-soft mb-16">Espacio libre para agregar todo lo que quieras que tu Mentor IA sepa, pero que <strong>no</strong> se le muestra al alumno en ningún lado (a diferencia de "Mi Presentación", que sí es pública). Ideal para contexto extra, matices, o cosas que prefieres no dejar públicas.</p>
+            <p id="mentor-info-privada-texto" class="hidden" style="white-space:pre-wrap; margin:0;"></p>
+            <textarea id="mentor-info-privada" placeholder="Cualquier info adicional para entrenar a tu clon, que no verá el alumno..." style="min-height:110px; resize:none;"></textarea>
+            <div class="flex-between" style="margin-top:12px;">
+              <span></span>
+              <button class="btn btn--primary" id="btn-guardar-info-privada-mentor">Guardar Info Privada</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel mb-24">
+          <div class="panel__header flex-between">
             <h3>Mis Temáticas</h3>
             <button class="btn btn--ghost hidden" id="btn-editar-temas-mentor">✏️ Editar</button>
           </div>
           <div class="panel__body">
-            <p class="text-soft mb-16">Elige las temáticas que dominas — los alumnos las van a ver en "Preguntas en Vivo" y en tu perfil del BUZÓN.</p>
+            <p class="text-soft mb-16">Elige las temáticas que dominas — los alumnos las van a ver en "Preguntas en Vivo" y en tu perfil del BOX Inteligente.</p>
             <p id="mentor-temas-lista" class="hidden"></p>
             <div id="mentor-temas-checkboxes" style="display:flex; flex-wrap:wrap; gap:10px 20px; margin-bottom:16px;"></div>
             <button class="btn btn--primary" id="btn-guardar-temas-mentor">Guardar Temáticas</button>
@@ -986,12 +1014,12 @@
       </section>
 
       <!-- ======================================================
-           BUZÓN DE CONSULTAS — vista MENTOR
+           BOX INTELIGENTE — vista MENTOR
            (queda lista pero vacía: depende de que Alumnos tenga
            cuenta propia, eso es la Fase 2)
            ====================================================== -->
       <section id="view-box-mentor" class="view hidden">
-        <div class="flex-between mb-16"><h2>BUZÓN de Consultas — Mentor IA</h2></div>
+        <div class="flex-between mb-16"><h2>BOX Inteligente — Mentor IA</h2></div>
         <div class="panel mb-24">
           <div class="panel__body" style="display:flex; gap:16px; flex-wrap:wrap;">
             <div class="field" style="flex:1; min-width:160px;">
@@ -1024,11 +1052,11 @@
         </div>
 
         <!-- ======================================================
-             BUZÓN BEGIN — bandeja compartida entre todos los mentores,
+             BOX DE CONSULTAS BEGIN — bandeja compartida entre todos los mentores,
              respuesta manual (sin IA). Ver box-begin-mentor.js.
              ====================================================== -->
         <div style="margin-top:24px;">
-          <div class="flex-between mb-16"><h2>BUZÓN BEGIN (respuesta manual)</h2></div>
+          <div class="flex-between mb-16"><h2>BOX de Consultas BEGIN (respuesta manual)</h2></div>
           <p class="text-soft mb-16" style="font-size:13px;">Preguntas de alumnos BEGIN, sin mentor asignado — cualquier mentor disponible puede responderlas. El alumno no sabe quién le responde.</p>
           <div class="panel">
             <div class="panel__header">
@@ -1055,11 +1083,11 @@
       </section>
 
       <!-- ======================================================
-           BUZÓN DE CONSULTAS — vista ALUMNO
+           BOX — vista ALUMNO (BEGIN o Inteligente según programa)
            ====================================================== -->
       <section id="view-box-alumno" class="view hidden">
         <div class="mb-16">
-          <h2 style="margin-bottom:4px;">BUZÓN de Consultas</h2>
+          <h2 style="margin-bottom:4px;" id="box-alumno-titulo">BOX de Consultas</h2>
           <p class="text-soft" id="box-alumno-contador">Tienes 1 pregunta por cada Mentor IA por semana</p>
         </div>
 
@@ -1129,7 +1157,7 @@
         </div>
 
         <!-- ======================================================
-             BUZÓN — ALUMNO BEGIN: canal único de preguntas por
+             BOX — ALUMNO BEGIN: canal único de preguntas por
              temática, respondidas a mano por un Mentor disponible
              (sin IA, sin elegir mentor). Ver box-begin.js.
              ====================================================== -->
@@ -1446,7 +1474,7 @@
           </div>
         </div>
         <div class="panel mb-24">
-          <div class="panel__header"><h3>Temáticas del BUZÓN de Consultas — BEGIN</h3></div>
+          <div class="panel__header"><h3>Temáticas del BOX de Consultas — BEGIN</h3></div>
           <div class="panel__body">
             <p class="text-soft mb-16" style="font-size:13px;">Estas son las opciones que ve el alumno BEGIN al elegir el tema de su pregunta. Se guardan al toque, no dependen del botón "Guardar Configuración" de abajo.</p>
             <div style="display:flex; gap:10px; margin-bottom:16px;">

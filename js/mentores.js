@@ -476,6 +476,23 @@ export async function cargarPerfilMentor() {
     if (btnEditarBio) btnEditarBio.classList.toggle('hidden', !tieneBio);
   }
 
+  const infoPrivadaTextarea = document.getElementById('mentor-info-privada');
+  const infoPrivadaTexto = document.getElementById('mentor-info-privada-texto');
+  const btnGuardarInfoPrivada = document.getElementById('btn-guardar-info-privada-mentor');
+  const btnEditarInfoPrivada = document.getElementById('btn-editar-info-privada-mentor');
+  if (infoPrivadaTextarea) {
+    infoPrivadaTextarea.value = datos.infoEntrenamientoIA || '';
+    const tieneInfoPrivada = !!(datos.infoEntrenamientoIA && datos.infoEntrenamientoIA.trim());
+    if (infoPrivadaTexto) {
+      infoPrivadaTexto.textContent = datos.infoEntrenamientoIA || 'Aún no has agregado nada acá.';
+      infoPrivadaTexto.classList.toggle('hidden', !tieneInfoPrivada);
+    }
+    infoPrivadaTextarea.classList.toggle('hidden', tieneInfoPrivada);
+    infoPrivadaTextarea.disabled = tieneInfoPrivada;
+    if (btnGuardarInfoPrivada) btnGuardarInfoPrivada.classList.toggle('hidden', tieneInfoPrivada);
+    if (btnEditarInfoPrivada) btnEditarInfoPrivada.classList.toggle('hidden', !tieneInfoPrivada);
+  }
+
   const temasCont = document.getElementById('mentor-temas-checkboxes');
   const temasListaEl = document.getElementById('mentor-temas-lista');
   const btnEditarTemas = document.getElementById('btn-editar-temas-mentor');
@@ -549,6 +566,33 @@ if (btnEditarBioMentor) {
     document.getElementById('mentor-bio').disabled = false;
     document.getElementById('btn-guardar-bio-mentor').classList.remove('hidden');
     btnEditarBioMentor.classList.add('hidden');
+  });
+}
+
+const btnGuardarInfoPrivadaMentor = document.getElementById('btn-guardar-info-privada-mentor');
+if (btnGuardarInfoPrivadaMentor) {
+  btnGuardarInfoPrivadaMentor.addEventListener('click', async () => {
+    const uid = auth.currentUser ? auth.currentUser.uid : null;
+    const infoEntrenamientoIA = document.getElementById('mentor-info-privada').value.trim();
+    if (!uid || !infoEntrenamientoIA) { alert('Escribe algo antes de guardar.'); return; }
+    btnGuardarInfoPrivadaMentor.disabled = true;
+    try {
+      await update(ref(db, `usuarios/${uid}`), { infoEntrenamientoIA });
+      await cargarPerfilMentor();
+    } finally {
+      btnGuardarInfoPrivadaMentor.disabled = false;
+    }
+  });
+}
+
+const btnEditarInfoPrivadaMentor = document.getElementById('btn-editar-info-privada-mentor');
+if (btnEditarInfoPrivadaMentor) {
+  btnEditarInfoPrivadaMentor.addEventListener('click', () => {
+    document.getElementById('mentor-info-privada-texto').classList.add('hidden');
+    document.getElementById('mentor-info-privada').classList.remove('hidden');
+    document.getElementById('mentor-info-privada').disabled = false;
+    document.getElementById('btn-guardar-info-privada-mentor').classList.remove('hidden');
+    btnEditarInfoPrivadaMentor.classList.add('hidden');
   });
 }
 
@@ -754,7 +798,7 @@ document.querySelectorAll('.nav-item[data-nav="dashboard"]').forEach(item => {
 export { cargarMentoriasView };
 
 /* ============================================================
-   MENTOR: BUZÓN de Consultas — recibe preguntas de alumnos y
+   MENTOR: BOX Inteligente — recibe preguntas de alumnos y
    responde con texto, audio o imagen.
    ============================================================ */
 const ESTADO_LABELS_BOX = { sin_revisar: 'Sin Revisar', confirmada: 'Confirmada', intervenida: 'Intervenida' };
@@ -917,7 +961,7 @@ document.querySelectorAll('.nav-item[data-nav="box-consultas"]').forEach(item =>
 });
 
 /* ============================================================
-   BUZÓN BEGIN — bandeja compartida: cualquier mentor puede
+   BOX DE CONSULTAS BEGIN — bandeja compartida: cualquier mentor puede
    responder cualquier pregunta (primero en escribir, gana).
    Sin IA, respuesta 100% manual.
    ============================================================ */
@@ -1052,7 +1096,7 @@ document.querySelectorAll('.nav-item[data-nav="box-consultas"]').forEach(item =>
 /* ============================================================
    Mentor IA — foto exclusiva, instrucciones de estilo, y
    conocimiento adicional (texto libre o archivos). Todo esto
-   alimenta al Mentor IA del BUZÓN de Consultas junto con lo
+   alimenta al Mentor IA del BOX Inteligente junto con lo
    automático (resúmenes, respuestas validadas, presentación,
    temáticas).
    ============================================================ */

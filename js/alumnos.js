@@ -17,7 +17,7 @@ import {
   crearCiclo, iniciarOnboardingSiCorresponde, generarAcuerdoYEnviarRevision,
   marcarEnviadoParaFirma, marcarFirmaProcesada, toggleCandado, renderStepper, renderAcciones
 } from './ciclos.js';
-import { showView, marcarNavActivo, setNav, setCandado, aplicarBloqueoCamposFicha, getCurrentRole, getCurrentUserNombre } from './main.js';
+import { showView, marcarNavActivo, setNav, setCandado, aplicarBloqueoCamposFicha, getCurrentRole, getCurrentUserNombre, applyRole } from './main.js';
 import { cargarTestParaCiclo, hayTestCompletado } from './test.js';
 import { cargarAcuerdoParaCiclo } from './pagos.js';
 import { cargarBitacoraParaCiclo } from './bitacora.js';
@@ -26,7 +26,7 @@ import './respaldo.js';
 import { cargarMiEvaluacionCoach } from './coaches.js';
 import { cargarDashboardMentor, cargarAlumnosMentor, cargarPerfilMentor, cargarMentoriasView, cargarBoxMentor } from './mentores.js';
 import { cargarSesionesBeginCoach } from './dashboard-coach.js';
-import { actualizarBotonAccesoAlumno } from './alumno-portal.js';
+import { actualizarBotonAccesoAlumno, cargarDashboardAlumno } from './alumno-portal.js';
 import './configuracion.js';
 import './mis-datos.js';
 import './informe-ia.js';
@@ -361,6 +361,21 @@ function crearFilaAlumno(alumnoId, alumno, ciclo, columnas, acuerdo) {
   if (columnas.fechas) {
     html += `<td>${formatFecha(ciclo && ciclo.fechaIngreso)}</td><td>${formatFecha(ciclo && ciclo.fechaEgreso)}</td>`;
   }
+  if (columnas.dias) {
+    let diasActivo = '—', diasRestantes = '—';
+    if (ciclo && ciclo.fechaIngreso) {
+      const hoy = new Date(); hoy.setHours(0, 0, 0, 0);
+      const ingreso = new Date(ciclo.fechaIngreso + 'T00:00:00');
+      diasActivo = Math.max(0, Math.round((hoy - ingreso) / (1000 * 60 * 60 * 24)));
+    }
+    if (ciclo && ciclo.fechaEgreso) {
+      const hoy = new Date(); hoy.setHours(0, 0, 0, 0);
+      const egreso = new Date(ciclo.fechaEgreso + 'T00:00:00');
+      const restantes = Math.round((egreso - hoy) / (1000 * 60 * 60 * 24));
+      diasRestantes = restantes < 0 ? 'Vencido' : restantes;
+    }
+    html += `<td>${diasActivo}</td><td>${diasRestantes}</td>`;
+  }
   if (columnas.pago) {
     const montoTexto = acuerdo && acuerdo.montoTotal ? `${acuerdo.montoTotal} ${acuerdo.moneda || ''}`.trim() : '—';
     const estadoPago = estadoPagoDeAcuerdo(acuerdo);
@@ -400,6 +415,7 @@ export async function cargarListasAlumnos() {
   [tbodyDashDirector, tbodyDashCoach, tbodyDirector, tbodyCoach].forEach(t => { if (t) t.innerHTML = ''; });
 
   Object.entries(alumnos).forEach(([alumnoId, alumno]) => {
+    if (alumno.esDemo) return; // Alumno Demo del director — nunca aparece en listas ni cuenta en nada
     const ciclo = alumno.cicloActualId ? ciclos[alumno.cicloActualId] : null;
     const acuerdo = alumno.cicloActualId ? acuerdos[alumno.cicloActualId] : null;
 
@@ -410,8 +426,8 @@ export async function cargarListasAlumnos() {
       const esMio = ciclo && ciclo.coachId === uid;
       const esBeginDeCabecera = ciclo && ciclo.programa === 'begin' && esCoachCabeceraBegin;
       if (!ciclo || !(esMio || esBeginDeCabecera)) return;
-      if (tbodyDashCoach) tbodyDashCoach.appendChild(crearFilaAlumno(alumnoId, alumno, ciclo, { coach: false, fase: true, fechas: false, pago: false }));
-      if (tbodyCoach) tbodyCoach.appendChild(crearFilaAlumno(alumnoId, alumno, ciclo, { coach: false, fase: true, fechas: true, pago: false }));
+      if (tbodyDashCoach) tbodyDashCoach.appendChild(crearFilaAlumno(alumnoId, alumno, ciclo, { coach: false, fase: true, fechas: true, dias: true, pago: false }));
+      if (tbodyCoach) tbodyCoach.appendChild(crearFilaAlumno(alumnoId, alumno, ciclo, { coach: false, fase: true, fechas: true, dias: true, pago: false }));
     }
   });
 
@@ -423,6 +439,7 @@ export async function cargarListasAlumnos() {
     const atrasadoPorMoneda = {};
 
     Object.values(alumnos).forEach(alumno => {
+      if (alumno.esDemo) return;
       const ciclo = alumno.cicloActualId ? ciclos[alumno.cicloActualId] : null;
       const acuerdo = alumno.cicloActualId ? acuerdos[alumno.cicloActualId] : null;
       if (!ciclo) return;
@@ -1197,3 +1214,107 @@ document.querySelectorAll('.nav-item[data-nav]').forEach(item => {
     }
   });
 });
+
+/* ============================================================
+   Director — "Ver como Alumno (Demo)": 3 alumnos ficticios fijos
+   (uno por programa), auto-creados la primera vez, marcados
+   esDemo:true (nunca cuentan en listas/KPIs — ver cargarListasAlumnos
+   y las secciones de coaches.js), y con "(BEGIN/NEXT/eXIT)" ya en el
+   apellido para que el tag "(DEMO)" se vea solo, en todos lados
+   donde se muestre su nombre (BOX, Preguntas en Vivo, etc.) sin tener
+   que tocar cada pantalla una por una.
+   ============================================================ */
+const ETIQUETAS_DEMO = { begin: 'BEGIN', next: 'NEXT', exit: 'eXIT' };
+let estadoDirectorAntesDeDemo = null;
+
+async function asegurarAlumnoDemo(programa) {
+  const demoId = `demo-${programa}`;
+  const alumnoSnap = await get(ref(db, `alumnos/${demoId}`));
+  if (alumnoSnap.exists()) return demoId;
+
+  const hoy = new Date().toISOString().slice(0, 10);
+  await set(ref(db, `alumnos/${demoId}`), {
+    nombre: 'Alumno Demo',
+    apellido: `(${ETIQUETAS_DEMO[programa]} · DEMO)`,
+    email: `demo-${programa}@uneq.local`,
+    cicloActualId: demoId,
+    esDemo: true,
+    createdAt: Date.now()
+  });
+  await set(ref(db, `ciclos/${demoId}`), {
+    alumnoId: demoId,
+    programa,
+    coachId: null,
+    estadoProceso: 'firma_procesada',
+    estadoAlumno: 'activo',
+    fechaIngreso: hoy,
+    fechaEgreso: hoy,
+    facturacionActual: '—',
+    objetivoFacturacion: '—',
+    situacionPersonal: '—',
+    objetivosPersonales: '—',
+    esDemo: true,
+    createdAt: Date.now()
+  });
+  return demoId;
+}
+
+function mostrarBannerModoDemo(programa) {
+  let banner = document.getElementById('banner-modo-demo');
+  if (!banner) {
+    banner = document.createElement('div');
+    banner.id = 'banner-modo-demo';
+    banner.style.cssText = 'background:#E8A33D; color:#1B2333; padding:8px 20px; text-align:center; font-size:13px; font-weight:600; display:flex; align-items:center; justify-content:center; gap:14px; flex-wrap:wrap;';
+    const mainCol = document.querySelector('.main');
+    if (mainCol) mainCol.prepend(banner);
+  }
+  banner.innerHTML = `👁️ Viendo como Alumno Demo (${ETIQUETAS_DEMO[programa]}) — esto no es un alumno real, nada de lo que hagas acá cuenta en el sistema.
+    <button type="button" id="btn-salir-modo-demo" class="btn btn--ghost" style="font-size:11px; padding:3px 12px; background:#fff;">🔙 Volver a Director</button>`;
+  document.getElementById('btn-salir-modo-demo').addEventListener('click', salirModoDemo);
+}
+
+function salirModoDemo() {
+  const banner = document.getElementById('banner-modo-demo');
+  if (banner) banner.remove();
+  const uidActual = auth.currentUser ? auth.currentUser.uid : null;
+  const restaurar = async () => {
+    // CRÍTICO: hay que borrar este mapeo, no solo dejar de usarlo — las
+    // reglas de alumnos/ciclos le dan acceso amplio al staff solo cuando
+    // su uid NO tiene entrada en alumnoPorAuthUid. Si queda puesto, el
+    // director pierde el acceso a los alumnos reales para siempre.
+    if (uidActual) await set(ref(db, `alumnoPorAuthUid/${uidActual}`), null);
+    if (estadoDirectorAntesDeDemo) {
+      applyRole('director', estadoDirectorAntesDeDemo.nombre, ['director']);
+      estadoDirectorAntesDeDemo = null;
+    }
+    setNav('dashboard');
+    cargarListasAlumnos();
+  };
+  restaurar();
+}
+
+async function verComoAlumnoDemo(programa) {
+  if (getCurrentRole() !== 'director') return;
+  const uid = auth.currentUser ? auth.currentUser.uid : null;
+  if (!uid) return;
+  if (!estadoDirectorAntesDeDemo) {
+    estadoDirectorAntesDeDemo = { nombre: getCurrentUserNombre() };
+  }
+  const demoId = await asegurarAlumnoDemo(programa);
+  // Sin esto, las reglas de seguridad rechazarían cualquier escritura
+  // "como alumno" (preguntas al BOX, Preguntas en Vivo, etc.) — el
+  // director sigue autenticado con su propia cuenta, así que esta
+  // cuenta necesita, temporalmente, mapear también a este alumno.
+  await update(ref(db, 'alumnoPorAuthUid'), { [uid]: demoId });
+  applyRole('alumno', `Alumno Demo (${ETIQUETAS_DEMO[programa]})`, ['alumno']);
+  mostrarBannerModoDemo(programa);
+  await cargarDashboardAlumno(demoId);
+  setNav('dashboard');
+}
+
+const btnVerDemoBegin = document.getElementById('btn-ver-demo-begin');
+if (btnVerDemoBegin) btnVerDemoBegin.addEventListener('click', () => verComoAlumnoDemo('begin'));
+const btnVerDemoNext = document.getElementById('btn-ver-demo-next');
+if (btnVerDemoNext) btnVerDemoNext.addEventListener('click', () => verComoAlumnoDemo('next'));
+const btnVerDemoExit = document.getElementById('btn-ver-demo-exit');
+if (btnVerDemoExit) btnVerDemoExit.addEventListener('click', () => verComoAlumnoDemo('exit'));
