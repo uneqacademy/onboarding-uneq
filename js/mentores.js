@@ -904,7 +904,8 @@ export async function cargarBoxMentor() {
       const btnComplementar = bloque.querySelector('.btn-complementar-respuesta');
 
       if (btnConfirmar) {
-        btnConfirmar.addEventListener('click', async () => {
+        btnConfirmar.addEventListener('click', async (ev) => {
+          ev.stopPropagation();
           btnConfirmar.disabled = true;
           try {
             await update(ref(db, `box/${uid}/${preguntaId}/respuesta`), { estadoRevision: 'confirmada', revisadoEn: Date.now() });
@@ -917,7 +918,8 @@ export async function cargarBoxMentor() {
       }
 
       if (btnComplementar) {
-        btnComplementar.addEventListener('click', () => {
+        btnComplementar.addEventListener('click', (ev) => {
+          ev.stopPropagation();
           const contenedorRespuesta = bloque.querySelector('.acciones-revision').parentElement;
           const textoActual = p.respuesta.texto || '';
           contenedorRespuesta.innerHTML = `
@@ -927,11 +929,15 @@ export async function cargarBoxMentor() {
               <button type="button" class="btn btn--ghost btn-cancelar-complemento" style="font-size:11px; padding:4px 10px;">Cancelar</button>
             </div>`;
 
-          contenedorRespuesta.querySelector('.btn-cancelar-complemento').addEventListener('click', () => cargarBoxMentor());
-          contenedorRespuesta.querySelector('.btn-guardar-complemento').addEventListener('click', async (ev) => {
+          contenedorRespuesta.querySelector('.btn-cancelar-complemento').addEventListener('click', (ev2) => {
+            ev2.stopPropagation();
+            cargarBoxMentor();
+          });
+          contenedorRespuesta.querySelector('.btn-guardar-complemento').addEventListener('click', async (ev2) => {
+            ev2.stopPropagation();
             const nuevoTexto = contenedorRespuesta.querySelector('.texto-edicion-respuesta').value.trim();
             if (!nuevoTexto) { alert('La respuesta no puede quedar vacía.'); return; }
-            ev.target.disabled = true;
+            ev2.target.disabled = true;
             try {
               await update(ref(db, `box/${uid}/${preguntaId}/respuesta`), {
                 texto: nuevoTexto,
@@ -941,7 +947,7 @@ export async function cargarBoxMentor() {
               await cargarBoxMentor();
             } catch (err) {
               alert('No se pudo guardar. Intenta de nuevo.');
-              ev.target.disabled = false;
+              ev2.target.disabled = false;
             }
           });
         });
@@ -1061,7 +1067,8 @@ async function cargarBoxBeginMentor() {
         `;
         const btnResponder = detalle.querySelector('.btn-responder-box-begin');
         if (btnResponder) {
-          btnResponder.addEventListener('click', async () => {
+          btnResponder.addEventListener('click', async (ev2) => {
+            ev2.stopPropagation();
             const texto = detalle.querySelector('.box-begin-textarea-respuesta').value.trim();
             if (!texto) { alert('Escribe una respuesta antes de enviar.'); return; }
             btnResponder.disabled = true;

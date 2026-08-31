@@ -666,7 +666,7 @@ export async function cargarBoxAlumno() {
     gridEl.appendChild(tarjeta);
 
     tarjeta.querySelector('.btn-hacer-pregunta').addEventListener('click', () => {
-      document.getElementById('box-alumno-detalle-panel').classList.add('hidden');
+      document.getElementById('modal-detalle-mentor').classList.remove('is-visible');
       document.getElementById('box-alumno-form-panel').classList.remove('hidden');
       document.getElementById('box-alumno-mentor-nombre-form').textContent = `${m.nombre || m.email} (Mentor IA)`;
       document.getElementById('btn-enviar-pregunta-alumno').dataset.mentorId = uid;
@@ -674,14 +674,13 @@ export async function cargarBoxAlumno() {
     });
 
     tarjeta.querySelector('.btn-detalles-mentor').addEventListener('click', () => {
-      document.getElementById('box-alumno-form-panel').classList.add('hidden');
-      document.getElementById('box-alumno-detalle-panel').classList.remove('hidden');
       document.getElementById('box-alumno-detalle-contenido').innerHTML = `
         <div style="display:flex; align-items:center; gap:14px; margin-bottom:12px;">
           <img src="${m.fotoUrl || PLACEHOLDER_FOTO_ALUMNO}" alt="" style="width:56px; height:56px; border-radius:50%; object-fit:cover;">
           <strong>${m.nombre || m.email}</strong>
         </div>
         <p style="white-space:pre-wrap;">${m.bio ? linkify(m.bio) : 'Este mentor aún no ha escrito su presentación.'}</p>`;
+      document.getElementById('modal-detalle-mentor').classList.add('is-visible');
     });
   });
 
@@ -777,8 +776,17 @@ export async function cargarBoxAlumno() {
 const btnCerrarFormPregunta = document.getElementById('btn-cerrar-form-pregunta');
 if (btnCerrarFormPregunta) btnCerrarFormPregunta.addEventListener('click', () => document.getElementById('box-alumno-form-panel').classList.add('hidden'));
 
+const modalDetalleMentor = document.getElementById('modal-detalle-mentor');
 const btnCerrarDetalleMentor = document.getElementById('btn-cerrar-detalle-mentor');
-if (btnCerrarDetalleMentor) btnCerrarDetalleMentor.addEventListener('click', () => document.getElementById('box-alumno-detalle-panel').classList.add('hidden'));
+if (btnCerrarDetalleMentor) btnCerrarDetalleMentor.addEventListener('click', () => modalDetalleMentor.classList.remove('is-visible'));
+if (modalDetalleMentor) {
+  modalDetalleMentor.addEventListener('click', (ev) => {
+    if (ev.target === modalDetalleMentor) modalDetalleMentor.classList.remove('is-visible'); // clic afuera de la tarjeta
+  });
+  document.addEventListener('keydown', (ev) => {
+    if (ev.key === 'Escape') modalDetalleMentor.classList.remove('is-visible');
+  });
+}
 
 let imagenesSeleccionadasPregunta = [];
 const btnAdjuntarImagenesPregunta = document.getElementById('btn-adjuntar-imagenes-pregunta');

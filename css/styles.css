@@ -563,6 +563,38 @@ textarea { width: 100%; max-width: 100%; box-sizing: border-box; resize: vertica
 }
 .sidebar-overlay.is-visible { opacity: 1; pointer-events: auto; }
 
+/* ============================================
+   MODAL genérico (ej. "Detalles Mentor")
+   ============================================ */
+.modal-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(27, 35, 51, 0.55);
+  z-index: 1200;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+.modal-overlay.is-visible { display: flex; }
+.modal-card {
+  background: var(--color-surface);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
+  width: 100%;
+  max-width: 440px;
+  max-height: 85vh;
+  overflow-y: auto;
+}
+.modal-card__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--color-border);
+}
+.modal-card__body { padding: 20px; }
+
 @media (max-width: 900px) {
   .app-shell { grid-template-columns: 1fr; }
 

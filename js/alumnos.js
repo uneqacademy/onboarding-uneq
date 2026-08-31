@@ -327,6 +327,21 @@ async function cargarCoaches() {
   }
   const selectNuevoAlumno = document.getElementById('nuevo-alumno-coach');
   if (selectNuevoAlumno) poblarSelectCoaches(selectNuevoAlumno, null);
+
+  const selectFiltroDirector = document.getElementById('filtro-director-coach');
+  if (selectFiltroDirector) {
+    const valorPrevio = selectFiltroDirector.value;
+    selectFiltroDirector.innerHTML = '<option value="">Coach: Todos</option>'
+      + Object.entries(coachesMap).map(([uid, nombre]) => `<option value="${uid}">${nombre}</option>`).join('');
+    selectFiltroDirector.value = valorPrevio;
+  }
+  const selectFiltroDashDirector = document.getElementById('filtro-dash-director-coach');
+  if (selectFiltroDashDirector) {
+    const valorPrevio = selectFiltroDashDirector.value;
+    selectFiltroDashDirector.innerHTML = '<option value="">Coach: Todos</option>'
+      + Object.entries(coachesMap).map(([uid, nombre]) => `<option value="${uid}">${nombre}</option>`).join('');
+    selectFiltroDashDirector.value = valorPrevio;
+  }
 }
 
 // Refresca la lista de coaches cada vez que se abre "Nuevo Alumno" — evita que
@@ -387,6 +402,25 @@ function crearFilaAlumno(alumnoId, alumno, ciclo, columnas, acuerdo) {
 }
 
 /* --- Recarga las 4 tablas de alumnos según el rol de la sesión actual --- */
+/* --- Filtros de "Todos los alumnos" — tanto en la vista Alumnos como
+       en el widget del Dashboard (2 tablas, 2 juegos de filtros
+       independientes con el mismo formato). --- */
+function pasaFiltrosDirector(alumno, ciclo, prefijo) {
+  const fCoach = document.getElementById(`filtro-${prefijo}-coach`)?.value || '';
+  const fPrograma = document.getElementById(`filtro-${prefijo}-programa`)?.value || '';
+  const fEstado = document.getElementById(`filtro-${prefijo}-estado`)?.value || '';
+  const fNombre = (document.getElementById(`filtro-${prefijo}-nombre`)?.value || '').toLowerCase().trim();
+
+  if (fCoach && (!ciclo || ciclo.coachId !== fCoach)) return false;
+  if (fPrograma && (!ciclo || ciclo.programa !== fPrograma)) return false;
+  if (fEstado && (!ciclo || ciclo.estadoAlumno !== fEstado)) return false;
+  if (fNombre) {
+    const nombreCompleto = `${alumno.nombre || ''} ${alumno.apellido || ''}`.toLowerCase();
+    if (!nombreCompleto.includes(fNombre)) return false;
+  }
+  return true;
+}
+
 export async function cargarListasAlumnos() {
   const role = getCurrentRole();
   const promesas = [get(ref(db, 'alumnos')), get(ref(db, 'ciclos'))];
@@ -420,8 +454,12 @@ export async function cargarListasAlumnos() {
     const acuerdo = alumno.cicloActualId ? acuerdos[alumno.cicloActualId] : null;
 
     if (role === 'director') {
-      if (tbodyDashDirector) tbodyDashDirector.appendChild(crearFilaAlumno(alumnoId, alumno, ciclo, { coach: true, fechas: false, pago: true }, acuerdo));
-      if (tbodyDirector) tbodyDirector.appendChild(crearFilaAlumno(alumnoId, alumno, ciclo, { coach: true, fechas: true, pago: false }));
+      if (tbodyDashDirector && pasaFiltrosDirector(alumno, ciclo, 'dash-director')) {
+        tbodyDashDirector.appendChild(crearFilaAlumno(alumnoId, alumno, ciclo, { coach: true, fechas: false, pago: true }, acuerdo));
+      }
+      if (tbodyDirector && pasaFiltrosDirector(alumno, ciclo, 'director')) {
+        tbodyDirector.appendChild(crearFilaAlumno(alumnoId, alumno, ciclo, { coach: true, fechas: true, pago: false }));
+      }
     } else if (role === 'coach') {
       const esMio = ciclo && ciclo.coachId === uid;
       const esBeginDeCabecera = ciclo && ciclo.programa === 'begin' && esCoachCabeceraBegin;
@@ -491,6 +529,12 @@ export async function cargarListasAlumnos() {
     setTexto('kpi-coach-esperando-director', esperandoDirector);
   }
 }
+
+['filtro-director-coach', 'filtro-director-programa', 'filtro-director-estado', 'filtro-director-nombre',
+ 'filtro-dash-director-coach', 'filtro-dash-director-programa', 'filtro-dash-director-estado', 'filtro-dash-director-nombre'].forEach(id => {
+  const el = document.getElementById(id);
+  if (el) el.addEventListener('change', cargarListasAlumnos);
+});
 
 async function renderHistorialCiclos(ciclosAnterioresIds) {
   const contenedor = document.getElementById('historial-ciclos-contenido');
