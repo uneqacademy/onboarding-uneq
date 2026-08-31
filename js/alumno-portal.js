@@ -1163,6 +1163,21 @@ function rutaPreguntas(s) {
   return s.tipo === 'coach' ? 'preguntasVivoBegin' : 'preguntasVivo';
 }
 
+/* --- Horarios multi-zona (mismo patrón que mentores.js/dashboard-coach.js):
+       la hora Chile siempre visible, además de la del propio alumno cuando
+       está en otra zona. Solo aplica a sesiones nuevas (con inicioTimestamp);
+       las viejas se siguen mostrando tal cual, como siempre. --- */
+function zonaHorariaLocal() {
+  return Intl.DateTimeFormat().resolvedOptions().timeZone;
+}
+function formatearHorarioSesion(timestampMs) {
+  const fechaObj = new Date(timestampMs);
+  const soloHora = (zona) => new Intl.DateTimeFormat('es-CL', { timeZone: zona, hour: '2-digit', minute: '2-digit', hour12: false }).format(fechaObj);
+  const zonaViewer = zonaHorariaLocal();
+  if (zonaViewer === 'America/Santiago') return `${soloHora(zonaViewer)} 🇨🇱`;
+  return `${soloHora(zonaViewer)} tu hora · ${soloHora('America/Santiago')} 🇨🇱 hora Chile`;
+}
+
 async function cargarMisPreguntasVivo(card, s) {
   const cont = card.querySelector('.pv-mis-preguntas');
   if (!cont) return;
@@ -1337,7 +1352,7 @@ export async function cargarPreguntasVivo() {
     Object.entries(snap.val()).forEach(([mentoriaId, m]) => {
       if (!m.fecha || !m.hora) return;
       if (esBegin !== !!m.exclusivaBegin) return; // filtra según programa
-      const inicio = new Date(`${m.fecha}T${m.hora}`);
+      const inicio = m.inicioTimestamp ? new Date(m.inicioTimestamp) : new Date(`${m.fecha}T${m.hora}`);
       if (isNaN(inicio.getTime())) return;
       sesiones.push({ tipo: 'mentor', mentorUid, mentorDatos, mentoriaId, ...m, inicio });
     });
@@ -1355,7 +1370,7 @@ export async function cargarPreguntasVivo() {
       const [coachUid, coachDatos] = coachesCabecera[idx];
       Object.entries(snap.val()).forEach(([sesionId, s]) => {
         if (!s.fecha || !s.hora) return;
-        const inicio = new Date(`${s.fecha}T${s.hora}`);
+        const inicio = s.inicioTimestamp ? new Date(s.inicioTimestamp) : new Date(`${s.fecha}T${s.hora}`);
         if (isNaN(inicio.getTime())) return;
         sesiones.push({ tipo: 'coach', mentorUid: coachUid, mentorDatos: coachDatos, mentoriaId: sesionId, ...s, inicio });
       });
@@ -1393,7 +1408,8 @@ export async function cargarPreguntasVivo() {
     const temasMentor = s.tipo === 'coach'
       ? 'Sesión grupal semanal — resolución de dudas (BEGIN)'
       : (Object.keys(s.mentorDatos.temas || {}).join(', ') || 'Temáticas no definidas aún');
-    const fechaLarga = new Intl.DateTimeFormat('es-CL', { day: '2-digit', month: 'long', year: 'numeric' }).format(s.inicio);
+    const fechaLarga = new Intl.DateTimeFormat('es-CL', { day: '2-digit', month: 'long', year: 'numeric', timeZone: zonaHorariaLocal() }).format(s.inicio);
+    const horaTexto = s.inicioTimestamp ? formatearHorarioSesion(s.inicioTimestamp) : s.hora;
     return `
     <div class="panel mb-16" data-sesion-idx="${idx}">
       <div class="panel__body" style="display:flex; gap:16px; align-items:flex-start; flex-wrap:wrap;">
@@ -1402,7 +1418,7 @@ export async function cargarPreguntasVivo() {
           <strong>${s.mentorDatos.nombre || s.mentorDatos.email}</strong>
           <span class="pv-badge-en-vivo hidden" style="background:#C0392B; color:#fff; font-size:10px; font-weight:700; letter-spacing:0.5px; padding:2px 8px; border-radius:4px; margin-left:6px; vertical-align:middle;">● EN VIVO</span>
           <p class="text-soft" style="margin:2px 0; font-size:12px;">${temasMentor}</p>
-          <p class="text-soft" style="margin:6px 0 2px; font-size:12px;">${fechaLarga} · ${s.hora}</p>
+          <p class="text-soft" style="margin:6px 0 2px; font-size:12px;">${fechaLarga} · ${horaTexto}</p>
           ${s.link ? `<a href="${s.link}" target="_blank" rel="noopener" style="font-size:13px;">Ir al link de acceso</a>` : ''}
           <p class="pv-countdown text-soft" style="margin-top:8px; font-size:12px; font-weight:600;"></p>
         </div>

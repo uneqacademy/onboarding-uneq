@@ -18,6 +18,50 @@ function formatFechaCortaBegin(fechaStr) {
   return new Intl.DateTimeFormat('es-CL', { day: '2-digit', month: 'short', year: 'numeric' }).format(new Date(fechaStr + 'T00:00:00'));
 }
 
+/* --- Horarios multi-zona (mismo patrón que mentores.js) --- */
+function zonaHorariaLocal() {
+  return Intl.DateTimeFormat().resolvedOptions().timeZone;
+}
+function fechaHoraChileDesdeInstante(fechaObj) {
+  const partes = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'America/Santiago', year: 'numeric', month: '2-digit', day: '2-digit',
+    hour: '2-digit', minute: '2-digit', hour12: false
+  }).formatToParts(fechaObj);
+  const obtener = (tipo) => partes.find(p => p.type === tipo)?.value || '';
+  return { fecha: `${obtener('year')}-${obtener('month')}-${obtener('day')}`, hora: `${obtener('hour')}:${obtener('minute')}` };
+}
+function formatearHoraEnZona(fechaObj, zona) {
+  return new Intl.DateTimeFormat('es-CL', { timeZone: zona, day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit', hour12: false }).format(fechaObj);
+}
+function formatearHorarioParaTabla(timestampMs) {
+  const fechaObj = new Date(timestampMs);
+  const soloHora = (zona) => new Intl.DateTimeFormat('es-CL', { timeZone: zona, hour: '2-digit', minute: '2-digit', hour12: false }).format(fechaObj);
+  const zonaViewer = zonaHorariaLocal();
+  if (zonaViewer === 'America/Santiago') return `${soloHora(zonaViewer)} 🇨🇱`;
+  return `${soloHora(zonaViewer)} (tú) · ${soloHora('America/Santiago')} 🇨🇱`;
+}
+function conectarPreviewHorario(idFecha, idHora, idPreview) {
+  const inputFecha = document.getElementById(idFecha);
+  const inputHora = document.getElementById(idHora);
+  const preview = document.getElementById(idPreview);
+  if (!inputFecha || !inputHora || !preview) return;
+  const actualizar = () => {
+    if (!inputFecha.value || !inputHora.value) { preview.classList.add('hidden'); return; }
+    const fechaObj = new Date(`${inputFecha.value}T${inputHora.value}`);
+    if (isNaN(fechaObj.getTime())) { preview.classList.add('hidden'); return; }
+    const zona = zonaHorariaLocal();
+    if (zona === 'America/Santiago') {
+      preview.textContent = `🇨🇱 ${formatearHoraEnZona(fechaObj, zona)} hora Chile.`;
+    } else {
+      preview.textContent = `Estás agendando a las ${inputHora.value} tu hora (${zona.split('/').pop().replace('_', ' ')}) → equivale a las ${formatearHoraEnZona(fechaObj, 'America/Santiago')} 🇨🇱 hora Chile.`;
+    }
+    preview.classList.remove('hidden');
+  };
+  inputFecha.addEventListener('input', actualizar);
+  inputHora.addEventListener('input', actualizar);
+}
+conectarPreviewHorario('sesion-begin-fecha', 'sesion-begin-hora', 'sesion-begin-preview-horario');
+
 function construirLinkNpsSesionBegin(coachId, sesionId, tema) {
   const url = new URL('nps-sesion-begin.html', window.location.href);
   url.searchParams.set('coach', coachId);
@@ -51,7 +95,7 @@ async function cargarSesionesBeginTabla(uid) {
       const noDictada = s.estado === 'no_dictada';
       tr.innerHTML = `
         <td>${formatFechaCortaBegin(s.fecha)}</td>
-        <td>${s.hora || '—'}</td>
+        <td>${s.inicioTimestamp ? formatearHorarioParaTabla(s.inicioTimestamp) : (s.hora || '—')}</td>
         <td>${s.link ? `<a href="${s.link}" target="_blank" rel="noopener">Ir al link</a>` : '—'}</td>
         <td>${promedioTexto}</td>
         <td>
@@ -166,23 +210,29 @@ const btnAgregarSesionBegin = document.getElementById('btn-agregar-sesion-begin'
 if (btnAgregarSesionBegin) {
   btnAgregarSesionBegin.addEventListener('click', async () => {
     const uid = auth.currentUser ? auth.currentUser.uid : null;
-    const fecha = document.getElementById('sesion-begin-fecha').value;
-    const hora = document.getElementById('sesion-begin-hora').value;
+    const fechaInput = document.getElementById('sesion-begin-fecha').value;
+    const horaInput = document.getElementById('sesion-begin-hora').value;
     const link = document.getElementById('sesion-begin-link').value.trim();
 
-    if (!uid || !fecha) {
+    if (!uid || !fechaInput) {
       alert('Completa al menos la Fecha.');
       return;
     }
 
     btnAgregarSesionBegin.disabled = true;
     try {
+      const inicioLocal = new Date(`${fechaInput}T${horaInput || '00:00'}`);
+      const inicioTimestamp = inicioLocal.getTime();
+      const zonaCreador = zonaHorariaLocal();
+      const { fecha, hora } = fechaHoraChileDesdeInstante(inicioLocal);
+
       const nuevaRef = push(ref(db, `sesionesBegin/${uid}`));
-      await set(nuevaRef, { fecha, hora, link, createdAt: Date.now() });
+      await set(nuevaRef, { fecha, hora, inicioTimestamp, zonaCreador, link, createdAt: Date.now() });
 
       document.getElementById('sesion-begin-fecha').value = '';
       document.getElementById('sesion-begin-hora').value = '';
       document.getElementById('sesion-begin-link').value = '';
+      document.getElementById('sesion-begin-preview-horario').classList.add('hidden');
 
       await cargarSesionesBeginTabla(uid);
     } catch (err) {

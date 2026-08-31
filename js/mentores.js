@@ -664,7 +664,7 @@ async function cargarMentoriasView() {
       const noDictada = m.estado === 'no_dictada';
       tr.innerHTML = `
         <td>${formatFechaCorta(m.fecha)}${m.exclusivaBegin ? ' <span class="badge badge--activo" style="font-size:9px;" title="Solo la ven alumnos BEGIN">BEGIN</span>' : ''}</td>
-        <td>${m.hora || '—'}</td>
+        <td>${m.inicioTimestamp ? formatearHorarioParaTabla(m.inicioTimestamp) : (m.hora || '—')}</td>
         <td>${m.link ? `<a href="${m.link}" target="_blank" rel="noopener">Ir al link</a>` : '—'}</td>
         <td>${promedioTexto}</td>
         <td>
@@ -760,29 +760,101 @@ async function cargarMentoriasView() {
     });
 }
 
+/* ============================================================
+   Horarios multi-zona: cada quien agenda en SU hora local (la que
+   ya tiene configurada su dispositivo, se detecta sola), y a quien
+   sea que lo mire después (mentor, coach, alumno, director, en
+   cualquier zona) se le muestra convertido a su propia hora, con
+   la de Chile siempre visible como referencia fija (🇨🇱).
+   Guardamos inicioTimestamp (instante exacto, sin ambigüedad) +
+   zonaCreador, además de fecha/hora en su equivalente Chile (para
+   que el resto del sistema, que ya asumía Chile, siga funcionando
+   igual sin tocarlo).
+   ============================================================ */
+function zonaHorariaLocal() {
+  return Intl.DateTimeFormat().resolvedOptions().timeZone;
+}
+
+function fechaHoraChileDesdeInstante(fechaObj) {
+  const partes = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'America/Santiago', year: 'numeric', month: '2-digit', day: '2-digit',
+    hour: '2-digit', minute: '2-digit', hour12: false
+  }).formatToParts(fechaObj);
+  const obtener = (tipo) => partes.find(p => p.type === tipo)?.value || '';
+  return { fecha: `${obtener('year')}-${obtener('month')}-${obtener('day')}`, hora: `${obtener('hour')}:${obtener('minute')}` };
+}
+
+function formatearHoraEnZona(fechaObj, zona) {
+  return new Intl.DateTimeFormat('es-CL', { timeZone: zona, day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit', hour12: false }).format(fechaObj);
+}
+
+// Versión compacta para celdas de tabla: solo la hora (sin fecha, esa
+// ya va en la columna de al lado), con la de Chile siempre visible.
+function formatearHorarioParaTabla(timestampMs) {
+  const fechaObj = new Date(timestampMs);
+  const soloHora = (zona) => new Intl.DateTimeFormat('es-CL', { timeZone: zona, hour: '2-digit', minute: '2-digit', hour12: false }).format(fechaObj);
+  const zonaViewer = zonaHorariaLocal();
+  if (zonaViewer === 'America/Santiago') return `${soloHora(zonaViewer)} 🇨🇱`;
+  return `${soloHora(zonaViewer)} (tú) · ${soloHora('America/Santiago')} 🇨🇱`;
+}
+
+// Muestra "Estás agendando a las X tu hora (zona) → equivale a las Y hora Chile"
+// apenas se llenan fecha+hora, ANTES de guardar.
+function conectarPreviewHorario(idFecha, idHora, idPreview) {
+  const inputFecha = document.getElementById(idFecha);
+  const inputHora = document.getElementById(idHora);
+  const preview = document.getElementById(idPreview);
+  if (!inputFecha || !inputHora || !preview) return;
+
+  const actualizar = () => {
+    if (!inputFecha.value || !inputHora.value) { preview.classList.add('hidden'); return; }
+    const fechaObj = new Date(`${inputFecha.value}T${inputHora.value}`);
+    if (isNaN(fechaObj.getTime())) { preview.classList.add('hidden'); return; }
+    const zona = zonaHorariaLocal();
+    if (zona === 'America/Santiago') {
+      preview.textContent = `🇨🇱 ${formatearHoraEnZona(fechaObj, zona)} hora Chile.`;
+    } else {
+      preview.textContent = `Estás agendando a las ${inputHora.value} tu hora (${zona.split('/').pop().replace('_', ' ')}) → equivale a las ${formatearHoraEnZona(fechaObj, 'America/Santiago')} 🇨🇱 hora Chile.`;
+    }
+    preview.classList.remove('hidden');
+  };
+  inputFecha.addEventListener('input', actualizar);
+  inputHora.addEventListener('input', actualizar);
+}
+conectarPreviewHorario('mentoria-fecha', 'mentoria-hora', 'mentoria-preview-horario');
+
 const btnAgregarMentoria = document.getElementById('btn-agregar-mentoria');
 if (btnAgregarMentoria) {
   btnAgregarMentoria.addEventListener('click', async () => {
     const uid = auth.currentUser ? auth.currentUser.uid : null;
-    const fecha = document.getElementById('mentoria-fecha').value;
-    const hora = document.getElementById('mentoria-hora').value;
+    const fechaInput = document.getElementById('mentoria-fecha').value;
+    const horaInput = document.getElementById('mentoria-hora').value;
     const link = document.getElementById('mentoria-link').value.trim();
     const exclusivaBegin = document.getElementById('mentoria-exclusiva-begin').checked;
 
-    if (!uid || !fecha) {
+    if (!uid || !fechaInput) {
       alert('Completa al menos la Fecha.');
       return;
     }
 
     btnAgregarMentoria.disabled = true;
     try {
+      // La fecha/hora que escribió el mentor se interpreta en SU propia
+      // zona (la de su dispositivo) — de ahí sacamos el instante exacto
+      // y el equivalente en hora Chile para el resto del sistema.
+      const inicioLocal = new Date(`${fechaInput}T${horaInput || '00:00'}`);
+      const inicioTimestamp = inicioLocal.getTime();
+      const zonaCreador = zonaHorariaLocal();
+      const { fecha, hora } = fechaHoraChileDesdeInstante(inicioLocal);
+
       const nuevaRef = push(ref(db, `mentorias/${uid}`));
-      await set(nuevaRef, { fecha, hora, link, exclusivaBegin, createdAt: Date.now() });
+      await set(nuevaRef, { fecha, hora, inicioTimestamp, zonaCreador, link, exclusivaBegin, createdAt: Date.now() });
 
       document.getElementById('mentoria-fecha').value = '';
       document.getElementById('mentoria-hora').value = '';
       document.getElementById('mentoria-link').value = '';
       document.getElementById('mentoria-exclusiva-begin').checked = false;
+      document.getElementById('mentoria-preview-horario').classList.add('hidden');
 
       await cargarMentoriasView();
     } finally {
