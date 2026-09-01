@@ -1476,6 +1476,41 @@ function bindSesionVivo(card, s) {
   cargarMisPreguntasVivo(card, s);
 }
 
+// Franja informativa arriba de "Preguntas en Vivo": día/hora recurrente
+// de cada mentor que lo tenga configurado (independiente de las
+// sesiones puntuales agendadas). El que no lo tenga, no aparece.
+const DIAS_ORDEN_SEMANA = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
+function renderHorariosRecurrentes(usuarios) {
+  const contenedor = document.getElementById('pv-horarios-recurrentes-contenedor');
+  const lista = document.getElementById('pv-horarios-recurrentes-lista');
+  if (!contenedor || !lista) return;
+
+  const mentoresConHorario = Object.values(usuarios).filter(u => {
+    const roles = (u.roles && typeof u.roles === 'object') ? u.roles : (u.rol ? { [u.rol]: true } : {});
+    return roles.mentor && u.horarioRecurrente && u.horarioRecurrente.dia && u.horarioRecurrente.hora;
+  });
+
+  if (!mentoresConHorario.length) {
+    contenedor.classList.add('hidden');
+    return;
+  }
+
+  mentoresConHorario.sort((a, b) => DIAS_ORDEN_SEMANA.indexOf(a.horarioRecurrente.dia) - DIAS_ORDEN_SEMANA.indexOf(b.horarioRecurrente.dia));
+
+  contenedor.classList.remove('hidden');
+  lista.innerHTML = mentoresConHorario.map(m => {
+    const [h, min] = m.horarioRecurrente.hora.split(':');
+    const horaAmPm = new Intl.DateTimeFormat('es-CL', { hour: 'numeric', minute: '2-digit', hour12: true }).format(new Date(2000, 0, 1, h, min));
+    return `
+      <div style="text-align:center; min-width:70px;">
+        <p style="font-weight:700; font-size:11px; letter-spacing:0.5px; margin:0 0 6px; text-transform:uppercase;">${m.nombre || m.email}</p>
+        <img src="${m.fotoUrl || PLACEHOLDER_FOTO_ALUMNO}" alt="" style="width:56px; height:56px; border-radius:50%; object-fit:cover; margin-bottom:6px;">
+        <p style="font-size:12px; margin:0;">📅 ${m.horarioRecurrente.dia}</p>
+        <p style="font-size:12px; margin:0;">🕐 ${horaAmPm}</p>
+      </div>`;
+  }).join('');
+}
+
 export async function cargarPreguntasVivo() {
   const listadoEl = document.getElementById('preguntas-vivo-listado');
   if (!listadoEl || !alumnoIdActual) return;
@@ -1489,10 +1524,11 @@ export async function cargarPreguntasVivo() {
     const cicloSnapPv = await get(ref(db, `ciclos/${alumnoDatosPv.cicloActualId}`));
     programaAlumnoPv = cicloSnapPv.exists() ? (cicloSnapPv.val().programa || null) : null;
   }
-  const esBegin = programaAlumnoPv === 'begin';
-
   const usuariosSnap = await get(ref(db, 'usuarios'));
   const usuarios = usuariosSnap.exists() ? usuariosSnap.val() : {};
+
+  renderHorariosRecurrentes(usuarios);
+  const esBegin = programaAlumnoPv === 'begin';
   const mentores = Object.entries(usuarios).filter(([, u]) => {
     const roles = (u.roles && typeof u.roles === 'object') ? u.roles : (u.rol ? { [u.rol]: true } : {});
     return !!roles.mentor;

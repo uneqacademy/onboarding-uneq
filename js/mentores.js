@@ -641,6 +641,15 @@ export async function cargarPerfilMentor() {
       });
     }
   }
+
+  // --- Horario Recurrente (informativo, independiente de las sesiones agendadas) ---
+  const horarioRecDia = document.getElementById('mentor-horario-recurrente-dia');
+  const horarioRecHora = document.getElementById('mentor-horario-recurrente-hora');
+  if (horarioRecDia && horarioRecHora) {
+    const hr = datos.horarioRecurrente || {};
+    horarioRecDia.value = hr.dia || '';
+    horarioRecHora.value = hr.hora || '';
+  }
 }
 
 const btnEditarTemasMentor = document.getElementById('btn-editar-temas-mentor');
@@ -1485,3 +1494,25 @@ if (btnAgregarConocimiento) {
 document.querySelectorAll('.nav-item[data-nav="dashboard"]').forEach(item => {
   item.addEventListener('click', cargarConocimientoMentor);
 });
+
+const btnGuardarHorarioRecurrente = document.getElementById('btn-guardar-horario-recurrente');
+if (btnGuardarHorarioRecurrente) {
+  btnGuardarHorarioRecurrente.addEventListener('click', async () => {
+    const uid = auth.currentUser ? auth.currentUser.uid : null;
+    if (!uid) return;
+    const dia = document.getElementById('mentor-horario-recurrente-dia').value;
+    const hora = document.getElementById('mentor-horario-recurrente-hora').value;
+
+    btnGuardarHorarioRecurrente.disabled = true;
+    try {
+      await update(ref(db, `usuarios/${uid}`), {
+        horarioRecurrente: (dia && hora) ? { dia, hora } : null
+      });
+      alert('Horario recurrente guardado.');
+    } catch (err) {
+      alert('No se pudo guardar. Intenta de nuevo.');
+    } finally {
+      btnGuardarHorarioRecurrente.disabled = false;
+    }
+  });
+}

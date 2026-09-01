@@ -953,6 +953,30 @@
         </div>
 
         <div class="panel mb-24">
+          <div class="panel__header"><h3>Mi Horario Recurrente</h3></div>
+          <div class="panel__body">
+            <p class="text-soft mb-16">El día y hora en que dictas tus mentorías en vivo habitualmente. Es solo informativo — los alumnos lo ven arriba de "Preguntas en Vivo" para saber cuándo estás, e independiente de las sesiones puntuales que agregas en "Mis Mentorías". Puedes editarlo cuando quieras.</p>
+            <div class="field-grid">
+              <div class="field">
+                <label>Día</label>
+                <select id="mentor-horario-recurrente-dia">
+                  <option value="">Sin definir</option>
+                  <option value="Lunes">Lunes</option>
+                  <option value="Martes">Martes</option>
+                  <option value="Miércoles">Miércoles</option>
+                  <option value="Jueves">Jueves</option>
+                  <option value="Viernes">Viernes</option>
+                  <option value="Sábado">Sábado</option>
+                  <option value="Domingo">Domingo</option>
+                </select>
+              </div>
+              <div class="field"><label>Hora</label><input type="time" id="mentor-horario-recurrente-hora"></div>
+            </div>
+            <button class="btn btn--primary" id="btn-guardar-horario-recurrente" style="margin-top:14px;">Guardar Horario</button>
+          </div>
+        </div>
+
+        <div class="panel mb-24">
           <div class="panel__header flex-between">
             <h3>Instrucciones de mi Mentor IA</h3>
             <button class="btn btn--ghost hidden" id="btn-editar-instrucciones-mentor">✏️ Editar</button>
@@ -1308,6 +1332,9 @@
            ====================================================== -->
       <section id="view-preguntas-vivo" class="view hidden">
         <div class="flex-between mb-16"><h2>Preguntas en Vivo</h2></div>
+        <div class="panel mb-24 hidden" id="pv-horarios-recurrentes-contenedor">
+          <div class="panel__body" id="pv-horarios-recurrentes-lista" style="display:flex; gap:20px; flex-wrap:wrap;"></div>
+        </div>
         <div id="preguntas-vivo-listado"></div>
 
         <div class="panel" style="margin-top:24px;">
