@@ -698,6 +698,10 @@ body.tema-alumno-oscuro .topbar {
   border-bottom-color: #2a2a2a;
 }
 body.tema-alumno-oscuro .topbar__title { color: #fff; }
+body.tema-alumno-oscuro .btn-hamburger {
+  color: #fff;
+  font-size: 27px;
+}
 body.tema-alumno-oscuro .topbar .btn--ghost {
   color: #fff;
   border-color: rgba(255, 255, 255, 0.5);
