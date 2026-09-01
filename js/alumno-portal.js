@@ -455,17 +455,17 @@ function renderKpiTest(test) {
   const p = test.promedios || {};
   const fecha = new Intl.DateTimeFormat('es-CL', { day: '2-digit', month: 'long', year: 'numeric' }).format(new Date(test.completadoAt));
   const FASES_GAUGE = [
-    ['fase1', 'Fase 1: Claridad y Fundamentos', '#8B5CF6'],
-    ['fase2', 'Fase 2: Cliente Soñado', '#0EA5E9'],
-    ['fase3', 'Fase 3: Oferta y Método', '#EC4899'],
-    ['fase4', 'Fase 4: Acción y Sistemas', '#10B981']
+    ['fase1', 'Fase 1:', 'Claridad y Fundamentos', '#8B5CF6'],
+    ['fase2', 'Fase 2:', 'Cliente Soñado', '#0EA5E9'],
+    ['fase3', 'Fase 3:', 'Oferta y Método', '#EC4899'],
+    ['fase4', 'Fase 4:', 'Acción y Sistemas', '#10B981']
   ];
   return `
     <p class="text-soft mb-16">${fecha}</p>
     <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(160px, 1fr)); gap:20px;">
-      ${FASES_GAUGE.map(([clave, titulo, color]) => `
+      ${FASES_GAUGE.map(([clave, linea1, linea2, color]) => `
         <div style="text-align:center;">
-          <p style="font-weight:700; font-size:12.5px; margin:0 0 4px;">${titulo}</p>
+          <p style="font-weight:700; font-size:12.5px; margin:0 0 4px; line-height:1.35;">${linea1}<br>${linea2}</p>
           ${gaugeSVG(p[clave], color)}
         </div>`).join('')}
     </div>`;

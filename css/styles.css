@@ -678,6 +678,16 @@ body.tema-alumno-oscuro .content {
   background: #000;
   color: #F2F2F2;
 }
+/* Los h1-h4 tienen su propia regla de color más abajo en este mismo
+   archivo (azul marino) — esa regla les gana a la herencia de arriba
+   porque apunta directo al título, no a un contenedor. Por eso hay
+   que pisarla acá explícitamente, apuntando también directo al título. */
+body.tema-alumno-oscuro .content h1,
+body.tema-alumno-oscuro .content h2,
+body.tema-alumno-oscuro .content h3,
+body.tema-alumno-oscuro .content h4 {
+  color: #fff;
+}
 body.tema-alumno-oscuro .content .text-soft { color: #9CA0A8; }
 body.tema-alumno-oscuro .content .btn--ghost {
   color: #fff;
@@ -700,6 +710,14 @@ body.tema-alumno-oscuro .panel,
 body.tema-alumno-oscuro .kpi-card,
 body.tema-alumno-oscuro .modal-card {
   color: var(--color-ink);
+}
+body.tema-alumno-oscuro .panel h1, body.tema-alumno-oscuro .panel h2,
+body.tema-alumno-oscuro .panel h3, body.tema-alumno-oscuro .panel h4,
+body.tema-alumno-oscuro .kpi-card h1, body.tema-alumno-oscuro .kpi-card h2,
+body.tema-alumno-oscuro .kpi-card h3, body.tema-alumno-oscuro .kpi-card h4,
+body.tema-alumno-oscuro .modal-card h1, body.tema-alumno-oscuro .modal-card h2,
+body.tema-alumno-oscuro .modal-card h3, body.tema-alumno-oscuro .modal-card h4 {
+  color: var(--color-primary);
 }
 body.tema-alumno-oscuro .panel .text-soft,
 body.tema-alumno-oscuro .kpi-card .text-soft,
