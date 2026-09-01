@@ -620,12 +620,9 @@
            ALUMNOS — vista DIRECTOR (lista completa)
            ====================================================== -->
       <section id="view-alumnos-director" class="view hidden">
-        <div class="flex-between mb-16">
-          <h2>Alumnos</h2>
-          <div style="display:flex; gap:8px; align-items:center;">
-            <button class="btn btn--ghost" id="btn-exportar-excel">Descargar Excel</button>
-            <button class="btn btn--accent" id="btn-nuevo-alumno">+ Nuevo Alumno</button>
-          </div>
+        <div style="display:flex; gap:8px; align-items:center; justify-content:flex-end;" class="mb-16">
+          <button class="btn btn--ghost" id="btn-exportar-excel">Descargar Excel</button>
+          <button class="btn btn--accent" id="btn-nuevo-alumno">+ Nuevo Alumno</button>
         </div>
         <div class="panel">
           <div class="panel__header">
@@ -748,8 +745,7 @@
            COACHES (solo Director)
            ====================================================== -->
       <section id="view-coaches" class="view hidden">
-        <div class="flex-between mb-16">
-          <h2>Coaches</h2>
+        <div class="mb-16" style="text-align:right;">
           <button class="btn btn--accent" id="btn-nuevo-coach">+ Nuevo Coach</button>
         </div>
         <div class="panel">
@@ -802,8 +798,7 @@
            MENTORES (solo Director)
            ====================================================== -->
       <section id="view-mentores" class="view hidden">
-        <div class="flex-between mb-16">
-          <h2>Mentores</h2>
+        <div class="mb-16" style="text-align:right;">
           <button class="btn btn--accent" id="btn-nuevo-mentor">+ Nuevo Mentor</button>
         </div>
         <div class="panel">
@@ -1292,7 +1287,6 @@
            MI FICHA ALUMNO — página propia
            ====================================================== -->
       <section id="view-ficha-alumno-propia" class="view hidden">
-        <div class="flex-between mb-16"><h2>Mi Ficha Alumno</h2></div>
         <div class="panel mb-24">
           <div class="panel__body" id="alumno-mi-ficha"></div>
         </div>
@@ -1318,7 +1312,6 @@
            SOPORTE ALUMNOS — página propia
            ====================================================== -->
       <section id="view-soporte-alumnos" class="view hidden">
-        <div class="flex-between mb-16"><h2>Soporte Alumnos</h2></div>
         <div class="panel mb-24">
           <div class="panel__body" id="soporte-alumnos-contacto"></div>
         </div>
@@ -1335,7 +1328,6 @@
            PREGUNTAS EN VIVO — página propia
            ====================================================== -->
       <section id="view-preguntas-vivo" class="view hidden">
-        <div class="flex-between mb-16"><h2>Preguntas en Vivo</h2></div>
         <div class="panel mb-24 hidden" id="pv-horarios-recurrentes-contenedor">
           <div class="panel__body" id="pv-horarios-recurrentes-lista" style="display:flex; gap:20px; flex-wrap:wrap;"></div>
         </div>
@@ -1367,7 +1359,6 @@
       </section>
 
       <section id="view-preguntas-comunidad" class="view hidden">
-        <div class="flex-between mb-16"><h2>Preguntas de la Comunidad</h2></div>
         <div class="panel mb-24">
           <div class="panel__body" style="display:flex; gap:16px; flex-wrap:wrap;">
             <div class="field" style="flex:1; min-width:200px;">
@@ -1397,7 +1388,6 @@
            BITÁCORA — vista ALUMNO (página propia, solo lectura)
            ====================================================== -->
       <section id="view-bitacora-alumno" class="view hidden">
-        <div class="flex-between mb-16"><h2>Mi Bitácora</h2></div>
         <div class="panel">
           <div class="panel__body" id="alumno-bitacora-completa"></div>
         </div>
@@ -1407,7 +1397,6 @@
            TEST BRÚJULA — vista ALUMNO (página propia, historial)
            ====================================================== -->
       <section id="view-test-alumno" class="view hidden">
-        <div class="flex-between mb-16"><h2>Mi Test Brújula</h2></div>
         <div class="panel">
           <div class="panel__body" id="alumno-test-completo"></div>
         </div>
@@ -1420,7 +1409,6 @@
            MIS DATOS (Director / Coach / Mentor)
            ====================================================== -->
       <section id="view-mis-datos" class="view hidden">
-        <div class="flex-between mb-16"><h2>Mis Datos</h2></div>
         <div class="panel mb-24">
           <div class="panel__body" style="display:flex; align-items:center; gap:20px; flex-wrap:wrap;">
             <div style="display:flex; flex-direction:column; align-items:center; gap:8px;">
@@ -1476,7 +1464,6 @@
            RENDIMIENTO IA (solo Director)
            ====================================================== -->
       <section id="view-rendimiento-ia" class="view hidden">
-        <div class="flex-between mb-16"><h2>Rendimiento IA</h2></div>
         <div class="panel">
           <div class="panel__body" style="padding:0;">
             <table class="data-table">
@@ -1496,7 +1483,6 @@
       </section>
 
       <section id="view-configuracion" class="view hidden">
-        <div class="flex-between mb-16"><h2>Configuración</h2></div>
         <div class="panel mb-24">
           <div class="panel__header"><h3>Metodología Base para Mentores IA</h3></div>
           <div class="panel__body">

@@ -698,13 +698,19 @@ export async function cargarBoxAlumno() {
   const tituloEl = document.getElementById('box-alumno-titulo');
   const topbarTituloEl = document.getElementById('topbar-title');
   const navBoxEl = document.querySelector('.nav-item[data-nav="box-consultas"]');
+  // Esta función se llama sola al iniciar sesión (para precargar datos),
+  // no solo cuando el alumno de verdad está mirando esta sección — por
+  // eso el título de arriba (topbar) solo se toca si esta vista es la
+  // que realmente está visible en pantalla en este momento; si no, se
+  // pisaría el título de la sección que sí se está viendo.
+  const vistaBoxVisible = !document.getElementById('view-box-alumno').classList.contains('hidden');
 
   if (programaBox === 'begin') {
     if (contMentorIA) contMentorIA.classList.add('hidden');
     if (contBegin) contBegin.classList.remove('hidden');
     if (contadorEl) contadorEl.textContent = 'Tienes hasta 2 preguntas por semana';
     if (tituloEl) tituloEl.textContent = 'BOX de Consultas';
-    if (topbarTituloEl) topbarTituloEl.textContent = 'BOX de Consultas';
+    if (topbarTituloEl && vistaBoxVisible) topbarTituloEl.textContent = 'BOX de Consultas';
     if (navBoxEl) navBoxEl.textContent = 'BOX de Consultas';
     await cargarBoxBeginAlumno();
     return;
@@ -712,7 +718,7 @@ export async function cargarBoxAlumno() {
   if (contMentorIA) contMentorIA.classList.remove('hidden');
   if (contBegin) contBegin.classList.add('hidden');
   if (tituloEl) tituloEl.textContent = 'BOX Inteligente';
-  if (topbarTituloEl) topbarTituloEl.textContent = 'BOX Inteligente';
+  if (topbarTituloEl && vistaBoxVisible) topbarTituloEl.textContent = 'BOX Inteligente';
   if (navBoxEl) navBoxEl.textContent = 'BOX Inteligente';
 
   const gridEl = document.getElementById('box-alumno-mentores-grid');

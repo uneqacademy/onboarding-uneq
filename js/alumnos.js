@@ -911,6 +911,12 @@ if (btnCrearAlumno) {
 
       ['nuevo-alumno-nombre', 'nuevo-alumno-apellido', 'nuevo-alumno-monto', 'nuevo-alumno-descuento', 'nuevo-alumno-abono']
         .forEach(id => { document.getElementById(id).value = ''; });
+      document.getElementById('nuevo-alumno-programa').value = 'begin';
+      document.getElementById('nuevo-alumno-moneda').value = 'CLP';
+      poblarSelectCoaches(document.getElementById('nuevo-alumno-coach'), null);
+      const tbodyCuotasNuevo = document.querySelector('#tabla-cuotas-nuevo tbody');
+      tbodyCuotasNuevo.innerHTML = '<tr><td><input type="date"></td><td><input placeholder="$0"></td><td><button class="btn btn--danger">Quitar</button></td></tr>';
+      tbodyCuotasNuevo.querySelector('.btn--danger').addEventListener('click', (ev) => ev.target.closest('tr').remove());
 
       await cargarListasAlumnos();
       setNav('alumnos');
