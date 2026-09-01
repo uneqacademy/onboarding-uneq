@@ -717,21 +717,23 @@ export async function cargarBoxAlumno() {
 
   // --- Tarjetas de mentor ---
   gridEl.innerHTML = mentores.length ? '' : '<p class="text-soft">No hay mentores disponibles por ahora.</p>';
-  gridEl.style.cssText = 'display:grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap:14px;';
+  gridEl.style.cssText = 'display:flex; flex-direction:column; gap:12px;';
   mentores.forEach(([uid, m]) => {
     const yaPreguntado = mentoresPreguntadosEstaSemana.has(uid);
     const bloqueado = yaPreguntado;
     const tarjeta = document.createElement('div');
-    tarjeta.className = 'panel' + (bloqueado ? ' mentor-card-bloqueado' : '');
-    tarjeta.style.cssText = 'padding:16px; text-align:center;';
+    tarjeta.className = 'mentor-card-ia' + (bloqueado ? ' mentor-card-bloqueado' : '');
+    tarjeta.style.cssText = 'display:flex; align-items:center; gap:14px; padding:14px 16px; background:var(--color-surface-alt); border-radius:var(--radius-md);';
     if (yaPreguntado) tarjeta.title = 'Ya le preguntaste a este Mentor IA esta semana';
     tarjeta.innerHTML = `
-      <img src="${m.fotoIA || m.fotoUrl || PLACEHOLDER_FOTO_ALUMNO}" alt="" style="width:64px; height:64px; border-radius:50%; object-fit:cover; margin-bottom:10px;">
-      <p style="font-weight:600; margin-bottom:2px;">${m.nombre || m.email}</p>
-      <p class="text-soft" style="font-size:10px; margin-bottom:8px;">Mentor IA</p>
-      <div style="display:flex; flex-direction:column; gap:6px;">
-        <button type="button" class="btn btn--primary btn-hacer-pregunta" style="font-size:12px;" ${bloqueado ? 'disabled' : ''}>Hacer Pregunta</button>
-        <button type="button" class="btn btn--ghost btn-detalles-mentor" style="font-size:12px;">Detalles Mentor</button>
+      <img src="${m.fotoIA || m.fotoUrl || PLACEHOLDER_FOTO_ALUMNO}" alt="" style="width:64px; height:64px; border-radius:50%; object-fit:cover; flex-shrink:0;">
+      <div style="flex:1; min-width:0;">
+        <p style="font-weight:700; margin:0 0 1px; font-size:16px;">${m.nombre || m.email}</p>
+        <p class="text-soft" style="font-size:12.5px; font-style:italic; margin:0;">Mentor IA</p>
+      </div>
+      <div style="display:flex; flex-direction:column; gap:6px; flex-shrink:0;">
+        <button type="button" class="btn btn--primary btn-hacer-pregunta" style="font-size:12px; padding:8px 14px; white-space:nowrap;" ${bloqueado ? 'disabled' : ''}>Hacer Pregunta</button>
+        <button type="button" class="btn btn-detalles-mentor" style="font-size:12px; padding:8px 14px; white-space:nowrap; background:#6B7280; color:#fff;">Detalles Mentor</button>
       </div>`;
     gridEl.appendChild(tarjeta);
 
