@@ -162,21 +162,23 @@ export async function cargarDashboardAlumno(alumnoId) {
     bienvenidaEl.textContent = `${saludo} a UNEQ Mentoring ${alumno.nombre || ''},`.trim();
   }
 
-  // --- Stepper del programa (Begin → Next → eXIT), como línea de tiempo ---
+  // --- Stepper del programa (Begin → Next → eXIT), con logos reales ---
   const stepperEl = document.getElementById('alumno-stepper-programa');
   if (stepperEl) {
     const programaActual = ciclo ? ciclo.programa : null;
-    const PROGRAMAS_ORDEN = [['begin', 'BEGIN'], ['next', 'NEXT'], ['exit', 'EXIT']];
+    const PROGRAMAS_ORDEN = [
+      ['begin', 'assets/logos/logo-begin.png', 'BEGIN'],
+      ['next', 'assets/logos/logo-next.png', 'NEXT'],
+      ['exit', 'assets/logos/logo-exit.png', 'eXIT']
+    ];
     stepperEl.innerHTML = `
-      <div style="display:flex; align-items:center;">
-        ${PROGRAMAS_ORDEN.map(([clave, label], idx) => {
+      <div style="display:flex; align-items:center; gap:10px;">
+        ${PROGRAMAS_ORDEN.map(([clave, logo, label]) => {
           const activo = clave === programaActual;
           return `
-          <div style="display:flex; flex-direction:column; align-items:center; opacity:${activo ? '1' : '0.35'};">
-            <span style="font-weight:700; font-size:14px; letter-spacing:0.5px; margin-bottom:6px;">${label}</span>
-            <span style="width:14px; height:14px; border-radius:50%; background:${activo ? 'var(--color-accent, #2563EB)' : 'transparent'}; border:2px solid ${activo ? 'var(--color-accent, #2563EB)' : 'var(--border)'};"></span>
-          </div>
-          ${idx < PROGRAMAS_ORDEN.length - 1 ? `<span style="flex:1; height:2px; background:var(--border); min-width:24px; margin:0 4px 22px;"></span>` : ''}`;
+          <div style="display:flex; align-items:center; justify-content:center; padding:${activo ? '10px 18px' : '8px 14px'}; border-radius:var(--radius-md, 10px); border:${activo ? '1.5px solid var(--color-accent, #2563EB)' : '1.5px solid transparent'}; opacity:${activo ? '1' : '0.4'};">
+            <img src="${logo}" alt="${label}" style="height:${activo ? '30px' : '22px'}; width:auto; object-fit:contain;">
+          </div>`;
         }).join('')}
       </div>`;
   }
@@ -253,11 +255,17 @@ export async function cargarDashboardAlumno(alumnoId) {
       }
     }
 
+    // Íconos genéricos (sin marca de nadie) para Comunidad/Contenidos —
+    // el de Hotmart sí es su logo real (assets/logos/hotmart.png).
+    const iconoComunidad = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="8" cy="8" r="3" stroke="currentColor" stroke-width="1.8"/><circle cx="16" cy="8" r="3" stroke="currentColor" stroke-width="1.8"/><path d="M2 20c0-3 2.5-5 6-5s6 2 6 5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M12 15.5c.7-.3 1.5-.5 2-.5 3.5 0 6 2 6 5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>`;
+    const iconoContenidos = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="3" y="5" width="18" height="12" rx="1.5" stroke="currentColor" stroke-width="1.8"/><path d="M1 20h22" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>`;
+    const logoHotmart = `<img src="assets/logos/hotmart.png" alt="Hotmart" style="height:14px; width:auto; vertical-align:middle;">`;
+
     accesosEl.innerHTML = `
       <div class="accesos-directos-botones" style="display:flex; flex-wrap:wrap; gap:10px; margin-bottom:18px;">
         <button type="button" class="btn btn--primary" id="btn-acceso-preguntar-mentores">Pregunta a los Mentores</button>
-        ${config.comunidadHotmartUrl ? `<a href="${config.comunidadHotmartUrl}" target="_blank" rel="noopener" class="btn btn--accent">Comunidad Hotmart</a>` : ''}
-        ${contenidoUrl ? `<a href="${contenidoUrl}" target="_blank" rel="noopener" class="btn btn--accent">Contenidos en Hotmart</a>` : ''}
+        ${config.comunidadHotmartUrl ? `<a href="${config.comunidadHotmartUrl}" target="_blank" rel="noopener" class="btn" style="background:#000; color:#fff; display:inline-flex; align-items:center; gap:7px;">Comunidad ${logoHotmart}hotmart ${iconoComunidad}</a>` : ''}
+        ${contenidoUrl ? `<a href="${contenidoUrl}" target="_blank" rel="noopener" class="btn" style="background:#000; color:#fff; display:inline-flex; align-items:center; gap:7px;">Contenidos en ${logoHotmart}hotmart ${iconoContenidos}</a>` : ''}
         ${whatsappUrl ? `<a href="${whatsappUrl}" target="_blank" rel="noopener" class="btn" style="background:#25D366; color:#fff;">Grupo WhatsApp Exclusivo</a>` : ''}
       </div>
       <div style="line-height:1.6;">

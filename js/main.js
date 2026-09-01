@@ -10,7 +10,7 @@ let currentNombre = '';
 let currentRolesDisponibles = [];
 let candadoBloqueado = false;
 
-// Inserta el ícono de marca (brújula) donde corresponda
+// Inserta el isotipo de UNEQ Mentoring donde corresponda
 document.querySelectorAll('[data-brand-mark]').forEach(el => {
   const tpl = document.getElementById('tpl-brand-mark');
   el.appendChild(tpl.content.cloneNode(true));
