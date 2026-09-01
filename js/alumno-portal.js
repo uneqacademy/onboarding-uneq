@@ -724,7 +724,7 @@ export async function cargarBoxAlumno() {
     const tarjeta = document.createElement('div');
     tarjeta.className = 'mentor-card-ia' + (bloqueado ? ' mentor-card-bloqueado' : '');
     tarjeta.style.cssText = 'display:flex; align-items:center; gap:14px; padding:14px 16px; background:var(--color-surface-alt); border-radius:var(--radius-md);';
-    if (yaPreguntado) tarjeta.title = 'Ya le preguntaste a este Mentor IA esta semana';
+    if (yaPreguntado) tarjeta.title = '¡Ya le has preguntado a este Mentor!';
     tarjeta.innerHTML = `
       <img src="${m.fotoIA || m.fotoUrl || PLACEHOLDER_FOTO_ALUMNO}" alt="" style="width:64px; height:64px; border-radius:50%; object-fit:cover; flex-shrink:0;">
       <div style="flex:1; min-width:0;">
@@ -748,7 +748,7 @@ export async function cargarBoxAlumno() {
     tarjeta.querySelector('.btn-detalles-mentor').addEventListener('click', () => {
       document.getElementById('box-alumno-detalle-contenido').innerHTML = `
         <div style="display:flex; align-items:center; gap:14px; margin-bottom:12px;">
-          <img src="${m.fotoUrl || PLACEHOLDER_FOTO_ALUMNO}" alt="" style="width:56px; height:56px; border-radius:50%; object-fit:cover;">
+          <img src="${m.fotoIA || m.fotoUrl || PLACEHOLDER_FOTO_ALUMNO}" alt="" style="width:56px; height:56px; border-radius:50%; object-fit:cover;">
           <strong>${m.nombre || m.email}</strong>
         </div>
         <p style="white-space:pre-wrap;">${m.bio ? linkify(m.bio) : 'Este mentor aún no ha escrito su presentación.'}</p>`;
