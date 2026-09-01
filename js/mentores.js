@@ -33,7 +33,22 @@ function tieneRol(perfil, rol) {
 }
 
 const FASE_LABELS = { fase1: 'Fase 1', fase2: 'Fase 2', fase3: 'Fase 3', fase4: 'Fase 4' };
-const TEMAS_BOX = ['Mentalidad', 'Estrategia', 'META ADS', 'Contenido Orgánico', 'CopyWriting', 'Ventas', 'Energía', 'Planificación', 'Identidad Visual', 'Diseño', 'Redes Sociales', 'Google ADS', 'Herramientas y Software'];
+// Compatible con datos viejos (imagenes: ["url", ...]) y nuevos
+// (archivos: [{url, nombre, tipo}, ...]) — mismo patrón que en
+// alumno-portal.js, para la vista del mentor.
+function renderArchivosAdjuntosMentor(archivos, imagenesLegado) {
+  const items = [];
+  (archivos || []).forEach(a => items.push(a));
+  (imagenesLegado || []).forEach(url => items.push({ url, nombre: 'Imagen', tipo: 'imagen' }));
+  if (!items.length) return '';
+  return `<div style="display:flex; gap:6px; flex-wrap:wrap; margin-bottom:10px;">${items.map(a => {
+    if (a.tipo === 'imagen') {
+      return `<img src="${a.url}" alt="" style="max-width:120px; max-height:120px; border-radius:6px; object-fit:cover;">`;
+    }
+    const icono = a.tipo === 'pdf' ? '📄' : a.tipo === 'word' ? '📝' : '📎';
+    return `<a href="${a.url}" target="_blank" rel="noopener" style="display:inline-flex; align-items:center; gap:6px; background:var(--color-surface-alt); padding:6px 12px; border-radius:8px; font-size:12px; text-decoration:none; color:var(--color-ink);">${icono} ${a.nombre || 'Archivo'}</a>`;
+  }).join('')}</div>`;
+}
 const URL_REDES = {
   Instagram: u => `https://instagram.com/${u.replace(/^@/, '')}`,
   Facebook: u => `https://facebook.com/${u.replace(/^@/, '')}`,
@@ -158,6 +173,62 @@ async function cargarMentoresView() {
         await cargarMentoresView();
       });
     });
+
+  await cargarTemasMentoresDirector(usuarios);
+}
+
+/* --- Director: ve las temáticas de todos los mentores (solo lectura de
+       lo que cada uno ya escribió) y puede sugerirles nuevas. --- */
+async function cargarTemasMentoresDirector(usuarios) {
+  const cont = document.getElementById('director-temas-mentores-lista');
+  if (!cont) return;
+
+  const mentoresEntries = Object.entries(usuarios).filter(([, u]) => tieneRol(u, 'mentor'));
+  const sugerenciasSnap = await get(ref(db, 'sugerenciasTemas'));
+  const sugerenciasTodas = sugerenciasSnap.exists() ? sugerenciasSnap.val() : {};
+
+  cont.innerHTML = mentoresEntries.map(([uid, mentor]) => {
+    const temas = Array.isArray(mentor.temasBox) ? mentor.temasBox : [];
+    const sugerenciasMentor = sugerenciasTodas[uid] ? Object.entries(sugerenciasTodas[uid]) : [];
+    const pendientes = sugerenciasMentor.filter(([, s]) => s.estado === 'pendiente');
+    return `
+      <div data-mentor-temas-id="${uid}" style="padding:12px 0; border-bottom:0.5px solid var(--border);">
+        <strong>${mentor.nombre || mentor.email}</strong>
+        <p class="text-soft" style="font-size:12.5px; margin:4px 0 8px;">
+          ${temas.length ? temas.join(', ') : 'Aún no ha agregado ninguna.'}
+          ${pendientes.length ? `<br><span style="color:#B8860B;">Sugerencias pendientes: ${pendientes.map(([, s]) => s.texto).join(', ')}</span>` : ''}
+        </p>
+        <div style="display:flex; gap:8px;">
+          <input type="text" class="input-sugerir-tema" placeholder="Sugerir una temática (máx. 2 palabras)..." style="flex:1; font-size:12.5px; padding:6px 10px;">
+          <button type="button" class="btn btn--ghost btn-sugerir-tema" style="font-size:11px; padding:6px 12px;">Sugerir</button>
+        </div>
+      </div>`;
+  }).join('') || '<p class="text-soft">Aún no hay mentores.</p>';
+
+  cont.querySelectorAll('[data-mentor-temas-id]').forEach(fila => {
+    const uidMentor = fila.dataset.mentorTemasId;
+    fila.querySelector('.btn-sugerir-tema').addEventListener('click', async (ev) => {
+      const input = fila.querySelector('.input-sugerir-tema');
+      const texto = input.value.trim();
+      if (!texto) return;
+      if (texto.split(/\s+/).length > 2) {
+        alert('La temática no puede tener más de 2 palabras.');
+        return;
+      }
+      ev.target.disabled = true;
+      try {
+        await push(ref(db, `sugerenciasTemas/${uidMentor}`), {
+          texto, estado: 'pendiente', creadoPor: auth.currentUser.uid, createdAt: Date.now()
+        });
+        input.value = '';
+        const usuariosActualizados = (await get(ref(db, 'usuarios'))).val() || {};
+        await cargarTemasMentoresDirector(usuariosActualizados);
+      } catch (err) {
+        alert('No se pudo enviar la sugerencia. Intenta de nuevo.');
+        ev.target.disabled = false;
+      }
+    });
+  });
 }
 
 const btnCrearMentor = document.getElementById('btn-crear-mentor');
@@ -493,25 +564,82 @@ export async function cargarPerfilMentor() {
     if (btnEditarInfoPrivada) btnEditarInfoPrivada.classList.toggle('hidden', !tieneInfoPrivada);
   }
 
-  const temasCont = document.getElementById('mentor-temas-checkboxes');
+  const temasInput = document.getElementById('mentor-temas-input');
   const temasListaEl = document.getElementById('mentor-temas-lista');
   const btnEditarTemas = document.getElementById('btn-editar-temas-mentor');
   const btnGuardarTemasEl = document.getElementById('btn-guardar-temas-mentor');
-  if (temasCont) {
-    const temasGuardados = datos.temas || {};
-    temasCont.innerHTML = TEMAS_BOX.map(t => `
-      <label style="font-weight:400; display:flex; align-items:center; gap:6px;">
-        <input type="checkbox" class="chk-tema-mentor" value="${t}" ${temasGuardados[t] ? 'checked' : ''}> ${t}
-      </label>`).join('');
+  if (temasInput) {
+    const temasArray = Array.isArray(datos.temasBox) ? datos.temasBox : [];
+    temasInput.value = temasArray.join(', ');
 
-    const hayTemasGuardados = Object.keys(temasGuardados).length > 0;
+    const hayTemasGuardados = temasArray.length > 0;
     if (temasListaEl) {
-      temasListaEl.textContent = Object.keys(temasGuardados).join(', ') || 'Sin temáticas elegidas aún.';
+      if (hayTemasGuardados) {
+        const primeras3 = temasArray.slice(0, 3);
+        const resto = temasArray.slice(3);
+        temasListaEl.innerHTML = `<strong>En Preguntas en Vivo se ve:</strong> ${primeras3.join(', ')}` +
+          (resto.length ? `<br><strong>También disponibles para filtros:</strong> ${resto.join(', ')}` : '');
+      }
       temasListaEl.classList.toggle('hidden', !hayTemasGuardados);
     }
-    temasCont.classList.toggle('hidden', hayTemasGuardados);
+    temasInput.classList.toggle('hidden', hayTemasGuardados);
     if (btnGuardarTemasEl) btnGuardarTemasEl.classList.toggle('hidden', hayTemasGuardados);
     if (btnEditarTemas) btnEditarTemas.classList.toggle('hidden', !hayTemasGuardados);
+  }
+
+  // --- Sugerencias del director: el mentor las ve acá y decide si las acepta ---
+  const sugerenciasCont = document.getElementById('mentor-sugerencias-director-cont');
+  const sugerenciasListaEl = document.getElementById('mentor-sugerencias-director-lista');
+  if (sugerenciasCont && sugerenciasListaEl) {
+    const uidMentorActual = auth.currentUser ? auth.currentUser.uid : null;
+    if (uidMentorActual) {
+      const sugerenciasSnap = await get(ref(db, `sugerenciasTemas/${uidMentorActual}`));
+      const sugerencias = sugerenciasSnap.exists()
+        ? Object.entries(sugerenciasSnap.val()).filter(([, s]) => s.estado === 'pendiente')
+        : [];
+      sugerenciasCont.classList.toggle('hidden', sugerencias.length === 0);
+      sugerenciasListaEl.innerHTML = sugerencias.map(([id, s]) => `
+        <div class="flex-between" data-sugerencia-id="${id}" style="padding:8px 0; border-bottom:0.5px solid var(--border);">
+          <span style="font-size:13px;">${s.texto}</span>
+          <div style="display:flex; gap:6px;">
+            <button type="button" class="btn btn--primary btn-aceptar-sugerencia" style="font-size:11px; padding:4px 10px;">Aceptar</button>
+            <button type="button" class="btn btn--ghost btn-rechazar-sugerencia" style="font-size:11px; padding:4px 10px;">Rechazar</button>
+          </div>
+        </div>`).join('');
+
+      sugerenciasListaEl.querySelectorAll('.btn-aceptar-sugerencia').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          const fila = btn.closest('[data-sugerencia-id]');
+          const id = fila.dataset.sugerenciaId;
+          const texto = fila.querySelector('span').textContent;
+          btn.disabled = true;
+          try {
+            const actualSnap = await get(ref(db, `usuarios/${uidMentorActual}/temasBox`));
+            const actual = actualSnap.exists() ? actualSnap.val() : [];
+            await update(ref(db, `usuarios/${uidMentorActual}`), { temasBox: [...actual, texto] });
+            await update(ref(db, `sugerenciasTemas/${uidMentorActual}/${id}`), { estado: 'aceptada' });
+            await cargarPerfilMentor();
+          } catch (err) {
+            alert('No se pudo aceptar. Intenta de nuevo.');
+            btn.disabled = false;
+          }
+        });
+      });
+      sugerenciasListaEl.querySelectorAll('.btn-rechazar-sugerencia').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          const fila = btn.closest('[data-sugerencia-id]');
+          const id = fila.dataset.sugerenciaId;
+          btn.disabled = true;
+          try {
+            await update(ref(db, `sugerenciasTemas/${uidMentorActual}/${id}`), { estado: 'rechazada' });
+            await cargarPerfilMentor();
+          } catch (err) {
+            alert('No se pudo rechazar. Intenta de nuevo.');
+            btn.disabled = false;
+          }
+        });
+      });
+    }
   }
 }
 
@@ -519,10 +647,14 @@ const btnEditarTemasMentor = document.getElementById('btn-editar-temas-mentor');
 if (btnEditarTemasMentor) {
   btnEditarTemasMentor.addEventListener('click', () => {
     document.getElementById('mentor-temas-lista').classList.add('hidden');
-    document.getElementById('mentor-temas-checkboxes').classList.remove('hidden');
+    document.getElementById('mentor-temas-input').classList.remove('hidden');
     document.getElementById('btn-guardar-temas-mentor').classList.remove('hidden');
     btnEditarTemasMentor.classList.add('hidden');
   });
+}
+
+function parsearTemasTexto(texto) {
+  return texto.split(',').map(t => t.trim()).filter(Boolean);
 }
 
 const btnGuardarTemasMentor = document.getElementById('btn-guardar-temas-mentor');
@@ -530,11 +662,20 @@ if (btnGuardarTemasMentor) {
   btnGuardarTemasMentor.addEventListener('click', async () => {
     const uid = auth.currentUser ? auth.currentUser.uid : null;
     if (!uid) return;
+    const errorEl = document.getElementById('mentor-temas-error');
+    errorEl.classList.add('hidden');
+
+    const temas = parsearTemasTexto(document.getElementById('mentor-temas-input').value);
+    const conMasDeDosPalabras = temas.filter(t => t.split(/\s+/).length > 2);
+    if (conMasDeDosPalabras.length) {
+      errorEl.textContent = `Estas temáticas tienen más de 2 palabras — acórtalas: ${conMasDeDosPalabras.join(', ')}`;
+      errorEl.classList.remove('hidden');
+      return;
+    }
+
     btnGuardarTemasMentor.disabled = true;
     try {
-      const temas = {};
-      document.querySelectorAll('.chk-tema-mentor:checked').forEach(chk => { temas[chk.value] = true; });
-      await update(ref(db, `usuarios/${uid}`), { temas });
+      await update(ref(db, `usuarios/${uid}`), { temasBox: temas });
       await cargarPerfilMentor();
     } finally {
       btnGuardarTemasMentor.disabled = false;
@@ -904,8 +1045,12 @@ export async function cargarBoxMentor() {
   const contenedor = document.getElementById('box-mentor-contenido');
   if (!uid || !contenedor) return;
 
-  const snap = await get(ref(db, `box/${uid}`));
+  const [snap, propioSnap] = await Promise.all([
+    get(ref(db, `box/${uid}`)),
+    get(ref(db, `usuarios/${uid}/temasBox`))
+  ]);
   const preguntas = snap.exists() ? Object.entries(snap.val()) : [];
+  const misTemasBox = propioSnap.exists() ? propioSnap.val() : [];
   preguntas.sort((a, b) => b[1].createdAt - a[1].createdAt);
 
   const filtroEstadoEl = document.getElementById('box-mentor-filtro-estado');
@@ -953,16 +1098,41 @@ export async function cargarBoxMentor() {
             <p style="margin:6px 0 0;">${p.pregunta || ''}</p>
           </div>
           <div style="display:flex; align-items:center; gap:8px; flex-shrink:0;">
+            <span class="badge badge--activo" style="font-size:10px; white-space:nowrap;">${p.tematica || 'Sin tema'}</span>
             <span class="badge ${ESTADO_CLASES_BOX[estado]}" style="font-size:10px; white-space:nowrap;">${ESTADO_LABELS_BOX[estado]}</span>
             <span class="text-soft" style="font-size:16px;" data-flecha-box-mentor>▾</span>
           </div>
         </div>
         <div class="hidden" style="margin-top:10px;" data-detalle-box-mentor>
-          ${(p.imagenes || []).map(url => `<img src="${url}" alt="" style="max-width:120px; border-radius:6px; margin:0 4px 6px 0;">`).join('')}
+          <div style="display:flex; align-items:center; gap:8px; margin-bottom:10px;">
+            <label style="font-size:11px; margin:0;">Temática:</label>
+            <select class="select-tematica-pregunta" style="font-size:12px; padding:4px 8px; width:auto;">
+              ${misTemasBox.map(t => `<option value="${t}" ${t === p.tematica ? 'selected' : ''}>${t}</option>`).join('')}
+              ${p.tematica && !misTemasBox.includes(p.tematica) ? `<option value="${p.tematica}" selected>${p.tematica}</option>` : ''}
+            </select>
+            <button type="button" class="btn btn--ghost btn-guardar-tematica-pregunta" style="font-size:11px; padding:4px 10px;">Guardar</button>
+          </div>
+          ${renderArchivosAdjuntosMentor(p.archivos, p.imagenes)}
           ${renderRespuestaMentorIA(preguntaId, p, uid)}
         </div>
       `;
       contenedor.appendChild(bloque);
+
+      const selectTematicaPregunta = bloque.querySelector('.select-tematica-pregunta');
+      const btnGuardarTematicaPregunta = bloque.querySelector('.btn-guardar-tematica-pregunta');
+      if (btnGuardarTematicaPregunta) {
+        btnGuardarTematicaPregunta.addEventListener('click', async (ev) => {
+          ev.stopPropagation();
+          btnGuardarTematicaPregunta.disabled = true;
+          try {
+            await update(ref(db, `box/${uid}/${preguntaId}`), { tematica: selectTematicaPregunta.value });
+            await cargarBoxMentor();
+          } catch (err) {
+            alert('No se pudo actualizar la temática. Intenta de nuevo.');
+            btnGuardarTematicaPregunta.disabled = false;
+          }
+        });
+      }
 
       bloque.addEventListener('click', (ev) => {
         if (ev.target.closest('[data-detalle-box-mentor]')) return;

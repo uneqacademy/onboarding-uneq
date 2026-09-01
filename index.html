@@ -15,7 +15,7 @@
 <title>UNEQ APP</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Sora:wght@600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/styles.css?v=20260901e">
+<link rel="stylesheet" href="css/styles.css?v=20260901f">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/intl-tel-input@latest/build/css/intlTelInput.min.css">
 <script src="https://cdn.jsdelivr.net/npm/intl-tel-input@latest/build/js/intlTelInputWithUtils.min.js"></script>
 </head>
@@ -814,6 +814,13 @@
             </table>
           </div>
         </div>
+
+        <div class="panel" style="margin-top:24px;">
+          <div class="panel__header"><h3>Temáticas por Mentor</h3></div>
+          <div class="panel__body" id="director-temas-mentores-lista">
+            <p class="text-soft">Cargando...</p>
+          </div>
+        </div>
       </section>
 
       <section id="view-crear-mentor" class="view hidden">
@@ -932,10 +939,16 @@
             <button class="btn btn--ghost hidden" id="btn-editar-temas-mentor">✏️ Editar</button>
           </div>
           <div class="panel__body">
-            <p class="text-soft mb-16">Elige las temáticas que dominas — los alumnos las van a ver en "Preguntas en Vivo" y en tu perfil del BOX Inteligente.</p>
-            <p id="mentor-temas-lista" class="hidden"></p>
-            <div id="mentor-temas-checkboxes" style="display:flex; flex-wrap:wrap; gap:10px 20px; margin-bottom:16px;"></div>
-            <button class="btn btn--primary" id="btn-guardar-temas-mentor">Guardar Temáticas</button>
+            <p class="text-soft mb-16">Escribe tus temáticas separadas por coma (máx. 2 palabras cada una, agrega las que quieras). Las <strong>primeras 3</strong> son las que se muestran en "Preguntas en Vivo" — todas sirven para que los alumnos elijan el tema al preguntarte en el BOX Inteligente, y para los filtros de Preguntas de la Comunidad.</p>
+            <p id="mentor-temas-lista" class="hidden mb-16"></p>
+            <input type="text" id="mentor-temas-input" placeholder="Ej: Meta Ads, Copywriting, Mentalidad, Ventas, Storytelling">
+            <p id="mentor-temas-error" class="hidden" style="color:#C0392B; font-size:12px; margin-top:8px;"></p>
+            <button class="btn btn--primary" id="btn-guardar-temas-mentor" style="margin-top:14px;">Guardar Temáticas</button>
+
+            <div id="mentor-sugerencias-director-cont" class="hidden" style="margin-top:20px; padding-top:16px; border-top:1px solid var(--color-border);">
+              <p style="font-weight:600; margin-bottom:10px; font-size:13px;">💡 Sugerencias de tu Director</p>
+              <div id="mentor-sugerencias-director-lista"></div>
+            </div>
           </div>
         </div>
 
@@ -1135,11 +1148,15 @@
           <div class="panel__body">
             <p class="mb-16">Tu pregunta va dirigida a <strong id="box-alumno-mentor-nombre-form">—</strong>.</p>
             <div class="field mb-16">
+              <label>Temática <span style="color:#C0392B;">*</span></label>
+              <select id="box-alumno-pregunta-tematica"></select>
+            </div>
+            <div class="field mb-16">
               <textarea id="box-alumno-pregunta" placeholder="Escribe tu consulta... (puedes incluir links)"></textarea>
             </div>
             <div style="margin-bottom:12px;">
-              <button type="button" class="btn btn--ghost" id="btn-adjuntar-imagenes-pregunta" style="font-size:12px;">🖼️ Adjuntar Imágenes</button>
-              <input type="file" id="input-imagenes-pregunta" accept="image/*" multiple class="hidden">
+              <button type="button" class="btn btn--ghost" id="btn-adjuntar-imagenes-pregunta" style="font-size:12px;">📎 Adjuntar Imagen, PDF o Word</button>
+              <input type="file" id="input-imagenes-pregunta" accept="image/*,.pdf,.doc,.docx" multiple class="hidden">
               <div id="box-alumno-imagenes-preview" style="display:flex; gap:8px; flex-wrap:wrap; margin-top:8px;"></div>
             </div>
             <p id="box-alumno-error" class="hidden" style="color:#C0392B; margin-bottom:12px;"></p>
@@ -1200,8 +1217,8 @@
                 <textarea id="box-begin-pregunta" placeholder="Escribe tu consulta... (puedes incluir links)"></textarea>
               </div>
               <div style="margin-bottom:12px;">
-                <button type="button" class="btn btn--ghost" id="btn-adjuntar-imagenes-box-begin" style="font-size:12px;">🖼️ Adjuntar Imágenes</button>
-                <input type="file" id="input-imagenes-box-begin" accept="image/*" multiple class="hidden">
+                <button type="button" class="btn btn--ghost" id="btn-adjuntar-imagenes-box-begin" style="font-size:12px;">📎 Adjuntar Imagen, PDF o Word</button>
+                <input type="file" id="input-imagenes-box-begin" accept="image/*,.pdf,.doc,.docx" multiple class="hidden">
                 <div id="box-begin-imagenes-preview" style="display:flex; gap:8px; flex-wrap:wrap; margin-top:8px;"></div>
               </div>
               <p id="box-begin-error" class="hidden" style="color:#C0392B; margin-bottom:12px;"></p>
@@ -1492,14 +1509,9 @@
           </div>
         </div>
         <div class="panel mb-24">
-          <div class="panel__header"><h3>Temáticas del BOX de Consultas — BEGIN</h3></div>
+          <div class="panel__header"><h3>Temáticas del BOX de Consultas</h3></div>
           <div class="panel__body">
-            <p class="text-soft mb-16" style="font-size:13px;">Estas son las opciones que ve el alumno BEGIN al elegir el tema de su pregunta. Se guardan al toque, no dependen del botón "Guardar Configuración" de abajo.</p>
-            <div style="display:flex; gap:10px; margin-bottom:16px;">
-              <input id="config-nueva-tematica-begin" placeholder="Nombre de la temática..." style="flex:1;">
-              <button class="btn btn--accent" id="btn-agregar-tematica-begin">+ Agregar</button>
-            </div>
-            <div id="listado-tematicas-begin"></div>
+            <p class="text-soft" style="font-size:13px;">Las temáticas ahora las agrega cada mentor desde su propio perfil (tú puedes sugerirles nuevas, pero ellos deciden agregarlas). Ve a <strong>Mentores</strong> para ver la lista completa de todos, y sugerirles temáticas puntuales.</p>
           </div>
         </div>
         <p id="configuracion-error" class="hidden" style="color:#C0392B; margin-bottom:12px;"></p>

@@ -363,12 +363,6 @@ textarea { width: 100%; max-width: 100%; box-sizing: border-box; resize: vertica
   margin: 0;
 }
 
-.mentor-card-bloqueado {
-  filter: grayscale(100%);
-  opacity: 0.55;
-  position: relative;
-}
-
 .btn {
   border: none;
   border-radius: var(--radius-sm);

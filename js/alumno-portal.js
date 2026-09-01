@@ -607,8 +607,6 @@ document.querySelectorAll('.nav-item[data-nav="test-alumno"]').forEach(item => {
    Pregunta" + "Detalles Mentor"), límite de 3 preguntas por
    semana (máx. 1 por mentor), reseteo los lunes 00:00.
    ============================================================ */
-const TEMAS_BOX = ['Mentalidad', 'Estrategia', 'META ADS', 'Contenido Orgánico', 'CopyWriting', 'Ventas', 'Energía', 'Planificación', 'Identidad Visual', 'Diseño', 'Redes Sociales', 'Google ADS', 'Herramientas y Software'];
-
 function inicioSemanaActual() {
   const ahora = new Date();
   const dia = ahora.getDay();
@@ -635,21 +633,50 @@ function renderRespuestaBox(respuesta) {
   return html;
 }
 
-function renderImagenesPregunta(imagenes) {
-  if (!imagenes || !imagenes.length) return '';
-  return `<div style="display:flex; gap:6px; flex-wrap:wrap; margin-top:6px;">
-    ${imagenes.map(url => `<img src="${url}" alt="" style="max-width:120px; border-radius:8px;">`).join('')}
-  </div>`;
+function renderImagenesPregunta(imagenes, archivos) {
+  const html = renderArchivosAdjuntos(archivos, imagenes);
+  return html ? `<div style="display:flex; gap:6px; flex-wrap:wrap; margin-top:6px;">${html}</div>` : '';
 }
 
-async function subirImagenesPregunta(rutaBase, files) {
-  const urls = [];
+const TAMANO_MAXIMO_ARCHIVO = 10 * 1024 * 1024; // 10 MB
+
+function tipoDeArchivo(file) {
+  if (file.type.startsWith('image/')) return 'imagen';
+  if (file.type === 'application/pdf') return 'pdf';
+  if (file.type.includes('word') || /\.docx?$/i.test(file.name)) return 'word';
+  return 'otro';
+}
+
+// Sube imágenes, PDF o Word — devuelve [{url, nombre, tipo}], no solo la
+// URL, para poder mostrar cada adjunto con su ícono/vista correcta
+// después, y para que la Cloud Function sepa cómo leer cada uno.
+async function subirArchivosPregunta(rutaBase, files) {
+  const resultado = [];
   for (let i = 0; i < files.length; i++) {
-    const archivoRef = storageRef(storage, `${rutaBase}/${i}_${Date.now()}`);
-    await uploadBytes(archivoRef, files[i]);
-    urls.push(await getDownloadURL(archivoRef));
+    const file = files[i];
+    const archivoRef = storageRef(storage, `${rutaBase}/${i}_${Date.now()}_${file.name}`);
+    await uploadBytes(archivoRef, file);
+    const url = await getDownloadURL(archivoRef);
+    resultado.push({ url, nombre: file.name, tipo: tipoDeArchivo(file), mimeType: file.type });
   }
-  return urls;
+  return resultado;
+}
+
+// Compatible con datos viejos (imagenes: ["url", ...]) y nuevos
+// (archivos: [{url, nombre, tipo}, ...]) — arma el HTML de vista previa
+// para cualquiera de los dos formatos.
+function renderArchivosAdjuntos(archivos, imagenesLegado) {
+  const items = [];
+  (archivos || []).forEach(a => items.push(a));
+  (imagenesLegado || []).forEach(url => items.push({ url, nombre: 'Imagen', tipo: 'imagen' }));
+  if (!items.length) return '';
+  return items.map(a => {
+    if (a.tipo === 'imagen') {
+      return `<img src="${a.url}" alt="" style="max-width:140px; max-height:140px; border-radius:6px; margin:0 6px 6px 0; object-fit:cover;">`;
+    }
+    const icono = a.tipo === 'pdf' ? '📄' : a.tipo === 'word' ? '📝' : '📎';
+    return `<a href="${a.url}" target="_blank" rel="noopener" style="display:inline-flex; align-items:center; gap:6px; background:var(--color-surface-alt); padding:6px 12px; border-radius:8px; margin:0 6px 6px 0; font-size:12px; text-decoration:none; color:var(--color-ink);">${icono} ${a.nombre || 'Archivo'}</a>`;
+  }).join('');
 }
 
 export async function cargarBoxAlumno() {
@@ -721,10 +748,12 @@ export async function cargarBoxAlumno() {
   mentores.forEach(([uid, m]) => {
     const yaPreguntado = mentoresPreguntadosEstaSemana.has(uid);
     const bloqueado = yaPreguntado;
+    const claseBotonPreguntar = bloqueado ? 'btn btn-hacer-pregunta' : 'btn btn--primary btn-hacer-pregunta';
+    const estiloBotonPreguntar = bloqueado ? 'background:#9CA3AF; color:#fff; opacity:1;' : '';
+    const atributosBotonPreguntar = bloqueado ? `disabled title="¡Ya le has preguntado a este Mentor!"` : '';
     const tarjeta = document.createElement('div');
-    tarjeta.className = 'mentor-card-ia' + (bloqueado ? ' mentor-card-bloqueado' : '');
+    tarjeta.className = 'mentor-card-ia';
     tarjeta.style.cssText = 'display:flex; align-items:center; gap:14px; padding:14px 16px; background:var(--color-surface-alt); border-radius:var(--radius-md);';
-    if (yaPreguntado) tarjeta.title = '¡Ya le has preguntado a este Mentor!';
     tarjeta.innerHTML = `
       <img src="${m.fotoIA || m.fotoUrl || PLACEHOLDER_FOTO_ALUMNO}" alt="" style="width:64px; height:64px; border-radius:50%; object-fit:cover; flex-shrink:0;">
       <div style="flex:1; min-width:0;">
@@ -732,7 +761,7 @@ export async function cargarBoxAlumno() {
         <p class="text-soft" style="font-size:12.5px; font-style:italic; margin:0;">Mentor IA</p>
       </div>
       <div style="display:flex; flex-direction:column; gap:6px; flex-shrink:0;">
-        <button type="button" class="btn btn--primary btn-hacer-pregunta" style="font-size:12px; padding:8px 14px; white-space:nowrap;" ${bloqueado ? 'disabled' : ''}>Hacer Pregunta</button>
+        <button type="button" class="${claseBotonPreguntar}" style="font-size:12px; padding:8px 14px; white-space:nowrap; ${estiloBotonPreguntar}" ${atributosBotonPreguntar}>Hacer Pregunta</button>
         <button type="button" class="btn btn-detalles-mentor" style="font-size:12px; padding:8px 14px; white-space:nowrap; background:#6B7280; color:#fff;">Detalles Mentor</button>
       </div>`;
     gridEl.appendChild(tarjeta);
@@ -742,6 +771,11 @@ export async function cargarBoxAlumno() {
       document.getElementById('box-alumno-form-panel').classList.remove('hidden');
       document.getElementById('box-alumno-mentor-nombre-form').textContent = `${m.nombre || m.email} (Mentor IA)`;
       document.getElementById('btn-enviar-pregunta-alumno').dataset.mentorId = uid;
+      const temasMentor = Array.isArray(m.temasBox) ? m.temasBox : [];
+      const selectTematicaPregunta = document.getElementById('box-alumno-pregunta-tematica');
+      selectTematicaPregunta.innerHTML = temasMentor.length
+        ? temasMentor.map(t => `<option value="${t}">${t}</option>`).join('')
+        : '<option value="">Este mentor aún no agregó temáticas</option>';
       document.getElementById('box-alumno-form-panel').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     });
 
@@ -798,7 +832,7 @@ export async function cargarBoxAlumno() {
               <span class="text-soft" style="font-size:12px;">${formatFecha(new Date(e.createdAt).toISOString().slice(0, 10))}</span>
               <p style="margin:6px 0;">${linkify(e.pregunta)}</p>
               <div class="hidden" data-detalle-consulta>
-                ${renderImagenesPregunta(e.imagenes)}
+                ${renderImagenesPregunta(e.imagenes, e.archivos)}
                 ${renderRespuestaBox(e.respuesta)}
               </div>
             </div>`;
@@ -866,10 +900,17 @@ const inputImagenesPregunta = document.getElementById('input-imagenes-pregunta')
 if (btnAdjuntarImagenesPregunta && inputImagenesPregunta) {
   btnAdjuntarImagenesPregunta.addEventListener('click', () => inputImagenesPregunta.click());
   inputImagenesPregunta.addEventListener('change', () => {
-    imagenesSeleccionadasPregunta = Array.from(inputImagenesPregunta.files);
+    const seleccionados = Array.from(inputImagenesPregunta.files);
+    const muyPesados = seleccionados.filter(f => f.size > TAMANO_MAXIMO_ARCHIVO);
+    if (muyPesados.length) {
+      alert(`Estos archivos pesan más de 10MB y no se pueden adjuntar: ${muyPesados.map(f => f.name).join(', ')}`);
+      inputImagenesPregunta.value = '';
+      return;
+    }
+    imagenesSeleccionadasPregunta = seleccionados;
     const previewEl = document.getElementById('box-alumno-imagenes-preview');
     previewEl.innerHTML = imagenesSeleccionadasPregunta
-      .map(f => `<span class="text-soft" style="font-size:11px; background:#F0F1F3; padding:3px 8px; border-radius:6px;">🖼️ ${f.name}</span>`)
+      .map(f => `<span class="text-soft" style="font-size:11px; background:#F0F1F3; padding:3px 8px; border-radius:6px;">${tipoDeArchivo(f) === 'imagen' ? '🖼️' : tipoDeArchivo(f) === 'pdf' ? '📄' : '📝'} ${f.name}</span>`)
       .join('');
   });
 }
@@ -881,9 +922,15 @@ if (btnEnviarPreguntaAlumno) {
     errorEl.classList.add('hidden');
     const mentorId = btnEnviarPreguntaAlumno.dataset.mentorId;
     const pregunta = document.getElementById('box-alumno-pregunta').value.trim();
+    const tematica = document.getElementById('box-alumno-pregunta-tematica').value;
 
+    if (!tematica) {
+      errorEl.textContent = 'Elige una temática para tu pregunta.';
+      errorEl.classList.remove('hidden');
+      return;
+    }
     if (!mentorId || (!pregunta && !imagenesSeleccionadasPregunta.length) || !alumnoIdActual) {
-      errorEl.textContent = 'Escribe tu pregunta o adjunta al menos una imagen.';
+      errorEl.textContent = 'Escribe tu pregunta o adjunta al menos un archivo.';
       errorEl.classList.remove('hidden');
       return;
     }
@@ -895,12 +942,12 @@ if (btnEnviarPreguntaAlumno) {
       const alumno = alumnoSnap.exists() ? alumnoSnap.val() : {};
       const nombreAlumno = `${alumno.nombre || ''} ${alumno.apellido || ''}`.trim();
 
-      const imagenes = imagenesSeleccionadasPregunta.length
-        ? await subirImagenesPregunta(`box-preguntas/${mentorId}/${preguntaId}`, imagenesSeleccionadasPregunta)
+      const archivos = imagenesSeleccionadasPregunta.length
+        ? await subirArchivosPregunta(`box-preguntas/${mentorId}/${preguntaId}`, imagenesSeleccionadasPregunta)
         : [];
 
       await update(ref(db), {
-        [`box/${mentorId}/${preguntaId}`]: { alumnoId: alumnoIdActual, alumnoNombre: nombreAlumno, mentorId, pregunta, imagenes, createdAt: Date.now(), respuesta: null },
+        [`box/${mentorId}/${preguntaId}`]: { alumnoId: alumnoIdActual, alumnoNombre: nombreAlumno, mentorId, pregunta, tematica, archivos, createdAt: Date.now(), respuesta: null },
         [`boxIndice/${alumnoIdActual}/${preguntaId}`]: mentorId
       });
 
@@ -951,11 +998,23 @@ async function cargarBoxBeginAlumno() {
   const selectTematica = document.getElementById('box-begin-tematica');
   if (!listadoEl || !selectTematica || !alumnoIdActual) return;
 
-  const tematicasSnap = await get(ref(db, 'configuracion/tematicasBoxBegin'));
-  const tematicas = tematicasSnap.exists() ? tematicasSnap.val() : {};
+  // BEGIN no tiene un mentor específico asignado a la pregunta — la
+  // lista de temáticas es la suma de las de TODOS los mentores (con
+  // "Otra" siempre al final para lo que no calce en ninguna).
+  const usuariosSnapTemas = await get(ref(db, 'usuarios'));
+  const usuariosTemas = usuariosSnapTemas.exists() ? usuariosSnapTemas.val() : {};
+  const todasLasTematicas = new Set();
+  Object.values(usuariosTemas).forEach(u => {
+    const roles = (u.roles && typeof u.roles === 'object') ? u.roles : (u.rol ? { [u.rol]: true } : {});
+    if (roles.mentor && Array.isArray(u.temasBox)) {
+      u.temasBox.forEach(t => todasLasTematicas.add(t));
+    }
+  });
+  const tematicas = [...todasLasTematicas].sort((a, b) => a.localeCompare(b, 'es'));
+  tematicas.push('Otra');
   const valorPrevio = selectTematica.value;
-  selectTematica.innerHTML = Object.values(tematicas).map(t => `<option value="${t}">${t}</option>`).join('');
-  if (valorPrevio && Object.values(tematicas).includes(valorPrevio)) selectTematica.value = valorPrevio;
+  selectTematica.innerHTML = tematicas.map(t => `<option value="${t}">${t}</option>`).join('');
+  if (valorPrevio && tematicas.includes(valorPrevio)) selectTematica.value = valorPrevio;
 
   const campoOtra = document.getElementById('box-begin-tematica-otra-campo');
   const actualizarCampoOtra = () => { if (campoOtra) campoOtra.classList.toggle('hidden', selectTematica.value !== 'Otra'); };
@@ -981,7 +1040,7 @@ async function cargarBoxBeginAlumno() {
         <div class="panel mb-16" style="padding:14px;">
           <span class="badge badge--activo" style="font-size:10px;">${p.tematica || 'Sin temática'}</span>
           <p style="margin:8px 0 0;">${linkify(p.pregunta || '')}</p>
-          ${renderImagenesPregunta(p.imagenes)}
+          ${renderImagenesPregunta(p.imagenes, p.archivos)}
           ${p.respuesta
             ? `<div style="margin-top:10px; padding:10px; background:#F7F8FA; border-radius:8px;">
                  <strong style="font-size:12px;">Respuesta${p.respuesta.mentorNombre ? ` de ${p.respuesta.mentorNombre}` : ''}</strong>
@@ -998,9 +1057,16 @@ const inputImagenesBoxBegin = document.getElementById('input-imagenes-box-begin'
 if (btnAdjuntarBoxBegin && inputImagenesBoxBegin) {
   btnAdjuntarBoxBegin.addEventListener('click', () => inputImagenesBoxBegin.click());
   inputImagenesBoxBegin.addEventListener('change', () => {
-    imagenesSelBoxBegin = Array.from(inputImagenesBoxBegin.files);
+    const seleccionados = Array.from(inputImagenesBoxBegin.files);
+    const muyPesados = seleccionados.filter(f => f.size > TAMANO_MAXIMO_ARCHIVO);
+    if (muyPesados.length) {
+      alert(`Estos archivos pesan más de 10MB: ${muyPesados.map(f => f.name).join(', ')}`);
+      inputImagenesBoxBegin.value = '';
+      return;
+    }
+    imagenesSelBoxBegin = seleccionados;
     document.getElementById('box-begin-imagenes-preview').innerHTML = imagenesSelBoxBegin
-      .map(f => `<span class="text-soft" style="font-size:11px; background:#F0F1F3; padding:3px 8px; border-radius:6px;">🖼️ ${f.name}</span>`).join('');
+      .map(f => `<span class="text-soft" style="font-size:11px; background:#F0F1F3; padding:3px 8px; border-radius:6px;">${tipoDeArchivo(f) === 'imagen' ? '🖼️' : tipoDeArchivo(f) === 'pdf' ? '📄' : '📝'} ${f.name}</span>`).join('');
   });
 }
 
@@ -1035,11 +1101,11 @@ if (btnEnviarBoxBegin) {
       const alumnoSnap = await get(ref(db, `alumnos/${alumnoIdActual}`));
       const alumno = alumnoSnap.exists() ? alumnoSnap.val() : {};
       const nombreAlumno = `${alumno.nombre || ''} ${alumno.apellido || ''}`.trim();
-      const imagenes = imagenesSelBoxBegin.length
-        ? await subirImagenesPregunta(`box-begin/${preguntaId}`, imagenesSelBoxBegin)
+      const archivos = imagenesSelBoxBegin.length
+        ? await subirArchivosPregunta(`box-begin/${preguntaId}`, imagenesSelBoxBegin)
         : [];
       await set(ref(db, `boxBegin/${preguntaId}`), {
-        alumnoId: alumnoIdActual, alumnoNombre: nombreAlumno, tematica, pregunta, imagenes, createdAt: Date.now()
+        alumnoId: alumnoIdActual, alumnoNombre: nombreAlumno, tematica, pregunta, archivos, createdAt: Date.now()
       });
 
       document.getElementById('box-begin-pregunta').value = '';
@@ -1096,10 +1162,6 @@ export async function cargarPreguntasComunidad() {
     filtroMentorEl.innerHTML = '<option value="">Todos</option>' + mentores.map(([uid, m]) => `<option value="${uid}">${m.nombre || m.email}</option>`).join('');
     filtroMentorEl.dataset.cargado = '1';
   }
-  if (filtroTemaEl && !filtroTemaEl.dataset.cargado) {
-    filtroTemaEl.innerHTML = '<option value="">Todas</option>' + TEMAS_BOX.map(t => `<option value="${t}">${t}</option>`).join('');
-    filtroTemaEl.dataset.cargado = '1';
-  }
 
   const todasSnaps = await Promise.all(mentores.map(([uid]) => get(ref(db, `box/${uid}`))));
   let todas = [];
@@ -1109,6 +1171,15 @@ export async function cargarPreguntasComunidad() {
     Object.values(snap.val()).forEach(p => { if (p.respuesta) todas.push(p); });
   });
   todas.sort((a, b) => b.createdAt - a.createdAt); // más reciente primero
+
+  // Las temáticas ya no son una lista fija — se arma con las que
+  // realmente aparecen en las preguntas ya hechas.
+  if (filtroTemaEl) {
+    const valorPrevioTema = filtroTemaEl.value;
+    const tematicasPresentes = [...new Set(todas.map(p => p.tematica).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'es'));
+    filtroTemaEl.innerHTML = '<option value="">Todas</option>' + tematicasPresentes.map(t => `<option value="${t}">${t}</option>`).join('');
+    if (valorPrevioTema && tematicasPresentes.includes(valorPrevioTema)) filtroTemaEl.value = valorPrevioTema;
+  }
 
   const PAGE_SIZE = 10;
   let cantidadVisible = PAGE_SIZE;
@@ -1121,7 +1192,7 @@ export async function cargarPreguntasComunidad() {
 
     const filtradas = todas.filter(p =>
       (!filtroMentor || p.mentorId === filtroMentor) &&
-      (!filtroTema || (p.respuesta && p.respuesta.tema === filtroTema)) &&
+      (!filtroTema || p.tematica === filtroTema) &&
       (!fDesde || p.createdAt >= fDesde) &&
       (!fHasta || p.createdAt <= fHasta)
     );
@@ -1134,13 +1205,13 @@ export async function cargarPreguntasComunidad() {
           return `
             <div class="panel mb-16" style="padding:14px; cursor:pointer;" data-fila-comunidad>
               <div class="flex-between">
-                <span class="badge badge--activo" style="font-size:10px;">${p.respuesta.tema || 'Sin tema'}</span>
+                <span class="badge badge--activo" style="font-size:10px;">${p.tematica || 'Sin tema'}</span>
                 <span class="text-soft" style="font-size:16px;" data-flecha-comunidad>▾</span>
               </div>
               <p class="text-soft" style="font-size:12px; margin:6px 0 2px;">Pregunta para ${mentorNombre} — ${formatFecha(new Date(p.createdAt).toISOString().slice(0, 10))}</p>
               <p style="margin:4px 0;">${linkify(p.pregunta)}</p>
               <div class="hidden" data-detalle-comunidad>
-                ${renderImagenesPregunta(p.imagenes)}
+                ${renderImagenesPregunta(p.imagenes, p.archivos)}
                 ${renderRespuestaBox(p.respuesta)}
               </div>
             </div>`;
@@ -1263,7 +1334,7 @@ async function cargarMisPreguntasVivo(card, s) {
     propias.map(([preguntaId, p]) => `
       <div class="pv-pregunta-propia" data-pregunta-id="${preguntaId}" style="margin-top:8px; font-size:13px; padding:8px; background:#fff; border-radius:8px;">
         <p class="pv-pregunta-propia-texto" style="margin:0;">${linkify(p.texto || '')}</p>
-        ${renderImagenesPregunta(p.imagenes)}
+        ${renderImagenesPregunta(p.imagenes, p.archivos)}
         ${p.revisada
           ? '<p class="text-soft" style="margin:6px 0 0; font-size:11px;">✓ El Mentor ya ha revisado tu pregunta.</p>'
           : `<button type="button" class="btn btn--ghost btn-editar-pregunta-vivo" style="font-size:11px; padding:3px 8px; margin-top:6px;">Editar</button>`}
@@ -1305,13 +1376,19 @@ async function cargarMisPreguntasVivo(card, s) {
         });
 
         const contNuevas = bloque.querySelector('.pv-editar-imagenes-nuevas');
-        contNuevas.innerHTML = imagenesNuevas.map(f => `<span class="text-soft" style="font-size:11px; background:#F0F1F3; padding:3px 8px; border-radius:6px;">🖼️ ${f.name}</span>`).join('');
+        contNuevas.innerHTML = imagenesNuevas.map(f => `<span class="text-soft" style="font-size:11px; background:#F0F1F3; padding:3px 8px; border-radius:6px;">${tipoDeArchivo(f) === 'imagen' ? '🖼️' : tipoDeArchivo(f) === 'pdf' ? '📄' : '📝'} ${f.name}</span>`).join('');
 
         const btnAdjuntar = bloque.querySelector('.btn-adjuntar-editar-vivo');
         const inputAdjuntar = bloque.querySelector('.pv-input-editar-imagenes');
         btnAdjuntar.addEventListener('click', () => inputAdjuntar.click());
         inputAdjuntar.addEventListener('change', () => {
-          imagenesNuevas = imagenesNuevas.concat(Array.from(inputAdjuntar.files));
+          const nuevos = Array.from(inputAdjuntar.files);
+          const muyPesados = nuevos.filter(f => f.size > TAMANO_MAXIMO_ARCHIVO);
+          if (muyPesados.length) {
+            alert(`Estos archivos pesan más de 10MB: ${muyPesados.map(f => f.name).join(', ')}`);
+            return;
+          }
+          imagenesNuevas = imagenesNuevas.concat(nuevos);
           renderEdicion();
         });
 
@@ -1324,12 +1401,13 @@ async function cargarMisPreguntasVivo(card, s) {
           }
           ev.target.disabled = true;
           try {
-            const urlsNuevas = imagenesNuevas.length
-              ? await subirImagenesPregunta(`preguntas-vivo/${s.mentorUid}/${s.mentoriaId}/${preguntaId}`, imagenesNuevas)
+            const archivosNuevos = imagenesNuevas.length
+              ? await subirArchivosPregunta(`preguntas-vivo/${s.mentorUid}/${s.mentoriaId}/${preguntaId}`, imagenesNuevas)
               : [];
             await update(ref(db, `${rutaPreguntas(s)}/${s.mentorUid}/${s.mentoriaId}/${preguntaId}`), {
               texto: nuevoTexto,
-              imagenes: [...imagenesActuales, ...urlsNuevas]
+              imagenes: imagenesActuales,
+              archivos: [...(datosPregunta.archivos || []), ...archivosNuevos]
             });
             await cargarMisPreguntasVivo(card, s);
           } catch (err) {
@@ -1354,26 +1432,33 @@ function bindSesionVivo(card, s) {
   const inputImagenes = card.querySelector('.pv-input-imagenes');
   btnAdjuntar.addEventListener('click', () => inputImagenes.click());
   inputImagenes.addEventListener('change', () => {
-    imagenesSel = Array.from(inputImagenes.files);
+    const seleccionados = Array.from(inputImagenes.files);
+    const muyPesados = seleccionados.filter(f => f.size > TAMANO_MAXIMO_ARCHIVO);
+    if (muyPesados.length) {
+      alert(`Estos archivos pesan más de 10MB y no se pueden adjuntar: ${muyPesados.map(f => f.name).join(', ')}`);
+      inputImagenes.value = '';
+      return;
+    }
+    imagenesSel = seleccionados;
     card.querySelector('.pv-imagenes-preview').innerHTML = imagenesSel
-      .map(f => `<span class="text-soft" style="font-size:11px; background:#F0F1F3; padding:3px 8px; border-radius:6px;">🖼️ ${f.name}</span>`).join('');
+      .map(f => `<span class="text-soft" style="font-size:11px; background:#F0F1F3; padding:3px 8px; border-radius:6px;">${tipoDeArchivo(f) === 'imagen' ? '🖼️' : tipoDeArchivo(f) === 'pdf' ? '📄' : '📝'} ${f.name}</span>`).join('');
   });
 
   card.querySelector('.pv-btn-enviar').addEventListener('click', async (ev) => {
     const btn = ev.target;
     const texto = card.querySelector('.pv-pregunta-texto').value.trim();
-    if (!texto && !imagenesSel.length) { alert('Escribe tu pregunta o adjunta una imagen.'); return; }
+    if (!texto && !imagenesSel.length) { alert('Escribe tu pregunta o adjunta un archivo.'); return; }
     btn.disabled = true;
     try {
       const preguntaId = push(ref(db, `${rutaPreguntas(s)}/${s.mentorUid}/${s.mentoriaId}`)).key;
       const alumnoSnap = await get(ref(db, `alumnos/${alumnoIdActual}`));
       const alumno = alumnoSnap.exists() ? alumnoSnap.val() : {};
       const nombreAlumno = `${alumno.nombre || ''} ${alumno.apellido || ''}`.trim();
-      const imagenes = imagenesSel.length
-        ? await subirImagenesPregunta(`preguntas-vivo/${s.mentorUid}/${s.mentoriaId}/${preguntaId}`, imagenesSel)
+      const archivos = imagenesSel.length
+        ? await subirArchivosPregunta(`preguntas-vivo/${s.mentorUid}/${s.mentoriaId}/${preguntaId}`, imagenesSel)
         : [];
       await set(ref(db, `${rutaPreguntas(s)}/${s.mentorUid}/${s.mentoriaId}/${preguntaId}`), {
-        alumnoId: alumnoIdActual, alumnoNombre: nombreAlumno, texto, imagenes, createdAt: Date.now()
+        alumnoId: alumnoIdActual, alumnoNombre: nombreAlumno, texto, archivos, createdAt: Date.now()
       });
       card.querySelector('.pv-pregunta-texto').value = '';
       card.querySelector('.pv-imagenes-preview').innerHTML = '';
@@ -1479,7 +1564,7 @@ export async function cargarPreguntasVivo() {
   listadoEl.innerHTML = sesiones.map((s, idx) => {
     const temasMentor = s.tipo === 'coach'
       ? 'Sesión grupal semanal — resolución de dudas (BEGIN)'
-      : (Object.keys(s.mentorDatos.temas || {}).join(', ') || 'Temáticas no definidas aún');
+      : ((Array.isArray(s.mentorDatos.temasBox) && s.mentorDatos.temasBox.length) ? s.mentorDatos.temasBox.slice(0, 3).join(', ') : 'Temáticas no definidas aún');
     const fechaLarga = new Intl.DateTimeFormat('es-CL', { day: '2-digit', month: 'long', year: 'numeric', timeZone: zonaHorariaLocal() }).format(s.inicio);
     const horaTexto = s.inicioTimestamp ? formatearHorarioSesion(s.inicioTimestamp) : s.hora;
     return `
@@ -1500,8 +1585,8 @@ export async function cargarPreguntasVivo() {
         <div class="field mb-16">
           <textarea class="pv-pregunta-texto" placeholder="Escribe tu pregunta para esta sesión... (puedes incluir links)"></textarea>
         </div>
-        <button type="button" class="btn btn--ghost pv-btn-adjuntar" style="font-size:11px;">🖼️ Adjuntar Imágenes</button>
-        <input type="file" class="pv-input-imagenes hidden" accept="image/*" multiple>
+        <button type="button" class="btn btn--ghost pv-btn-adjuntar" style="font-size:11px;">📎 Adjuntar Imagen, PDF o Word</button>
+        <input type="file" class="pv-input-imagenes hidden" accept="image/*,.pdf,.doc,.docx" multiple>
         <div class="pv-imagenes-preview" style="display:flex; gap:6px; flex-wrap:wrap; margin:8px 0;"></div>
         <button type="button" class="btn btn--primary pv-btn-enviar" style="font-size:12px;">Enviar</button>
       </div>
@@ -1596,7 +1681,7 @@ export async function cargarPreguntasVivo() {
             <div class="panel mb-16" style="padding:12px; font-size:13px;">
               <strong>Para ${p.mentorNombre}</strong> <span class="text-soft" style="font-size:11px;">— ${formatFecha(new Date(p.createdAt).toISOString().slice(0, 10))}</span>
               <p style="margin:6px 0 0;">${linkify(p.texto || '')}</p>
-              ${renderImagenesPregunta(p.imagenes)}
+              ${renderImagenesPregunta(p.imagenes, p.archivos)}
             </div>`).join('')
         : '<p class="text-soft">No hay preguntas con ese filtro.</p>';
     }
