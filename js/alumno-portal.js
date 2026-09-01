@@ -172,15 +172,32 @@ export async function cargarDashboardAlumno(alumnoId) {
       ['exit', 'assets/logos/logo-exit.png', 'eXIT']
     ];
     stepperEl.innerHTML = `
-      <div style="display:flex; align-items:center; gap:10px;">
+      <div style="display:flex; align-items:center; justify-content:center; gap:16px;">
         ${PROGRAMAS_ORDEN.map(([clave, logo, label]) => {
           const activo = clave === programaActual;
           return `
-          <div style="display:flex; align-items:center; justify-content:center; padding:${activo ? '10px 18px' : '8px 14px'}; border-radius:var(--radius-md, 10px); border:${activo ? '1.5px solid var(--color-accent, #2563EB)' : '1.5px solid transparent'}; opacity:${activo ? '1' : '0.4'};">
-            <img src="${logo}" alt="${label}" style="height:${activo ? '30px' : '22px'}; width:auto; object-fit:contain;">
+          <div style="display:flex; align-items:center; justify-content:center; padding:${activo ? '12px 22px' : '10px 16px'}; border-radius:var(--radius-md, 10px); border:${activo ? '1.5px solid var(--color-accent, #2563EB)' : '1.5px solid transparent'}; opacity:${activo ? '1' : '0.4'};">
+            <img src="${logo}" alt="${label}" style="height:${activo ? '42px' : '30px'}; width:auto; object-fit:contain;">
           </div>`;
         }).join('')}
       </div>`;
+  }
+
+  // --- Stepper de astronautas: Inicio → Fase 1-4 → Final, según el
+  //     avance real del alumno (faseMetodologia / estadoAlumno). ---
+  const astronautaEl = document.getElementById('alumno-astronauta-fase');
+  if (astronautaEl) {
+    // TODO: cuando lleguen los sets de BEGIN y eXIT, cambiar 'next' por
+    // (ciclo ? ciclo.programa : 'next') acá abajo, para que cada quien
+    // vea el set de su propio programa. Por ahora, todos ven el de NEXT.
+    const carpetaStepper = 'next';
+    let estadoAstro = 'inicio';
+    if (ciclo && ciclo.estadoAlumno === 'egresado') {
+      estadoAstro = 'final';
+    } else if (ciclo && ciclo.faseMetodologia && /\d/.test(ciclo.faseMetodologia)) {
+      estadoAstro = `fase${ciclo.faseMetodologia.match(/\d/)[0]}`;
+    }
+    astronautaEl.innerHTML = `<img src="assets/stepper/${carpetaStepper}/${estadoAstro}.jpg" alt="Tu avance en la Metodología 2E" style="width:100%; height:auto; display:block; border-radius:var(--radius-md, 10px);">`;
   }
 
   // --- Aviso de atraso de pago (automático: alguna cuota vencida y no pagada) ---
@@ -238,7 +255,7 @@ export async function cargarDashboardAlumno(alumnoId) {
     }
     const numeroFase = (ciclo && ciclo.faseMetodologia && /\d/.test(ciclo.faseMetodologia)) ? ciclo.faseMetodologia.match(/\d/)[0] : null;
     const fraseFase = numeroFase
-      ? `Actualmente te encuentras en la Fase ${numeroFase} de la Metodología 2E`
+      ? `Actualmente te encuentras en: <span style="background:#E2E4E8; color:#1B2333; padding:2px 10px; border-radius:6px; font-weight:700;">Fase ${numeroFase}</span> de la Metodología 2E`
       : 'Tu fase actual aún no está definida — pronto tu coach la va a actualizar.';
     const mensajeCoach = coach ? encodeURIComponent(`Hola ${coach.nombre || ''}, necesito tu ayuda por favor`) : '';
     const whatsappCoachUrl = coach && coach.telefono ? `https://wa.me/${coach.telefono.replace(/[^0-9]/g, '')}?text=${mensajeCoach}` : '';
@@ -249,9 +266,9 @@ export async function cargarDashboardAlumno(alumnoId) {
       const egreso = new Date(ciclo.fechaEgreso + 'T00:00:00');
       const diasRestantes = Math.ceil((egreso.getTime() - hoy.getTime()) / (1000 * 60 * 60 * 24));
       if (diasRestantes > 0) {
-        fraseDiasRestantes = `<p style="margin:0 0 8px; line-height:1.6;">¡Te quedan ${diasRestantes} día${diasRestantes === 1 ? '' : 's'} de acceso al acompañamiento, estamos aquí para acompañarte, no te detengas!</p>`;
+        fraseDiasRestantes = `¡Te quedan <strong>${diasRestantes} día${diasRestantes === 1 ? '' : 's'}</strong> de acceso al acompañamiento, estamos aquí para guiarte, <strong><em>no te detengas!</em></strong>`;
       } else {
-        fraseDiasRestantes = `<p style="margin:0 0 8px; line-height:1.6; color:#B8860B; font-weight:600;">Tu acceso está en período de gracia</p>`;
+        fraseDiasRestantes = `<span style="color:#B8860B; font-weight:600;">Tu acceso está en período de gracia</span>`;
       }
     }
 
@@ -259,23 +276,41 @@ export async function cargarDashboardAlumno(alumnoId) {
     // el de Hotmart sí es su logo real (assets/logos/hotmart.png).
     const iconoComunidad = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="8" cy="8" r="3" stroke="currentColor" stroke-width="1.8"/><circle cx="16" cy="8" r="3" stroke="currentColor" stroke-width="1.8"/><path d="M2 20c0-3 2.5-5 6-5s6 2 6 5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M12 15.5c.7-.3 1.5-.5 2-.5 3.5 0 6 2 6 5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>`;
     const iconoContenidos = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="3" y="5" width="18" height="12" rx="1.5" stroke="currentColor" stroke-width="1.8"/><path d="M1 20h22" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>`;
+    const iconoWhatsapp = `<svg width="16" height="16" viewBox="0 0 24 24" fill="#fff" xmlns="http://www.w3.org/2000/svg"><path d="M12 2C6.48 2 2 6.48 2 12c0 1.85.5 3.58 1.36 5.07L2 22l5.05-1.33C8.51 21.5 10.2 22 12 22c5.52 0 10-4.48 10-10S17.52 2 12 2zm5.2 14.15c-.22.62-1.28 1.18-1.76 1.24-.45.06-1.02.09-1.65-.1-.38-.12-.87-.28-1.5-.55-2.64-1.14-4.36-3.8-4.5-3.98-.13-.18-1.08-1.43-1.08-2.73 0-1.3.68-1.94.92-2.2.24-.26.53-.33.7-.33.18 0 .35 0 .5.01.16.01.38-.06.6.46.22.53.75 1.83.82 1.96.07.13.11.29.02.47-.09.18-.13.29-.26.44-.13.15-.27.34-.39.46-.13.13-.26.27-.11.53.15.26.68 1.12 1.46 1.81 1 .89 1.85 1.17 2.11 1.3.26.13.41.11.56-.07.15-.18.64-.75.81-1 .17-.26.34-.22.57-.13.24.09 1.5.71 1.76.84.26.13.43.2.5.31.06.11.06.62-.16 1.24z"/></svg>`;
     const logoHotmart = `<img src="assets/logos/hotmart.png" alt="Hotmart" style="height:14px; width:auto; vertical-align:middle;">`;
 
     accesosEl.innerHTML = `
       <div class="accesos-directos-botones" style="display:flex; flex-wrap:wrap; gap:10px; margin-bottom:18px;">
         <button type="button" class="btn btn--primary" id="btn-acceso-preguntar-mentores">Pregunta a los Mentores</button>
-        ${config.comunidadHotmartUrl ? `<a href="${config.comunidadHotmartUrl}" target="_blank" rel="noopener" class="btn" style="background:#000; color:#fff; display:inline-flex; align-items:center; gap:7px;">Comunidad ${logoHotmart}hotmart ${iconoComunidad}</a>` : ''}
-        ${contenidoUrl ? `<a href="${contenidoUrl}" target="_blank" rel="noopener" class="btn" style="background:#000; color:#fff; display:inline-flex; align-items:center; gap:7px;">Contenidos en ${logoHotmart}hotmart ${iconoContenidos}</a>` : ''}
+        ${config.comunidadHotmartUrl ? `<a href="${config.comunidadHotmartUrl}" target="_blank" rel="noopener" class="btn" style="background:#000; color:#fff; display:inline-flex; align-items:center; justify-content:center; gap:7px;">Comunidad ${logoHotmart}hotmart ${iconoComunidad}</a>` : ''}
+        ${contenidoUrl ? `<a href="${contenidoUrl}" target="_blank" rel="noopener" class="btn" style="background:#000; color:#fff; display:inline-flex; align-items:center; justify-content:center; gap:7px;">Contenidos en ${logoHotmart}hotmart ${iconoContenidos}</a>` : ''}
         ${whatsappUrl ? `<a href="${whatsappUrl}" target="_blank" rel="noopener" class="btn" style="background:#25D366; color:#fff;">Grupo WhatsApp Exclusivo</a>` : ''}
       </div>
       <div style="line-height:1.6;">
-        <p style="margin:0 0 8px; line-height:1.6;">
-          ${coach ? `Tu Coach es <strong>${coach.nombre || '—'}</strong>${esCoachCabeceraMsg ? ' <span style="font-size:11px;">🚩 Coach de Cabecera</span>' : ''}` : 'Aún no tienes coach asignado'}
-          ${whatsappCoachUrl ? ` <a href="${whatsappCoachUrl}" target="_blank" rel="noopener" class="btn" style="background:#25D366; color:#fff; padding:4px 12px; font-size:12px;">💬 WhatsApp</a>` : ''}
+        <p style="margin:0 0 10px; line-height:1.6; display:flex; align-items:center; gap:10px;">
+          <img src="${coach && coach.fotoUrl ? coach.fotoUrl : PLACEHOLDER_FOTO_ALUMNO}" alt="" style="width:38px; height:38px; border-radius:50%; object-fit:cover; flex-shrink:0; ${coach ? '' : 'display:none;'}">
+          <span>
+            ${coach ? `<strong>Tu Coach es:</strong> <em>${coach.nombre || '—'}</em>${esCoachCabeceraMsg ? ' <span style="font-size:11px;">🚩 Coach de Cabecera</span>' : ''}` : 'Aún no tienes coach asignado'}
+            ${whatsappCoachUrl ? ` <a href="${whatsappCoachUrl}" target="_blank" rel="noopener" aria-label="WhatsApp" style="display:inline-flex; align-items:center; justify-content:center; width:28px; height:28px; border-radius:50%; background:#25D366; vertical-align:middle;">${iconoWhatsapp}</a>` : ''}
+          </span>
         </p>
-        <p style="margin:0 0 8px; line-height:1.6;">${fraseFase}</p>
-        ${fraseDiasRestantes}
+        <p style="margin:0 0 8px; line-height:1.6; text-align:center;">${fraseFase}</p>
       </div>`;
+
+    const diasRestantesPanelEl = document.getElementById('alumno-dias-restantes-panel');
+    if (diasRestantesPanelEl) {
+      if (fraseDiasRestantes) {
+        diasRestantesPanelEl.classList.remove('hidden');
+        diasRestantesPanelEl.innerHTML = `
+          <div class="panel__body" style="display:flex; align-items:center; gap:14px;">
+            <span style="font-size:28px;">⏳</span>
+            <p style="margin:0; line-height:1.5;">${fraseDiasRestantes}</p>
+          </div>`;
+      } else {
+        diasRestantesPanelEl.classList.add('hidden');
+        diasRestantesPanelEl.innerHTML = '';
+      }
+    }
 
     const btnPreguntarMentores = document.getElementById('btn-acceso-preguntar-mentores');
     if (btnPreguntarMentores) {
@@ -396,16 +431,43 @@ document.querySelectorAll('.nav-item[data-nav="ficha-alumno-propia"]').forEach(i
   item.addEventListener('click', () => { cargarFichaAlumnoPropia(); cargarAcuerdoAlumno(); });
 });
 
+// --- Gauge semicircular (SVG puro, sin librerías) para las 4 Fases ---
+function gaugeSVG(valor, colorHex) {
+  const v = Math.max(0, Math.min(10, Number(valor) || 0));
+  const cx = 100, cy = 95, r = 78;
+  const anguloGrados = 180 - (v / 10) * 180;
+  const rad = deg => (deg * Math.PI) / 180;
+  const endX = (cx + r * Math.cos(rad(anguloGrados))).toFixed(2);
+  const endY = (cy - r * Math.sin(rad(anguloGrados))).toFixed(2);
+  const pathValor = v > 0 ? `M ${cx - r} ${cy} A ${r} ${r} 0 0 1 ${endX} ${endY}` : '';
+  return `
+    <svg viewBox="0 0 200 120" style="width:100%; max-width:220px; display:block; margin:0 auto;">
+      <path d="M ${cx - r} ${cy} A ${r} ${r} 0 0 1 ${cx + r} ${cy}" fill="none" stroke="#E2E4E8" stroke-width="16" stroke-linecap="round"/>
+      ${pathValor ? `<path d="${pathValor}" fill="none" stroke="${colorHex}" stroke-width="16" stroke-linecap="round"/>` : ''}
+      <text x="${cx}" y="${cy - 6}" text-anchor="middle" font-size="30" font-weight="700" fill="${colorHex}" font-family="Sora, sans-serif">${v.toFixed(1)}</text>
+      <text x="${cx}" y="${cy + 16}" text-anchor="middle" font-size="11" fill="#5B6472" font-family="Inter, sans-serif">de 10</text>
+      <text x="${cx - r}" y="${cy + 20}" text-anchor="start" font-size="10" fill="#9CA3AF">0</text>
+      <text x="${cx + r}" y="${cy + 20}" text-anchor="end" font-size="10" fill="#9CA3AF">10</text>
+    </svg>`;
+}
+
 function renderKpiTest(test) {
   const p = test.promedios || {};
   const fecha = new Intl.DateTimeFormat('es-CL', { day: '2-digit', month: 'long', year: 'numeric' }).format(new Date(test.completadoAt));
+  const FASES_GAUGE = [
+    ['fase1', 'Fase 1: Claridad y Fundamentos', '#8B5CF6'],
+    ['fase2', 'Fase 2: Cliente Soñado', '#0EA5E9'],
+    ['fase3', 'Fase 3: Oferta y Método', '#EC4899'],
+    ['fase4', 'Fase 4: Acción y Sistemas', '#10B981']
+  ];
   return `
     <p class="text-soft mb-16">${fecha}</p>
-    <div class="kpi-grid">
-      <div class="kpi-card"><div class="kpi-card__label">Fase 1: Claridad y Fundamentos</div><div class="kpi-card__value accent">${p.fase1 ?? '—'}</div></div>
-      <div class="kpi-card"><div class="kpi-card__label">Fase 2: Cliente Soñado</div><div class="kpi-card__value accent">${p.fase2 ?? '—'}</div></div>
-      <div class="kpi-card"><div class="kpi-card__label">Fase 3: Oferta y Método</div><div class="kpi-card__value accent">${p.fase3 ?? '—'}</div></div>
-      <div class="kpi-card"><div class="kpi-card__label">Fase 4: Acción y Sistemas</div><div class="kpi-card__value accent">${p.fase4 ?? '—'}</div></div>
+    <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(160px, 1fr)); gap:20px;">
+      ${FASES_GAUGE.map(([clave, titulo, color]) => `
+        <div style="text-align:center;">
+          <p style="font-weight:700; font-size:12.5px; margin:0 0 4px;">${titulo}</p>
+          ${gaugeSVG(p[clave], color)}
+        </div>`).join('')}
     </div>`;
 }
 

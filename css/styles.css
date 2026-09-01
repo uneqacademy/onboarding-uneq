@@ -679,6 +679,10 @@ body.tema-alumno-oscuro .content {
   color: #F2F2F2;
 }
 body.tema-alumno-oscuro .content .text-soft { color: #9CA0A8; }
+body.tema-alumno-oscuro .content .btn--ghost {
+  color: #fff;
+  border-color: rgba(255, 255, 255, 0.5);
+}
 body.tema-alumno-oscuro .topbar {
   background: #161616;
   border-bottom-color: #2a2a2a;

@@ -15,7 +15,7 @@
 <title>UNEQ APP</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Sora:wght@600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/styles.css">
+<link rel="stylesheet" href="css/styles.css?v=20260901">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/intl-tel-input@latest/build/css/intlTelInput.min.css">
 <script src="https://cdn.jsdelivr.net/npm/intl-tel-input@latest/build/js/intlTelInputWithUtils.min.js"></script>
 </head>
@@ -1230,16 +1230,18 @@
       <section id="view-dashboard-alumno" class="view hidden">
         <div id="alumno-stepper-programa" class="mb-24"></div>
         <div id="alumno-aviso-atraso" class="hidden mb-24"></div>
-        <h2 id="alumno-bienvenida" style="margin-bottom:20px;">Bienvenido,</h2>
+        <h2 id="alumno-bienvenida" style="margin-bottom:20px; text-align:center;">Bienvenido,</h2>
         <div class="panel mb-24">
           <div class="panel__header"><h3>Accesos Directos</h3></div>
           <div class="panel__body" id="alumno-accesos-directos"></div>
         </div>
+        <div id="alumno-astronauta-fase" class="mb-24"></div>
+        <div class="panel mb-24" id="alumno-dias-restantes-panel"></div>
+        <div class="flex-between mb-16">
+          <h3 style="color:#fff;">Mi Último Test Brújula</h3>
+          <button class="btn btn--ghost" id="btn-ver-historial-test-alumno" style="font-size:12px;">Ver historial completo →</button>
+        </div>
         <div class="panel">
-          <div class="panel__header flex-between">
-            <h3>Mi Último Test Brújula</h3>
-            <button class="btn btn--ghost" id="btn-ver-historial-test-alumno" style="font-size:12px;">Ver historial completo →</button>
-          </div>
           <div class="panel__body" id="alumno-ultimo-test"></div>
         </div>
       </section>

@@ -1,0 +1,1 @@
+Cuando tengas los 6 archivos para eXIT (inicio, fase1, fase2, fase3, fase4, final — mismo formato que next/), ponlos acá con esos mismos nombres.
