@@ -645,10 +645,23 @@ export async function cargarPerfilMentor() {
   // --- Horario Recurrente (informativo, independiente de las sesiones agendadas) ---
   const horarioRecDia = document.getElementById('mentor-horario-recurrente-dia');
   const horarioRecHora = document.getElementById('mentor-horario-recurrente-hora');
+  const horarioRecCampos = document.getElementById('mentor-horario-recurrente-campos');
+  const horarioRecTexto = document.getElementById('mentor-horario-recurrente-texto');
+  const btnEditarHorarioRec = document.getElementById('btn-editar-horario-recurrente');
+  const btnGuardarHorarioRec = document.getElementById('btn-guardar-horario-recurrente');
   if (horarioRecDia && horarioRecHora) {
     const hr = datos.horarioRecurrente || {};
     horarioRecDia.value = hr.dia || '';
     horarioRecHora.value = hr.hora || '';
+
+    const yaGuardado = !!(hr.dia && hr.hora);
+    if (horarioRecTexto) {
+      horarioRecTexto.textContent = yaGuardado ? `${hr.dia}, ${hr.hora} hrs.` : '';
+      horarioRecTexto.classList.toggle('hidden', !yaGuardado);
+    }
+    if (horarioRecCampos) horarioRecCampos.classList.toggle('hidden', yaGuardado);
+    if (btnGuardarHorarioRec) btnGuardarHorarioRec.classList.toggle('hidden', yaGuardado);
+    if (btnEditarHorarioRec) btnEditarHorarioRec.classList.toggle('hidden', !yaGuardado);
   }
 }
 
@@ -1503,16 +1516,31 @@ if (btnGuardarHorarioRecurrente) {
     const dia = document.getElementById('mentor-horario-recurrente-dia').value;
     const hora = document.getElementById('mentor-horario-recurrente-hora').value;
 
+    // Antes se guardaba "null" en silencio si faltaba uno de los dos
+    // campos, pero igual avisaba "guardado" — quedaba sin efecto sin
+    // que el mentor se diera cuenta.
+    if (!dia || !hora) {
+      alert('Elige el día y la hora antes de guardar.');
+      return;
+    }
+
     btnGuardarHorarioRecurrente.disabled = true;
     try {
-      await update(ref(db, `usuarios/${uid}`), {
-        horarioRecurrente: (dia && hora) ? { dia, hora } : null
-      });
-      alert('Horario recurrente guardado.');
+      await update(ref(db, `usuarios/${uid}`), { horarioRecurrente: { dia, hora } });
+      await cargarPerfilMentor();
     } catch (err) {
       alert('No se pudo guardar. Intenta de nuevo.');
-    } finally {
       btnGuardarHorarioRecurrente.disabled = false;
     }
+  });
+}
+
+const btnEditarHorarioRecurrente = document.getElementById('btn-editar-horario-recurrente');
+if (btnEditarHorarioRecurrente) {
+  btnEditarHorarioRecurrente.addEventListener('click', () => {
+    document.getElementById('mentor-horario-recurrente-texto').classList.add('hidden');
+    document.getElementById('mentor-horario-recurrente-campos').classList.remove('hidden');
+    document.getElementById('btn-guardar-horario-recurrente').classList.remove('hidden');
+    btnEditarHorarioRecurrente.classList.add('hidden');
   });
 }

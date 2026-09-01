@@ -953,10 +953,14 @@
         </div>
 
         <div class="panel mb-24">
-          <div class="panel__header"><h3>Mi Horario Recurrente</h3></div>
+          <div class="panel__header flex-between">
+            <h3>Mi Horario Recurrente</h3>
+            <button class="btn btn--ghost hidden" id="btn-editar-horario-recurrente">✏️ Editar</button>
+          </div>
           <div class="panel__body">
-            <p class="text-soft mb-16">El día y hora en que dictas tus mentorías en vivo habitualmente. Es solo informativo — los alumnos lo ven arriba de "Preguntas en Vivo" para saber cuándo estás, e independiente de las sesiones puntuales que agregas en "Mis Mentorías". Puedes editarlo cuando quieras.</p>
-            <div class="field-grid">
+            <p class="text-soft mb-16">El día y hora en que dictas tus mentorías en vivo habitualmente. Es solo informativo — los alumnos lo ven arriba de "Preguntas en Vivo" para saber cuándo estás, e independiente de las sesiones puntuales que agregas en "Mis Mentorías".</p>
+            <p id="mentor-horario-recurrente-texto" class="hidden mb-16" style="font-weight:600;"></p>
+            <div class="field-grid" id="mentor-horario-recurrente-campos">
               <div class="field">
                 <label>Día</label>
                 <select id="mentor-horario-recurrente-dia">
