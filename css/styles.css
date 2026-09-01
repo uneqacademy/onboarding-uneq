@@ -665,3 +665,46 @@ textarea { width: 100%; max-width: 100%; box-sizing: border-box; resize: vertica
   .btn { font-size: 13px; padding: 8px 12px; }
   h2 { font-size: 18px; }
 }
+
+/* ============================================
+   TEMA OSCURO — solo vista Alumno (ver applyRole
+   en main.js: agrega/quita esta clase en <body>)
+   Las tarjetas blancas (.panel, .kpi-card, .modal-card)
+   NO cambian — siguen blancas con texto oscuro normal,
+   solo cambia el "fondo" alrededor de ellas.
+   ============================================ */
+body.tema-alumno-oscuro { background: #000; }
+body.tema-alumno-oscuro .content {
+  background: #000;
+  color: #F2F2F2;
+}
+body.tema-alumno-oscuro .content .text-soft { color: #9CA0A8; }
+body.tema-alumno-oscuro .topbar {
+  background: #161616;
+  border-bottom-color: #2a2a2a;
+}
+body.tema-alumno-oscuro .topbar__title { color: #fff; }
+body.tema-alumno-oscuro .topbar .btn--ghost {
+  color: #fff;
+  border-color: rgba(255, 255, 255, 0.5);
+}
+body.tema-alumno-oscuro .sidebar { background: #000; }
+
+/* Dentro de una tarjeta blanca, todo vuelve al texto oscuro normal
+   (la herencia de color de arriba no debe filtrarse para adentro) */
+body.tema-alumno-oscuro .panel,
+body.tema-alumno-oscuro .kpi-card,
+body.tema-alumno-oscuro .modal-card {
+  color: var(--color-ink);
+}
+body.tema-alumno-oscuro .panel .text-soft,
+body.tema-alumno-oscuro .kpi-card .text-soft,
+body.tema-alumno-oscuro .modal-card .text-soft {
+  color: var(--color-ink-soft);
+}
+body.tema-alumno-oscuro .panel .btn--ghost,
+body.tema-alumno-oscuro .kpi-card .btn--ghost,
+body.tema-alumno-oscuro .modal-card .btn--ghost {
+  color: var(--color-primary);
+  border-color: var(--color-border);
+}

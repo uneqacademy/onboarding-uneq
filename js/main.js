@@ -23,6 +23,8 @@ export function applyRole(role, nombre, rolesDisponibles) {
   currentNombre = nombre;
   currentRolesDisponibles = (rolesDisponibles && rolesDisponibles.length) ? rolesDisponibles : [role];
 
+  document.body.classList.toggle('tema-alumno-oscuro', role === 'alumno');
+
   document.querySelectorAll('[data-role="director"]').forEach(el => {
     el.classList.toggle('hidden', role !== 'director');
   });
@@ -100,6 +102,7 @@ function renderSelectorRol() {
 }
 
 export function showLogin() {
+  document.body.classList.remove('tema-alumno-oscuro');
   document.getElementById('view-splash').classList.add('hidden');
   document.getElementById('app-shell').classList.add('hidden');
   document.getElementById('view-login').classList.remove('hidden');
