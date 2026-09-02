@@ -88,14 +88,29 @@ async function cargarMentoresView() {
   const npsMentoriasTodos = npsMentoriasSnap.exists() ? npsMentoriasSnap.val() : {};
   tbody.innerHTML = '';
 
-  Object.entries(usuarios)
+  const mentoresOrdenados = Object.entries(usuarios)
     .filter(([, u]) => tieneRol(u, 'mentor'))
     .sort(([, a], [, b]) => {
       const oa = typeof a.orden === 'number' ? a.orden : 999;
       const ob = typeof b.orden === 'number' ? b.orden : 999;
       if (oa !== ob) return oa - ob;
       return (a.nombre || '').localeCompare(b.nombre || '', 'es');
-    })
+    });
+
+  // Si algún mentor todavía no tiene "orden" guardado, se lo asignamos
+  // ahora según su posición actual — así las flechas siempre trabajan
+  // con números reales y comparables entre todos, nunca con un valor
+  // "de mentira" que antes hacía que alguien se pasara de largo al
+  // moverse (bug ya corregido, esto es lo que lo previene).
+  const backfills = mentoresOrdenados
+    .map(([uid, m], idx) => (typeof m.orden !== 'number' ? update(ref(db, `usuarios/${uid}`), { orden: idx }) : null))
+    .filter(Boolean);
+  if (backfills.length) {
+    await Promise.all(backfills);
+    return cargarMentoresView();
+  }
+
+  mentoresOrdenados
     .forEach(([uid, mentor], idx, listaOrdenada) => {
       const { promedio, total } = calcularNpsResumenMentor(npsMentoriasTodos[uid]);
       const npsTexto = promedio !== null ? `${promedio.toFixed(1)} ★ (${total})` : '—';
@@ -118,13 +133,14 @@ async function cargarMentoresView() {
         </td>`;
       tbody.appendChild(tr);
 
+      // Gracias al backfill de arriba, acá SIEMPRE hay un número real
+      // guardado para cada mentor — ya no hace falta ningún valor de
+      // respaldo "inventado", que era justo lo que causaba el bug.
       const intercambiarOrden = async (otroUid) => {
-        const ordenActual = typeof mentor.orden === 'number' ? mentor.orden : idx;
         const otroMentor = listaOrdenada.find(([u]) => u === otroUid)[1];
-        const ordenOtro = typeof otroMentor.orden === 'number' ? otroMentor.orden : listaOrdenada.findIndex(([u]) => u === otroUid);
         await Promise.all([
-          update(ref(db, `usuarios/${uid}`), { orden: ordenOtro }),
-          update(ref(db, `usuarios/${otroUid}`), { orden: ordenActual })
+          update(ref(db, `usuarios/${uid}`), { orden: otroMentor.orden }),
+          update(ref(db, `usuarios/${otroUid}`), { orden: mentor.orden })
         ]);
         await cargarMentoresView();
       };
@@ -686,7 +702,7 @@ export async function cargarPerfilMentor() {
 
     const yaGuardado = !!(hr.dia && hr.hora);
     if (horarioRecTexto) {
-      horarioRecTexto.textContent = yaGuardado ? `${hr.dia}, ${hr.hora} hrs.` : '';
+      horarioRecTexto.textContent = yaGuardado ? `${hr.dia}, ${hr.hora} hrs. ${hr.zonaCreador ? banderaDeZona(hr.zonaCreador) : ''}` : '';
       horarioRecTexto.classList.toggle('hidden', !yaGuardado);
     }
     if (horarioRecCampos) horarioRecCampos.classList.toggle('hidden', yaGuardado);
@@ -968,6 +984,39 @@ function zonaHorariaLocal() {
   return Intl.DateTimeFormat().resolvedOptions().timeZone;
 }
 
+// Mapa de zona horaria (IANA) → código de país, cubriendo todo el
+// continente americano (norte, centro, sur y caribe). Lo que no
+// calce con ningún país de la tabla muestra 🌍 en vez de arriesgar
+// una bandera equivocada.
+const ZONA_A_PAIS = {
+  'America/New_York': 'US', 'America/Chicago': 'US', 'America/Denver': 'US', 'America/Los_Angeles': 'US',
+  'America/Anchorage': 'US', 'Pacific/Honolulu': 'US', 'America/Phoenix': 'US', 'America/Detroit': 'US',
+  'America/Indiana/Indianapolis': 'US', 'America/Boise': 'US',
+  'America/Toronto': 'CA', 'America/Vancouver': 'CA', 'America/Edmonton': 'CA', 'America/Winnipeg': 'CA',
+  'America/Halifax': 'CA', 'America/St_Johns': 'CA', 'America/Regina': 'CA',
+  'America/Mexico_City': 'MX', 'America/Cancun': 'MX', 'America/Tijuana': 'MX', 'America/Monterrey': 'MX',
+  'America/Chihuahua': 'MX', 'America/Hermosillo': 'MX', 'America/Mazatlan': 'MX', 'America/Merida': 'MX',
+  'America/Guatemala': 'GT', 'America/Belize': 'BZ', 'America/Tegucigalpa': 'HN', 'America/El_Salvador': 'SV',
+  'America/Managua': 'NI', 'America/Costa_Rica': 'CR', 'America/Panama': 'PA',
+  'America/Havana': 'CU', 'America/Santo_Domingo': 'DO', 'America/Port-au-Prince': 'HT',
+  'America/Jamaica': 'JM', 'America/Puerto_Rico': 'PR', 'America/Nassau': 'BS',
+  'America/Barbados': 'BB', 'America/Port_of_Spain': 'TT',
+  'America/Bogota': 'CO', 'America/Caracas': 'VE', 'America/Guayaquil': 'EC', 'America/Lima': 'PE',
+  'America/La_Paz': 'BO', 'America/Santiago': 'CL', 'America/Punta_Arenas': 'CL',
+  'America/Argentina/Buenos_Aires': 'AR', 'America/Argentina/Cordoba': 'AR', 'America/Argentina/Mendoza': 'AR',
+  'America/Argentina/Salta': 'AR', 'America/Argentina/Ushuaia': 'AR', 'America/Argentina/Rio_Gallegos': 'AR',
+  'America/Asuncion': 'PY', 'America/Montevideo': 'UY',
+  'America/Sao_Paulo': 'BR', 'America/Manaus': 'BR', 'America/Recife': 'BR', 'America/Fortaleza': 'BR',
+  'America/Bahia': 'BR', 'America/Belem': 'BR', 'America/Cuiaba': 'BR', 'America/Campo_Grande': 'BR',
+  'America/Porto_Velho': 'BR', 'America/Boa_Vista': 'BR', 'America/Rio_Branco': 'BR', 'America/Araguaina': 'BR', 'America/Maceio': 'BR',
+  'America/Guyana': 'GY', 'America/Paramaribo': 'SR', 'America/Cayenne': 'GF'
+};
+function banderaDeZona(zona) {
+  const codigo = ZONA_A_PAIS[zona];
+  if (!codigo) return '🌍';
+  return codigo.replace(/./g, c => String.fromCodePoint(127397 + c.charCodeAt(0)));
+}
+
 function fechaHoraChileDesdeInstante(fechaObj) {
   const partes = new Intl.DateTimeFormat('en-CA', {
     timeZone: 'America/Santiago', year: 'numeric', month: '2-digit', day: '2-digit',
@@ -988,7 +1037,7 @@ function formatearHorarioParaTabla(timestampMs) {
   const soloHora = (zona) => new Intl.DateTimeFormat('es-CL', { timeZone: zona, hour: '2-digit', minute: '2-digit', hour12: false }).format(fechaObj);
   const zonaViewer = zonaHorariaLocal();
   if (zonaViewer === 'America/Santiago') return `${soloHora(zonaViewer)} 🇨🇱`;
-  return `${soloHora(zonaViewer)} (tú) · ${soloHora('America/Santiago')} 🇨🇱`;
+  return `${soloHora(zonaViewer)} ${banderaDeZona(zonaViewer)} · ${soloHora('America/Santiago')} 🇨🇱`;
 }
 
 // Muestra "Estás agendando a las X tu hora (zona) → equivale a las Y hora Chile"
@@ -1007,7 +1056,7 @@ function conectarPreviewHorario(idFecha, idHora, idPreview) {
     if (zona === 'America/Santiago') {
       preview.textContent = `🇨🇱 ${formatearHoraEnZona(fechaObj, zona)} hora Chile.`;
     } else {
-      preview.textContent = `Estás agendando a las ${inputHora.value} tu hora (${zona.split('/').pop().replace('_', ' ')}) → equivale a las ${formatearHoraEnZona(fechaObj, 'America/Santiago')} 🇨🇱 hora Chile.`;
+      preview.textContent = `Estás agendando a las ${inputHora.value} ${banderaDeZona(zona)} tu hora (${zona.split('/').pop().replace('_', ' ')}) → equivale a las ${formatearHoraEnZona(fechaObj, 'America/Santiago')} 🇨🇱 hora Chile.`;
     }
     preview.classList.remove('hidden');
   };
@@ -1556,7 +1605,7 @@ if (btnGuardarHorarioRecurrente) {
 
     btnGuardarHorarioRecurrente.disabled = true;
     try {
-      await update(ref(db, `usuarios/${uid}`), { horarioRecurrente: { dia, hora } });
+      await update(ref(db, `usuarios/${uid}`), { horarioRecurrente: { dia, hora, zonaCreador: zonaHorariaLocal() } });
       await cargarPerfilMentor();
     } catch (err) {
       alert('No se pudo guardar. Intenta de nuevo.');

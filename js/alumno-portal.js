@@ -1330,12 +1330,40 @@ function rutaPreguntas(s) {
 function zonaHorariaLocal() {
   return Intl.DateTimeFormat().resolvedOptions().timeZone;
 }
+const ZONA_A_PAIS = {
+  'America/New_York': 'US', 'America/Chicago': 'US', 'America/Denver': 'US', 'America/Los_Angeles': 'US',
+  'America/Anchorage': 'US', 'Pacific/Honolulu': 'US', 'America/Phoenix': 'US', 'America/Detroit': 'US',
+  'America/Indiana/Indianapolis': 'US', 'America/Boise': 'US',
+  'America/Toronto': 'CA', 'America/Vancouver': 'CA', 'America/Edmonton': 'CA', 'America/Winnipeg': 'CA',
+  'America/Halifax': 'CA', 'America/St_Johns': 'CA', 'America/Regina': 'CA',
+  'America/Mexico_City': 'MX', 'America/Cancun': 'MX', 'America/Tijuana': 'MX', 'America/Monterrey': 'MX',
+  'America/Chihuahua': 'MX', 'America/Hermosillo': 'MX', 'America/Mazatlan': 'MX', 'America/Merida': 'MX',
+  'America/Guatemala': 'GT', 'America/Belize': 'BZ', 'America/Tegucigalpa': 'HN', 'America/El_Salvador': 'SV',
+  'America/Managua': 'NI', 'America/Costa_Rica': 'CR', 'America/Panama': 'PA',
+  'America/Havana': 'CU', 'America/Santo_Domingo': 'DO', 'America/Port-au-Prince': 'HT',
+  'America/Jamaica': 'JM', 'America/Puerto_Rico': 'PR', 'America/Nassau': 'BS',
+  'America/Barbados': 'BB', 'America/Port_of_Spain': 'TT',
+  'America/Bogota': 'CO', 'America/Caracas': 'VE', 'America/Guayaquil': 'EC', 'America/Lima': 'PE',
+  'America/La_Paz': 'BO', 'America/Santiago': 'CL', 'America/Punta_Arenas': 'CL',
+  'America/Argentina/Buenos_Aires': 'AR', 'America/Argentina/Cordoba': 'AR', 'America/Argentina/Mendoza': 'AR',
+  'America/Argentina/Salta': 'AR', 'America/Argentina/Ushuaia': 'AR', 'America/Argentina/Rio_Gallegos': 'AR',
+  'America/Asuncion': 'PY', 'America/Montevideo': 'UY',
+  'America/Sao_Paulo': 'BR', 'America/Manaus': 'BR', 'America/Recife': 'BR', 'America/Fortaleza': 'BR',
+  'America/Bahia': 'BR', 'America/Belem': 'BR', 'America/Cuiaba': 'BR', 'America/Campo_Grande': 'BR',
+  'America/Porto_Velho': 'BR', 'America/Boa_Vista': 'BR', 'America/Rio_Branco': 'BR', 'America/Araguaina': 'BR', 'America/Maceio': 'BR',
+  'America/Guyana': 'GY', 'America/Paramaribo': 'SR', 'America/Cayenne': 'GF'
+};
+function banderaDeZona(zona) {
+  const codigo = ZONA_A_PAIS[zona];
+  if (!codigo) return '🌍';
+  return codigo.replace(/./g, c => String.fromCodePoint(127397 + c.charCodeAt(0)));
+}
 function formatearHorarioSesion(timestampMs) {
   const fechaObj = new Date(timestampMs);
   const soloHora = (zona) => new Intl.DateTimeFormat('es-CL', { timeZone: zona, hour: '2-digit', minute: '2-digit', hour12: false }).format(fechaObj);
   const zonaViewer = zonaHorariaLocal();
   if (zonaViewer === 'America/Santiago') return `${soloHora(zonaViewer)} 🇨🇱`;
-  return `${soloHora(zonaViewer)} tu hora · ${soloHora('America/Santiago')} 🇨🇱 hora Chile`;
+  return `${soloHora(zonaViewer)} ${banderaDeZona(zonaViewer)} tu hora · ${soloHora('America/Santiago')} 🇨🇱 hora Chile`;
 }
 
 async function cargarMisPreguntasVivo(card, s) {
@@ -1497,6 +1525,44 @@ function bindSesionVivo(card, s) {
 // de cada mentor que lo tenga configurado (independiente de las
 // sesiones puntuales agendadas). El que no lo tenga, no aparece.
 const DIAS_ORDEN_SEMANA = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
+function capitalizar(texto) {
+  return texto ? texto.charAt(0).toUpperCase() + texto.slice(1) : texto;
+}
+
+// Convierte año/mes/día/hora/minuto, interpretados EN UNA ZONA
+// ESPECÍFICA, al instante UTC exacto que representan — es lo
+// contrario de "formatear un instante en una zona", que es lo que
+// ya hacíamos en fechaHoraChileDesdeInstante. JS no trae esto de
+// fábrica, así que se calcula: se asume el valor como si fuera UTC,
+// se mide qué hora local muestra esa zona para ese instante, y se
+// corrige por la diferencia.
+function instanteDesdeFechaHoraEnZona(anio, mes, dia, hora, minuto, zona) {
+  const comoUTC = Date.UTC(anio, mes - 1, dia, hora, minuto);
+  const partes = new Intl.DateTimeFormat('en-US', {
+    timeZone: zona, year: 'numeric', month: '2-digit', day: '2-digit',
+    hour: '2-digit', minute: '2-digit', hour12: false
+  }).formatToParts(new Date(comoUTC));
+  const obtener = (tipo) => parseInt(partes.find(p => p.type === tipo)?.value || '0', 10);
+  const horaObtenida = obtener('hour') === 24 ? 0 : obtener('hour');
+  const comoSiFueraZona = Date.UTC(obtener('year'), obtener('month') - 1, obtener('day'), horaObtenida, obtener('minute'));
+  return comoUTC + (comoUTC - comoSiFueraZona);
+}
+
+// La próxima fecha (año/mes/día) en que cae ese día de la semana,
+// contando desde hoy — solo sirve como "ancla" para poder convertir
+// zonas horarias, el día exacto no importa mientras caiga en el día
+// de semana correcto.
+function proximaFechaParaDia(diaNombre) {
+  const idx = DIAS_ORDEN_SEMANA.indexOf(diaNombre);
+  const hoy = new Date();
+  const diaHoyISO = hoy.getDay() === 0 ? 6 : hoy.getDay() - 1; // 0=Lunes...6=Domingo
+  let diff = idx - diaHoyISO;
+  if (diff < 0) diff += 7;
+  const fecha = new Date(hoy);
+  fecha.setDate(hoy.getDate() + diff);
+  return fecha;
+}
+
 function renderHorariosRecurrentes(usuarios) {
   const contenedor = document.getElementById('pv-horarios-recurrentes-contenedor');
   const lista = document.getElementById('pv-horarios-recurrentes-lista');
@@ -1512,18 +1578,37 @@ function renderHorariosRecurrentes(usuarios) {
     return;
   }
 
-  mentoresConHorario.sort((a, b) => DIAS_ORDEN_SEMANA.indexOf(a.horarioRecurrente.dia) - DIAS_ORDEN_SEMANA.indexOf(b.horarioRecurrente.dia));
+  const zonaViewer = zonaHorariaLocal();
+  const mismaZonaQueChile = zonaViewer === 'America/Santiago';
+
+  // Cada horario se guardó en la zona del mentor que lo creó (o se
+  // asume Chile, para los pocos que se hayan guardado antes de este
+  // cambio) — acá se convierte al instante real, y desde ahí a lo
+  // que corresponda ver a quien esté mirando en este momento.
+  const conInstante = mentoresConHorario.map(m => {
+    const hr = m.horarioRecurrente;
+    const zonaCreador = hr.zonaCreador || 'America/Santiago';
+    const [hora, minuto] = hr.hora.split(':').map(Number);
+    const fechaAnclaje = proximaFechaParaDia(hr.dia);
+    const instante = instanteDesdeFechaHoraEnZona(fechaAnclaje.getFullYear(), fechaAnclaje.getMonth() + 1, fechaAnclaje.getDate(), hora, minuto, zonaCreador);
+    return { m, instante };
+  });
+  conInstante.sort((a, b) => a.instante - b.instante);
 
   contenedor.classList.remove('hidden');
-  lista.innerHTML = mentoresConHorario.map(m => {
-    const [h, min] = m.horarioRecurrente.hora.split(':');
-    const horaAmPm = new Intl.DateTimeFormat('es-CL', { hour: 'numeric', minute: '2-digit', hour12: true }).format(new Date(2000, 0, 1, h, min));
+  lista.innerHTML = conInstante.map(({ m, instante }) => {
+    const fechaObj = new Date(instante);
+    const diaViewer = capitalizar(new Intl.DateTimeFormat('es-CL', { weekday: 'long', timeZone: zonaViewer }).format(fechaObj));
+    const horaViewer = new Intl.DateTimeFormat('es-CL', { hour: 'numeric', minute: '2-digit', hour12: true, timeZone: zonaViewer }).format(fechaObj);
+    const diaChile = capitalizar(new Intl.DateTimeFormat('es-CL', { weekday: 'long', timeZone: 'America/Santiago' }).format(fechaObj));
+    const horaChile = new Intl.DateTimeFormat('es-CL', { hour: 'numeric', minute: '2-digit', hour12: true, timeZone: 'America/Santiago' }).format(fechaObj);
     return `
-      <div style="text-align:center; min-width:70px;">
+      <div style="text-align:center; min-width:80px;">
         <p style="font-weight:700; font-size:11px; letter-spacing:0.5px; margin:0 0 6px; text-transform:uppercase;">${m.nombre || m.email}</p>
         <img src="${m.fotoUrl || PLACEHOLDER_FOTO_ALUMNO}" alt="" style="width:56px; height:56px; border-radius:50%; object-fit:cover; margin-bottom:6px;">
-        <p style="font-size:12px; margin:0;">📅 ${m.horarioRecurrente.dia}</p>
-        <p style="font-size:12px; margin:0;">🕐 ${horaAmPm}</p>
+        <p style="font-size:12px; margin:0;">📅 ${diaViewer}</p>
+        <p style="font-size:12px; margin:0;">🕐 ${horaViewer} ${banderaDeZona(zonaViewer)}</p>
+        ${!mismaZonaQueChile ? `<p style="font-size:10px; margin:3px 0 0; color:#9CA0A8;">${diaChile} ${horaChile} 🇨🇱</p>` : ''}
       </div>`;
   }).join('');
 }

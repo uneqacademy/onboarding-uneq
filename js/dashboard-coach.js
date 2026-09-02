@@ -22,6 +22,34 @@ function formatFechaCortaBegin(fechaStr) {
 function zonaHorariaLocal() {
   return Intl.DateTimeFormat().resolvedOptions().timeZone;
 }
+const ZONA_A_PAIS = {
+  'America/New_York': 'US', 'America/Chicago': 'US', 'America/Denver': 'US', 'America/Los_Angeles': 'US',
+  'America/Anchorage': 'US', 'Pacific/Honolulu': 'US', 'America/Phoenix': 'US', 'America/Detroit': 'US',
+  'America/Indiana/Indianapolis': 'US', 'America/Boise': 'US',
+  'America/Toronto': 'CA', 'America/Vancouver': 'CA', 'America/Edmonton': 'CA', 'America/Winnipeg': 'CA',
+  'America/Halifax': 'CA', 'America/St_Johns': 'CA', 'America/Regina': 'CA',
+  'America/Mexico_City': 'MX', 'America/Cancun': 'MX', 'America/Tijuana': 'MX', 'America/Monterrey': 'MX',
+  'America/Chihuahua': 'MX', 'America/Hermosillo': 'MX', 'America/Mazatlan': 'MX', 'America/Merida': 'MX',
+  'America/Guatemala': 'GT', 'America/Belize': 'BZ', 'America/Tegucigalpa': 'HN', 'America/El_Salvador': 'SV',
+  'America/Managua': 'NI', 'America/Costa_Rica': 'CR', 'America/Panama': 'PA',
+  'America/Havana': 'CU', 'America/Santo_Domingo': 'DO', 'America/Port-au-Prince': 'HT',
+  'America/Jamaica': 'JM', 'America/Puerto_Rico': 'PR', 'America/Nassau': 'BS',
+  'America/Barbados': 'BB', 'America/Port_of_Spain': 'TT',
+  'America/Bogota': 'CO', 'America/Caracas': 'VE', 'America/Guayaquil': 'EC', 'America/Lima': 'PE',
+  'America/La_Paz': 'BO', 'America/Santiago': 'CL', 'America/Punta_Arenas': 'CL',
+  'America/Argentina/Buenos_Aires': 'AR', 'America/Argentina/Cordoba': 'AR', 'America/Argentina/Mendoza': 'AR',
+  'America/Argentina/Salta': 'AR', 'America/Argentina/Ushuaia': 'AR', 'America/Argentina/Rio_Gallegos': 'AR',
+  'America/Asuncion': 'PY', 'America/Montevideo': 'UY',
+  'America/Sao_Paulo': 'BR', 'America/Manaus': 'BR', 'America/Recife': 'BR', 'America/Fortaleza': 'BR',
+  'America/Bahia': 'BR', 'America/Belem': 'BR', 'America/Cuiaba': 'BR', 'America/Campo_Grande': 'BR',
+  'America/Porto_Velho': 'BR', 'America/Boa_Vista': 'BR', 'America/Rio_Branco': 'BR', 'America/Araguaina': 'BR', 'America/Maceio': 'BR',
+  'America/Guyana': 'GY', 'America/Paramaribo': 'SR', 'America/Cayenne': 'GF'
+};
+function banderaDeZona(zona) {
+  const codigo = ZONA_A_PAIS[zona];
+  if (!codigo) return '🌍';
+  return codigo.replace(/./g, c => String.fromCodePoint(127397 + c.charCodeAt(0)));
+}
 function fechaHoraChileDesdeInstante(fechaObj) {
   const partes = new Intl.DateTimeFormat('en-CA', {
     timeZone: 'America/Santiago', year: 'numeric', month: '2-digit', day: '2-digit',
@@ -38,7 +66,7 @@ function formatearHorarioParaTabla(timestampMs) {
   const soloHora = (zona) => new Intl.DateTimeFormat('es-CL', { timeZone: zona, hour: '2-digit', minute: '2-digit', hour12: false }).format(fechaObj);
   const zonaViewer = zonaHorariaLocal();
   if (zonaViewer === 'America/Santiago') return `${soloHora(zonaViewer)} 🇨🇱`;
-  return `${soloHora(zonaViewer)} (tú) · ${soloHora('America/Santiago')} 🇨🇱`;
+  return `${soloHora(zonaViewer)} ${banderaDeZona(zonaViewer)} · ${soloHora('America/Santiago')} 🇨🇱`;
 }
 function conectarPreviewHorario(idFecha, idHora, idPreview) {
   const inputFecha = document.getElementById(idFecha);
@@ -53,7 +81,7 @@ function conectarPreviewHorario(idFecha, idHora, idPreview) {
     if (zona === 'America/Santiago') {
       preview.textContent = `🇨🇱 ${formatearHoraEnZona(fechaObj, zona)} hora Chile.`;
     } else {
-      preview.textContent = `Estás agendando a las ${inputHora.value} tu hora (${zona.split('/').pop().replace('_', ' ')}) → equivale a las ${formatearHoraEnZona(fechaObj, 'America/Santiago')} 🇨🇱 hora Chile.`;
+      preview.textContent = `Estás agendando a las ${inputHora.value} ${banderaDeZona(zona)} tu hora (${zona.split('/').pop().replace('_', ' ')}) → equivale a las ${formatearHoraEnZona(fechaObj, 'America/Santiago')} 🇨🇱 hora Chile.`;
     }
     preview.classList.remove('hidden');
   };
