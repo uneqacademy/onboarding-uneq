@@ -729,7 +729,6 @@ export async function cargarBoxAlumno() {
   }
   const contMentorIA = document.getElementById('box-alumno-mentor-ia-contenedor');
   const contBegin = document.getElementById('box-alumno-begin-contenedor');
-  const tituloEl = document.getElementById('box-alumno-titulo');
   const topbarTituloEl = document.getElementById('topbar-title');
   const navBoxEl = document.querySelector('.nav-item[data-nav="box-consultas"]');
   // Esta función se llama sola al iniciar sesión (para precargar datos),
@@ -741,7 +740,6 @@ export async function cargarBoxAlumno() {
 
   if (contMentorIA) contMentorIA.classList.remove('hidden');
   if (contBegin) contBegin.classList.add('hidden');
-  if (tituloEl) tituloEl.textContent = 'BOX Inteligente';
   if (topbarTituloEl && vistaBoxVisible) topbarTituloEl.textContent = 'BOX Inteligente';
   if (navBoxEl) navBoxEl.textContent = 'BOX Inteligente';
 
