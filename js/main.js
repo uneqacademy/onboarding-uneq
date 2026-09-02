@@ -52,6 +52,11 @@ export function applyRole(role, nombre, rolesDisponibles) {
     if (role === 'mentor') navBox.textContent = 'BOX Inteligente';
   }
 
+  // "Mis Hitos" — visible para todos: alumno publica, y mentor/coach/
+  // director acompañan comentando y reaccionando.
+  const navHitos = document.querySelector('.nav-item[data-nav="mis-hitos"]');
+  if (navHitos) navHitos.classList.remove('hidden');
+
   const navMisDatos = document.querySelector('.nav-item[data-nav="mis-datos"]');
   if (navMisDatos) navMisDatos.classList.toggle('hidden', role === 'alumno');
 

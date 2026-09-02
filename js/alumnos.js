@@ -28,6 +28,7 @@ import { cargarDashboardMentor, cargarAlumnosMentor, cargarPerfilMentor, cargarM
 import { cargarSesionesBeginCoach } from './dashboard-coach.js';
 import { actualizarBotonAccesoAlumno, cargarDashboardAlumno } from './alumno-portal.js';
 import './configuracion.js';
+import './hitos.js';
 import './mis-datos.js';
 import './informe-ia.js';
 

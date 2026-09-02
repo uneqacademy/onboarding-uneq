@@ -111,6 +111,7 @@
         <li class="nav-item" data-role="alumno" data-nav="bitacora-alumno">Bitácora</li>
         <li class="nav-item" data-role="alumno" data-nav="test-alumno">Test Brújula</li>
         <li class="nav-item hidden" data-nav="box-consultas">BOX Inteligente</li>
+        <li class="nav-item hidden" data-nav="mis-hitos">Mis Hitos</li>
         <li class="nav-item" data-role="alumno" data-nav="preguntas-comunidad">Preguntas de la Comunidad</li>
         <li class="nav-item" data-role="alumno" data-nav="preguntas-vivo">Preguntas en Vivo</li>
         <li class="nav-item" data-role="alumno" data-nav="soporte-alumnos">Soporte Alumnos</li>
@@ -1357,6 +1358,63 @@
       <!-- ======================================================
            PREGUNTAS EN VIVO — página propia
            ====================================================== -->
+      <section id="view-mis-hitos" class="view hidden">
+        <div class="flex-between mb-16"><h2>Mis Hitos</h2></div>
+
+        <!-- Solo alumno: seguimiento personal -->
+        <div class="panel mb-24 hidden" id="hitos-seguimiento-panel">
+          <div class="panel__header"><h3>Tu Progreso</h3></div>
+          <div class="panel__body" id="hitos-seguimiento-contenido"></div>
+        </div>
+
+        <!-- Solo alumno: publicar -->
+        <div class="panel mb-24 hidden" id="hitos-publicar-panel">
+          <div class="panel__header"><h3>Publicar un Hito</h3></div>
+          <div class="panel__body">
+            <div class="field mb-16">
+              <label>Elige el hito que lograste</label>
+              <select id="hito-select-publicar"><option value="">Selecciona...</option></select>
+            </div>
+            <div class="field mb-16">
+              <label>Cuéntanos sobre este logro</label>
+              <textarea id="hito-texto-publicar" placeholder="Comparte tu experiencia, cómo lo lograste..."></textarea>
+            </div>
+            <div style="margin-bottom:12px;">
+              <button type="button" class="btn btn--ghost" id="btn-adjuntar-foto-hito">📷 Agregar Foto</button>
+              <input type="file" id="input-foto-hito" accept="image/*" multiple class="hidden">
+              <div id="hito-fotos-preview" style="display:flex; gap:8px; flex-wrap:wrap; margin-top:8px;"></div>
+            </div>
+            <p id="hito-publicar-error" class="hidden" style="color:#C0392B; margin-bottom:12px;"></p>
+            <button class="btn btn--primary" id="btn-publicar-hito">Publicar Hito</button>
+          </div>
+        </div>
+
+        <!-- Solo staff: filtros -->
+        <div class="panel mb-24 hidden" id="hitos-filtros-panel">
+          <div class="panel__body" style="display:flex; gap:10px; flex-wrap:wrap;">
+            <select id="hitos-filtro-alumno"><option value="">Todos los alumnos</option></select>
+            <select id="hitos-filtro-programa">
+              <option value="">Todos los programas</option>
+              <option value="begin">Begin</option>
+              <option value="next">Next</option>
+              <option value="exit">eXIT</option>
+            </select>
+            <select id="hitos-filtro-fase">
+              <option value="">Todas las fases</option>
+              <option value="fase1">Fase 1</option>
+              <option value="fase2">Fase 2</option>
+              <option value="fase3">Fase 3</option>
+              <option value="fase4">Fase 4</option>
+            </select>
+            <label style="display:flex; align-items:center; gap:6px; font-size:12.5px;">
+              <input type="checkbox" id="hitos-filtro-denunciados"> Solo denunciados
+            </label>
+          </div>
+        </div>
+
+        <div id="hitos-feed"></div>
+      </section>
+
       <section id="view-preguntas-vivo" class="view hidden">
         <div class="panel mb-24 hidden" id="pv-horarios-recurrentes-contenedor">
           <div class="panel__body" id="pv-horarios-recurrentes-lista" style="display:flex; gap:20px; flex-wrap:wrap;"></div>
@@ -1562,6 +1620,29 @@
             <p class="text-soft" style="font-size:13px;">Las temáticas ahora las agrega cada mentor desde su propio perfil (tú puedes sugerirles nuevas, pero ellos deciden agregarlas). Ve a <strong>Mentores</strong> para ver la lista completa de todos, y sugerirles temáticas puntuales.</p>
           </div>
         </div>
+
+        <div class="panel mb-24">
+          <div class="panel__header"><h3>Hitos por Fase — "Mis Hitos"</h3></div>
+          <div class="panel__body">
+            <p class="text-soft mb-16" style="font-size:13px;">Los hitos que los alumnos pueden ir publicando a medida que avanzan. Editar un hito no cambia lo que alumnos ya publicaron con la versión anterior (queda tal cual); desactivar uno solo deja de ofrecerse hacia adelante, sin borrar lo ya publicado.</p>
+            <div class="field-grid mb-16">
+              <div class="field"><label>Fase</label>
+                <select id="hito-nueva-fase">
+                  <option value="fase1">Fase 1: Claridad y Fundamentos</option>
+                  <option value="fase2">Fase 2: Cliente Soñado</option>
+                  <option value="fase3">Fase 3: Oferta y Método</option>
+                  <option value="fase4">Fase 4: Acción y Sistemas</option>
+                </select>
+              </div>
+              <div class="field"><label>Título</label><input id="hito-nuevo-titulo" placeholder="Ej: Primera venta lograda"></div>
+            </div>
+            <div class="field mb-16"><label>Descripción</label><textarea id="hito-nueva-descripcion" placeholder="Qué implica este hito, para que el alumno sepa si ya lo cumplió..." style="min-height:70px;"></textarea></div>
+            <button class="btn btn--accent" id="btn-agregar-hito">+ Agregar Hito</button>
+
+            <div id="hitos-por-fase-lista" style="margin-top:20px;"></div>
+          </div>
+        </div>
+
         <p id="configuracion-error" class="hidden" style="color:#C0392B; margin-bottom:12px;"></p>
         <button class="btn btn--primary" id="btn-guardar-configuracion">Guardar Configuración</button>
       </section>
