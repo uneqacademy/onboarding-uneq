@@ -640,6 +640,17 @@ function renderImagenesPregunta(imagenes, archivos) {
 
 const TAMANO_MAXIMO_ARCHIVO = 10 * 1024 * 1024; // 10 MB
 
+// Orden de mentores definido por el director (usuarios/{uid}/orden) —
+// el que no tenga orden asignado todavía queda al final, por nombre.
+function ordenarMentores(entries) {
+  return entries.sort(([, a], [, b]) => {
+    const oa = typeof a.orden === 'number' ? a.orden : 999;
+    const ob = typeof b.orden === 'number' ? b.orden : 999;
+    if (oa !== ob) return oa - ob;
+    return (a.nombre || '').localeCompare(b.nombre || '', 'es');
+  });
+}
+
 function tipoDeArchivo(file) {
   if (file.type.startsWith('image/')) return 'imagen';
   if (file.type === 'application/pdf') return 'pdf';
@@ -727,10 +738,10 @@ export async function cargarBoxAlumno() {
 
   const usuariosSnap = await get(ref(db, 'usuarios'));
   const usuarios = usuariosSnap.exists() ? usuariosSnap.val() : {};
-  const mentores = Object.entries(usuarios).filter(([, u]) => {
+  const mentores = ordenarMentores(Object.entries(usuarios).filter(([, u]) => {
     const roles = (u.roles && typeof u.roles === 'object') ? u.roles : (u.rol ? { [u.rol]: true } : {});
     return !!roles.mentor;
-  });
+  }));
 
   // --- Mis consultas + cálculo del límite semanal ---
   const indiceSnap = await get(ref(db, `boxIndice/${alumnoIdActual}`));
@@ -1159,10 +1170,10 @@ export async function cargarPreguntasComunidad() {
 
   const usuariosSnap = await get(ref(db, 'usuarios'));
   const usuarios = usuariosSnap.exists() ? usuariosSnap.val() : {};
-  const mentores = Object.entries(usuarios).filter(([, u]) => {
+  const mentores = ordenarMentores(Object.entries(usuarios).filter(([, u]) => {
     const roles = (u.roles && typeof u.roles === 'object') ? u.roles : (u.rol ? { [u.rol]: true } : {});
     return !!roles.mentor;
-  });
+  }));
 
   if (filtroMentorEl && !filtroMentorEl.dataset.cargado) {
     filtroMentorEl.innerHTML = '<option value="">Todos</option>' + mentores.map(([uid, m]) => `<option value="${uid}">${m.nombre || m.email}</option>`).join('');
@@ -1535,10 +1546,10 @@ export async function cargarPreguntasVivo() {
 
   renderHorariosRecurrentes(usuarios);
   const esBegin = programaAlumnoPv === 'begin';
-  const mentores = Object.entries(usuarios).filter(([, u]) => {
+  const mentores = ordenarMentores(Object.entries(usuarios).filter(([, u]) => {
     const roles = (u.roles && typeof u.roles === 'object') ? u.roles : (u.rol ? { [u.rol]: true } : {});
     return !!roles.mentor;
-  });
+  }));
 
   let sesiones = [];
 

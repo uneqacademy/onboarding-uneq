@@ -90,12 +90,22 @@ async function cargarMentoresView() {
 
   Object.entries(usuarios)
     .filter(([, u]) => tieneRol(u, 'mentor'))
-    .forEach(([uid, mentor]) => {
+    .sort(([, a], [, b]) => {
+      const oa = typeof a.orden === 'number' ? a.orden : 999;
+      const ob = typeof b.orden === 'number' ? b.orden : 999;
+      if (oa !== ob) return oa - ob;
+      return (a.nombre || '').localeCompare(b.nombre || '', 'es');
+    })
+    .forEach(([uid, mentor], idx, listaOrdenada) => {
       const { promedio, total } = calcularNpsResumenMentor(npsMentoriasTodos[uid]);
       const npsTexto = promedio !== null ? `${promedio.toFixed(1)} ★ (${total})` : '—';
 
       const tr = document.createElement('tr');
       tr.innerHTML = `
+        <td style="white-space:nowrap;">
+          <button type="button" class="btn btn--ghost btn-orden-mentor-arriba" style="font-size:11px; padding:2px 7px;" ${idx === 0 ? 'disabled' : ''}>↑</button>
+          <button type="button" class="btn btn--ghost btn-orden-mentor-abajo" style="font-size:11px; padding:2px 7px;" ${idx === listaOrdenada.length - 1 ? 'disabled' : ''}>↓</button>
+        </td>
         <td>${mentor.nombre || ''}</td>
         <td>${mentor.email || ''}</td>
         <td><span class="badge ${mentor.activo === false ? 'badge--impaga' : 'badge--activo'}">${mentor.activo === false ? 'Inactivo' : 'Activo'}</span></td>
@@ -107,6 +117,26 @@ async function cargarMentoresView() {
           <button class="btn btn--ghost btn-eliminar-mentor" style="font-size:11px; padding:4px 8px;">Eliminar</button>
         </td>`;
       tbody.appendChild(tr);
+
+      const intercambiarOrden = async (otroUid) => {
+        const ordenActual = typeof mentor.orden === 'number' ? mentor.orden : idx;
+        const otroMentor = listaOrdenada.find(([u]) => u === otroUid)[1];
+        const ordenOtro = typeof otroMentor.orden === 'number' ? otroMentor.orden : listaOrdenada.findIndex(([u]) => u === otroUid);
+        await Promise.all([
+          update(ref(db, `usuarios/${uid}`), { orden: ordenOtro }),
+          update(ref(db, `usuarios/${otroUid}`), { orden: ordenActual })
+        ]);
+        await cargarMentoresView();
+      };
+
+      const btnArriba = tr.querySelector('.btn-orden-mentor-arriba');
+      if (btnArriba) btnArriba.addEventListener('click', () => {
+        if (idx > 0) intercambiarOrden(listaOrdenada[idx - 1][0]);
+      });
+      const btnAbajo = tr.querySelector('.btn-orden-mentor-abajo');
+      if (btnAbajo) btnAbajo.addEventListener('click', () => {
+        if (idx < listaOrdenada.length - 1) intercambiarOrden(listaOrdenada[idx + 1][0]);
+      });
 
       tr.querySelector('.btn-restablecer-password-mentor').addEventListener('click', (ev) => enviarResetPasswordMentor(mentor.email, ev.target));
 
