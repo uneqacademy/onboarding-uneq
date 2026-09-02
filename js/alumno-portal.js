@@ -1596,19 +1596,21 @@ function renderHorariosRecurrentes(usuarios) {
   conInstante.sort((a, b) => a.instante - b.instante);
 
   contenedor.classList.remove('hidden');
+  lista.style.cssText = 'display:flex; gap:8px; justify-content:space-between; flex-wrap:nowrap;';
   lista.innerHTML = conInstante.map(({ m, instante }) => {
     const fechaObj = new Date(instante);
-    const diaViewer = capitalizar(new Intl.DateTimeFormat('es-CL', { weekday: 'long', timeZone: zonaViewer }).format(fechaObj));
-    const horaViewer = new Intl.DateTimeFormat('es-CL', { hour: 'numeric', minute: '2-digit', hour12: true, timeZone: zonaViewer }).format(fechaObj);
-    const diaChile = capitalizar(new Intl.DateTimeFormat('es-CL', { weekday: 'long', timeZone: 'America/Santiago' }).format(fechaObj));
-    const horaChile = new Intl.DateTimeFormat('es-CL', { hour: 'numeric', minute: '2-digit', hour12: true, timeZone: 'America/Santiago' }).format(fechaObj);
+    const diaViewer = new Intl.DateTimeFormat('es-CL', { weekday: 'short', timeZone: zonaViewer }).format(fechaObj);
+    const diaViewerAbrev = capitalizar(diaViewer.replace('.', '').slice(0, 3));
+    const horaViewer = new Intl.DateTimeFormat('es-CL', { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: zonaViewer }).format(fechaObj);
+    const diaChileAbrev = capitalizar(new Intl.DateTimeFormat('es-CL', { weekday: 'short', timeZone: 'America/Santiago' }).format(fechaObj).replace('.', '').slice(0, 3));
+    const horaChile = new Intl.DateTimeFormat('es-CL', { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'America/Santiago' }).format(fechaObj);
     return `
-      <div style="text-align:center; min-width:80px;">
-        <p style="font-weight:700; font-size:11px; letter-spacing:0.5px; margin:0 0 6px; text-transform:uppercase;">${m.nombre || m.email}</p>
-        <img src="${m.fotoUrl || PLACEHOLDER_FOTO_ALUMNO}" alt="" style="width:56px; height:56px; border-radius:50%; object-fit:cover; margin-bottom:6px;">
-        <p style="font-size:12px; margin:0;">📅 ${diaViewer}</p>
-        <p style="font-size:12px; margin:0;">🕐 ${horaViewer} ${banderaDeZona(zonaViewer)}</p>
-        ${!mismaZonaQueChile ? `<p style="font-size:10px; margin:3px 0 0; color:#9CA0A8;">${diaChile} ${horaChile} 🇨🇱</p>` : ''}
+      <div style="text-align:center; min-width:0; flex:1;">
+        <p style="font-weight:700; font-size:9.5px; letter-spacing:0.3px; margin:0 0 4px; text-transform:uppercase; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${m.nombre || m.email}</p>
+        <img src="${m.fotoUrl || PLACEHOLDER_FOTO_ALUMNO}" alt="" style="width:44px; height:44px; border-radius:50%; object-fit:cover; margin-bottom:4px;">
+        <p style="font-size:10.5px; margin:0;">📅 ${diaViewerAbrev}</p>
+        <p style="font-size:10.5px; margin:0;">${horaViewer} ${banderaDeZona(zonaViewer)}</p>
+        ${!mismaZonaQueChile ? `<p style="font-size:9px; margin:2px 0 0; color:#9CA0A8;">${diaChileAbrev} ${horaChile} 🇨🇱</p>` : ''}
       </div>`;
   }).join('');
 }

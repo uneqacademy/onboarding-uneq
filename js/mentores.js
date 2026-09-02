@@ -1507,7 +1507,15 @@ const inputArchivoConocimiento = document.getElementById('input-archivo-conocimi
 if (btnAdjuntarArchivoConocimiento && inputArchivoConocimiento) {
   btnAdjuntarArchivoConocimiento.addEventListener('click', () => inputArchivoConocimiento.click());
   inputArchivoConocimiento.addEventListener('change', () => {
-    archivoConocimientoSeleccionado = inputArchivoConocimiento.files[0] || null;
+    const archivo = inputArchivoConocimiento.files[0] || null;
+    if (archivo && archivo.size > 10 * 1024 * 1024) {
+      alert('El archivo pesa más de 10MB. Elige uno más liviano.');
+      inputArchivoConocimiento.value = '';
+      archivoConocimientoSeleccionado = null;
+      document.getElementById('conocimiento-archivo-nombre').textContent = '';
+      return;
+    }
+    archivoConocimientoSeleccionado = archivo;
     document.getElementById('conocimiento-archivo-nombre').textContent = archivoConocimientoSeleccionado ? `📄 ${archivoConocimientoSeleccionado.name}` : '';
   });
 }
