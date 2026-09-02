@@ -110,7 +110,7 @@
         <li class="nav-item" data-role="alumno" data-nav="ficha-alumno-propia">Mi Ficha Alumno</li>
         <li class="nav-item" data-role="alumno" data-nav="bitacora-alumno">Bitácora</li>
         <li class="nav-item" data-role="alumno" data-nav="test-alumno">Test Brújula</li>
-        <li class="nav-item hidden" data-nav="box-consultas">BOX de Consultas</li>
+        <li class="nav-item hidden" data-nav="box-consultas">BOX Inteligente</li>
         <li class="nav-item" data-role="alumno" data-nav="preguntas-comunidad">Preguntas de la Comunidad</li>
         <li class="nav-item" data-role="alumno" data-nav="preguntas-vivo">Preguntas en Vivo</li>
         <li class="nav-item" data-role="alumno" data-nav="soporte-alumnos">Soporte Alumnos</li>
@@ -1145,8 +1145,11 @@
         <!-- ======================================================
              BOX DE CONSULTAS BEGIN — bandeja compartida entre todos los mentores,
              respuesta manual (sin IA). Ver box-begin-mentor.js.
+             DESACTIVADO: BEGIN ahora usa el mismo BOX Inteligente que
+             Next/eXIT (solo cambian los topes semanales) — se deja el
+             código sin borrar por si se vuelve a activar más adelante.
              ====================================================== -->
-        <div style="margin-top:24px;">
+        <div style="margin-top:24px;" class="hidden">
           <div class="flex-between mb-16"><h2>BOX de Consultas BEGIN (respuesta manual)</h2></div>
           <p class="text-soft mb-16" style="font-size:13px;">Preguntas de alumnos BEGIN, sin mentor asignado — cualquier mentor disponible puede responderlas. El alumno no sabe quién le responde.</p>
           <div class="panel">
@@ -1178,7 +1181,7 @@
            ====================================================== -->
       <section id="view-box-alumno" class="view hidden">
         <div class="mb-16">
-          <h2 style="margin-bottom:4px;" id="box-alumno-titulo">BOX de Consultas</h2>
+          <h2 style="margin-bottom:4px;" id="box-alumno-titulo">BOX Inteligente</h2>
           <p class="text-soft" id="box-alumno-contador">Tienes 1 pregunta por cada Mentor IA por semana</p>
         </div>
 
@@ -1555,7 +1558,7 @@
           </div>
         </div>
         <div class="panel mb-24">
-          <div class="panel__header"><h3>Temáticas del BOX de Consultas</h3></div>
+          <div class="panel__header"><h3>Temáticas del BOX Inteligente</h3></div>
           <div class="panel__body">
             <p class="text-soft" style="font-size:13px;">Las temáticas ahora las agrega cada mentor desde su propio perfil (tú puedes sugerirles nuevas, pero ellos deciden agregarlas). Ve a <strong>Mentores</strong> para ver la lista completa de todos, y sugerirles temáticas puntuales.</p>
           </div>

@@ -13,6 +13,7 @@ import { db, auth, storage, firebaseConfig } from './firebase-config.js';
 import { ref as storageRef, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-storage.js";
 import { ref, get, set, update, push } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-database.js";
 import { initializeApp, deleteApp } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-app.js";
+import { setNav } from './main.js';
 import { getAuth, createUserWithEmailAndPassword, signOut as signOutSecundaria, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-auth.js";
 import { programaLabel } from './ciclos.js';
 
@@ -716,9 +717,9 @@ function renderArchivosAdjuntos(archivos, imagenesLegado) {
 export async function cargarBoxAlumno() {
   if (!alumnoIdActual) return;
 
-  // --- BEGIN usa un canal distinto: sin elegir mentor, sin IA,
-  //     respuesta manual de "un mentor disponible". Ver más abajo
-  //     cargarBoxBeginAlumno(). ---
+  // El BOX Inteligente ahora es el mismo para todos los programas —
+  // BEGIN también elige mentor y pregunta a su clon IA, solo cambian
+  // los topes semanales (ver LIMITES_BOX_POR_PROGRAMA más abajo).
   const alumnoSnapBox = await get(ref(db, `alumnos/${alumnoIdActual}`));
   const alumnoDatosBox = alumnoSnapBox.exists() ? alumnoSnapBox.val() : {};
   let programaBox = null;
@@ -728,7 +729,6 @@ export async function cargarBoxAlumno() {
   }
   const contMentorIA = document.getElementById('box-alumno-mentor-ia-contenedor');
   const contBegin = document.getElementById('box-alumno-begin-contenedor');
-  const contadorEl = document.getElementById('box-alumno-contador');
   const tituloEl = document.getElementById('box-alumno-titulo');
   const topbarTituloEl = document.getElementById('topbar-title');
   const navBoxEl = document.querySelector('.nav-item[data-nav="box-consultas"]');
@@ -739,16 +739,6 @@ export async function cargarBoxAlumno() {
   // pisaría el título de la sección que sí se está viendo.
   const vistaBoxVisible = !document.getElementById('view-box-alumno').classList.contains('hidden');
 
-  if (programaBox === 'begin') {
-    if (contMentorIA) contMentorIA.classList.add('hidden');
-    if (contBegin) contBegin.classList.remove('hidden');
-    if (contadorEl) contadorEl.textContent = 'Tienes hasta 2 preguntas por semana';
-    if (tituloEl) tituloEl.textContent = 'BOX de Consultas';
-    if (topbarTituloEl && vistaBoxVisible) topbarTituloEl.textContent = 'BOX de Consultas';
-    if (navBoxEl) navBoxEl.textContent = 'BOX de Consultas';
-    await cargarBoxBeginAlumno();
-    return;
-  }
   if (contMentorIA) contMentorIA.classList.remove('hidden');
   if (contBegin) contBegin.classList.add('hidden');
   if (tituloEl) tituloEl.textContent = 'BOX Inteligente';
@@ -779,21 +769,42 @@ export async function cargarBoxAlumno() {
     })
   )).filter(Boolean);
 
+  // --- Topes semanales: total + por mentor, según el programa. Se
+  //     revisan los 2 juntos — cualquiera de los 2 que se cumpla,
+  //     bloquea. ---
+  const LIMITES_BOX_POR_PROGRAMA = {
+    begin: { total: 5, porMentor: 1 },
+    next: { total: 8, porMentor: 3 },
+    exit: { total: 8, porMentor: 3 }
+  };
+  const limite = LIMITES_BOX_POR_PROGRAMA[programaBox] || LIMITES_BOX_POR_PROGRAMA.next;
+
   const inicioSemana = inicioSemanaActual();
   const deEstaSemana = entradas.filter(e => e.createdAt >= inicioSemana);
-  const mentoresPreguntadosEstaSemana = new Set(deEstaSemana.map(e => e.mentorId));
+  const conteoPorMentor = {};
+  deEstaSemana.forEach(e => { conteoPorMentor[e.mentorId] = (conteoPorMentor[e.mentorId] || 0) + 1; });
+  const totalEstaSemana = deEstaSemana.length;
+  const seAlcanzoTopeTotal = totalEstaSemana >= limite.total;
 
-  if (contadorEl) contadorEl.textContent = 'Tienes 1 pregunta por cada Mentor IA por semana';
+  const contadorEl = document.getElementById('box-alumno-contador');
+  if (contadorEl) {
+    contadorEl.textContent = seAlcanzoTopeTotal
+      ? `Ya usaste tus ${limite.total} preguntas de esta semana — vuelve la próxima semana.`
+      : `Llevas ${totalEstaSemana} de ${limite.total} preguntas esta semana (máx. ${limite.porMentor} por Mentor IA)`;
+  }
 
   // --- Tarjetas de mentor ---
   gridEl.innerHTML = mentores.length ? '' : '<p class="text-soft">No hay mentores disponibles por ahora.</p>';
   gridEl.style.cssText = 'display:flex; flex-direction:column; gap:12px;';
   mentores.forEach(([uid, m]) => {
-    const yaPreguntado = mentoresPreguntadosEstaSemana.has(uid);
-    const bloqueado = yaPreguntado;
+    const yaAlTopeConEsteMentor = (conteoPorMentor[uid] || 0) >= limite.porMentor;
+    const bloqueado = yaAlTopeConEsteMentor || seAlcanzoTopeTotal;
     const claseBotonPreguntar = bloqueado ? 'btn btn-hacer-pregunta' : 'btn btn--primary btn-hacer-pregunta';
     const estiloBotonPreguntar = bloqueado ? 'background:#9CA3AF; color:#fff; opacity:1;' : '';
-    const atributosBotonPreguntar = bloqueado ? `disabled title="¡Ya le has preguntado a este Mentor!"` : '';
+    const tituloBloqueo = seAlcanzoTopeTotal
+      ? `Ya usaste tus ${limite.total} preguntas de esta semana`
+      : `Ya le hiciste el máximo de ${limite.porMentor} pregunta${limite.porMentor === 1 ? '' : 's'} a este Mentor esta semana`;
+    const atributosBotonPreguntar = bloqueado ? `disabled title="${tituloBloqueo}"` : '';
     const tarjeta = document.createElement('div');
     tarjeta.className = 'mentor-card-ia';
     tarjeta.style.cssText = 'display:flex; align-items:center; gap:14px; padding:14px 16px; background:var(--color-surface-alt); border-radius:var(--radius-md);';
@@ -1194,6 +1205,26 @@ export async function cargarPreguntasComunidad() {
   const filtroDesdeEl = document.getElementById('comunidad-filtro-desde');
   const filtroHastaEl = document.getElementById('comunidad-filtro-hasta');
   if (!listadoEl) return;
+
+  // BEGIN no ve Preguntas de la Comunidad por ahora.
+  const navComunidadEl = document.querySelector('.nav-item[data-nav="preguntas-comunidad"]');
+  let programaComunidad = null;
+  if (alumnoIdActual) {
+    const alumnoSnapCom = await get(ref(db, `alumnos/${alumnoIdActual}`));
+    const cicloIdCom = alumnoSnapCom.exists() ? alumnoSnapCom.val().cicloActualId : null;
+    if (cicloIdCom) {
+      const cicloSnapCom = await get(ref(db, `ciclos/${cicloIdCom}`));
+      programaComunidad = cicloSnapCom.exists() ? (cicloSnapCom.val().programa || null) : null;
+    }
+  }
+  const esBeginComunidad = programaComunidad === 'begin';
+  if (navComunidadEl) navComunidadEl.classList.toggle('hidden', esBeginComunidad);
+  if (esBeginComunidad) {
+    listadoEl.innerHTML = '';
+    document.getElementById('view-preguntas-comunidad')?.classList.add('hidden');
+    setNav('dashboard');
+    return;
+  }
 
   const usuariosSnap = await get(ref(db, 'usuarios'));
   const usuarios = usuariosSnap.exists() ? usuariosSnap.val() : {};

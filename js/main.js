@@ -43,9 +43,9 @@ export function applyRole(role, nombre, rolesDisponibles) {
   const navAlumnos = document.querySelector('.nav-item[data-nav="alumnos"]');
   if (navAlumnos) navAlumnos.classList.toggle('hidden', role === 'alumno');
 
-  // "BOX" existe para mentor (responde, ve "BOX Inteligente") y alumno
-  // (pregunta, ve "BOX de Consultas" en BEGIN o "BOX Inteligente" en
-  // NEXT/eXIT según su programa — ver cargarDashboardAlumno).
+  // "BOX Inteligente" existe para mentor (responde) y alumno (pregunta,
+  // ahora igual para todos los programas — solo cambian los topes
+  // semanales, ver LIMITES_BOX_POR_PROGRAMA en alumno-portal.js).
   const navBox = document.querySelector('.nav-item[data-nav="box-consultas"]');
   if (navBox) {
     navBox.classList.toggle('hidden', !(role === 'mentor' || role === 'alumno'));
@@ -176,7 +176,7 @@ export function setNav(section) {
     document.getElementById('topbar-title').textContent = 'Mentores';
   } else if (section === 'box-consultas') {
     showView(currentRole === 'alumno' ? 'view-box-alumno' : 'view-box-mentor');
-    document.getElementById('topbar-title').textContent = currentRole === 'mentor' ? 'BOX Inteligente' : 'BOX de Consultas';
+    document.getElementById('topbar-title').textContent = 'BOX Inteligente';
   } else if (section === 'mis-datos') {
     showView('view-mis-datos');
     document.getElementById('topbar-title').textContent = 'Mis Datos';
