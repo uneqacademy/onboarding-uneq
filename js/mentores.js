@@ -452,12 +452,24 @@ export async function cargarAlumnosMentor() {
   const ciclos = ciclosSnap.exists() ? ciclosSnap.val() : {};
   const usuarios = usuariosSnap.exists() ? usuariosSnap.val() : {};
 
-  alumnosMentorCache = Object.values(alumnos)
-    .map(alumno => {
+  // Igual que en las otras tablas — 2 personas que comparten el mismo
+  // ciclo ("socias") aparecen como 1 sola fila con nombre combinado,
+  // no 2 filas separadas.
+  const gruposVistos = new Set();
+  alumnosMentorCache = Object.entries(alumnos)
+    .map(([alumnoId, alumno]) => {
       const ciclo = alumno.cicloActualId ? ciclos[alumno.cicloActualId] : null;
       if (!ciclo || ciclo.estadoAlumno !== 'activo') return null;
+      const claveGrupo = alumno.cicloActualId || alumnoId;
+      if (gruposVistos.has(claveGrupo)) return null;
+      gruposVistos.add(claveGrupo);
+
       const coachNombre = ciclo.coachId && usuarios[ciclo.coachId] ? (usuarios[ciclo.coachId].nombre || usuarios[ciclo.coachId].email) : '—';
-      const nombreCompleto = `${alumno.nombre || ''} ${alumno.apellido || ''}`.trim() || '(sin nombre)';
+      const nombreCompleto = Object.values(alumnos)
+        .filter(a => a.cicloActualId === alumno.cicloActualId && !a.esDemo)
+        .map(a => `${a.nombre || ''} ${a.apellido || ''}`.trim())
+        .filter(Boolean)
+        .join(' y ') || '(sin nombre)';
       return { alumno, ciclo, nombreCompleto, coachNombre };
     })
     .filter(Boolean);
@@ -846,6 +858,29 @@ function construirLinkNpsMentoria(mentorId, mentoriaId, tema) {
   return url.href;
 }
 
+export async function actualizarNotificacionesMentor() {
+  const uid = auth.currentUser ? auth.currentUser.uid : null;
+  if (!uid || getCurrentRole() !== 'mentor') return;
+
+  const [boxSnap, boxBeginSnap, preguntasVivoSnap] = await Promise.all([
+    get(ref(db, `box/${uid}`)),
+    get(ref(db, 'boxBegin')),
+    get(ref(db, `preguntasVivo/${uid}`))
+  ]);
+
+  const hayBoxIA = boxSnap.exists() && Object.values(boxSnap.val()).some(p => p.respuesta && p.respuesta.estadoRevision === 'sin_revisar');
+  const hayBoxBegin = boxBeginSnap.exists() && Object.values(boxBeginSnap.val()).some(p => !p.respuesta);
+  let hayVivoSinRevisar = false;
+  if (preguntasVivoSnap.exists()) {
+    Object.values(preguntasVivoSnap.val()).forEach(mentoria => {
+      if (Object.values(mentoria || {}).some(p => !p.revisada)) hayVivoSinRevisar = true;
+    });
+  }
+
+  document.querySelector('.nav-item[data-nav="box-consultas"]')?.classList.toggle('tiene-notificacion', hayBoxIA || hayBoxBegin);
+  document.querySelector('.nav-item[data-nav="dashboard"]')?.classList.toggle('tiene-notificacion', hayVivoSinRevisar);
+}
+
 async function cargarMentoriasView() {
   if (getCurrentRole() !== 'mentor') return;
   const uid = auth.currentUser ? auth.currentUser.uid : null;
@@ -926,6 +961,7 @@ async function cargarMentoriasView() {
             try {
               await update(ref(db, `preguntasVivo/${uid}/${mentoriaId}/${preguntaId}`), { revisada: true });
               btn.outerHTML = '<span class="badge badge--activo" style="font-size:10px;">✓ Revisada</span>';
+              await actualizarNotificacionesMentor();
             } catch (err) {
               alert('No se pudo marcar. Intenta de nuevo.');
               btn.disabled = false;
@@ -1303,6 +1339,7 @@ export async function cargarBoxMentor() {
   if (filtroAlumnoEl) filtroAlumnoEl.onchange = render;
   if (filtroDesdeEl) filtroDesdeEl.onchange = render;
   if (filtroHastaEl) filtroHastaEl.onchange = render;
+  await actualizarNotificacionesMentor();
 }
 
 document.querySelectorAll('.nav-item[data-nav="box-consultas"]').forEach(item => {

@@ -24,7 +24,7 @@ import { cargarBitacoraParaCiclo } from './bitacora.js';
 import { generarPdfAcuerdo } from './pdf-acuerdo.js';
 import './respaldo.js';
 import { cargarMiEvaluacionCoach } from './coaches.js';
-import { cargarDashboardMentor, cargarAlumnosMentor, cargarPerfilMentor, cargarMentoriasView, cargarBoxMentor } from './mentores.js';
+import { cargarDashboardMentor, cargarAlumnosMentor, cargarPerfilMentor, cargarMentoriasView, cargarBoxMentor, actualizarNotificacionesMentor } from './mentores.js';
 import { cargarSesionesBeginCoach } from './dashboard-coach.js';
 import { actualizarBotonAccesoAlumno, cargarDashboardAlumno } from './alumno-portal.js';
 import './configuracion.js';
@@ -354,11 +354,11 @@ if (btnNuevoAlumnoRefrescaCoaches) {
 }
 
 /* --- Construye una fila <tr> de alumno, con columnas según el contexto --- */
-function crearFilaAlumno(alumnoId, alumno, ciclo, columnas, acuerdo) {
+function crearFilaAlumno(alumnoId, alumno, ciclo, columnas, acuerdo, nombreOverride) {
   const tr = document.createElement('tr');
   tr.className = 'row-alumno';
 
-  const nombreCompleto = `${alumno.nombre || ''} ${alumno.apellido || ''}`.trim() || '(sin nombre)';
+  const nombreCompleto = nombreOverride || (`${alumno.nombre || ''} ${alumno.apellido || ''}`.trim() || '(sin nombre)');
   const coachNombre = ciclo
     ? (ciclo.coachId ? (coachesMap[ciclo.coachId] || '—') : (ciclo.programa === 'begin' ? '🚩 Coach de Cabecera' : '—'))
     : '—';
@@ -448,24 +448,47 @@ export async function cargarListasAlumnos() {
   const tbodyCoach = document.getElementById('tabla-alumnos-coach');
   [tbodyDashDirector, tbodyDashCoach, tbodyDirector, tbodyCoach].forEach(t => { if (t) t.innerHTML = ''; });
 
+  // Agrupa por ciclo — 2 personas compartiendo el mismo ciclo ("socias")
+  // aparecen en UNA sola fila combinada ("Paz y Andrea"), no 2 filas
+  // separadas. Un set por tabla, porque cada una filtra distinto.
+  const ciclosVistos = { dashDirector: new Set(), director: new Set(), dashCoach: new Set(), coach: new Set() };
+  const nombreCombinadoDeCiclo = (cicloId, alumnoActual) => {
+    if (!cicloId) return `${alumnoActual.nombre || ''} ${alumnoActual.apellido || ''}`.trim();
+    const nombres = Object.values(alumnos)
+      .filter(a => a.cicloActualId === cicloId && !a.esDemo)
+      .map(a => `${a.nombre || ''} ${a.apellido || ''}`.trim())
+      .filter(Boolean);
+    return nombres.join(' y ') || '(sin nombre)';
+  };
+
   Object.entries(alumnos).forEach(([alumnoId, alumno]) => {
     if (alumno.esDemo) return; // Alumno Demo del director — nunca aparece en listas ni cuenta en nada
     const ciclo = alumno.cicloActualId ? ciclos[alumno.cicloActualId] : null;
     const acuerdo = alumno.cicloActualId ? acuerdos[alumno.cicloActualId] : null;
+    const claveGrupo = alumno.cicloActualId || alumnoId; // sin ciclo, cada quien es su propio grupo
+    const nombreFila = nombreCombinadoDeCiclo(alumno.cicloActualId, alumno);
 
     if (role === 'director') {
-      if (tbodyDashDirector && pasaFiltrosDirector(alumno, ciclo, 'dash-director')) {
-        tbodyDashDirector.appendChild(crearFilaAlumno(alumnoId, alumno, ciclo, { coach: true, fechas: false, pago: true }, acuerdo));
+      if (tbodyDashDirector && pasaFiltrosDirector(alumno, ciclo, 'dash-director') && !ciclosVistos.dashDirector.has(claveGrupo)) {
+        ciclosVistos.dashDirector.add(claveGrupo);
+        tbodyDashDirector.appendChild(crearFilaAlumno(alumnoId, alumno, ciclo, { coach: true, fechas: false, pago: true }, acuerdo, nombreFila));
       }
-      if (tbodyDirector && pasaFiltrosDirector(alumno, ciclo, 'director')) {
-        tbodyDirector.appendChild(crearFilaAlumno(alumnoId, alumno, ciclo, { coach: true, fechas: true, pago: false }));
+      if (tbodyDirector && pasaFiltrosDirector(alumno, ciclo, 'director') && !ciclosVistos.director.has(claveGrupo)) {
+        ciclosVistos.director.add(claveGrupo);
+        tbodyDirector.appendChild(crearFilaAlumno(alumnoId, alumno, ciclo, { coach: true, fechas: true, pago: false }, null, nombreFila));
       }
     } else if (role === 'coach') {
       const esMio = ciclo && ciclo.coachId === uid;
       const esBeginDeCabecera = ciclo && ciclo.programa === 'begin' && esCoachCabeceraBegin;
       if (!ciclo || !(esMio || esBeginDeCabecera)) return;
-      if (tbodyDashCoach) tbodyDashCoach.appendChild(crearFilaAlumno(alumnoId, alumno, ciclo, { coach: false, fase: true, fechas: true, dias: true, pago: false }));
-      if (tbodyCoach) tbodyCoach.appendChild(crearFilaAlumno(alumnoId, alumno, ciclo, { coach: false, fase: true, fechas: true, dias: true, pago: false }));
+      if (tbodyDashCoach && !ciclosVistos.dashCoach.has(claveGrupo)) {
+        ciclosVistos.dashCoach.add(claveGrupo);
+        tbodyDashCoach.appendChild(crearFilaAlumno(alumnoId, alumno, ciclo, { coach: false, fase: true, fechas: true, dias: true, pago: false }, null, nombreFila));
+      }
+      if (tbodyCoach && !ciclosVistos.coach.has(claveGrupo)) {
+        ciclosVistos.coach.add(claveGrupo);
+        tbodyCoach.appendChild(crearFilaAlumno(alumnoId, alumno, ciclo, { coach: false, fase: true, fechas: true, dias: true, pago: false }, null, nombreFila));
+      }
     }
   });
 
@@ -475,9 +498,20 @@ export async function cargarListasAlumnos() {
     let activos = 0, begin = 0, next = 0, exit = 0, pendientesFirma = 0;
     const porCobrarPorMoneda = {};
     const atrasadoPorMoneda = {};
+    const gruposContadosKpi = new Set();
+    let totalProyectos = 0;
 
-    Object.values(alumnos).forEach(alumno => {
+    Object.entries(alumnos).forEach(([alumnoId, alumno]) => {
       if (alumno.esDemo) return;
+
+      // "Socias" comparten ciclo — cuentan como 1 solo proyecto, no 2.
+      // Si no tiene ciclo todavía, se cuenta igual (como antes), cada
+      // uno por su cuenta.
+      const claveKpi = alumno.cicloActualId || alumnoId;
+      if (gruposContadosKpi.has(claveKpi)) return;
+      gruposContadosKpi.add(claveKpi);
+      totalProyectos++;
+
       const ciclo = alumno.cicloActualId ? ciclos[alumno.cicloActualId] : null;
       const acuerdo = alumno.cicloActualId ? acuerdos[alumno.cicloActualId] : null;
       if (!ciclo) return;
@@ -508,7 +542,7 @@ export async function cargarListasAlumnos() {
     });
 
     setTexto('kpi-alumnos-activos', activos);
-    setTexto('kpi-alumnos-totales', Object.keys(alumnos).length);
+    setTexto('kpi-alumnos-totales', totalProyectos);
     setTexto('kpi-activos-begin', begin);
     setTexto('kpi-activos-next', next);
     setTexto('kpi-activos-exit', exit);
@@ -517,9 +551,12 @@ export async function cargarListasAlumnos() {
     setTexto('kpi-atrasado', formatMontoPorMoneda(atrasadoPorMoneda));
   } else if (role === 'coach') {
     let activos = 0, enOnboarding = 0, esperandoDirector = 0;
+    const ciclosContadosKpiCoach = new Set();
     Object.values(alumnos).forEach(alumno => {
       const ciclo = alumno.cicloActualId ? ciclos[alumno.cicloActualId] : null;
       if (!ciclo || ciclo.coachId !== uid) return;
+      if (ciclosContadosKpiCoach.has(alumno.cicloActualId)) return;
+      ciclosContadosKpiCoach.add(alumno.cicloActualId);
       if (ciclo.estadoAlumno === 'activo') activos++;
       if (ciclo.estadoProceso === 'en_onboarding') enOnboarding++;
       if (ciclo.estadoProceso === 'enviado_firma' || ciclo.estadoProceso === 'en_revision') esperandoDirector++;
@@ -714,12 +751,41 @@ async function abrirFicha(alumnoId) {
 
   const role = getCurrentRole();
 
+  // --- Socios: otros alumnos que comparten este mismo ciclo (mismo
+  //     proyecto) — se buscan por cicloActualId, no hay una lista
+  //     aparte que mantener sincronizada. ---
+  let socios = [[alumnoId, alumno]];
+  if (currentCicloId) {
+    const todosSnap = await get(ref(db, 'alumnos'));
+    const todos = todosSnap.exists() ? todosSnap.val() : {};
+    socios = Object.entries(todos).filter(([, a]) => a.cicloActualId === currentCicloId);
+    if (!socios.some(([id]) => id === alumnoId)) socios.push([alumnoId, alumno]);
+  }
+  const nombreCompletoDe = (a) => `${a.nombre || ''} ${a.apellido || ''}`.trim();
+  const nombreCombinado = socios.map(([, a]) => nombreCompletoDe(a)).filter(Boolean).join(' y ') || '(sin nombre)';
+
+  const btnAgregarSocio = document.getElementById('btn-agregar-socio');
+  if (btnAgregarSocio) btnAgregarSocio.classList.toggle('hidden', role !== 'coach' || socios.length >= 2);
+
+  const panelSelector = document.getElementById('panel-selector-socios');
+  const selectorBotones = document.getElementById('selector-socios-botones');
+  if (panelSelector && selectorBotones) {
+    panelSelector.classList.toggle('hidden', socios.length < 2);
+    if (socios.length >= 2) {
+      selectorBotones.innerHTML = socios.map(([id, a]) => `
+        <button type="button" class="btn ${id === alumnoId ? 'btn--primary' : 'btn--ghost'} btn-seleccionar-socio" data-socio-id="${id}" style="font-size:12px; padding:6px 14px;">${nombreCompletoDe(a) || '(sin nombre)'}</button>`).join('');
+      selectorBotones.querySelectorAll('.btn-seleccionar-socio').forEach(btn => {
+        btn.addEventListener('click', () => abrirFicha(btn.dataset.socioId));
+      });
+    }
+  }
+
   // Siempre resetea a "Datos Generales" al abrir una ficha — evita que quede
   // pegada una pestaña restringida (ej. Pago) de una sesión o alumno anterior.
   document.querySelectorAll('.tab[data-tab]').forEach(t => t.classList.toggle('is-active', t.dataset.tab === 'datos'));
   document.querySelectorAll('.tab-panel[data-panel]').forEach(p => p.classList.toggle('is-active', p.dataset.panel === 'datos'));
 
-  document.getElementById('ficha-nombre-alumno').textContent = `${alumno.nombre || ''} ${alumno.apellido || ''}`.trim() || '(sin nombre)';
+  document.getElementById('ficha-nombre-alumno').textContent = nombreCombinado;
   document.getElementById('ficha-foto-alumno').src = alumno.fotoUrl || PLACEHOLDER_FOTO;
   document.getElementById('ficha-rut').textContent = alumno.rut || '—';
   document.getElementById('ficha-programa').textContent = ciclo ? programaLabel(ciclo.programa) : '—';
@@ -1248,6 +1314,7 @@ export async function initAlumnosModule() {
     await cargarPerfilMentor();
     await cargarMentoriasView();
     await cargarBoxMentor();
+    await actualizarNotificacionesMentor();
   }
 }
 
@@ -1368,3 +1435,83 @@ const btnVerDemoNext = document.getElementById('btn-ver-demo-next');
 if (btnVerDemoNext) btnVerDemoNext.addEventListener('click', () => verComoAlumnoDemo('next'));
 const btnVerDemoExit = document.getElementById('btn-ver-demo-exit');
 if (btnVerDemoExit) btnVerDemoExit.addEventListener('click', () => verComoAlumnoDemo('exit'));
+
+/* ============================================================
+   Agregar Socio/a — otra persona que comparte el mismo proyecto
+   (mismo ciclo: programa, coach, fechas, bitácora). No crea acuerdo
+   ni pago nuevo, solo su propia ficha + acceso individual, con el
+   mismo mecanismo de "Crear Acceso" que ya existe para cualquier
+   alumno.
+   ============================================================ */
+const btnAgregarSocioToggle = document.getElementById('btn-agregar-socio');
+if (btnAgregarSocioToggle) {
+  btnAgregarSocioToggle.addEventListener('click', () => {
+    document.getElementById('panel-form-agregar-socio').classList.remove('hidden');
+    document.getElementById('panel-form-agregar-socio').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  });
+}
+
+const btnCancelarAgregarSocio = document.getElementById('btn-cancelar-agregar-socio');
+if (btnCancelarAgregarSocio) {
+  btnCancelarAgregarSocio.addEventListener('click', () => {
+    document.getElementById('panel-form-agregar-socio').classList.add('hidden');
+    ['socio-nombre', 'socio-apellido', 'socio-email', 'socio-telefono'].forEach(id => { document.getElementById(id).value = ''; });
+    document.getElementById('socio-error').classList.add('hidden');
+  });
+}
+
+const btnGuardarSocio = document.getElementById('btn-guardar-socio');
+if (btnGuardarSocio) {
+  btnGuardarSocio.addEventListener('click', async () => {
+    const errorEl = document.getElementById('socio-error');
+    errorEl.classList.add('hidden');
+    const nombre = document.getElementById('socio-nombre').value.trim();
+    const apellido = document.getElementById('socio-apellido').value.trim();
+    const email = document.getElementById('socio-email').value.trim();
+    const telefono = document.getElementById('socio-telefono').value.trim();
+
+    if (!nombre || !apellido) {
+      errorEl.textContent = 'Completa al menos nombre y apellido.';
+      errorEl.classList.remove('hidden');
+      return;
+    }
+    if (!currentCicloId) {
+      errorEl.textContent = 'Este alumno todavía no tiene un ciclo asignado — no se puede agregar un socio/a todavía.';
+      errorEl.classList.remove('hidden');
+      return;
+    }
+
+    btnGuardarSocio.disabled = true;
+    try {
+      const nuevoRef = push(ref(db, 'alumnos'));
+      await set(nuevoRef, {
+        nombre, apellido, email, telefono,
+        rut: '', fechaNacimiento: '', genero: '', direccion: '', ocupacion: '', fotoUrl: '',
+        coachId: alumno.coachId || null,
+        cicloActualId: currentCicloId, // el mismo ciclo — comparten programa, coach, fechas y bitácora
+        ciclosAnteriores: [],
+        createdAt: Date.now()
+      });
+
+      // El ciclo guarda la lista de quiénes lo comparten — así, cada
+      // alumno puede saber quién es su socio/a leyendo SU PROPIO ciclo
+      // (que ya tiene permiso de leer), sin necesitar revisar toda la
+      // colección de alumnos (a la que no tiene acceso).
+      const cicloActualSnap = await get(ref(db, `ciclos/${currentCicloId}/alumnoIds`));
+      const idsExistentes = cicloActualSnap.exists() ? cicloActualSnap.val() : [currentAlumnoId];
+      const idsActualizados = [...new Set([...idsExistentes, nuevoRef.key])];
+      await update(ref(db, `ciclos/${currentCicloId}`), { alumnoIds: idsActualizados });
+
+      document.getElementById('panel-form-agregar-socio').classList.add('hidden');
+      ['socio-nombre', 'socio-apellido', 'socio-email', 'socio-telefono'].forEach(id => { document.getElementById(id).value = ''; });
+
+      await abrirFicha(nuevoRef.key);
+      await cargarListasAlumnos();
+    } catch (err) {
+      errorEl.textContent = 'No se pudo guardar. Intenta de nuevo.';
+      errorEl.classList.remove('hidden');
+    } finally {
+      btnGuardarSocio.disabled = false;
+    }
+  });
+}

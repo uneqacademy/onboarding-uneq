@@ -187,6 +187,7 @@ async function cargarSesionesBeginTabla(uid) {
             try {
               await update(ref(db, `preguntasVivoBegin/${uid}/${sesionId}/${preguntaId}`), { revisada: true });
               btn.outerHTML = '<span class="badge badge--activo" style="font-size:10px;">✓ Revisada</span>';
+              await actualizarNotificacionesCoach();
             } catch (err) {
               alert('No se pudo marcar. Intenta de nuevo.');
               btn.disabled = false;
@@ -219,6 +220,27 @@ async function cargarSesionesBeginTabla(uid) {
     });
 }
 
+export async function actualizarNotificacionesCoach() {
+  const uid = auth.currentUser ? auth.currentUser.uid : null;
+  if (!uid || getCurrentRole() !== 'coach') return;
+
+  const perfilSnap = await get(ref(db, `usuarios/${uid}`));
+  const esCabecera = perfilSnap.exists() && perfilSnap.val().coachCabeceraBegin === true;
+  if (!esCabecera) {
+    document.querySelector('.nav-item[data-nav="dashboard"]')?.classList.remove('tiene-notificacion');
+    return;
+  }
+
+  const preguntasSnap = await get(ref(db, `preguntasVivoBegin/${uid}`));
+  let haySinRevisar = false;
+  if (preguntasSnap.exists()) {
+    Object.values(preguntasSnap.val()).forEach(sesion => {
+      if (Object.values(sesion || {}).some(p => !p.revisada)) haySinRevisar = true;
+    });
+  }
+  document.querySelector('.nav-item[data-nav="dashboard"]')?.classList.toggle('tiene-notificacion', haySinRevisar);
+}
+
 export async function cargarSesionesBeginCoach() {
   if (getCurrentRole() !== 'coach') return;
   const uid = auth.currentUser ? auth.currentUser.uid : null;
@@ -232,6 +254,7 @@ export async function cargarSesionesBeginCoach() {
   if (!esCabecera) return;
 
   await cargarSesionesBeginTabla(uid);
+  await actualizarNotificacionesCoach();
 }
 
 const btnAgregarSesionBegin = document.getElementById('btn-agregar-sesion-begin');

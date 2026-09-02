@@ -40,6 +40,28 @@ const PLACEHOLDER_FOTO_ALUMNO = 'data:image/svg+xml;utf8,' + encodeURIComponent(
   '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 80"><rect width="80" height="80" rx="40" fill="#E4E7EC"/><circle cx="40" cy="32" r="14" fill="#9AA4B2"/><ellipse cx="40" cy="70" rx="24" ry="18" fill="#9AA4B2"/></svg>'
 );
 let alumnoIdActual = null;
+let idsDelProyectoCache = null; // se resetea cada vez que cambia el alumno actual (login/demo)
+
+// Con quién comparte proyecto el alumno actual (su "socio/a", si tiene) —
+// se lee desde SU PROPIO ciclo (ciclos/{cicloId}/alumnoIds), porque un
+// alumno no tiene permiso para revisar toda la colección de alumnos.
+// Los límites semanales (BOX, BOX BEGIN, Preguntas en Vivo) se
+// calculan sobre TODOS estos IDs juntos, no solo el propio.
+async function obtenerIdsDelProyecto() {
+  if (idsDelProyectoCache) return idsDelProyectoCache;
+  if (!alumnoIdActual) return [];
+  try {
+    const alumnoSnap = await get(ref(db, `alumnos/${alumnoIdActual}`));
+    const cicloId = alumnoSnap.exists() ? alumnoSnap.val().cicloActualId : null;
+    if (!cicloId) { idsDelProyectoCache = [alumnoIdActual]; return idsDelProyectoCache; }
+    const idsSnap = await get(ref(db, `ciclos/${cicloId}/alumnoIds`));
+    idsDelProyectoCache = idsSnap.exists() ? idsSnap.val() : [alumnoIdActual];
+  } catch (err) {
+    idsDelProyectoCache = [alumnoIdActual];
+  }
+  return idsDelProyectoCache;
+}
+
 
 /* ============================================================
    Crear acceso del alumno (desde la ficha, director o coach)
@@ -138,6 +160,7 @@ if (btnRestablecerPasswordAlumno) {
    ============================================================ */
 export async function cargarDashboardAlumno(alumnoId) {
   alumnoIdActual = alumnoId;
+  idsDelProyectoCache = null;
   const alumnoSnap = await get(ref(db, `alumnos/${alumnoId}`));
   if (!alumnoSnap.exists()) return;
   const alumno = alumnoSnap.val();
@@ -743,11 +766,14 @@ export async function cargarBoxAlumno() {
     return !!roles.mentor;
   }));
 
-  // --- Mis consultas + cálculo del límite semanal ---
-  const indiceSnap = await get(ref(db, `boxIndice/${alumnoIdActual}`));
-  const indice = indiceSnap.exists() ? indiceSnap.val() : {};
+  // --- Mis consultas + cálculo del límite semanal — combinando las
+  //     de todo el proyecto (si hay socio/a), no solo las propias ---
+  const idsProyecto = await obtenerIdsDelProyecto();
+  const indicesSnaps = await Promise.all(idsProyecto.map(id => get(ref(db, `boxIndice/${id}`))));
+  const indiceCombinado = {};
+  indicesSnaps.forEach(snap => { if (snap.exists()) Object.assign(indiceCombinado, snap.val()); });
   const entradas = (await Promise.all(
-    Object.entries(indice).map(async ([preguntaId, mentorId]) => {
+    Object.entries(indiceCombinado).map(async ([preguntaId, mentorId]) => {
       const snap = await get(ref(db, `box/${mentorId}/${preguntaId}`));
       return snap.exists() ? { ...snap.val(), preguntaId } : null;
     })
@@ -1040,7 +1066,8 @@ async function cargarBoxBeginAlumno() {
 
   const boxBeginSnap = await get(ref(db, 'boxBegin'));
   const todas = boxBeginSnap.exists() ? Object.entries(boxBeginSnap.val()) : [];
-  const propias = todas.filter(([, p]) => p.alumnoId === alumnoIdActual).sort((a, b) => b[1].createdAt - a[1].createdAt);
+  const idsProyectoBegin = await obtenerIdsDelProyecto();
+  const propias = todas.filter(([, p]) => idsProyectoBegin.includes(p.alumnoId)).sort((a, b) => b[1].createdAt - a[1].createdAt);
 
   const inicioSemana = inicioSemanaActual();
   const estaSemana = propias.filter(([, p]) => p.createdAt >= inicioSemana);
@@ -1683,7 +1710,9 @@ export async function cargarPreguntasVivo() {
     return;
   }
 
-  // --- Límite: 1 pregunta en vivo por responsable (mentor o coach), por semana ---
+  // --- Límite: 1 pregunta en vivo por responsable (mentor o coach), por semana
+  //     — compartido entre todo el proyecto, no solo lo propio ---
+  const idsProyectoVivo = await obtenerIdsDelProyecto();
   const responsablesEnSesiones = [...new Set(sesiones.map(s => `${s.tipo}:${s.mentorUid}`))];
   const preguntasPorResponsableSnaps = await Promise.all(responsablesEnSesiones.map(clave => {
     const [tipo, uid] = clave.split(':');
@@ -1696,7 +1725,7 @@ export async function cargarPreguntasVivo() {
     const clave = responsablesEnSesiones[idx];
     Object.values(snap.val()).forEach(preguntasDeSesion => {
       Object.values(preguntasDeSesion).forEach(p => {
-        if (p.alumnoId === alumnoIdActual && p.createdAt >= inicioSemanaVivo) mentoresConPreguntaEstaSemana.add(clave);
+        if (idsProyectoVivo.includes(p.alumnoId) && p.createdAt >= inicioSemanaVivo) mentoresConPreguntaEstaSemana.add(clave);
       });
     });
   });

@@ -299,8 +299,36 @@
           </div>
           <div style="display:flex; align-items:center; gap:12px;">
             <span class="badge badge--activo" id="ficha-badge-estado">—</span>
+            <button class="btn btn--ghost hidden" id="btn-agregar-socio" data-role="coach">+ Agregar Socio/a</button>
             <button class="btn btn--ghost hidden" id="btn-editar-datos-ciclo">✏️ Editar</button>
             <button class="btn btn--danger hidden" id="btn-eliminar-alumno" data-role="director">🗑 Eliminar Alumno</button>
+          </div>
+        </div>
+
+        <!-- Selector de socio/a — solo aparece si hay más de 1 persona en el ciclo -->
+        <div class="panel mb-16 hidden" id="panel-selector-socios">
+          <div class="panel__body" style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+            <span class="text-soft" style="font-size:12.5px;">Viendo datos individuales de:</span>
+            <div id="selector-socios-botones" style="display:flex; gap:8px;"></div>
+          </div>
+        </div>
+
+        <!-- Formulario para agregar socio/a (colapsado por defecto) -->
+        <div class="panel mb-16 hidden" id="panel-form-agregar-socio">
+          <div class="panel__header"><h3>Agregar Socio/a al mismo proyecto</h3></div>
+          <div class="panel__body">
+            <p class="text-soft mb-16" style="font-size:13px;">Comparte el mismo ciclo (programa, coach, fechas, bitácora) — no se crea un acuerdo ni pago nuevo, solo su propia ficha y acceso.</p>
+            <div class="field-grid mb-16">
+              <div class="field"><label>Nombre <span style="color:#C0392B;">*</span></label><input id="socio-nombre"></div>
+              <div class="field"><label>Apellido <span style="color:#C0392B;">*</span></label><input id="socio-apellido"></div>
+              <div class="field"><label>Correo</label><input id="socio-email" type="email"></div>
+              <div class="field"><label>Teléfono</label><input id="socio-telefono"></div>
+            </div>
+            <p id="socio-error" class="hidden" style="color:#C0392B; margin-bottom:12px;"></p>
+            <div style="display:flex; gap:10px;">
+              <button class="btn btn--ghost" id="btn-cancelar-agregar-socio">Cancelar</button>
+              <button class="btn btn--primary" id="btn-guardar-socio">Guardar Socio/a</button>
+            </div>
           </div>
         </div>
 

@@ -132,6 +132,12 @@ export async function generarPdfAcuerdo(alumnoId, cicloId) {
   const acuerdo = acuerdoSnap.exists() ? acuerdoSnap.val() : {};
   const moneda = acuerdo.moneda || 'CLP';
 
+  // --- Socio/a: si el ciclo tiene más de una persona, el acuerdo se
+  //     redacta y firma a nombre de ambas. ---
+  const idsProyectoAcuerdo = Array.isArray(ciclo.alumnoIds) && ciclo.alumnoIds.length ? ciclo.alumnoIds : [alumnoId];
+  const otrosSnaps = await Promise.all(idsProyectoAcuerdo.filter(id => id !== alumnoId).map(id => get(ref(db, `alumnos/${id}`))));
+  const alumnosProyecto = [alumno, ...otrosSnaps.filter(s => s.exists()).map(s => s.val())];
+
   const hoyStr = new Date().toISOString().slice(0, 10);
   const fechaIngresoEstimada = hoyStr;
   const fechaEgresoEstimada = calcularFechaEgreso(hoyStr, ciclo.programa);
@@ -141,7 +147,10 @@ export async function generarPdfAcuerdo(alumnoId, cicloId) {
   const abono = parsearMontoCLP(acuerdo.abono);
   const saldo = montoTotal - descuento - abono;
 
-  const nombreCompleto = `${alumno.nombre || ''} ${alumno.apellido || ''}`.trim();
+  const nombreCompleto = alumnosProyecto
+    .map(a => `${a.nombre || ''} ${a.apellido || ''}`.trim())
+    .filter(Boolean)
+    .join(' y ');
   let nombreCoach = '—';
   if (ciclo.coachId) {
     const coachSnap = await get(ref(db, `usuarios/${ciclo.coachId}/nombre`));
@@ -227,9 +236,13 @@ export async function generarPdfAcuerdo(alumnoId, cicloId) {
   doc.text('ACUERDO DE PRESTACIÓN DE SERVICIOS DE MENTORÍA', 105, y, { align: 'center' });
   y += 12;
 
-  // --- Intro y partes ---
+  // --- Intro y partes — con socio/a, se nombra y describe a ambas
+  //     personas por separado (RUT y domicilio propios de cada una) ---
+  const descripcionPartes = alumnosProyecto
+    .map(a => `${`${a.nombre || ''} ${a.apellido || ''}`.trim()}, RUT ${a.rut || '—'}, con domicilio en ${formatDireccion(a.direccion)}`)
+    .join(', y ');
   parrafo(
-    `En Santiago de Chile, con fecha ${formatFechaLarga(hoyStr)}, entre AGENCIA UNEQ LTDA., RUT 77.438.998-9, representada en este acto por don Luis Felipe Gostling, RUT 13.673.392-3, y doña Macarena Francisca Cruz Montt, RUT 16.143.054-4, en adelante "UNEQ"; y ${nombreCompleto}, RUT ${alumno.rut || '—'}, con domicilio en ${formatDireccion(alumno.direccion)}, en adelante "el/la Alumno/a"; se acuerda celebrar el presente Acuerdo de Prestación de Servicios de Mentoría, sujeto a las siguientes cláusulas:`
+    `En Santiago de Chile, con fecha ${formatFechaLarga(hoyStr)}, entre AGENCIA UNEQ LTDA., RUT 77.438.998-9, representada en este acto por don Luis Felipe Gostling, RUT 13.673.392-3, y doña Macarena Francisca Cruz Montt, RUT 16.143.054-4, en adelante "UNEQ"; y ${descripcionPartes}, en adelante "el/la Alumno/a" (o "los/las Alumnos/as" si corresponde a más de una persona); se acuerda celebrar el presente Acuerdo de Prestación de Servicios de Mentoría, sujeto a las siguientes cláusulas:`
   );
 
   // --- PRIMERO ---
@@ -299,7 +312,10 @@ export async function generarPdfAcuerdo(alumnoId, cicloId) {
   parrafo('Firmado electrónicamente por las partes a través de Google Workspace.', { spacingAfter: 22 });
   parrafo('Felipe Gostling, RUT 13.673.392-3 en representación de Agencia UNEQ Ltda.', { spacingAfter: 22 });
   parrafo('Macarena Cruz, RUT 16.143.054-4 en representación de Agencia UNEQ Ltda.', { spacingAfter: 22 });
-  parrafo(`${nombreCompleto}, RUT: ${alumno.rut || '—'}`, { spacingAfter: 10 });
+  alumnosProyecto.forEach((a, idx) => {
+    const nombreFirma = `${a.nombre || ''} ${a.apellido || ''}`.trim();
+    parrafo(`${nombreFirma}, RUT: ${a.rut || '—'}`, { spacingAfter: idx === alumnosProyecto.length - 1 ? 10 : 22 });
+  });
 
   // --- Subir a Storage y guardar la URL ---
   const blob = doc.output('blob');
