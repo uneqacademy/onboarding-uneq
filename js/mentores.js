@@ -97,17 +97,20 @@ async function cargarMentoresView() {
       return (a.nombre || '').localeCompare(b.nombre || '', 'es');
     });
 
-  // Si algún mentor todavía no tiene "orden" guardado, se lo asignamos
-  // ahora según su posición actual — así las flechas siempre trabajan
-  // con números reales y comparables entre todos, nunca con un valor
-  // "de mentira" que antes hacía que alguien se pasara de largo al
-  // moverse (bug ya corregido, esto es lo que lo previene).
-  const backfills = mentoresOrdenados
-    .map(([uid, m], idx) => (typeof m.orden !== 'number' ? update(ref(db, `usuarios/${uid}`), { orden: idx }) : null))
-    .filter(Boolean);
-  if (backfills.length) {
-    await Promise.all(backfills);
-    return cargarMentoresView();
+  // Mover a alguien renumera TODA la lista de una vez (0,1,2,3...) —
+  // así nunca puede quedar un número repetido o "de mentira" entre
+  // medio, que era lo que hacía que las flechas fallaran a veces sí y
+  // a veces no. Simple y siempre correcto, sin casos especiales.
+  async function moverMentor(uid, direccion) {
+    const idx = mentoresOrdenados.findIndex(([id]) => id === uid);
+    const nuevoIdx = idx + direccion;
+    if (idx === -1 || nuevoIdx < 0 || nuevoIdx >= mentoresOrdenados.length) return;
+
+    const copia = [...mentoresOrdenados];
+    [copia[idx], copia[nuevoIdx]] = [copia[nuevoIdx], copia[idx]];
+
+    await Promise.all(copia.map(([id], nuevaPos) => update(ref(db, `usuarios/${id}`), { orden: nuevaPos })));
+    await cargarMentoresView();
   }
 
   mentoresOrdenados
@@ -133,26 +136,10 @@ async function cargarMentoresView() {
         </td>`;
       tbody.appendChild(tr);
 
-      // Gracias al backfill de arriba, acá SIEMPRE hay un número real
-      // guardado para cada mentor — ya no hace falta ningún valor de
-      // respaldo "inventado", que era justo lo que causaba el bug.
-      const intercambiarOrden = async (otroUid) => {
-        const otroMentor = listaOrdenada.find(([u]) => u === otroUid)[1];
-        await Promise.all([
-          update(ref(db, `usuarios/${uid}`), { orden: otroMentor.orden }),
-          update(ref(db, `usuarios/${otroUid}`), { orden: mentor.orden })
-        ]);
-        await cargarMentoresView();
-      };
-
       const btnArriba = tr.querySelector('.btn-orden-mentor-arriba');
-      if (btnArriba) btnArriba.addEventListener('click', () => {
-        if (idx > 0) intercambiarOrden(listaOrdenada[idx - 1][0]);
-      });
+      if (btnArriba) btnArriba.addEventListener('click', () => moverMentor(uid, -1));
       const btnAbajo = tr.querySelector('.btn-orden-mentor-abajo');
-      if (btnAbajo) btnAbajo.addEventListener('click', () => {
-        if (idx < listaOrdenada.length - 1) intercambiarOrden(listaOrdenada[idx + 1][0]);
-      });
+      if (btnAbajo) btnAbajo.addEventListener('click', () => moverMentor(uid, 1));
 
       tr.querySelector('.btn-restablecer-password-mentor').addEventListener('click', (ev) => enviarResetPasswordMentor(mentor.email, ev.target));
 
