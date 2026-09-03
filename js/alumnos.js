@@ -1484,11 +1484,14 @@ if (btnGuardarSocio) {
 
     btnGuardarSocio.disabled = true;
     try {
+      const alumnoOriginalSnap = await get(ref(db, `alumnos/${currentAlumnoId}`));
+      const coachIdOriginal = alumnoOriginalSnap.exists() ? (alumnoOriginalSnap.val().coachId || null) : null;
+
       const nuevoRef = push(ref(db, 'alumnos'));
       await set(nuevoRef, {
         nombre, apellido, email, telefono,
         rut: '', fechaNacimiento: '', genero: '', direccion: '', ocupacion: '', fotoUrl: '',
-        coachId: alumno.coachId || null,
+        coachId: coachIdOriginal,
         cicloActualId: currentCicloId, // el mismo ciclo — comparten programa, coach, fechas y bitácora
         ciclosAnteriores: [],
         createdAt: Date.now()
@@ -1509,6 +1512,7 @@ if (btnGuardarSocio) {
       await abrirFicha(nuevoRef.key);
       await cargarListasAlumnos();
     } catch (err) {
+      console.error('Error al guardar socio/a:', err);
       errorEl.textContent = 'No se pudo guardar. Intenta de nuevo.';
       errorEl.classList.remove('hidden');
     } finally {
