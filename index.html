@@ -1578,17 +1578,35 @@
       </section>
 
       <section id="view-configuracion" class="view hidden">
-        <div class="panel mb-24">
-          <div class="panel__header"><h3>Metodología Base para Mentores IA</h3></div>
+        <div class="panel mb-24" data-config-seccion="metodologia">
+          <div class="panel__header flex-between">
+            <h3>Metodología Base para Mentores IA</h3>
+            <div style="display:flex; gap:8px;">
+              <button class="btn btn--ghost hidden btn-editar-config-seccion" data-seccion="metodologia" style="font-size:12px; padding:5px 12px;">✏️ Editar</button>
+              <button class="btn btn--primary btn-guardar-config-seccion" data-seccion="metodologia" style="font-size:12px; padding:5px 12px;">Guardar</button>
+            </div>
+          </div>
           <div class="panel__body">
             <p class="text-soft mb-16">Este contenido se aplica automáticamente a <strong>todos</strong> los Mentores IA — es la capa compartida (metodología 2E, paso a paso), sobre la cual cada mentor suma su propio conocimiento individual.</p>
             <div class="field mb-16">
               <textarea id="config-metodologia-base" placeholder="Pega o escribe aquí la metodología base que todos los Mentores IA deben conocer..." style="min-height:180px;"></textarea>
             </div>
+
+            <p style="font-weight:600; font-size:13px; margin-bottom:8px;">Archivos de apoyo (opcional)</p>
+            <p class="text-soft mb-16" style="font-size:12.5px;">Además del texto, puedes subir imágenes, PDF o Word — se procesan solos y su contenido se suma a la base compartida de todos los Mentores IA.</p>
+            <button type="button" class="btn btn--ghost" id="btn-agregar-archivo-metodologia" style="font-size:12px;">+ Agregar Archivo</button>
+            <input type="file" id="input-archivo-metodologia" accept=".pdf,.doc,.docx,.png,.jpg,.jpeg" class="hidden">
+            <div id="metodologia-archivos-lista" style="margin-top:14px;"></div>
           </div>
         </div>
-        <div class="panel mb-24">
-          <div class="panel__header"><h3>Comunidad y Soporte</h3></div>
+        <div class="panel mb-24" data-config-seccion="comunidad">
+          <div class="panel__header flex-between">
+            <h3>Comunidad y Soporte</h3>
+            <div style="display:flex; gap:8px;">
+              <button class="btn btn--ghost hidden btn-editar-config-seccion" data-seccion="comunidad" style="font-size:12px; padding:5px 12px;">✏️ Editar</button>
+              <button class="btn btn--primary btn-guardar-config-seccion" data-seccion="comunidad" style="font-size:12px; padding:5px 12px;">Guardar</button>
+            </div>
+          </div>
           <div class="panel__body">
             <div class="field-grid mb-16">
               <div class="field"><label>Link Comunidad Hotmart (único, para todos)</label><input id="config-comunidad-hotmart" placeholder="https://..."></div>
@@ -1601,8 +1619,14 @@
             </div>
           </div>
         </div>
-        <div class="panel mb-24">
-          <div class="panel__header"><h3>Contenido del Programa en Hotmart (por nivel)</h3></div>
+        <div class="panel mb-24" data-config-seccion="hotmart">
+          <div class="panel__header flex-between">
+            <h3>Contenido del Programa en Hotmart (por nivel)</h3>
+            <div style="display:flex; gap:8px;">
+              <button class="btn btn--ghost hidden btn-editar-config-seccion" data-seccion="hotmart" style="font-size:12px; padding:5px 12px;">✏️ Editar</button>
+              <button class="btn btn--primary btn-guardar-config-seccion" data-seccion="hotmart" style="font-size:12px; padding:5px 12px;">Guardar</button>
+            </div>
+          </div>
           <div class="panel__body">
             <div class="field-grid">
               <div class="field"><label>Begin</label><input id="config-contenido-begin" placeholder="https://..."></div>
@@ -1611,8 +1635,14 @@
             </div>
           </div>
         </div>
-        <div class="panel mb-24">
-          <div class="panel__header"><h3>Grupos de WhatsApp</h3></div>
+        <div class="panel mb-24" data-config-seccion="whatsapp">
+          <div class="panel__header flex-between">
+            <h3>Grupos de WhatsApp</h3>
+            <div style="display:flex; gap:8px;">
+              <button class="btn btn--ghost hidden btn-editar-config-seccion" data-seccion="whatsapp" style="font-size:12px; padding:5px 12px;">✏️ Editar</button>
+              <button class="btn btn--primary btn-guardar-config-seccion" data-seccion="whatsapp" style="font-size:12px; padding:5px 12px;">Guardar</button>
+            </div>
+          </div>
           <div class="panel__body">
             <div class="field-grid">
               <div class="field"><label>Begin</label><input id="config-whatsapp-begin" placeholder="https://chat.whatsapp.com/..."></div>
@@ -1650,7 +1680,6 @@
         </div>
 
         <p id="configuracion-error" class="hidden" style="color:#C0392B; margin-bottom:12px;"></p>
-        <button class="btn btn--primary" id="btn-guardar-configuracion">Guardar Configuración</button>
       </section>
 
     </div>

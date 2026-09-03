@@ -12,9 +12,168 @@
    vista "Mentores".
    ============================================================ */
 
-import { db } from './firebase-config.js';
-import { ref, get, set, push, update } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-database.js";
+import { db, storage } from './firebase-config.js';
+import { ref, get, set, push, update, remove } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-database.js";
+import { ref as storageRef, uploadBytes, getDownloadURL, deleteObject } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-storage.js";
 import { getCurrentRole } from './main.js';
+
+const TAMANO_MAXIMO_ARCHIVO_METODOLOGIA = 10 * 1024 * 1024;
+
+// Qué campos pertenece a cada sección — para guardar/bloquear cada
+// una por separado, sin tocar las demás.
+const CAMPOS_POR_SECCION_CONFIG = {
+  metodologia: { metodologiaBase: 'config-metodologia-base' },
+  comunidad: {
+    comunidadHotmartUrl: 'config-comunidad-hotmart',
+    correoSoporte: 'config-correo-soporte',
+    whatsappSoporte: 'config-whatsapp-soporte',
+    formSoporteEmbed: 'config-form-soporte-embed'
+  },
+  hotmart: {
+    contenidoHotmartBegin: 'config-contenido-begin',
+    contenidoHotmartNext: 'config-contenido-next',
+    contenidoHotmartExit: 'config-contenido-exit'
+  },
+  whatsapp: {
+    whatsappBegin: 'config-whatsapp-begin',
+    whatsappNextExit: 'config-whatsapp-nextexit'
+  }
+};
+
+function bloquearSeccionConfig(seccion, bloqueado) {
+  const panel = document.querySelector(`[data-config-seccion="${seccion}"]`);
+  if (!panel) return;
+  panel.querySelectorAll('input, textarea').forEach(el => { el.disabled = bloqueado; });
+  const btnAgregarArchivo = document.getElementById('btn-agregar-archivo-metodologia');
+  if (seccion === 'metodologia' && btnAgregarArchivo) btnAgregarArchivo.disabled = bloqueado;
+  panel.querySelector('.btn-guardar-config-seccion')?.classList.toggle('hidden', bloqueado);
+  panel.querySelector('.btn-editar-config-seccion')?.classList.toggle('hidden', !bloqueado);
+}
+
+document.querySelectorAll('.btn-guardar-config-seccion').forEach(btn => {
+  btn.addEventListener('click', async () => {
+    const seccion = btn.dataset.seccion;
+    const campos = CAMPOS_POR_SECCION_CONFIG[seccion];
+    const errorEl = document.getElementById('configuracion-error');
+    errorEl.classList.add('hidden');
+    btn.disabled = true;
+    try {
+      const datos = {};
+      Object.entries(campos).forEach(([campoDb, idInput]) => {
+        datos[campoDb] = document.getElementById(idInput).value.trim();
+      });
+      await update(ref(db, 'configuracion/general'), datos);
+      bloquearSeccionConfig(seccion, true);
+    } catch (err) {
+      errorEl.textContent = 'No se pudo guardar. Intenta de nuevo.';
+      errorEl.classList.remove('hidden');
+    } finally {
+      btn.disabled = false;
+    }
+  });
+});
+
+document.querySelectorAll('.btn-editar-config-seccion').forEach(btn => {
+  btn.addEventListener('click', () => bloquearSeccionConfig(btn.dataset.seccion, false));
+});
+
+/* --- Archivos de apoyo para la Metodología Base (imagen/PDF/Word) --- */
+async function cargarArchivosMetodologia() {
+  const cont = document.getElementById('metodologia-archivos-lista');
+  if (!cont) return;
+  const snap = await get(ref(db, 'configuracion/metodologiaArchivos'));
+  const archivos = snap.exists() ? Object.entries(snap.val()) : [];
+
+  if (!archivos.length) {
+    cont.innerHTML = '<p class="text-soft" style="font-size:12px;">Sin archivos agregados todavía.</p>';
+    return;
+  }
+  cont.innerHTML = archivos.map(([id, a]) => `
+    <div class="flex-between" data-archivo-id="${id}" style="padding:8px 0; border-bottom:0.5px solid var(--border);">
+      <span style="font-size:12.5px;">📎 <a href="${a.archivoUrl}" target="_blank" rel="noopener">${a.nombre}</a> ${a.archivoTexto ? '' : '<span class=\"text-soft\" style=\"font-size:11px;\">— procesando...</span>'}</span>
+      <button type="button" class="btn btn--ghost btn-quitar-archivo-metodologia" style="font-size:11px; padding:3px 8px;">Quitar</button>
+    </div>`).join('');
+
+  cont.querySelectorAll('.btn-quitar-archivo-metodologia').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const fila = btn.closest('[data-archivo-id]');
+      const id = fila.dataset.archivoId;
+      const archivo = archivos.find(([aid]) => aid === id)[1];
+      btn.disabled = true;
+      try {
+        await remove(ref(db, `configuracion/metodologiaArchivos/${id}`));
+        try { await deleteObject(storageRef(storage, archivo.storagePath)); } catch (e) { /* no pasa nada si ya no existe */ }
+        await cargarArchivosMetodologia();
+      } catch (err) {
+        alert('No se pudo quitar. Intenta de nuevo.');
+        btn.disabled = false;
+      }
+    });
+  });
+}
+
+const btnAgregarArchivoMetodologia = document.getElementById('btn-agregar-archivo-metodologia');
+const inputArchivoMetodologia = document.getElementById('input-archivo-metodologia');
+if (btnAgregarArchivoMetodologia && inputArchivoMetodologia) {
+  btnAgregarArchivoMetodologia.addEventListener('click', () => inputArchivoMetodologia.click());
+  inputArchivoMetodologia.addEventListener('change', async () => {
+    const archivo = inputArchivoMetodologia.files[0];
+    inputArchivoMetodologia.value = '';
+    if (!archivo) return;
+    if (archivo.size > TAMANO_MAXIMO_ARCHIVO_METODOLOGIA) {
+      alert('El archivo pesa más de 10MB. Elige uno más liviano.');
+      return;
+    }
+    btnAgregarArchivoMetodologia.disabled = true;
+    try {
+      const nuevoRef = push(ref(db, 'configuracion/metodologiaArchivos'));
+      const storagePath = `metodologia-base/${nuevoRef.key}_${archivo.name}`;
+      const archivoRef = storageRef(storage, storagePath);
+      await uploadBytes(archivoRef, archivo);
+      const archivoUrl = await getDownloadURL(archivoRef);
+      // archivoTexto queda vacío por ahora — una Cloud Function lo
+      // procesa solo apenas detecta el archivoUrl, igual que con el
+      // Conocimiento Adicional de cada mentor.
+      await set(nuevoRef, { nombre: archivo.name, archivoUrl, storagePath, createdAt: Date.now() });
+      await cargarArchivosMetodologia();
+    } catch (err) {
+      alert('No se pudo subir el archivo. Intenta de nuevo.');
+    } finally {
+      btnAgregarArchivoMetodologia.disabled = false;
+    }
+  });
+}
+
+export async function cargarConfiguracion() {
+  if (getCurrentRole() !== 'director') return;
+  const snap = await get(ref(db, 'configuracion/general'));
+  const c = snap.exists() ? snap.val() : {};
+
+  document.getElementById('config-comunidad-hotmart').value = c.comunidadHotmartUrl || '';
+  document.getElementById('config-metodologia-base').value = c.metodologiaBase || '';
+  document.getElementById('config-correo-soporte').value = c.correoSoporte || '';
+  document.getElementById('config-whatsapp-soporte').value = c.whatsappSoporte || '';
+  document.getElementById('config-form-soporte-embed').value = c.formSoporteEmbed || '';
+  document.getElementById('config-contenido-begin').value = c.contenidoHotmartBegin || '';
+  document.getElementById('config-contenido-next').value = c.contenidoHotmartNext || '';
+  document.getElementById('config-contenido-exit').value = c.contenidoHotmartExit || '';
+  document.getElementById('config-whatsapp-begin').value = c.whatsappBegin || '';
+  document.getElementById('config-whatsapp-nextexit').value = c.whatsappNextExit || '';
+
+  // Cada sección arranca bloqueada si ya tiene algún dato guardado;
+  // si está vacía (primera vez), arranca lista para escribir.
+  Object.entries(CAMPOS_POR_SECCION_CONFIG).forEach(([seccion, campos]) => {
+    const tieneDatos = Object.keys(campos).some(campoDb => (c[campoDb] || '').trim() !== '');
+    bloquearSeccionConfig(seccion, tieneDatos);
+  });
+
+  await cargarArchivosMetodologia();
+  await cargarHitosDefinidos();
+}
+
+document.querySelectorAll('.nav-item[data-nav="configuracion"]').forEach(item => {
+  item.addEventListener('click', cargarConfiguracion);
+});
 
 const FASES_HITOS = { fase1: 'Fase 1', fase2: 'Fase 2', fase3: 'Fase 3', fase4: 'Fase 4' };
 
@@ -117,55 +276,3 @@ if (btnAgregarHito) {
     }
   });
 }
-
-export async function cargarConfiguracion() {
-  if (getCurrentRole() !== 'director') return;
-  const snap = await get(ref(db, 'configuracion/general'));
-  const c = snap.exists() ? snap.val() : {};
-
-  document.getElementById('config-comunidad-hotmart').value = c.comunidadHotmartUrl || '';
-  document.getElementById('config-metodologia-base').value = c.metodologiaBase || '';
-  document.getElementById('config-correo-soporte').value = c.correoSoporte || '';
-  document.getElementById('config-whatsapp-soporte').value = c.whatsappSoporte || '';
-  document.getElementById('config-form-soporte-embed').value = c.formSoporteEmbed || '';
-  document.getElementById('config-contenido-begin').value = c.contenidoHotmartBegin || '';
-  document.getElementById('config-contenido-next').value = c.contenidoHotmartNext || '';
-  document.getElementById('config-contenido-exit').value = c.contenidoHotmartExit || '';
-  document.getElementById('config-whatsapp-begin').value = c.whatsappBegin || '';
-  document.getElementById('config-whatsapp-nextexit').value = c.whatsappNextExit || '';
-
-  await cargarHitosDefinidos();
-}
-
-const btnGuardarConfiguracion = document.getElementById('btn-guardar-configuracion');
-if (btnGuardarConfiguracion) {
-  btnGuardarConfiguracion.addEventListener('click', async () => {
-    const errorEl = document.getElementById('configuracion-error');
-    errorEl.classList.add('hidden');
-    btnGuardarConfiguracion.disabled = true;
-    try {
-      await set(ref(db, 'configuracion/general'), {
-        comunidadHotmartUrl: document.getElementById('config-comunidad-hotmart').value.trim(),
-        metodologiaBase: document.getElementById('config-metodologia-base').value,
-        correoSoporte: document.getElementById('config-correo-soporte').value.trim(),
-        whatsappSoporte: document.getElementById('config-whatsapp-soporte').value.trim(),
-        formSoporteEmbed: document.getElementById('config-form-soporte-embed').value,
-        contenidoHotmartBegin: document.getElementById('config-contenido-begin').value.trim(),
-        contenidoHotmartNext: document.getElementById('config-contenido-next').value.trim(),
-        contenidoHotmartExit: document.getElementById('config-contenido-exit').value.trim(),
-        whatsappBegin: document.getElementById('config-whatsapp-begin').value.trim(),
-        whatsappNextExit: document.getElementById('config-whatsapp-nextexit').value.trim()
-      });
-      alert('Configuración guardada.');
-    } catch (err) {
-      errorEl.textContent = 'No se pudo guardar. Intenta de nuevo.';
-      errorEl.classList.remove('hidden');
-    } finally {
-      btnGuardarConfiguracion.disabled = false;
-    }
-  });
-}
-
-document.querySelectorAll('.nav-item[data-nav="configuracion"]').forEach(item => {
-  item.addEventListener('click', cargarConfiguracion);
-});
