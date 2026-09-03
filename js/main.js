@@ -209,6 +209,9 @@ export function setNav(section) {
   } else if (section === 'preguntas-comunidad') {
     showView('view-preguntas-comunidad');
     document.getElementById('topbar-title').textContent = 'Preguntas de la Comunidad';
+  } else if (section === 'mis-hitos') {
+    showView('view-mis-hitos');
+    document.getElementById('topbar-title').textContent = 'Mis Hitos';
   }
 }
 
