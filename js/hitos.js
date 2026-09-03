@@ -382,8 +382,14 @@ async function enviarComentario(hitoId, texto) {
   await cargarMisHitos();
 }
 
+// Dominio propio (una vez que esté conectado) que arma la tarjeta de
+// WhatsApp con la foto/título de CADA hito, y de ahí manda a la app
+// real. Si cambias el subdominio elegido, solo hay que actualizar
+// esta línea.
+const DOMINIO_PREVIEW_HITOS = 'https://hitos.uneqacademy.com';
+
 function compartirHitoWhatsapp(hitoId, titulo) {
-  const url = `${window.location.origin}${window.location.pathname}#hito-${hitoId}`;
+  const url = `${DOMINIO_PREVIEW_HITOS}/?id=${hitoId}`;
   const mensaje = encodeURIComponent(`¡Quiero compartir con ustedes que logré "${titulo}" en mi programa con UNEQ Mentoring! 🎉\n\nMíralo y déjame un comentario acá:\n${url}`);
   window.open(`https://wa.me/?text=${mensaje}`, '_blank');
 }
