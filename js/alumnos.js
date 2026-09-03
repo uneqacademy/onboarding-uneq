@@ -765,6 +765,17 @@ async function abrirFicha(alumnoId) {
   const nombreCompletoDe = (a) => `${a.nombre || ''} ${a.apellido || ''}`.trim();
   const nombreCombinado = socios.map(([, a]) => nombreCompletoDe(a)).filter(Boolean).join(' y ') || '(sin nombre)';
 
+  // El socio/a "principal" es el primero que quedó guardado en la
+  // lista del ciclo (el que ya existía antes de agregar a alguien más).
+  // Al ver la ficha de un socio/a AGREGADO, se ocultan las pestañas
+  // compartidas (Ciclo Actual, Bitácora) — ya se ven completas en la
+  // pestaña del principal, no hace falta repetirlas.
+  const idPrincipal = (ciclo && Array.isArray(ciclo.alumnoIds) && ciclo.alumnoIds.length) ? ciclo.alumnoIds[0] : alumnoId;
+  const esSocioAgregado = socios.length >= 2 && alumnoId !== idPrincipal;
+  ['ciclo', 'bitacora'].forEach(tabClave => {
+    document.querySelector(`.tab[data-tab="${tabClave}"]`)?.classList.toggle('hidden', esSocioAgregado);
+  });
+
   const btnAgregarSocio = document.getElementById('btn-agregar-socio');
   if (btnAgregarSocio) btnAgregarSocio.classList.toggle('hidden', role !== 'coach' || socios.length >= 2);
 
