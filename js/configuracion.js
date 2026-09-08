@@ -54,8 +54,8 @@ document.querySelectorAll('.btn-guardar-config-seccion').forEach(btn => {
   btn.addEventListener('click', async () => {
     const seccion = btn.dataset.seccion;
     const campos = CAMPOS_POR_SECCION_CONFIG[seccion];
-    const errorEl = document.getElementById('configuracion-error');
-    errorEl.classList.add('hidden');
+    const errorEl = document.getElementById(`config-error-${seccion}`);
+    if (errorEl) errorEl.classList.add('hidden');
     btn.disabled = true;
     try {
       const datos = {};
@@ -65,8 +65,11 @@ document.querySelectorAll('.btn-guardar-config-seccion').forEach(btn => {
       await update(ref(db, 'configuracion/general'), datos);
       bloquearSeccionConfig(seccion, true);
     } catch (err) {
-      errorEl.textContent = 'No se pudo guardar. Intenta de nuevo.';
-      errorEl.classList.remove('hidden');
+      console.error('Error al guardar sección de configuración:', seccion, err);
+      if (errorEl) {
+        errorEl.textContent = 'No se pudo guardar. Intenta de nuevo.';
+        errorEl.classList.remove('hidden');
+      }
     } finally {
       btn.disabled = false;
     }

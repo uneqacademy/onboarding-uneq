@@ -1134,12 +1134,20 @@ if (btnGenerarAcuerdo) {
 const btnEnviarRevision = document.getElementById('btn-enviar-a-revision');
 if (btnEnviarRevision) {
   btnEnviarRevision.addEventListener('click', async () => {
-    if (!currentCicloId) return;
+    if (!currentCicloId) {
+      alert('No se encontró el ciclo de este alumno. Recarga la página e intenta de nuevo.');
+      return;
+    }
     btnEnviarRevision.disabled = true;
-    await marcarEnviadoParaFirma(currentCicloId);
-    await abrirFicha(currentAlumnoId);
-    await cargarListasAlumnos();
-    btnEnviarRevision.disabled = false;
+    try {
+      await marcarEnviadoParaFirma(currentCicloId);
+      await abrirFicha(currentAlumnoId);
+      await cargarListasAlumnos();
+    } catch (err) {
+      console.error('Error al marcar como enviado a revisión:', err);
+      alert('No se pudo actualizar el estado. Revisa la consola (F12) y avísale a Felipe con la captura.');
+      btnEnviarRevision.disabled = false;
+    }
   });
 }
 
