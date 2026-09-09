@@ -116,6 +116,8 @@
         <li class="nav-item" data-role="alumno" data-nav="ficha-alumno-propia">Mi Ficha Alumno</li>
         <li class="nav-item" data-role="alumno" data-nav="bitacora-alumno">Bitácora</li>
         <li class="nav-item" data-role="alumno" data-nav="test-alumno">Test Brújula</li>
+        <li class="nav-item hidden" data-nav="mentorias-mentor">Mis Mentorías</li>
+        <li class="nav-item hidden" data-nav="mi-clon-ia">Mi Clon IA</li>
         <li class="nav-item hidden" data-nav="box-consultas">BOX Inteligente</li>
         <li class="nav-item hidden" data-nav="mis-hitos">Mis Hitos</li>
         <li class="nav-item" data-role="alumno" data-nav="preguntas-comunidad">Preguntas de la Comunidad</li>
@@ -741,6 +743,12 @@
                   <option value="exit">eXIT (6 meses · $5.000.000)</option>
                 </select>
               </div>
+              <div class="field" id="campo-nuevo-alumno-membresia" style="display:flex; align-items:center; gap:8px; margin-top:22px;">
+                <label style="display:flex; align-items:center; gap:8px; cursor:pointer; margin:0;">
+                  <input type="checkbox" id="nuevo-alumno-membresia">
+                  Es Membresía (pago mes a mes, mismos accesos de Next)
+                </label>
+              </div>
               <div class="field" id="campo-nuevo-alumno-coach"><label>Coach Asignado</label>
                 <select id="nuevo-alumno-coach"><option value="">Cargando coaches...</option></select>
               </div>
@@ -753,19 +761,24 @@
           <div class="panel__header"><h3>Acuerdo de Pago</h3></div>
           <div class="panel__body">
             <div class="field-grid mb-16">
-              <div class="field"><label>Monto Total</label><input id="nuevo-alumno-monto" placeholder="Según programa"></div>
+              <div class="field"><label id="label-nuevo-alumno-monto">Monto Total</label><input id="nuevo-alumno-monto" placeholder="Según programa"></div>
               <div class="field"><label>Moneda</label><select id="nuevo-alumno-moneda"><option>CLP</option><option>USD</option></select></div>
               <div class="field hidden" id="campo-tipo-cambio"><label>Tipo de Cambio (CLP por USD)</label><input type="number" id="nuevo-alumno-tipo-cambio" placeholder="Ej: 950"></div>
-              <div class="field"><label>Descuento (opcional)</label><input id="nuevo-alumno-descuento" placeholder="0"></div>
-              <div class="field"><label>Abono</label><input id="nuevo-alumno-abono" placeholder="$0"></div>
             </div>
-            <table class="data-table mb-16" id="tabla-cuotas-nuevo">
-              <thead><tr><th>Fecha</th><th>Monto</th><th></th></tr></thead>
-              <tbody>
-                <tr><td><input type="date"></td><td><input placeholder="$0"></td><td><button class="btn btn--danger">Quitar</button></td></tr>
-              </tbody>
-            </table>
-            <button class="btn btn--ghost" id="btn-agregar-cuota">+ Agregar Cuota</button>
+            <div id="bloque-pago-normal">
+              <div class="field-grid mb-16">
+                <div class="field"><label>Descuento (opcional)</label><input id="nuevo-alumno-descuento" placeholder="0"></div>
+                <div class="field"><label>Abono</label><input id="nuevo-alumno-abono" placeholder="$0"></div>
+              </div>
+              <table class="data-table mb-16" id="tabla-cuotas-nuevo">
+                <thead><tr><th>Fecha</th><th>Monto</th><th></th></tr></thead>
+                <tbody>
+                  <tr><td><input type="date"></td><td><input placeholder="$0"></td><td><button class="btn btn--danger">Quitar</button></td></tr>
+                </tbody>
+              </table>
+              <button class="btn btn--ghost" id="btn-agregar-cuota">+ Agregar Cuota</button>
+            </div>
+            <p class="text-soft hidden" id="aviso-pago-membresia" style="font-size:13px;">Este monto se cobra <strong>mes a mes</strong> — no hace falta cargar un calendario de cuotas ahora. Una vez matriculado, cada pago mensual se va agregando desde su ficha, a medida que llega.</p>
           </div>
         </div>
 
@@ -908,21 +921,52 @@
           </div>
         </div>
 
+        <!-- Accesos rápidos: próxima sesión + última pregunta BOX -->
+        <div class="mb-24" id="dashboard-accesos-rapidos-grid" style="display:grid; grid-template-columns: 1fr 1fr; gap:14px;">
+          <div class="panel" id="card-dashboard-proxima-sesion" style="cursor:pointer;">
+            <div class="panel__body">
+              <p class="text-soft" style="font-size:10.5px; text-transform:uppercase; letter-spacing:0.5px; margin:0 0 8px;">📅 Próxima Sesión en Vivo</p>
+              <p id="dashboard-proxima-sesion-texto" style="font-weight:700; margin:0; font-size:14px;">—</p>
+              <p id="dashboard-proxima-sesion-sub" class="text-soft" style="margin:4px 0 0; font-size:12px;"></p>
+            </div>
+          </div>
+          <div class="panel" id="card-dashboard-ultima-pregunta" style="cursor:pointer;">
+            <div class="panel__body">
+              <p class="text-soft" style="font-size:10.5px; text-transform:uppercase; letter-spacing:0.5px; margin:0 0 8px;">💬 Última Pregunta BOX Inteligente</p>
+              <p id="dashboard-ultima-pregunta-texto" style="font-weight:700; margin:0; font-size:14px; overflow:hidden; text-overflow:ellipsis; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical;">—</p>
+              <p id="dashboard-ultima-pregunta-sub" class="text-soft" style="margin:4px 0 0; font-size:12px;"></p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Asistente UNEQ — solo la estética por ahora, sin funcionar aún -->
+        <div class="panel mb-24">
+          <div class="panel__header" style="display:flex; align-items:center; gap:10px;">
+            <div style="width:32px; height:32px; border-radius:50%; background:linear-gradient(135deg, var(--color-primary), var(--color-accent)); display:flex; align-items:center; justify-content:center; color:#fff; font-size:15px; flex-shrink:0;">✨</div>
+            <div style="flex:1;">
+              <h3 style="margin:0;">Asistente UNEQ</h3>
+            </div>
+            <span class="badge" style="background:var(--color-accent-soft); color:var(--color-accent); font-size:10px;">Próximamente</span>
+          </div>
+          <div class="panel__body" style="padding:0;">
+            <div style="min-height:260px; max-height:260px; overflow-y:auto; padding:20px; display:flex; flex-direction:column; gap:14px; background:var(--color-surface-alt);">
+              <div style="display:flex; gap:10px; align-items:flex-start;">
+                <div style="width:28px; height:28px; border-radius:50%; background:var(--color-primary); flex-shrink:0; display:flex; align-items:center; justify-content:center; color:#fff; font-size:13px;">✨</div>
+                <div style="background:#fff; padding:12px 16px; border-radius:14px; border-top-left-radius:4px; max-width:82%; box-shadow:0 1px 2px rgba(0,0,0,0.06);">
+                  <p style="margin:0; font-size:13.5px; line-height:1.5;">¡Hola! Muy pronto vas a poder preguntarme sobre tus alumnos, sus dudas más repetidas, resultados del Test Brújula y más — siempre alineado con la metodología UNEQ.</p>
+                </div>
+              </div>
+            </div>
+            <div style="display:flex; gap:10px; padding:14px 16px; border-top:1px solid var(--color-border); align-items:center;">
+              <input type="text" placeholder="Muy pronto vas a poder escribir aquí..." disabled style="flex:1; border:1px solid var(--color-border); border-radius:20px; padding:10px 16px; font-size:13.5px; background:#fff; color:var(--color-ink-soft);">
+              <button type="button" disabled style="width:38px; height:38px; border-radius:50%; background:var(--color-border); border:none; display:flex; align-items:center; justify-content:center; color:#fff; cursor:not-allowed; flex-shrink:0; font-size:14px;">➤</button>
+            </div>
+          </div>
+        </div>
+
         <div class="panel mb-24">
           <div class="panel__header"><h3>Mi Perfil</h3></div>
           <div class="panel__body" style="display:flex; align-items:center; gap:20px; flex-wrap:wrap;">
-            <div style="display:flex; flex-direction:column; align-items:center; gap:8px;">
-              <img id="mentor-foto-preview" src="" alt="" style="width:72px; height:72px; border-radius:50%; object-fit:cover;">
-              <input type="file" id="mentor-foto-input" accept="image/*" class="hidden">
-              <button type="button" class="btn btn--ghost" id="btn-cambiar-foto-mentor" style="font-size:11px; padding:4px 10px;">Cambiar Foto</button>
-              <span class="text-soft" style="font-size:10px;">Foto real (Preguntas en Vivo)</span>
-            </div>
-            <div style="display:flex; flex-direction:column; align-items:center; gap:8px;">
-              <img id="mentor-foto-ia-preview" src="" alt="" style="width:72px; height:72px; border-radius:50%; object-fit:cover; border:2px solid var(--color-accent, #2563EB);">
-              <input type="file" id="mentor-foto-ia-input" accept="image/*" class="hidden">
-              <button type="button" class="btn btn--ghost" id="btn-cambiar-foto-ia-mentor" style="font-size:11px; padding:4px 10px;">Cambiar Foto</button>
-              <span class="text-soft" style="font-size:10px;">Foto del Mentor IA (BOX Inteligente)</span>
-            </div>
             <div>
               <p style="margin:0 0 4px;">Mi NPS resumido</p>
               <p class="kpi-card__value accent" style="margin:0;" id="mentor-nps-resumen">—</p>
@@ -931,19 +975,50 @@
           </div>
         </div>
 
-        <div class="panel mb-24">
-          <div class="panel__header flex-between">
-            <h3>Mi Presentación</h3>
-            <button class="btn btn--ghost hidden" id="btn-editar-bio-mentor">✏️ Editar</button>
-          </div>
+      </section>
+
+      <!-- ======================================================
+           MIS MENTORÍAS — vista propia del MENTOR (antes vivía
+           dentro del Dashboard)
+           ====================================================== -->
+      <section id="view-mentorias" class="view hidden">
+        <div class="flex-between mb-16"><h2>Mis Mentorías</h2></div>
+        <div class="panel">
           <div class="panel__body">
-            <p class="text-soft mb-16">Especialidad, experiencia, lo que quieras que sepan de ti — esto lo verán los alumnos más adelante.</p>
-            <p id="mentor-bio-texto" class="hidden" style="white-space:pre-wrap; margin:0;"></p>
-            <textarea id="mentor-bio" placeholder="Cuéntales sobre tu especialidad y experiencia..." style="min-height:110px; resize:none;"></textarea>
-            <div class="flex-between" style="margin-top:12px;">
-              <span></span>
-              <button class="btn btn--primary" id="btn-guardar-bio-mentor">Guardar Presentación</button>
+            <div class="field-grid mb-16">
+              <div class="field"><label>Fecha</label><input type="date" id="mentoria-fecha"></div>
+              <div class="field"><label>Hora</label><input type="time" id="mentoria-hora"></div>
+              <div class="field"><label>Link de Acceso (Zoom, etc.)</label><input id="mentoria-link" placeholder="https://..."></div>
             </div>
+            <p class="text-soft hidden" id="mentoria-preview-horario" style="margin-top:-10px; margin-bottom:14px; font-size:12px;"></p>
+            <label style="font-weight:400; display:flex; align-items:center; gap:8px; margin-bottom:14px;" title="Solo la ven y pueden preguntar los alumnos del programa BEGIN">
+              <input type="checkbox" id="mentoria-exclusiva-begin"> Sesión exclusiva para alumnos BEGIN
+            </label>
+            <button class="btn btn--accent" id="btn-agregar-mentoria">+ Agregar Mentoría</button>
+            <table class="data-table mb-16" style="margin-top:16px;">
+              <thead><tr><th>Fecha</th><th>Hora</th><th>Acceso</th><th>NPS de la sesión</th><th>Resumen IA</th><th>Preguntas</th><th></th><th>Estado</th></tr></thead>
+              <tbody id="tabla-mentorias-body"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- ======================================================
+           MI CLON IA — vista propia del MENTOR (todo lo relacionado
+           a su Mentor IA, antes vivía disperso en el Dashboard)
+           ====================================================== -->
+      <section id="view-mi-clon-ia" class="view hidden">
+        <div class="flex-between mb-16"><h2>Mi Clon IA</h2></div>
+
+        <div class="panel mb-24">
+          <div class="panel__header"><h3>Foto de mi Mentor IA</h3></div>
+          <div class="panel__body" style="display:flex; align-items:center; gap:20px;">
+            <div style="display:flex; flex-direction:column; align-items:center; gap:8px;">
+              <img id="mentor-foto-ia-preview" src="" alt="" style="width:72px; height:72px; border-radius:50%; object-fit:cover; border:2px solid var(--color-accent, #2563EB);">
+              <input type="file" id="mentor-foto-ia-input" accept="image/*" class="hidden">
+              <button type="button" class="btn btn--ghost" id="btn-cambiar-foto-ia-mentor" style="font-size:11px; padding:4px 10px;">Cambiar Foto</button>
+            </div>
+            <p class="text-soft" style="font-size:12.5px; margin:0;">La ven los alumnos en BOX Inteligente al elegir a quién preguntarle.</p>
           </div>
         </div>
 
@@ -960,53 +1035,6 @@
               <span></span>
               <button class="btn btn--primary" id="btn-guardar-info-privada-mentor">Guardar Info Privada</button>
             </div>
-          </div>
-        </div>
-
-        <div class="panel mb-24">
-          <div class="panel__header flex-between">
-            <h3>Mis Temáticas</h3>
-            <button class="btn btn--ghost hidden" id="btn-editar-temas-mentor">✏️ Editar</button>
-          </div>
-          <div class="panel__body">
-            <p class="text-soft mb-16">Escribe tus temáticas separadas por coma (máx. 2 palabras cada una, agrega las que quieras). Las <strong>primeras 3</strong> son las que se muestran en "Preguntas en Vivo" — todas sirven para que los alumnos elijan el tema al preguntarte en el BOX Inteligente, y para los filtros de Preguntas de la Comunidad.</p>
-            <p id="mentor-temas-lista" class="hidden mb-16"></p>
-            <input type="text" id="mentor-temas-input" placeholder="Ej: Meta Ads, Copywriting, Mentalidad, Ventas, Storytelling">
-            <p id="mentor-temas-error" class="hidden" style="color:#C0392B; font-size:12px; margin-top:8px;"></p>
-            <button class="btn btn--primary" id="btn-guardar-temas-mentor" style="margin-top:14px;">Guardar Temáticas</button>
-
-            <div id="mentor-sugerencias-director-cont" class="hidden" style="margin-top:20px; padding-top:16px; border-top:1px solid var(--color-border);">
-              <p style="font-weight:600; margin-bottom:10px; font-size:13px;">💡 Sugerencias de tu Director</p>
-              <div id="mentor-sugerencias-director-lista"></div>
-            </div>
-          </div>
-        </div>
-
-        <div class="panel mb-24">
-          <div class="panel__header flex-between">
-            <h3>Mi Horario Recurrente</h3>
-            <button class="btn btn--ghost hidden" id="btn-editar-horario-recurrente">✏️ Editar</button>
-          </div>
-          <div class="panel__body">
-            <p class="text-soft mb-16">El día y hora en que dictas tus mentorías en vivo habitualmente. Es solo informativo — los alumnos lo ven arriba de "Preguntas en Vivo" para saber cuándo estás, e independiente de las sesiones puntuales que agregas en "Mis Mentorías".</p>
-            <p id="mentor-horario-recurrente-texto" class="hidden mb-16" style="font-weight:600;"></p>
-            <div class="field-grid" id="mentor-horario-recurrente-campos">
-              <div class="field">
-                <label>Día</label>
-                <select id="mentor-horario-recurrente-dia">
-                  <option value="">Sin definir</option>
-                  <option value="Lunes">Lunes</option>
-                  <option value="Martes">Martes</option>
-                  <option value="Miércoles">Miércoles</option>
-                  <option value="Jueves">Jueves</option>
-                  <option value="Viernes">Viernes</option>
-                  <option value="Sábado">Sábado</option>
-                  <option value="Domingo">Domingo</option>
-                </select>
-              </div>
-              <div class="field"><label>Hora</label><input type="time" id="mentor-horario-recurrente-hora"></div>
-            </div>
-            <button class="btn btn--primary" id="btn-guardar-horario-recurrente" style="margin-top:14px;">Guardar Horario</button>
           </div>
         </div>
 
@@ -1044,26 +1072,6 @@
               <button class="btn btn--primary" id="btn-agregar-conocimiento">+ Agregar</button>
             </div>
             <div id="conocimiento-listado" style="margin-top:20px;"></div>
-          </div>
-        </div>
-
-        <div class="panel">
-          <div class="panel__header"><h3>Mis Mentorías</h3></div>
-          <div class="panel__body">
-            <div class="field-grid mb-16">
-              <div class="field"><label>Fecha</label><input type="date" id="mentoria-fecha"></div>
-              <div class="field"><label>Hora</label><input type="time" id="mentoria-hora"></div>
-              <div class="field"><label>Link de Acceso (Zoom, etc.)</label><input id="mentoria-link" placeholder="https://..."></div>
-            </div>
-            <p class="text-soft hidden" id="mentoria-preview-horario" style="margin-top:-10px; margin-bottom:14px; font-size:12px;"></p>
-            <label style="font-weight:400; display:flex; align-items:center; gap:8px; margin-bottom:14px;" title="Solo la ven y pueden preguntar los alumnos del programa BEGIN">
-              <input type="checkbox" id="mentoria-exclusiva-begin"> Sesión exclusiva para alumnos BEGIN
-            </label>
-            <button class="btn btn--accent" id="btn-agregar-mentoria">+ Agregar Mentoría</button>
-            <table class="data-table mb-16" style="margin-top:16px;">
-              <thead><tr><th>Fecha</th><th>Hora</th><th>Acceso</th><th>NPS de la sesión</th><th>Resumen IA</th><th>Preguntas</th><th></th><th>Estado</th></tr></thead>
-              <tbody id="tabla-mentorias-body"></tbody>
-            </table>
           </div>
         </div>
       </section>
@@ -1543,6 +1551,81 @@
             <button class="btn btn--primary" id="btn-guardar-password">Guardar Contraseña</button>
           </div>
         </div>
+        <div class="panel mb-24" data-role="mentor" id="panel-mentor-foto-normal">
+          <div class="panel__header"><h3>Mi Foto de Perfil (real)</h3></div>
+          <div class="panel__body" style="display:flex; align-items:center; gap:20px;">
+            <div style="display:flex; flex-direction:column; align-items:center; gap:8px;">
+              <img id="mentor-foto-preview" src="" alt="" style="width:72px; height:72px; border-radius:50%; object-fit:cover;">
+              <input type="file" id="mentor-foto-input" accept="image/*" class="hidden">
+              <button type="button" class="btn btn--ghost" id="btn-cambiar-foto-mentor" style="font-size:11px; padding:4px 10px;">Cambiar Foto</button>
+            </div>
+            <p class="text-soft" style="font-size:12.5px; margin:0;">Tu foto real — la ven los alumnos en "Preguntas en Vivo".</p>
+          </div>
+        </div>
+
+        <div class="panel mb-24" data-role="mentor">
+          <div class="panel__header flex-between">
+            <h3>Mi Presentación</h3>
+            <button class="btn btn--ghost hidden" id="btn-editar-bio-mentor">✏️ Editar</button>
+          </div>
+          <div class="panel__body">
+            <p class="text-soft mb-16">Especialidad, experiencia, lo que quieras que sepan de ti — esto lo verán los alumnos más adelante.</p>
+            <p id="mentor-bio-texto" class="hidden" style="white-space:pre-wrap; margin:0;"></p>
+            <textarea id="mentor-bio" placeholder="Cuéntales sobre tu especialidad y experiencia..." style="min-height:110px; resize:none;"></textarea>
+            <div class="flex-between" style="margin-top:12px;">
+              <span></span>
+              <button class="btn btn--primary" id="btn-guardar-bio-mentor">Guardar Presentación</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel mb-24" data-role="mentor">
+          <div class="panel__header flex-between">
+            <h3>Mis Temáticas</h3>
+            <button class="btn btn--ghost hidden" id="btn-editar-temas-mentor">✏️ Editar</button>
+          </div>
+          <div class="panel__body">
+            <p class="text-soft mb-16">Escribe tus temáticas separadas por coma (máx. 2 palabras cada una, agrega las que quieras). Las <strong>primeras 3</strong> son las que se muestran en "Preguntas en Vivo" — todas sirven para que los alumnos elijan el tema al preguntarte en el BOX Inteligente, y para los filtros de Preguntas de la Comunidad.</p>
+            <p id="mentor-temas-lista" class="hidden mb-16"></p>
+            <input type="text" id="mentor-temas-input" placeholder="Ej: Meta Ads, Copywriting, Mentalidad, Ventas, Storytelling">
+            <p id="mentor-temas-error" class="hidden" style="color:#C0392B; font-size:12px; margin-top:8px;"></p>
+            <button class="btn btn--primary" id="btn-guardar-temas-mentor" style="margin-top:14px;">Guardar Temáticas</button>
+
+            <div id="mentor-sugerencias-director-cont" class="hidden" style="margin-top:20px; padding-top:16px; border-top:1px solid var(--color-border);">
+              <p style="font-weight:600; margin-bottom:10px; font-size:13px;">💡 Sugerencias de tu Director</p>
+              <div id="mentor-sugerencias-director-lista"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel mb-24" data-role="mentor">
+          <div class="panel__header flex-between">
+            <h3>Mi Horario Recurrente</h3>
+            <button class="btn btn--ghost hidden" id="btn-editar-horario-recurrente">✏️ Editar</button>
+          </div>
+          <div class="panel__body">
+            <p class="text-soft mb-16">El día y hora en que dictas tus mentorías en vivo habitualmente. Es solo informativo — los alumnos lo ven arriba de "Preguntas en Vivo" para saber cuándo estás, e independiente de las sesiones puntuales que agregas en "Mis Mentorías".</p>
+            <p id="mentor-horario-recurrente-texto" class="hidden mb-16" style="font-weight:600;"></p>
+            <div class="field-grid" id="mentor-horario-recurrente-campos">
+              <div class="field">
+                <label>Día</label>
+                <select id="mentor-horario-recurrente-dia">
+                  <option value="">Sin definir</option>
+                  <option value="Lunes">Lunes</option>
+                  <option value="Martes">Martes</option>
+                  <option value="Miércoles">Miércoles</option>
+                  <option value="Jueves">Jueves</option>
+                  <option value="Viernes">Viernes</option>
+                  <option value="Sábado">Sábado</option>
+                  <option value="Domingo">Domingo</option>
+                </select>
+              </div>
+              <div class="field"><label>Hora</label><input type="time" id="mentor-horario-recurrente-hora"></div>
+            </div>
+            <button class="btn btn--primary" id="btn-guardar-horario-recurrente" style="margin-top:14px;">Guardar Horario</button>
+          </div>
+        </div>
+
         <div class="panel hidden" data-role="director" id="panel-mis-roles-director">
           <div class="panel__header"><h3>Mis Roles Adicionales</h3></div>
           <div class="panel__body">

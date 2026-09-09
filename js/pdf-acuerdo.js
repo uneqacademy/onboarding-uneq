@@ -22,7 +22,7 @@ import { db, storage } from './firebase-config.js';
 import { ref, get, update } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-database.js";
 import { ref as storageRef, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-storage.js";
 import { jsPDF } from "https://esm.sh/jspdf@4.2.1";
-import { programaLabel, calcularFechaEgreso } from './ciclos.js';
+import { programaLabel } from './ciclos.js';
 
 const MARGEN_X = 20;
 const ANCHO_UTIL = 170;
@@ -139,8 +139,13 @@ export async function generarPdfAcuerdo(alumnoId, cicloId) {
   const alumnosProyecto = [alumno, ...otrosSnaps.filter(s => s.exists()).map(s => s.val())];
 
   const hoyStr = new Date().toISOString().slice(0, 10);
-  const fechaIngresoEstimada = hoyStr;
-  const fechaEgresoEstimada = calcularFechaEgreso(hoyStr, ciclo.programa);
+  const esMembresia = ciclo.modalidadPago === 'membresia';
+  // Fechas reales del ciclo (ya escritas a mano en "Ciclo Actual") en
+  // vez de inventar "hoy" — este era justo el bug: el PDF ignoraba lo
+  // que ya se había cargado y usaba la fecha en que se generaba el
+  // PDF. Membresía no tiene fecha de egreso fija (ver más abajo).
+  const fechaIngresoEstimada = ciclo.fechaIngreso || hoyStr;
+  const fechaEgresoEstimada = esMembresia ? null : ciclo.fechaEgreso;
 
   const montoTotal = parsearMontoCLP(acuerdo.montoTotal);
   const descuento = parsearMontoCLP(acuerdo.descuento);
@@ -248,7 +253,9 @@ export async function generarPdfAcuerdo(alumnoId, cicloId) {
   // --- PRIMERO ---
   tituloSeccion('PRIMERO: Objeto del Acuerdo');
   parrafo(
-    `UNEQ se compromete a prestar al Alumno/a servicios de mentoría bajo el programa ${programaLabel(ciclo.programa)}, basado en la metodología propia 2E, con fecha de inicio el ${formatFechaLarga(fechaIngresoEstimada)} y fecha de término estimada el ${formatFechaLarga(fechaEgresoEstimada)}.`
+    esMembresia
+      ? `UNEQ se compromete a prestar al Alumno/a servicios de mentoría bajo el programa ${programaLabel(ciclo.programa)}, bajo la modalidad de Membresía (pago mensual), basado en la metodología propia 2E, con fecha de inicio el ${formatFechaLarga(fechaIngresoEstimada)}. Al tratarse de una Membresía, el presente Acuerdo no tiene una fecha de término fija, y se mantiene vigente mientras el/la Alumno/a se encuentre al día con el pago mensual correspondiente, hasta que ocurra alguno de los siguientes eventos: (a) el/la Alumno/a comunique su renuncia voluntaria a continuar en el programa; o (b) UNEQ dé por terminado el presente Acuerdo, lo que podrá ocurrir si se registran quince (15) días corridos de atraso en el pago de la mensualidad correspondiente, contados desde la fecha en que dicho pago debía efectuarse — en cuyo caso se entenderá que el/la Alumno/a ha desistido de continuar en el programa, sin perjuicio de las mensualidades ya devengadas y no pagadas a la fecha.`
+      : `UNEQ se compromete a prestar al Alumno/a servicios de mentoría bajo el programa ${programaLabel(ciclo.programa)}, basado en la metodología propia 2E, con fecha de inicio el ${formatFechaLarga(fechaIngresoEstimada)} y fecha de término estimada el ${formatFechaLarga(fechaEgresoEstimada)}.`
   );
   parrafo(clausulaCoach);
 

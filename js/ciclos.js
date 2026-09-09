@@ -38,7 +38,7 @@ export function estadoProcesoLabel(estado) {
 }
 
 /* --- Crea un ciclo nuevo (llamado desde alumnos.js al crear alumno) --- */
-export async function crearCiclo({ alumnoId, coachId, programa, acuerdoPago }) {
+export async function crearCiclo({ alumnoId, coachId, programa, acuerdoPago, modalidadPago }) {
   const cicloRef = push(ref(db, 'ciclos'));
   const cicloId = cicloRef.key;
 
@@ -46,6 +46,7 @@ export async function crearCiclo({ alumnoId, coachId, programa, acuerdoPago }) {
     alumnoId,
     coachId,
     programa,
+    modalidadPago: modalidadPago || null,
     estadoProceso: 'asignado',
     estadoAlumno: 'en_proceso_matricula',
     fechaIngreso: null,
@@ -86,9 +87,15 @@ export async function marcarEnviadoParaFirma(cicloId) {
        el director fija la fecha real de firma y, en el mismo paso, se da por
        finalizado el proceso de matrícula) --- */
 export async function marcarFirmaProcesada(cicloId, fechaFirmaStr) {
-  const snap = await get(ref(db, `ciclos/${cicloId}/programa`));
-  const programa = snap.val();
-  const fechaEgreso = calcularFechaEgreso(fechaFirmaStr, programa);
+  const snap = await get(ref(db, `ciclos/${cicloId}`));
+  const ciclo = snap.exists() ? snap.val() : {};
+  // Membresía no tiene fecha de egreso fija — siempre es "hasta fin
+  // del mes en curso", recalculada sola cada vez que se muestra (ver
+  // fechaEgresoVigente). Lo que se guarda acá es solo un valor de
+  // referencia inicial, no el que realmente se usa para mostrarla.
+  const fechaEgreso = ciclo.modalidadPago === 'membresia'
+    ? fechaEgresoVigente(ciclo)
+    : calcularFechaEgreso(fechaFirmaStr, ciclo.programa);
 
   await update(ref(db, `ciclos/${cicloId}`), {
     estadoProceso: 'matricula_finalizada',
@@ -104,6 +111,22 @@ export function calcularFechaEgreso(fechaIngresoStr, programaKey) {
   const fecha = new Date(fechaIngresoStr + 'T00:00:00');
   fecha.setMonth(fecha.getMonth() + meses);
   return fecha.toISOString().slice(0, 10);
+}
+
+// Para alumnos de Membresía (mismo Next, mismo acceso, pago mes a mes),
+// la fecha de egreso NO es fija — es siempre "hasta fin del mes en
+// curso", recalculada sola cada vez que se pide, sin guardar nada ni
+// necesitar que nada "corra" el día 1. Si el ingreso fue el 20, hoy ya
+// muestra fin de ESTE mes; llegado el 1 del mes siguiente, sin tocar
+// nada, ya muestra fin del mes nuevo.
+export function fechaEgresoVigente(ciclo) {
+  if (!ciclo) return null;
+  if (ciclo.modalidadPago === 'membresia') {
+    const hoy = new Date();
+    const ultimoDiaMes = new Date(hoy.getFullYear(), hoy.getMonth() + 1, 0);
+    return ultimoDiaMes.toISOString().slice(0, 10);
+  }
+  return ciclo.fechaEgreso || null;
 }
 
 export async function toggleCandado(cicloId, bloqueado) {

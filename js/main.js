@@ -57,6 +57,12 @@ export function applyRole(role, nombre, rolesDisponibles) {
   const navHitos = document.querySelector('.nav-item[data-nav="mis-hitos"]');
   if (navHitos) navHitos.classList.remove('hidden');
 
+  const navMentoriasMentor = document.querySelector('.nav-item[data-nav="mentorias-mentor"]');
+  if (navMentoriasMentor) navMentoriasMentor.classList.toggle('hidden', role !== 'mentor');
+
+  const navMiClonIA = document.querySelector('.nav-item[data-nav="mi-clon-ia"]');
+  if (navMiClonIA) navMiClonIA.classList.toggle('hidden', role !== 'mentor');
+
   const navMisDatos = document.querySelector('.nav-item[data-nav="mis-datos"]');
   if (navMisDatos) navMisDatos.classList.toggle('hidden', role === 'alumno');
 
@@ -212,6 +218,12 @@ export function setNav(section) {
   } else if (section === 'mis-hitos') {
     showView('view-mis-hitos');
     document.getElementById('topbar-title').textContent = 'Mis Hitos';
+  } else if (section === 'mentorias-mentor') {
+    showView('view-mentorias');
+    document.getElementById('topbar-title').textContent = 'Mis Mentorías';
+  } else if (section === 'mi-clon-ia') {
+    showView('view-mi-clon-ia');
+    document.getElementById('topbar-title').textContent = 'Mi Clon IA';
   }
 }
 

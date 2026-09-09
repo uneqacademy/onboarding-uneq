@@ -421,7 +421,65 @@ export async function cargarDashboardMentor() {
   setTexto('kpi-mentor-next', next);
   setTexto('kpi-mentor-exit', exit);
   setTexto('kpi-mentor-total', begin + next + exit);
+
+  await cargarAccesosRapidosDashboardMentor();
 }
+
+// Próxima sesión en vivo + última pregunta de BOX Inteligente — para
+// que el mentor tenga acceso rápido desde el Dashboard, sin tener que
+// entrar a cada sección para ver si hay algo nuevo.
+async function cargarAccesosRapidosDashboardMentor() {
+  const uid = auth.currentUser ? auth.currentUser.uid : null;
+  if (!uid) return;
+
+  const [mentoriasSnap, boxSnap] = await Promise.all([
+    get(ref(db, `mentorias/${uid}`)),
+    get(ref(db, `box/${uid}`))
+  ]);
+
+  // --- Próxima sesión en vivo (la más cercana que todavía no pasa) ---
+  const textoProxima = document.getElementById('dashboard-proxima-sesion-texto');
+  const subProxima = document.getElementById('dashboard-proxima-sesion-sub');
+  if (textoProxima && subProxima) {
+    const ahora = Date.now();
+    const mentorias = mentoriasSnap.exists() ? Object.values(mentoriasSnap.val()) : [];
+    const proximas = mentorias
+      .map(m => ({ ...m, instante: m.inicioTimestamp || new Date(`${m.fecha}T${(m.hora || '00:00')}`).getTime() }))
+      .filter(m => m.instante && m.instante >= ahora)
+      .sort((a, b) => a.instante - b.instante);
+
+    if (proximas.length) {
+      const fechaObj = new Date(proximas[0].instante);
+      textoProxima.textContent = new Intl.DateTimeFormat('es-CL', { weekday: 'long', day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }).format(fechaObj);
+      subProxima.textContent = 'Toca para ver los detalles →';
+    } else {
+      textoProxima.textContent = 'No tienes sesiones agendadas';
+      subProxima.textContent = 'Agrega una desde "Mis Mentorías" →';
+    }
+  }
+
+  // --- Última pregunta de BOX Inteligente ---
+  const textoUltima = document.getElementById('dashboard-ultima-pregunta-texto');
+  const subUltima = document.getElementById('dashboard-ultima-pregunta-sub');
+  if (textoUltima && subUltima) {
+    const preguntas = boxSnap.exists() ? Object.values(boxSnap.val()) : [];
+    preguntas.sort((a, b) => b.createdAt - a.createdAt);
+    if (preguntas.length) {
+      const ultima = preguntas[0];
+      textoUltima.textContent = `"${(ultima.texto || '').slice(0, 90)}${(ultima.texto || '').length > 90 ? '…' : ''}"`;
+      const yaRespondida = !!ultima.respuesta;
+      subUltima.textContent = yaRespondida ? 'Ya respondida — toca para revisarla →' : '⏳ Sin respuesta todavía — toca para verla →';
+    } else {
+      textoUltima.textContent = 'Todavía no te han preguntado nada';
+      subUltima.textContent = '';
+    }
+  }
+}
+
+const cardProximaSesion = document.getElementById('card-dashboard-proxima-sesion');
+if (cardProximaSesion) cardProximaSesion.addEventListener('click', () => setNav('mentorias-mentor'));
+const cardUltimaPregunta = document.getElementById('card-dashboard-ultima-pregunta');
+if (cardUltimaPregunta) cardUltimaPregunta.addEventListener('click', () => setNav('box-consultas'));
 
 let alumnosMentorCache = []; // [{ alumno, ciclo, nombreCompleto, coachNombre }]
 
@@ -1655,3 +1713,10 @@ if (btnEditarHorarioRecurrente) {
     btnEditarHorarioRecurrente.classList.add('hidden');
   });
 }
+
+document.querySelectorAll('.nav-item[data-nav="mentorias-mentor"]').forEach(item => {
+  item.addEventListener('click', cargarMentoriasView);
+});
+document.querySelectorAll('.nav-item[data-nav="mi-clon-ia"]').forEach(item => {
+  item.addEventListener('click', cargarPerfilMentor);
+});

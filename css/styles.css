@@ -657,6 +657,7 @@ textarea { width: 100%; max-width: 100%; box-sizing: border-box; resize: vertica
   .kpi-card { padding: 12px 14px; }
   .btn { font-size: 13px; padding: 8px 12px; }
   h2 { font-size: 18px; }
+  #dashboard-accesos-rapidos-grid { grid-template-columns: 1fr; }
 }
 
 /* ============================================

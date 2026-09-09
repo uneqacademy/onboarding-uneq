@@ -16,7 +16,7 @@ import {
   reauthenticateWithCredential,
   updatePassword
 } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-auth.js";
-import { ref, get } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-database.js";
+import { ref, get, set } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-database.js";
 import { applyRole, showLogin } from './main.js';
 import { initAlumnosModule } from './alumnos.js';
 import { cargarDashboardAlumno, cargarBoxAlumno } from './alumno-portal.js';
@@ -76,7 +76,26 @@ btnLogin.addEventListener('click', async () => {
   });
 });
 
-btnLogout.addEventListener('click', () => {
+btnLogout.addEventListener('click', async () => {
+  // Resguardo: si esta cuenta es de staff (director/coach/mentor) pero
+  // por cualquier motivo quedó con un mapeo de alumno pegado (ej. modo
+  // demo cerrado sin usar "Salir Modo Demo"), se limpia ANTES de cerrar
+  // sesión — así nunca queda una cuenta de staff bloqueada la próxima
+  // vez que entre.
+  try {
+    const uid = auth.currentUser ? auth.currentUser.uid : null;
+    if (uid) {
+      const [esStaffSnap, mapeoSnap] = await Promise.all([
+        get(ref(db, `usuarios/${uid}`)),
+        get(ref(db, `alumnoPorAuthUid/${uid}`))
+      ]);
+      if (esStaffSnap.exists() && mapeoSnap.exists()) {
+        await set(ref(db, `alumnoPorAuthUid/${uid}`), null);
+      }
+    }
+  } catch (err) {
+    console.error('No se pudo limpiar el mapeo de alumno al cerrar sesión:', err);
+  }
   signOut(auth);
 });
 
@@ -204,6 +223,19 @@ onAuthStateChanged(auth, async (user) => {
       mostrarError('Esta cuenta no tiene un rol válido asignado.');
       await signOut(auth);
       return;
+    }
+
+    // Segunda capa de resguardo: si esta cuenta de staff quedó con un
+    // mapeo de alumno pegado de alguna sesión anterior (ej. el
+    // navegador se cerró de golpe estando en modo demo, sin pasar por
+    // "Cerrar sesión"), se limpia acá también, al iniciar sesión.
+    try {
+      const mapeoResidualSnap = await get(ref(db, `alumnoPorAuthUid/${user.uid}`));
+      if (mapeoResidualSnap.exists()) {
+        await set(ref(db, `alumnoPorAuthUid/${user.uid}`), null);
+      }
+    } catch (err) {
+      console.error('No se pudo limpiar un mapeo de alumno residual:', err);
     }
 
     limpiarError();

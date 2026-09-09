@@ -10,6 +10,7 @@ import { db, auth, storage } from './firebase-config.js';
 import { ref, get, update } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-database.js";
 import { ref as storageRef, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-storage.js";
 import { getCurrentRole } from './main.js';
+import { cargarPerfilMentor } from './mentores.js';
 
 const PLACEHOLDER_FOTO_MIS_DATOS = 'data:image/svg+xml;utf8,' + encodeURIComponent(
   '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 80"><rect width="80" height="80" rx="40" fill="#E4E7EC"/><circle cx="40" cy="32" r="14" fill="#9AA4B2"/><ellipse cx="40" cy="70" rx="24" ry="18" fill="#9AA4B2"/></svg>'
@@ -37,6 +38,11 @@ export async function cargarMisDatos() {
   document.getElementById('mis-datos-telefono').disabled = hayContacto;
   if (btnGuardarMisDatosEl) btnGuardarMisDatosEl.classList.toggle('hidden', hayContacto);
   if (btnEditarMisDatos) btnEditarMisDatos.classList.toggle('hidden', !hayContacto);
+
+  // Los paneles propios del mentor (foto real, presentación, temáticas,
+  // horario recurrente) viven acá también — se recargan frescos cada
+  // vez que se entra a esta pantalla, igual que el resto.
+  if (rolActivo === 'mentor') await cargarPerfilMentor();
 
   const panelRoles = document.getElementById('panel-mis-roles-director');
   if (panelRoles) {

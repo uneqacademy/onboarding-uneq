@@ -650,10 +650,12 @@ async function renderHistorialCiclos(ciclosAnterioresIds) {
 }
 
 /* --- Bloqueo general de Datos/Ciclo tras guardar, con botón "Editar" ---
-       Director: el botón desbloquea todo. Coach: solo Correo, Teléfono,
-       Dirección y Redes Sociales (la Fase tiene su propia regla aparte,
-       ver abrirFicha). No se toca ciclo-programa/fechas (siempre fijos)
-       ni ciclo-coach (ya lo gobierna su propia regla de rol). */
+       Director: el botón desbloquea todo. Coach: Correo, Teléfono,
+       Dirección y Redes Sociales, más Fase/WhatsApp/Facturación/
+       Objetivos/Situación en Ciclo Actual. Programa, Fecha Ingreso,
+       Fecha Egreso y Coach Asignado quedan SIEMPRE fijos para el
+       coach (sin importar si el resto está bloqueado o no) — solo el
+       director los puede tocar. */
 function aplicarBloqueoDatosCiclo(bloqueado, role) {
   document.querySelectorAll('.tab-panel[data-panel="datos"] input, .tab-panel[data-panel="datos"] select, .tab-panel[data-panel="datos"] textarea')
     .forEach(el => { if (el.id !== 'datos-edad' && el.id !== 'datos-foto-input') el.disabled = bloqueado; });
@@ -664,13 +666,20 @@ function aplicarBloqueoDatosCiclo(bloqueado, role) {
       el.disabled = bloqueado;
     });
 
+  // Fecha Ingreso, Fecha Egreso y Coach Asignado: el coach nunca los
+  // edita, sin importar si la sección está bloqueada o no (quedan
+  // siempre fijos para él). El director sigue con el flujo normal de
+  // bloqueo/"Editar".
+  const inputFechaIngresoCiclo = document.getElementById('ciclo-fecha-ingreso');
+  const inputFechaEgresoCiclo = document.getElementById('ciclo-fecha-egreso');
+  if (inputFechaIngresoCiclo) inputFechaIngresoCiclo.disabled = role === 'coach' ? true : bloqueado;
+  if (inputFechaEgresoCiclo) inputFechaEgresoCiclo.disabled = role === 'coach' ? true : bloqueado;
+
   const selectFase = document.getElementById('ciclo-fase-metodologia');
   if (selectFase) selectFase.disabled = bloqueado;
 
-  if (role === 'director') {
-    const selectCoach = document.getElementById('ciclo-coach');
-    if (selectCoach) selectCoach.disabled = bloqueado;
-  }
+  const selectCoach = document.getElementById('ciclo-coach');
+  if (selectCoach) selectCoach.disabled = role === 'coach' ? true : bloqueado;
 
   const btnWhatsapp = document.getElementById('ciclo-whatsapp-toggle');
   if (btnWhatsapp) btnWhatsapp.disabled = bloqueado;
@@ -944,11 +953,12 @@ if (btnCrearAlumno) {
     const nombre = document.getElementById('nuevo-alumno-nombre').value.trim();
     const apellido = document.getElementById('nuevo-alumno-apellido').value.trim();
     const programa = document.getElementById('nuevo-alumno-programa').value;
+    const esMembresia = programa === 'next' && document.getElementById('nuevo-alumno-membresia').checked;
     const coachId = programa === 'begin' ? null : document.getElementById('nuevo-alumno-coach').value;
     const monto = document.getElementById('nuevo-alumno-monto').value.trim();
     const moneda = document.getElementById('nuevo-alumno-moneda').value;
-    const descuento = document.getElementById('nuevo-alumno-descuento').value.trim();
-    const abono = document.getElementById('nuevo-alumno-abono').value.trim();
+    const descuento = esMembresia ? '0' : document.getElementById('nuevo-alumno-descuento').value.trim();
+    const abono = esMembresia ? '0' : document.getElementById('nuevo-alumno-abono').value.trim();
 
     if (!nombre || !apellido || (programa !== 'begin' && !coachId)) {
       errorEl.textContent = 'Completa nombre, apellido y coach asignado.';
@@ -961,15 +971,17 @@ if (btnCrearAlumno) {
 
     try {
       const cuotas = {};
-      document.querySelectorAll('#tabla-cuotas-nuevo tbody tr').forEach(row => {
-        const inputs = row.querySelectorAll('input');
-        const fecha = inputs[0].value;
-        const montoCuota = inputs[1].value.trim();
-        if (fecha || montoCuota) {
-          const cuotaId = push(ref(db)).key;
-          cuotas[cuotaId] = { fecha, monto: montoCuota, estado: 'pendiente' };
-        }
-      });
+      if (!esMembresia) {
+        document.querySelectorAll('#tabla-cuotas-nuevo tbody tr').forEach(row => {
+          const inputs = row.querySelectorAll('input');
+          const fecha = inputs[0].value;
+          const montoCuota = inputs[1].value.trim();
+          if (fecha || montoCuota) {
+            const cuotaId = push(ref(db)).key;
+            cuotas[cuotaId] = { fecha, monto: montoCuota, estado: 'pendiente' };
+          }
+        });
+      }
 
       const alumnoRef = push(ref(db, 'alumnos'));
       const alumnoId = alumnoRef.key;
@@ -982,14 +994,22 @@ if (btnCrearAlumno) {
         createdAt: Date.now()
       });
 
+      // Membresía: el "monto" ingresado es el mensual, y las cuotas
+      // parten vacías — cada pago del mes se va agregando desde la
+      // ficha a medida que llega, no de antemano.
       await crearCiclo({
         alumnoId, coachId, programa,
-        acuerdoPago: { montoTotal: monto, moneda, descuento, abono, saldo: monto, cuotas, pdfUrl: '' }
+        modalidadPago: esMembresia ? 'membresia' : null,
+        acuerdoPago: esMembresia
+          ? { montoMensual: monto, moneda, cuotas: {}, pdfUrl: '' }
+          : { montoTotal: monto, moneda, descuento, abono, saldo: monto, cuotas, pdfUrl: '' }
       });
 
       ['nuevo-alumno-nombre', 'nuevo-alumno-apellido', 'nuevo-alumno-monto', 'nuevo-alumno-descuento', 'nuevo-alumno-abono']
         .forEach(id => { document.getElementById(id).value = ''; });
       document.getElementById('nuevo-alumno-programa').value = 'begin';
+      document.getElementById('nuevo-alumno-membresia').checked = false;
+      actualizarCampoMembresiaSegunPrograma();
       document.getElementById('nuevo-alumno-moneda').value = 'CLP';
       poblarSelectCoaches(document.getElementById('nuevo-alumno-coach'), null);
       const tbodyCuotasNuevo = document.querySelector('#tabla-cuotas-nuevo tbody');
@@ -1114,6 +1134,17 @@ const btnGenerarAcuerdo = document.getElementById('btn-generar-acuerdo');
 if (btnGenerarAcuerdo) {
   btnGenerarAcuerdo.addEventListener('click', async () => {
     if (!currentCicloId) return;
+    const cicloSnap = await get(ref(db, `ciclos/${currentCicloId}`));
+    const cicloActual = cicloSnap.exists() ? cicloSnap.val() : {};
+    // Para todos menos Membresía, la fecha de egreso tiene que estar
+    // escrita a mano ANTES de generar el acuerdo — si no, el PDF
+    // saldría con una fecha inventada, que es justo el bug que
+    // arreglamos. Membresía no tiene fecha de egreso fija, así que no
+    // aplica esta validación.
+    if (cicloActual.modalidadPago !== 'membresia' && !cicloActual.fechaEgreso) {
+      alert('Antes de generar el acuerdo, completa la Fecha de Egreso en la pestaña "Ciclo Actual".');
+      return;
+    }
     btnGenerarAcuerdo.disabled = true;
     btnGenerarAcuerdo.textContent = 'Generando PDF...';
     try {
@@ -1191,6 +1222,33 @@ function actualizarCampoCoachSegunPrograma(selectProgramaId, campoCoachId, aviso
   if (aviso) aviso.classList.toggle('hidden', !esBegin);
 }
 
+function actualizarCampoMembresiaSegunPrograma() {
+  const selectPrograma = document.getElementById('nuevo-alumno-programa');
+  const campoMembresia = document.getElementById('campo-nuevo-alumno-membresia');
+  const checkboxMembresia = document.getElementById('nuevo-alumno-membresia');
+  if (!selectPrograma || !campoMembresia) return;
+  const esNext = selectPrograma.value === 'next';
+  campoMembresia.classList.toggle('hidden', !esNext);
+  if (!esNext && checkboxMembresia) {
+    checkboxMembresia.checked = false;
+    actualizarFormularioPagoSegunMembresia();
+  }
+}
+
+function actualizarFormularioPagoSegunMembresia() {
+  const checkboxMembresia = document.getElementById('nuevo-alumno-membresia');
+  const esMembresia = checkboxMembresia ? checkboxMembresia.checked : false;
+  const labelMonto = document.getElementById('label-nuevo-alumno-monto');
+  const bloquePagoNormal = document.getElementById('bloque-pago-normal');
+  const avisoMembresia = document.getElementById('aviso-pago-membresia');
+  if (labelMonto) labelMonto.textContent = esMembresia ? 'Monto Mensual' : 'Monto Total';
+  if (bloquePagoNormal) bloquePagoNormal.classList.toggle('hidden', esMembresia);
+  if (avisoMembresia) avisoMembresia.classList.toggle('hidden', !esMembresia);
+}
+
+const checkboxNuevoAlumnoMembresia = document.getElementById('nuevo-alumno-membresia');
+if (checkboxNuevoAlumnoMembresia) checkboxNuevoAlumnoMembresia.addEventListener('change', actualizarFormularioPagoSegunMembresia);
+
 function autocompletarMontoNuevoAlumno() {
   const selectPrograma = document.getElementById('nuevo-alumno-programa');
   const selectMoneda = document.getElementById('nuevo-alumno-moneda');
@@ -1219,11 +1277,13 @@ const inputNuevoAlumnoTipoCambio = document.getElementById('nuevo-alumno-tipo-ca
 if (selectNuevoAlumnoPrograma) {
   selectNuevoAlumnoPrograma.addEventListener('change', autocompletarMontoNuevoAlumno);
   selectNuevoAlumnoPrograma.addEventListener('change', () => actualizarCampoCoachSegunPrograma('nuevo-alumno-programa', 'campo-nuevo-alumno-coach', 'aviso-nuevo-alumno-begin-sin-coach'));
+  selectNuevoAlumnoPrograma.addEventListener('change', actualizarCampoMembresiaSegunPrograma);
 }
 if (selectNuevoAlumnoMoneda) selectNuevoAlumnoMoneda.addEventListener('change', autocompletarMontoNuevoAlumno);
 if (inputNuevoAlumnoTipoCambio) inputNuevoAlumnoTipoCambio.addEventListener('input', autocompletarMontoNuevoAlumno);
 autocompletarMontoNuevoAlumno(); // prefill inicial (Begin · CLP por defecto)
 actualizarCampoCoachSegunPrograma('nuevo-alumno-programa', 'campo-nuevo-alumno-coach', 'aviso-nuevo-alumno-begin-sin-coach');
+actualizarCampoMembresiaSegunPrograma();
 
 const btnEliminarAlumno = document.getElementById('btn-eliminar-alumno');
 if (btnEliminarAlumno) {
