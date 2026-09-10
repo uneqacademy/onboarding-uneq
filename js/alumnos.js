@@ -27,6 +27,7 @@ import { cargarMiEvaluacionCoach } from './coaches.js';
 import { cargarDashboardMentor, cargarAlumnosMentor, cargarPerfilMentor, cargarMentoriasView, cargarBoxMentor, actualizarNotificacionesMentor } from './mentores.js';
 import { cargarSesionesBeginCoach } from './dashboard-coach.js';
 import { actualizarBotonAccesoAlumno, cargarDashboardAlumno } from './alumno-portal.js';
+import { conectarCascadaDireccion, prepararCamposDireccionVacios, precargarDireccionGuardada, nombrePaisDesdeCodigo } from './geodata.js';
 import './configuracion.js';
 import './hitos.js';
 import './mis-datos.js';
@@ -837,9 +838,11 @@ async function abrirFicha(alumnoId) {
   document.getElementById('datos-direccion-calle').value = dir.calle || '';
   document.getElementById('datos-direccion-numero').value = dir.numero || '';
   document.getElementById('datos-direccion-depto').value = dir.departamento || '';
-  document.getElementById('datos-direccion-comuna').value = dir.comuna || '';
-  document.getElementById('datos-direccion-region').value = dir.region || '';
-  document.getElementById('datos-direccion-pais').value = dir.pais || 'Chile';
+  if (dir.pais || dir.region || dir.comuna) {
+    await precargarDireccionGuardada({ pais: dir.pais, region: dir.region, comuna: dir.comuna });
+  } else {
+    await prepararCamposDireccionVacios();
+  }
   document.getElementById('datos-ocupacion').value = alumno.ocupacion || '';
   document.getElementById('datos-ocupacion-especialidad').value = alumno.ocupacionEspecialidad || '';
   actualizarCampoEspecialidad();
@@ -1054,8 +1057,8 @@ if (btnGuardarDatos) {
         numero: document.getElementById('datos-direccion-numero').value.trim(),
         departamento: document.getElementById('datos-direccion-depto').value.trim(),
         comuna: document.getElementById('datos-direccion-comuna').value.trim(),
-        region: document.getElementById('datos-direccion-region').value.trim(),
-        pais: document.getElementById('datos-direccion-pais').value.trim()
+        region: (() => { const el = document.getElementById('datos-direccion-region'); return el.value && el.options[el.selectedIndex] ? el.options[el.selectedIndex].text.trim() : ''; })(),
+        pais: nombrePaisDesdeCodigo(document.getElementById('datos-direccion-pais').value)
       },
       ocupacion: document.getElementById('datos-ocupacion').value,
       ocupacionEspecialidad: document.getElementById('datos-ocupacion-especialidad').value.trim(),
@@ -1605,3 +1608,5 @@ if (btnGuardarSocio) {
     }
   });
 }
+
+conectarCascadaDireccion();

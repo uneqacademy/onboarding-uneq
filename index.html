@@ -481,10 +481,17 @@
                 <div class="field"><label>Calle <span style="color:#C0392B;">*</span></label><input id="datos-direccion-calle"></div>
                 <div class="field"><label>Número <span style="color:#C0392B;">*</span></label><input id="datos-direccion-numero"></div>
                 <div class="field"><label>Departamento/Oficina (opcional)</label><input id="datos-direccion-depto"></div>
-                <div class="field"><label>Comuna <span style="color:#C0392B;">*</span></label><input id="datos-direccion-comuna"></div>
-                <div class="field"><label>Región <span style="color:#C0392B;">*</span></label><input id="datos-direccion-region"></div>
-                <div class="field"><label>País <span style="color:#C0392B;">*</span></label><input id="datos-direccion-pais" value="Chile"></div>
+                <div class="field"><label>País <span style="color:#C0392B;">*</span></label>
+                  <select id="datos-direccion-pais"><option value="">Cargando países...</option></select>
+                </div>
+                <div class="field"><label>Región / Estado <span style="color:#C0392B;">*</span></label>
+                  <select id="datos-direccion-region"><option value="">Elige un país primero</option></select>
+                </div>
+                <div class="field" id="campo-datos-direccion-comuna"><label>Comuna / Ciudad <span style="color:#C0392B;">*</span></label>
+                  <select id="datos-direccion-comuna"><option value="">Elige una región primero</option></select>
+                </div>
               </div>
+              <p class="text-soft hidden" id="datos-direccion-cargando" style="margin-top:-8px; font-size:12px;">Cargando datos geográficos...</p>
               <div class="mb-16" style="margin-top:14px;">
                 <label>Redes Sociales (opcional)</label>
                 <table class="data-table mb-16" id="tabla-redes-sociales">
