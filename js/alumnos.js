@@ -651,11 +651,12 @@ async function renderHistorialCiclos(ciclosAnterioresIds) {
 
 /* --- Bloqueo general de Datos/Ciclo tras guardar, con botón "Editar" ---
        Director: el botón desbloquea todo. Coach: Correo, Teléfono,
-       Dirección y Redes Sociales, más Fase/WhatsApp/Facturación/
-       Objetivos/Situación en Ciclo Actual. Programa, Fecha Ingreso,
+       Dirección y Redes Sociales, más Fase/WhatsApp en Ciclo Actual.
+       Facturación Actual, Objetivo Facturación, Situación Personal y
+       Objetivos Personales quedan SIEMPRE editables para el coach (sin
+       importar si el resto está bloqueado). Programa, Fecha Ingreso,
        Fecha Egreso y Coach Asignado quedan SIEMPRE fijos para el
-       coach (sin importar si el resto está bloqueado o no) — solo el
-       director los puede tocar. */
+       coach — solo el director los puede tocar. */
 function aplicarBloqueoDatosCiclo(bloqueado, role) {
   document.querySelectorAll('.tab-panel[data-panel="datos"] input, .tab-panel[data-panel="datos"] select, .tab-panel[data-panel="datos"] textarea')
     .forEach(el => { if (el.id !== 'datos-edad' && el.id !== 'datos-foto-input') el.disabled = bloqueado; });
@@ -663,6 +664,12 @@ function aplicarBloqueoDatosCiclo(bloqueado, role) {
   document.querySelectorAll('.tab-panel[data-panel="ciclo"] input, .tab-panel[data-panel="ciclo"] textarea')
     .forEach(el => {
       if (['ciclo-fecha-ingreso', 'ciclo-fecha-egreso', 'ciclo-whatsapp-grupo'].includes(el.id)) return;
+      // El coach siempre puede editar estos 4, sin importar si el
+      // resto de la pestaña está bloqueado o no.
+      if (role === 'coach' && ['ciclo-facturacion-actual', 'ciclo-objetivo-facturacion', 'ciclo-situacion-personal', 'ciclo-objetivos-personales'].includes(el.id)) {
+        el.disabled = false;
+        return;
+      }
       el.disabled = bloqueado;
     });
 

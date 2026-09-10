@@ -297,12 +297,21 @@ if (btnCancelarMentor) btnCancelarMentor.addEventListener('click', () => setNav(
 // --- CANDADO A: bloqueo simple post-firma (evita ediciones accidentales del coach).
 //     El estado real (bloqueado sí/no) lo decide y persiste ciclos.js/alumnos.js;
 //     esta función solo pinta la UI. ---
+const CAMPOS_SIEMPRE_EDITABLES_COACH = ['ciclo-facturacion-actual', 'ciclo-objetivo-facturacion', 'ciclo-situacion-personal', 'ciclo-objetivos-personales'];
+
 export function aplicarBloqueoCamposFicha(bloqueado) {
   document.querySelectorAll(
     '.tab-panel[data-panel="datos"] input, .tab-panel[data-panel="datos"] select,' +
     '.tab-panel[data-panel="ciclo"] textarea, .tab-panel[data-panel="ciclo"] input:not(:disabled)'
   ).forEach(el => {
     if (el.id === 'datos-foto-input') return;
+    // Facturación Actual, Objetivo Facturación, Situación Personal y
+    // Objetivos Personales: el coach los puede editar SIEMPRE, incluso
+    // con el candado puesto (candado solo protege el resto).
+    if (currentRole === 'coach' && CAMPOS_SIEMPRE_EDITABLES_COACH.includes(el.id)) {
+      el.disabled = false;
+      return;
+    }
     el.disabled = bloqueado && currentRole === 'coach';
   });
 }
