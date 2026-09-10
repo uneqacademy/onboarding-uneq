@@ -18,7 +18,7 @@ import {
   marcarEnviadoParaFirma, marcarFirmaProcesada, toggleCandado, renderStepper, renderAcciones
 } from './ciclos.js';
 import { showView, marcarNavActivo, setNav, setCandado, aplicarBloqueoCamposFicha, getCurrentRole, getCurrentUserNombre, getCurrentRolesDisponibles, applyRole } from './main.js';
-import { cargarTestParaCiclo, hayTestCompletado } from './test.js';
+import { cargarTestParaCiclo } from './test.js';
 import { cargarAcuerdoParaCiclo } from './pagos.js';
 import { cargarBitacoraParaCiclo } from './bitacora.js';
 import { generarPdfAcuerdo } from './pdf-acuerdo.js';
@@ -899,7 +899,7 @@ async function abrirFicha(alumnoId) {
   await cargarAcuerdoParaCiclo(currentCicloId);
   await cargarBitacoraParaCiclo(currentCicloId, estadoProceso === 'matricula_finalizada');
 
-  const listoParaGenerarAcuerdo = datosGeneralesCompletos(alumno) && cicloCompleto(ciclo) && hayTestCompletado();
+  const listoParaGenerarAcuerdo = datosGeneralesCompletos(alumno) && cicloCompleto(ciclo);
   renderAcciones(estadoProceso, role, listoParaGenerarAcuerdo);
 
   // --- Bloqueo general: si Datos+Ciclo ya están completos, se bloquea todo
