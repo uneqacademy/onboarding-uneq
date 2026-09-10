@@ -683,7 +683,7 @@ function aplicarBloqueoDatosCiclo(bloqueado, role) {
   if (inputFechaEgresoCiclo) inputFechaEgresoCiclo.disabled = role === 'coach' ? true : bloqueado;
 
   const selectFase = document.getElementById('ciclo-fase-metodologia');
-  if (selectFase) selectFase.disabled = bloqueado;
+  if (selectFase) selectFase.disabled = role === 'coach' ? false : bloqueado;
 
   const selectCoach = document.getElementById('ciclo-coach');
   if (selectCoach) selectCoach.disabled = role === 'coach' ? true : bloqueado;
@@ -703,7 +703,8 @@ function aplicarBloqueoDatosCiclo(bloqueado, role) {
 function habilitarEdicionParcialCoach() {
   ['datos-email', 'datos-telefono', 'datos-direccion-calle', 'datos-direccion-numero',
     'datos-direccion-depto', 'datos-direccion-comuna', 'datos-direccion-region', 'datos-direccion-pais',
-    'ciclo-fase-metodologia', 'ciclo-whatsapp-toggle', 'btn-cambiar-foto'
+    'ciclo-fase-metodologia', 'ciclo-whatsapp-toggle', 'btn-cambiar-foto',
+    'ciclo-facturacion-actual', 'ciclo-objetivo-facturacion', 'ciclo-situacion-personal', 'ciclo-objetivos-personales'
   ].forEach(id => { const el = document.getElementById(id); if (el) el.disabled = false; });
 
   document.querySelectorAll('#tabla-redes-sociales-body select, #tabla-redes-sociales-body input, #tabla-redes-sociales-body button')
@@ -719,9 +720,6 @@ if (btnEditarDatosCiclo) {
       aplicarBloqueoDatosCiclo(false, 'director');
     } else {
       habilitarEdicionParcialCoach();
-      if (estadoProcesoActual !== 'matricula_finalizada') {
-        document.getElementById('ciclo-fase-metodologia').disabled = true;
-      }
     }
     btnEditarDatosCiclo.classList.add('hidden');
   });
@@ -917,10 +915,11 @@ async function abrirFicha(alumnoId) {
     btnEditar.classList.add('hidden');
   }
 
-  // La Fase de la Metodología ahora forma parte del bloqueo general (botón
-  // "Editar") — solo se fuerza deshabilitada si aún no corresponde mostrarla
-  // (antes de "Proceso de Matrícula Finalizado").
-  if (estadoProceso !== 'matricula_finalizada') {
+  // La Fase de la Metodología forma parte del bloqueo general (botón
+  // "Editar") — solo se fuerza deshabilitada si aún no corresponde
+  // mostrarla (antes de "Proceso de Matrícula Finalizado"). El coach
+  // queda afuera de esta restricción — para él, Fase siempre editable.
+  if (estadoProceso !== 'matricula_finalizada' && role !== 'coach') {
     document.getElementById('ciclo-fase-metodologia').disabled = true;
   }
 
