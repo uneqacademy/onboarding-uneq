@@ -266,6 +266,7 @@ function renderFeedHitos(hitosVisibles, usuarios, ctx) {
         </div>
         <div style="display:flex; gap:8px; margin-top:10px;">
           <input class="input-comentario-hito" data-hito-id="${hitoId}" placeholder="Escribe un comentario de ánimo..." style="flex:1;">
+          <button type="button" class="btn btn--ghost btn-emoji-picker" data-target-selector=".input-comentario-hito[data-hito-id='${hitoId}']" style="font-size:14px; padding:6px 10px;">😊</button>
           <button type="button" class="btn btn--primary btn-enviar-comentario-hito" data-hito-id="${hitoId}" style="font-size:12px; padding:6px 14px;">Enviar</button>
         </div>
       </div>
@@ -509,4 +510,63 @@ if (feedHitosEl) {
 
 document.querySelectorAll('.nav-item[data-nav="mis-hitos"]').forEach(item => {
   item.addEventListener('click', cargarMisHitos);
+});
+
+/* ============================================================
+   Selector de emojis — compartido entre "publicar hito" y cada
+   campo de comentario (agregados dinámicamente por hito). Un set
+   acotado y motivacional, no el listado completo de Unicode.
+   ============================================================ */
+const EMOJIS_DISPONIBLES = ['🎉', '🚀', '💪', '🔥', '👏', '🙌', '❤️', '⭐', '✨', '🏆', '👍', '😃', '🥳', '💯', '🙏', '😍', '💡', '🎯', '☺️', '🤗', '👊', '💛', '🌟', '😊'];
+
+function cerrarEmojiPopover() {
+  const pop = document.getElementById('emoji-picker-popover');
+  if (pop) pop.classList.add('hidden');
+}
+
+document.addEventListener('click', (ev) => {
+  const btnEmoji = ev.target.closest('.btn-emoji-picker');
+  const pop = document.getElementById('emoji-picker-popover');
+  if (!pop) return;
+
+  if (btnEmoji) {
+    // Encuentra el campo de texto destino: por id fijo (publicar) o
+    // por selector CSS (comentarios, que se generan de a uno por hito).
+    const campo = btnEmoji.dataset.target
+      ? document.getElementById(btnEmoji.dataset.target)
+      : document.querySelector(btnEmoji.dataset.targetSelector);
+    if (!campo) return;
+
+    const yaAbiertoParaEsteBoton = !pop.classList.contains('hidden') && pop.dataset.abiertoPor === (btnEmoji.dataset.target || btnEmoji.dataset.targetSelector);
+    if (yaAbiertoParaEsteBoton) { cerrarEmojiPopover(); return; }
+
+    pop.innerHTML = EMOJIS_DISPONIBLES.map(e => `<button type="button" class="btn-emoji-opcion" style="font-size:19px; background:none; border:none; cursor:pointer; padding:4px; border-radius:6px;">${e}</button>`).join('');
+    pop.dataset.abiertoPor = btnEmoji.dataset.target || btnEmoji.dataset.targetSelector;
+
+    const rect = btnEmoji.getBoundingClientRect();
+    const arribaDeLaMitad = rect.top < window.innerHeight / 2;
+    pop.style.left = `${Math.min(rect.left, window.innerWidth - 240)}px`;
+    pop.style.top = arribaDeLaMitad ? `${rect.bottom + 6}px` : '';
+    pop.style.bottom = arribaDeLaMitad ? '' : `${window.innerHeight - rect.top + 6}px`;
+    pop.classList.remove('hidden');
+    pop.dataset.campoId = campo.id || '';
+    pop.dataset.campoSelector = campo.id ? '' : (btnEmoji.dataset.targetSelector || '');
+    return;
+  }
+
+  const btnOpcion = ev.target.closest('.btn-emoji-opcion');
+  if (btnOpcion) {
+    const campo = pop.dataset.campoId ? document.getElementById(pop.dataset.campoId) : document.querySelector(pop.dataset.campoSelector);
+    if (campo) {
+      const inicio = campo.selectionStart ?? campo.value.length;
+      const fin = campo.selectionEnd ?? campo.value.length;
+      campo.value = campo.value.slice(0, inicio) + btnOpcion.textContent + campo.value.slice(fin);
+      campo.focus();
+      campo.selectionStart = campo.selectionEnd = inicio + btnOpcion.textContent.length;
+    }
+    return;
+  }
+
+  // Clic afuera del popover y de cualquier botón de emoji -> se cierra.
+  if (!ev.target.closest('#emoji-picker-popover')) cerrarEmojiPopover();
 });

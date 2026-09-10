@@ -1392,6 +1392,7 @@
             <div class="field mb-16">
               <label>Cuéntanos sobre este logro</label>
               <textarea id="hito-texto-publicar" placeholder="Comparte tu experiencia, cómo lo lograste..."></textarea>
+              <button type="button" class="btn btn--ghost btn-emoji-picker" data-target="hito-texto-publicar" style="font-size:12px; padding:4px 10px; margin-top:6px;">😊 Emoji</button>
             </div>
             <div style="margin-bottom:12px;">
               <button type="button" class="btn btn--ghost" id="btn-adjuntar-foto-hito">📷 Agregar Foto</button>
@@ -1786,6 +1787,11 @@
     setTimeout(function () { meta.setAttribute('content', original); }, 300);
   })();
 </script>
+
+<!-- Selector de emojis flotante, compartido por todos los campos de
+     texto de Mis Hitos (publicar + comentar). Ver hitos.js. -->
+<div id="emoji-picker-popover" class="hidden" style="position:fixed; z-index:1300; background:#fff; border:1px solid var(--color-border); border-radius:10px; box-shadow:0 6px 20px rgba(0,0,0,0.15); padding:10px; display:grid; grid-template-columns:repeat(6, 1fr); gap:4px; max-width:220px;"></div>
+
 <script type="module" src="js/auth.js"></script>
 </body>
 </html>

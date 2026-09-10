@@ -55,7 +55,10 @@ export function applyRole(role, nombre, rolesDisponibles) {
   // "Mis Hitos" — visible para todos: alumno publica, y mentor/coach/
   // director acompañan comentando y reaccionando.
   const navHitos = document.querySelector('.nav-item[data-nav="mis-hitos"]');
-  if (navHitos) navHitos.classList.remove('hidden');
+  if (navHitos) {
+    navHitos.classList.remove('hidden');
+    navHitos.textContent = role === 'mentor' ? 'Hitos Estudiantes' : 'Mis Hitos';
+  }
 
   const navMentoriasMentor = document.querySelector('.nav-item[data-nav="mentorias-mentor"]');
   if (navMentoriasMentor) navMentoriasMentor.classList.toggle('hidden', role !== 'mentor');
@@ -217,7 +220,7 @@ export function setNav(section) {
     document.getElementById('topbar-title').textContent = 'Preguntas de la Comunidad';
   } else if (section === 'mis-hitos') {
     showView('view-mis-hitos');
-    document.getElementById('topbar-title').textContent = 'Mis Hitos';
+    document.getElementById('topbar-title').textContent = currentRole === 'mentor' ? 'Hitos Estudiantes' : 'Mis Hitos';
   } else if (section === 'mentorias-mentor') {
     showView('view-mentorias');
     document.getElementById('topbar-title').textContent = 'Mis Mentorías';
