@@ -194,6 +194,27 @@
           </div>
         </div>
 
+        <div class="panel mb-24">
+          <div class="panel__header" style="display:flex; align-items:center; gap:10px;">
+            <div style="width:32px; height:32px; border-radius:50%; background:linear-gradient(135deg, var(--color-primary), var(--color-accent)); display:flex; align-items:center; justify-content:center; color:#fff; font-size:15px; flex-shrink:0;">✨</div>
+            <div style="flex:1;"><h3 style="margin:0;">Asistente UNEQ</h3></div>
+          </div>
+          <div class="panel__body" style="padding:0;">
+            <div id="asistente-chat-mensajes-director" style="min-height:260px; max-height:260px; overflow-y:auto; padding:20px; display:flex; flex-direction:column; gap:14px; background:var(--color-surface-alt);">
+              <div style="display:flex; gap:10px; align-items:flex-start;">
+                <div style="width:28px; height:28px; border-radius:50%; background:var(--color-primary); flex-shrink:0; display:flex; align-items:center; justify-content:center; color:#fff; font-size:13px;">✨</div>
+                <div style="background:#fff; padding:12px 16px; border-radius:14px; border-top-left-radius:4px; max-width:82%; box-shadow:0 1px 2px rgba(0,0,0,0.06);">
+                  <p style="margin:0; font-size:13.5px; line-height:1.5;">¡Hola! Pregúntame sobre alumnos, mentores, coaches, dudas repetidas, resultados del Test Brújula y más — siempre alineado con la metodología UNEQ. (No puedo ver datos de pagos ni acuerdos.)</p>
+                </div>
+              </div>
+            </div>
+            <div style="display:flex; gap:10px; padding:14px 16px; border-top:1px solid var(--color-border); align-items:center;">
+              <input type="text" id="asistente-chat-input-director" placeholder="Escribe tu pregunta..." style="flex:1; border:1px solid var(--color-border); border-radius:20px; padding:10px 16px; font-size:13.5px; background:#fff;">
+              <button type="button" id="asistente-chat-enviar-director" style="width:38px; height:38px; border-radius:50%; background:var(--color-accent); border:none; display:flex; align-items:center; justify-content:center; color:#fff; cursor:pointer; flex-shrink:0; font-size:14px;">➤</button>
+            </div>
+          </div>
+        </div>
+
         <div class="panel">
           <div class="panel__header">
             <h3>Todos los alumnos</h3>
@@ -259,6 +280,27 @@
           <div class="kpi-card hidden" id="kpi-card-mi-evaluacion">
             <div class="kpi-card__label">Mi Evaluación</div>
             <div class="kpi-card__value accent" id="kpi-mi-evaluacion-valor">—</div>
+          </div>
+        </div>
+
+        <div class="panel mb-24">
+          <div class="panel__header" style="display:flex; align-items:center; gap:10px;">
+            <div style="width:32px; height:32px; border-radius:50%; background:linear-gradient(135deg, var(--color-primary), var(--color-accent)); display:flex; align-items:center; justify-content:center; color:#fff; font-size:15px; flex-shrink:0;">✨</div>
+            <div style="flex:1;"><h3 style="margin:0;">Asistente UNEQ</h3></div>
+          </div>
+          <div class="panel__body" style="padding:0;">
+            <div id="asistente-chat-mensajes-coach" style="min-height:260px; max-height:260px; overflow-y:auto; padding:20px; display:flex; flex-direction:column; gap:14px; background:var(--color-surface-alt);">
+              <div style="display:flex; gap:10px; align-items:flex-start;">
+                <div style="width:28px; height:28px; border-radius:50%; background:var(--color-primary); flex-shrink:0; display:flex; align-items:center; justify-content:center; color:#fff; font-size:13px;">✨</div>
+                <div style="background:#fff; padding:12px 16px; border-radius:14px; border-top-left-radius:4px; max-width:82%; box-shadow:0 1px 2px rgba(0,0,0,0.06);">
+                  <p style="margin:0; font-size:13.5px; line-height:1.5;">¡Hola! Pregúntame sobre tus alumnos, dudas repetidas, resultados del Test Brújula y más — siempre alineado con la metodología UNEQ. (No puedo ver datos de pagos ni acuerdos.)</p>
+                </div>
+              </div>
+            </div>
+            <div style="display:flex; gap:10px; padding:14px 16px; border-top:1px solid var(--color-border); align-items:center;">
+              <input type="text" id="asistente-chat-input-coach" placeholder="Escribe tu pregunta..." style="flex:1; border:1px solid var(--color-border); border-radius:20px; padding:10px 16px; font-size:13.5px; background:#fff;">
+              <button type="button" id="asistente-chat-enviar-coach" style="width:38px; height:38px; border-radius:50%; background:var(--color-accent); border:none; display:flex; align-items:center; justify-content:center; color:#fff; cursor:pointer; flex-shrink:0; font-size:14px;">➤</button>
+            </div>
           </div>
         </div>
 
@@ -946,27 +988,26 @@
           </div>
         </div>
 
-        <!-- Asistente UNEQ — solo la estética por ahora, sin funcionar aún -->
+        <!-- Asistente UNEQ -->
         <div class="panel mb-24">
           <div class="panel__header" style="display:flex; align-items:center; gap:10px;">
             <div style="width:32px; height:32px; border-radius:50%; background:linear-gradient(135deg, var(--color-primary), var(--color-accent)); display:flex; align-items:center; justify-content:center; color:#fff; font-size:15px; flex-shrink:0;">✨</div>
             <div style="flex:1;">
               <h3 style="margin:0;">Asistente UNEQ</h3>
             </div>
-            <span class="badge" style="background:var(--color-accent-soft); color:var(--color-accent); font-size:10px;">Próximamente</span>
           </div>
           <div class="panel__body" style="padding:0;">
-            <div style="min-height:260px; max-height:260px; overflow-y:auto; padding:20px; display:flex; flex-direction:column; gap:14px; background:var(--color-surface-alt);">
+            <div id="asistente-chat-mensajes-mentor" style="min-height:260px; max-height:260px; overflow-y:auto; padding:20px; display:flex; flex-direction:column; gap:14px; background:var(--color-surface-alt);">
               <div style="display:flex; gap:10px; align-items:flex-start;">
                 <div style="width:28px; height:28px; border-radius:50%; background:var(--color-primary); flex-shrink:0; display:flex; align-items:center; justify-content:center; color:#fff; font-size:13px;">✨</div>
                 <div style="background:#fff; padding:12px 16px; border-radius:14px; border-top-left-radius:4px; max-width:82%; box-shadow:0 1px 2px rgba(0,0,0,0.06);">
-                  <p style="margin:0; font-size:13.5px; line-height:1.5;">¡Hola! Muy pronto vas a poder preguntarme sobre tus alumnos, sus dudas más repetidas, resultados del Test Brújula y más — siempre alineado con la metodología UNEQ.</p>
+                  <p style="margin:0; font-size:13.5px; line-height:1.5;">¡Hola! Pregúntame sobre tus alumnos, dudas repetidas, resultados del Test Brújula y más — siempre alineado con la metodología UNEQ. (No puedo ver datos de pagos ni acuerdos.)</p>
                 </div>
               </div>
             </div>
             <div style="display:flex; gap:10px; padding:14px 16px; border-top:1px solid var(--color-border); align-items:center;">
-              <input type="text" placeholder="Muy pronto vas a poder escribir aquí..." disabled style="flex:1; border:1px solid var(--color-border); border-radius:20px; padding:10px 16px; font-size:13.5px; background:#fff; color:var(--color-ink-soft);">
-              <button type="button" disabled style="width:38px; height:38px; border-radius:50%; background:var(--color-border); border:none; display:flex; align-items:center; justify-content:center; color:#fff; cursor:not-allowed; flex-shrink:0; font-size:14px;">➤</button>
+              <input type="text" id="asistente-chat-input-mentor" placeholder="Escribe tu pregunta..." style="flex:1; border:1px solid var(--color-border); border-radius:20px; padding:10px 16px; font-size:13.5px; background:#fff;">
+              <button type="button" id="asistente-chat-enviar-mentor" style="width:38px; height:38px; border-radius:50%; background:var(--color-accent); border:none; display:flex; align-items:center; justify-content:center; color:#fff; cursor:pointer; flex-shrink:0; font-size:14px;">➤</button>
             </div>
           </div>
         </div>
