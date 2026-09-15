@@ -62,7 +62,7 @@ const BENEFICIOS = {
   begin: {
     items: [
       'Contenido pregrabado de ejecución práctica — Nivel Inicial, para las 4 fases de la metodología 2E (acceso: 1 año)',
-      'Buzón de consultas sobre el contenido, respondida por cualquiera de nuestros mentores, quienes conocen la metodología completa y las distintas temáticas (tiempo de respuesta: hasta 3 días hábiles). Se pueden realizar hasta 2 preguntas por semana. — vigente durante el programa: 3 meses',
+      'BOX Inteligente de consultas específicas por temática disponible 24/7, con Mentor IA, el cual es un CLON entrenado personalmente por el Mentor Humano especialista en esa temática. Las respuestas son revisadas y validadas por el mentor Humano y las complementa en caso de ser necesario (tiempo de respuesta: 10 segundos). Los alumnos podrán enviar hasta 5 preguntas por semana en total, con un máximo de 1 pregunta por Mentor — vigente durante el programa: 3 meses',
       'Comunidad UNEQ Mentoring en Hotmart (acceso: 6 meses)',
       'Sesiones semanales grupales con coach de cabecera capacitado para revisar avances y resolver dudas de contenidos, además de responder preguntas previamente recibidas y algunas en vivo si el tiempo lo permite (vigente durante el programa: 3 meses)',
       '1 sesión mensual grupal con Maca y Felipe (vigente durante el programa: 3 meses)',
@@ -79,7 +79,7 @@ const BENEFICIOS = {
   next: {
     items: [
       'Contenido pregrabado de ejecución práctica — Nivel Inicial + Nivel Intermedio, para las 4 fases de la metodología 2E (acceso: de por vida)',
-      'BOX Inteligente de consultas específicas por temática disponible 24/7, con Mentor IA, el cual es un CLON entrenado personalmente por el Mentor Humano especialista en esa temática. Las respuestas son revisadas y validadas por el mentor Humano y las complementa en caso de ser necesario (tiempo de respuesta: 10 segundos). Los alumnos podrán enviar 1 pregunta por Mentor por semana — vigente durante el programa: 6 meses',
+      'BOX Inteligente de consultas específicas por temática disponible 24/7, con Mentor IA, el cual es un CLON entrenado personalmente por el Mentor Humano especialista en esa temática. Las respuestas son revisadas y validadas por el mentor Humano y las complementa en caso de ser necesario (tiempo de respuesta: 10 segundos). Los alumnos podrán enviar hasta 8 preguntas por semana en total, con un máximo de 3 preguntas por Mentor — vigente durante el programa: 6 meses',
       'Comunidad UNEQ Mentoring en Hotmart (vigente durante el programa: 6 meses)',
       'Coach personalizado disponible de Lunes a viernes de 9:00 a 18:00 hrs. por whatsapp, para accountability, motivación, guía para el consumo de contenidos y resolución de dudas sobre el funcionamiento del programa. (vigente durante el programa: 6 meses)',
       'Mentorías en vivo de lunes a viernes, con temáticas: Lunes Copywriting, Martes Mentalidad-Estrategia-Tráfico, Miércoles Identidad Visual y Redes Sociales, Jueves Ventas Energéticas, Viernes Gestión de Proyectos y Estructuración de Calendarios. Puedes enviar preguntas hasta 12 horas antes para cada sesión y serán respondidas de forma personalizada. (vigente durante el programa: 6 meses)',
@@ -92,7 +92,8 @@ const BENEFICIOS = {
       'Grupo de WhatsApp Ex-Alumnos UNEQ Mentoring (acceso: de por vida, una vez finalizado el programa)',
       'Hotseat el primer martes de cada mes (acceso: 1 año)',
       'Acceso gratuito a todos los eventos online que realice la Academia (acceso: 1 año)',
-      '1 acceso general al evento presencial Sinergia on Stage'
+      '1 acceso general al evento presencial Sinergia on Stage',
+      'Agencia UNEQ creará la página de aterrizaje (Landing Page) y bienvenida para la SDV (Sesión de Validación), además del montaje de las campañas base en META ADS. No incluye por parte de UNEQ las modificaciones, optimizaciones, ni seguimiento de estos montajes. El alumno por su cuenta podrá editar esos archivos cuando lo desee.'
     ],
     duracion: 'Duración del programa (sesiones en vivo y BOX Inteligente de consultas): 6 meses.',
     nota: null
@@ -100,7 +101,7 @@ const BENEFICIOS = {
   exit: {
     items: [
       'Contenido pregrabado de ejecución práctica — Nivel Básico, Intermedio y Avanzado, para las 4 fases de la metodología 2E (acceso: de por vida)',
-      'BOX Inteligente de consultas específicas por temática disponible 24/7, con Mentor IA, el cual es un CLON entrenado personalmente por el Mentor Humano especialista en esa temática. Las respuestas son revisadas y validadas por el mentor Humano y las complementa en caso de ser necesario (tiempo de respuesta: 10 segundos). Los alumnos podrán enviar 1 pregunta por Mentor por semana — vigente durante el programa: 6 meses',
+      'BOX Inteligente de consultas específicas por temática disponible 24/7, con Mentor IA, el cual es un CLON entrenado personalmente por el Mentor Humano especialista en esa temática. Las respuestas son revisadas y validadas por el mentor Humano y las complementa en caso de ser necesario (tiempo de respuesta: 10 segundos). Los alumnos podrán enviar hasta 8 preguntas por semana en total, con un máximo de 3 preguntas por Mentor — vigente durante el programa: 6 meses',
       'Comunidad UNEQ Mentoring en Hotmart (vigente durante el programa: 6 meses)',
       'Mentorías en vivo de lunes a viernes, con temáticas: Lunes Copywriting, Martes Mentalidad-Estrategia-Tráfico, Miércoles Identidad Visual y Redes Sociales, Jueves Ventas Energéticas, Viernes Gestión de Proyectos y Estructuración de Calendarios. Puedes enviar preguntas hasta 12 horas antes para cada sesión y serán respondidas de forma personalizada. (vigente durante el programa: 6 meses)',
       'Acceso a Membresía ONE, con clases todos los miércoles a las 9:00 hrs (acceso: 1 año)',
@@ -114,7 +115,8 @@ const BENEFICIOS = {
       '8 sesiones personalizadas en Zoom con Maca y Felipe, directo (deben utilizarse dentro de los primeros 6 meses del programa)',
       'Hotseat el primer martes de cada mes (acceso: 1 año)',
       'Acceso gratuito a todos los eventos online que realice la Academia (acceso: 1 año)',
-      '1 acceso general al evento presencial Sinergia on Stage'
+      '1 acceso general al evento presencial Sinergia on Stage',
+      'Agencia UNEQ creará la página de aterrizaje (Landing Page) y bienvenida para la SDV (Sesión de Validación), además del montaje de las campañas base en META ADS. No incluye por parte de UNEQ las modificaciones, optimizaciones, ni seguimiento de estos montajes. El alumno por su cuenta podrá editar esos archivos cuando lo desee.'
     ],
     duracion: 'Duración del programa (sesiones en vivo y BOX Inteligente de consultas): 6 meses.',
     nota: '(En eXIT no se incluye Coach Personalizado; este es reemplazado por el acompañamiento directo de Maca y Felipe a través de WhatsApp privado y las sesiones personalizadas en Zoom.)'
