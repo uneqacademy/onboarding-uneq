@@ -336,27 +336,35 @@ export async function cargarDashboardAlumno(alumnoId) {
     if (esBeginDashboard) {
       // BEGIN: días restantes dentro de Accesos Directos; la fase va en su
       // propia tarjeta, antes de los astronautas.
-      accesosEl.innerHTML = `${botonesAccesos}<div style="line-height:1.6;">${lineaCoach}</div>${bloqueDias}`;
+      accesosEl.innerHTML = `${botonesAccesos}<div class="acceso-coach-bloque" style="line-height:1.6;">${lineaCoach}</div>${bloqueDias}`;
       if (fasePanelEl) {
-        fasePanelEl.classList.remove('hidden');
+        fasePanelEl.classList.remove('hidden', 'solo-pc');
         fasePanelEl.innerHTML = `<div class="panel__body alumno-fase-texto">${fraseFase}</div>`;
       }
       if (diasRestantesPanelEl) {
         diasRestantesPanelEl.classList.add('hidden');
+        diasRestantesPanelEl.classList.remove('solo-movil');
         diasRestantesPanelEl.innerHTML = '';
       }
     } else {
+      // NEXT/eXIT: en móvil la fase va dentro de Accesos y los días en su
+      // propia tarjeta; en PC (≥1024px) se usa la misma diagramación que
+      // BEGIN — mismo contenido, solo cambia dónde se muestra (clases
+      // solo-movil / solo-pc en styles.css).
       accesosEl.innerHTML = `
         ${botonesAccesos}
-        <div style="line-height:1.6;">
+        <div class="acceso-coach-bloque" style="line-height:1.6;">
           ${lineaCoach}
-          <p style="margin:0 0 8px; line-height:1.6; text-align:center;">${fraseFase}</p>
-        </div>`;
+          <p class="solo-movil" style="margin:0 0 8px; line-height:1.6; text-align:center;">${fraseFase}</p>
+        </div>
+        ${bloqueDias ? bloqueDias.replace('class="acceso-dias"', 'class="acceso-dias solo-pc"') : ''}`;
       if (fasePanelEl) {
-        fasePanelEl.classList.add('hidden');
-        fasePanelEl.innerHTML = '';
+        fasePanelEl.classList.remove('hidden');
+        fasePanelEl.classList.add('solo-pc');
+        fasePanelEl.innerHTML = `<div class="panel__body alumno-fase-texto">${fraseFase}</div>`;
       }
       if (diasRestantesPanelEl) {
+        diasRestantesPanelEl.classList.add('solo-movil');
         if (fraseDiasRestantes) {
           diasRestantesPanelEl.classList.remove('hidden');
           diasRestantesPanelEl.innerHTML = `
@@ -1772,6 +1780,7 @@ function renderHorariosRecurrentes(usuarios) {
 
   contenedor.classList.remove('hidden');
   lista.style.cssText = 'display:flex; gap:8px; justify-content:space-between; flex-wrap:nowrap;';
+  lista.classList.add('pv-hr-lista');
   lista.innerHTML = conInstante.map(({ m, instante }) => {
     const fechaObj = new Date(instante);
     const diaViewer = new Intl.DateTimeFormat('es-CL', { weekday: 'short', timeZone: zonaViewer }).format(fechaObj);
@@ -1780,12 +1789,12 @@ function renderHorariosRecurrentes(usuarios) {
     const diaChileAbrev = capitalizar(new Intl.DateTimeFormat('es-CL', { weekday: 'short', timeZone: 'America/Santiago' }).format(fechaObj).replace('.', '').slice(0, 3));
     const horaChile = new Intl.DateTimeFormat('es-CL', { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'America/Santiago' }).format(fechaObj);
     return `
-      <div style="text-align:center; min-width:0; flex:1;">
-        <p style="font-weight:700; font-size:9.5px; letter-spacing:0.3px; margin:0 0 4px; text-transform:uppercase; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${m.nombre || m.email}</p>
-        <img src="${m.fotoUrl || PLACEHOLDER_FOTO_ALUMNO}" alt="" style="width:44px; height:44px; border-radius:50%; object-fit:cover; margin-bottom:4px;">
-        <p style="font-size:10.5px; margin:0;">📅 ${diaViewerAbrev}</p>
-        <p style="font-size:10.5px; margin:0;">${horaViewer} ${banderaDeZona(zonaViewer)}</p>
-        ${!mismaZonaQueChile ? `<p style="font-size:9px; margin:2px 0 0; color:#9CA0A8;">${diaChileAbrev} ${horaChile} 🇨🇱</p>` : ''}
+      <div class="pv-hr-item" style="text-align:center; min-width:0; flex:1;">
+        <p class="pv-hr-nombre" style="font-weight:700; font-size:9.5px; letter-spacing:0.3px; margin:0 0 4px; text-transform:uppercase; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${m.nombre || m.email}</p>
+        <img class="pv-hr-foto" src="${m.fotoUrl || PLACEHOLDER_FOTO_ALUMNO}" alt="" style="width:44px; height:44px; border-radius:50%; object-fit:cover; margin-bottom:4px;">
+        <p class="pv-hr-dia" style="font-size:10.5px; margin:0;">📅 ${diaViewerAbrev}</p>
+        <p class="pv-hr-hora" style="font-size:10.5px; margin:0;">${horaViewer} ${banderaDeZona(zonaViewer)}</p>
+        ${!mismaZonaQueChile ? `<p class="pv-hr-chile" style="font-size:9px; margin:2px 0 0; color:#9CA0A8;">${diaChileAbrev} ${horaChile} 🇨🇱</p>` : ''}
       </div>`;
   }).join('');
 }

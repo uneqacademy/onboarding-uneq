@@ -922,3 +922,165 @@ body.tema-alumno-oscuro .panel .hitos-fase-bloque--fase4 .hitos-fase-titulo { co
   width: 20px; height: 20px; border-radius: 50%; object-fit: cover;
   vertical-align: middle; margin-right: 5px; background: #E4E7EC;
 }
+
+/* ============================================================
+   PORTAL ALUMNO — DIAGRAMACIÓN PC (≥1024px), los 3 niveles
+   Solo reubica bloques existentes; mismo contenido y textos.
+   Colores: cada nivel conserva los suyos (BEGIN azul, NEXT/eXIT negro).
+   ============================================================ */
+@media (max-width: 1023px) {
+  .solo-pc { display: none !important; }
+}
+@media (min-width: 1024px) {
+  .solo-movil { display: none !important; }
+
+  /* --- Estructura general --- */
+  body.tema-alumno-oscuro .app-shell { grid-template-columns: 270px 1fr; }
+  body.tema-alumno-oscuro .sidebar { padding: 28px 22px; }
+  body.tema-alumno-oscuro .sidebar .brand__mark { width: 40px !important; height: 40px !important; }
+  body.tema-alumno-oscuro .sidebar .brand__name { font-size: 18px; }
+  body.tema-alumno-oscuro #sidebar-foto-alumno { width: 120px !important; height: 120px !important; }
+  body.tema-alumno-oscuro .nav-item { font-size: 15px; padding: 9px 12px; border-radius: 10px; }
+  body.tema-alumno-oscuro:not(.tema-begin) .nav-item.is-active { background: #2B3A8C; color: #fff; }
+  body.tema-alumno-oscuro:not(.tema-begin) .topbar { background: #2E2E2E; border-bottom-color: #2E2E2E; }
+  body.tema-alumno-oscuro .topbar { min-height: 78px; padding-left: 28px; padding-right: 40px; }
+  body.tema-alumno-oscuro .topbar__title { font-size: 20px; font-weight: 700; }
+  body.tema-alumno-oscuro .content { padding: 32px 40px 40px; }
+  body.tema-alumno-oscuro .panel { border-radius: 14px; }
+
+  /* --- Dashboard: grilla de 2 columnas --- */
+  body.tema-alumno-oscuro #view-dashboard-alumno:not(.hidden) {
+    display: grid;
+    grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr);
+    grid-template-areas:
+      "bien  stepper"
+      "aviso aviso"
+      "acc   fase"
+      "acc   astro"
+      "testh ."
+      "test  prox"
+      "test  grab";
+    column-gap: 24px;
+    align-items: start;
+  }
+  #view-dashboard-alumno > #alumno-stepper-programa { grid-area: stepper; margin-bottom: 28px; }
+  #view-dashboard-alumno > #alumno-stepper-programa > div { justify-content: flex-end !important; gap: 36px !important; }
+  #view-dashboard-alumno > #alumno-aviso-atraso { grid-area: aviso; }
+  #view-dashboard-alumno > #alumno-bienvenida { grid-area: bien; text-align: left !important; align-self: center; margin-bottom: 28px !important; font-size: 24px; }
+  #view-dashboard-alumno > #alumno-accesos-panel { grid-area: acc; align-self: stretch; margin-bottom: 28px; }
+  #view-dashboard-alumno > #alumno-fase-panel { grid-area: fase; margin-bottom: 12px; }
+  #view-dashboard-alumno > #alumno-astronauta-fase { grid-area: astro; margin-bottom: 28px; max-width: none; }
+  #view-dashboard-alumno > #alumno-dias-restantes-panel { display: none !important; }
+  #view-dashboard-alumno > .alumno-test-encabezado { grid-area: testh; justify-content: flex-start !important; gap: 16px; margin-bottom: 14px; }
+  #view-dashboard-alumno > .alumno-test-encabezado h3 { white-space: nowrap; }
+  #alumno-ultimo-test > div { grid-template-columns: repeat(4, minmax(0, 1fr)) !important; gap: 12px !important; }
+  #alumno-ultimo-test svg { max-width: 100%; height: auto; }
+  #view-dashboard-alumno > #alumno-ultimo-test-panel { grid-area: test; margin-bottom: 0; }
+  #view-dashboard-alumno > #alumno-proxima-mentoria { grid-area: prox; }
+  #view-dashboard-alumno > #alumno-grabaciones { grid-area: grab; margin-bottom: 0; }
+  #view-dashboard-alumno .alumno-fase-texto { text-align: left !important; font-size: 16px !important; padding: 14px 18px; }
+
+  /* Accesos Directos: botones a la izquierda, coach y días a la derecha */
+  #alumno-accesos-panel { display: flex; flex-direction: column; }
+  #alumno-accesos-panel .panel__header { border-bottom: 0; padding-bottom: 0; width: 50%; justify-content: center !important; }
+  #alumno-accesos-directos {
+    flex: 1;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr);
+    grid-template-areas: "btn coach" "btn dias";
+    column-gap: 28px;
+    align-content: center;
+    align-items: center;
+  }
+  #alumno-accesos-directos .accesos-directos-botones {
+    grid-area: btn; flex-direction: column; align-items: stretch; margin: 0; gap: 12px;
+  }
+  #alumno-accesos-directos .acceso-btn { width: 100%; white-space: nowrap; }
+  body.tema-alumno-oscuro:not(.tema-begin) #alumno-accesos-directos .acceso-btn { font-size: 14px; padding: 9px 14px; }
+  #alumno-accesos-directos .acceso-dias p { font-size: 14px; line-height: 1.35; }
+  #alumno-accesos-directos .acceso-coach-bloque { grid-area: coach; }
+  #alumno-accesos-directos .acceso-coach { justify-content: flex-start; flex-wrap: nowrap; }
+  #alumno-accesos-directos .acceso-dias {
+    grid-area: dias; justify-content: flex-start; margin: 6px 0 0; max-width: none;
+    border: 1.5px solid #C9CCD2; border-radius: 8px; padding: 10px 14px;
+  }
+  body.tema-begin #alumno-accesos-directos .acceso-btn { font-size: 14px; padding: 9px 28px; white-space: nowrap; }
+  body.tema-begin #alumno-accesos-directos .acceso-btn .acceso-icono { right: 6px; width: 18px; height: 18px; }
+  body.tema-begin #alumno-accesos-directos .acceso-icono--wa svg { width: 18px; height: 18px; }
+  body.tema-begin #alumno-accesos-directos .acceso-coach { font-size: 16px; }
+
+  /* --- Mi Ficha Alumno: ficha a la izquierda, acuerdo y contraseña a la derecha --- */
+  body.tema-alumno-oscuro #view-ficha-alumno-propia:not(.hidden) {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 2fr);
+    grid-template-areas: "ficha acuerdo" "ficha pass";
+    gap: 16px 16px;
+    align-items: start;
+  }
+  #view-ficha-alumno-propia > #alumno-mi-ficha-panel { grid-area: ficha; margin: 0; align-self: stretch; }
+  #view-ficha-alumno-propia > #alumno-mi-acuerdo-panel { grid-area: acuerdo; margin: 0; }
+  #view-ficha-alumno-propia > #alumno-password-panel { grid-area: pass; margin: 0; }
+  #alumno-password-panel .panel__body { display: grid; grid-template-columns: 1fr 1fr; gap: 14px 24px; align-items: end; }
+  #alumno-password-panel .field-grid { display: contents; }
+  #alumno-password-panel .field-grid .field { margin: 0; }
+  #alumno-password-panel #cambiar-password-error-alumno { grid-column: 1 / -1; grid-row: 3; margin: 0 !important; }
+  #alumno-password-panel #btn-guardar-password-alumno { grid-column: 2; grid-row: 2; justify-self: start; }
+
+  /* --- BOX Inteligente: mentores como tarjetas verticales en fila --- */
+  #box-alumno-mentores-grid { display: grid !important; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 20px; }
+  #box-alumno-mentores-grid .mentor-card-ia {
+    display: grid !important;
+    grid-template-columns: auto 1fr;
+    grid-template-areas: "foto nombre" "botones botones";
+    align-items: center;
+    gap: 12px 10px !important;
+    margin: 0 !important;
+  }
+  #box-alumno-mentores-grid .mentor-card-ia > img { grid-area: foto; }
+  #box-alumno-mentores-grid .mentor-card-ia > div:nth-of-type(1) { grid-area: nombre; }
+  #box-alumno-mentores-grid .mentor-card-ia > div:nth-of-type(2) { grid-area: botones; align-items: center; margin-top: 6px; }
+
+  /* --- Mis Hitos: checklist a la izquierda, astronauta y Hotmart a la derecha --- */
+  body.tema-alumno-oscuro #view-mis-hitos:not(.hidden) {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(280px, 380px);
+    grid-template-areas:
+      "titulo  titulo"
+      "tabs    tabs"
+      "seg     hero"
+      "seg     cont"
+      "pub     pub"
+      "fstaff  fstaff"
+      "falumno falumno"
+      "feed    feed";
+    column-gap: 24px;
+    align-items: start;
+  }
+  #view-mis-hitos > .flex-between { grid-area: titulo; }
+  #view-mis-hitos > #hitos-tabs { grid-area: tabs; }
+  #view-mis-hitos > #hitos-hero-fase { grid-area: hero; margin: 0 0 16px; }
+  #view-mis-hitos > #hitos-hero-fase img { max-width: 100%; }
+  #view-mis-hitos > #hitos-contenidos-hotmart { grid-area: cont; }
+  #view-mis-hitos > #hitos-seguimiento-panel { grid-area: seg; }
+  #view-mis-hitos > #hitos-publicar-panel { grid-area: pub; }
+  #view-mis-hitos > #hitos-filtros-panel { grid-area: fstaff; }
+  #view-mis-hitos > #hitos-filtros-alumno-panel { grid-area: falumno; }
+  #view-mis-hitos > #hitos-feed { grid-area: feed; }
+  #hitos-seguimiento-contenido { display: grid; grid-template-columns: 1fr 1fr; column-gap: 32px; align-items: start; }
+  #hitos-seguimiento-contenido > p { grid-column: 1 / -1; }
+
+  /* --- Preguntas en Vivo: horarios recurrentes como tarjetas grandes --- */
+  #pv-horarios-recurrentes-contenedor { background: transparent !important; border: 0 !important; box-shadow: none !important; }
+  #pv-horarios-recurrentes-contenedor > .panel__body { padding: 0 !important; }
+  .pv-hr-lista {
+    display: grid !important;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 20px !important;
+  }
+  .pv-hr-item { background: #fff; color: var(--color-ink); border-radius: 6px; padding: 14px 10px 16px; }
+  .pv-hr-nombre { font-size: 20px !important; letter-spacing: 0 !important; text-transform: none !important; margin-bottom: 10px !important; color: var(--color-ink); }
+  .pv-hr-foto { width: 108px !important; height: 108px !important; margin-bottom: 10px !important; }
+  .pv-hr-dia, .pv-hr-hora { font-size: 17px !important; line-height: 1.4; }
+  .pv-hr-chile { font-size: 12px !important; color: var(--color-ink-soft) !important; }
+  #preguntas-vivo-listado [data-sesion-idx] > .panel__body:first-child { align-items: center !important; padding: 20px 28px; }
+}
