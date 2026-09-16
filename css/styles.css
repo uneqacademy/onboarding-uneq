@@ -784,6 +784,10 @@ body.tema-alumno-oscuro .modal-card .btn--ghost {
 .hitos-tab.is-active { color: #fff; border-bottom-color: #fff; }
 .hitos-hero-fase { text-align: center; margin: -8px 0 16px; }
 .hitos-hero-fase img { width: 100%; max-width: 340px; height: auto; }
+@media (max-width: 640px) {
+  .hitos-hero-fase { margin: -12px 0 8px; }
+  .hitos-hero-fase img { max-width: 210px; }
+}
 .btn-contenidos-hotmart {
   display: inline-flex; align-items: center; gap: 8px;
   background: #000; color: #fff; border: 1px solid rgba(255,255,255,0.6);
@@ -792,7 +796,6 @@ body.tema-alumno-oscuro .modal-card .btn--ghost {
 
 .test-pagina-encabezado { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 16px; }
 .test-pagina-encabezado h3 { display: flex; align-items: center; gap: 10px; margin: 0; color: #fff; }
-.titulo-vista-begin { display: none; }
 .btn-whatsapp-soporte { display: inline-flex; align-items: center; gap: 10px; background: #25D366; color: #fff; }
 
 /* ============================================
@@ -815,8 +818,6 @@ body.tema-begin .content .text-soft { color: #C9D6EE; }
 body.tema-begin .panel .text-soft,
 body.tema-begin .kpi-card .text-soft { color: var(--color-ink-soft); }
 
-body.tema-begin .titulo-vista-begin { display: block; text-align: center; margin: 4px 0 20px; }
-body.tema-begin .titulo-vista-begin--izq { text-align: left; margin-bottom: 2px; }
 body.tema-begin #box-alumno-contador { color: #fff; }
 
 /* Dashboard */
@@ -824,9 +825,10 @@ body.tema-begin #view-dashboard-alumno .panel__header { justify-content: center;
 body.tema-begin #view-dashboard-alumno .panel__header h3 { font-size: 22px; color: var(--color-ink); }
 body.tema-begin .accesos-directos-botones { flex-direction: column; align-items: center; gap: 12px; margin: 6px 0 20px; }
 body.tema-begin .acceso-btn {
-  width: min(100%, 360px); justify-content: space-between;
-  padding: 9px 14px; border-radius: 8px; font-size: 17px; font-weight: 400;
+  width: min(100%, 360px); justify-content: center; position: relative;
+  padding: 9px 46px; border-radius: 8px; font-size: 17px; font-weight: 400; text-align: center;
 }
+body.tema-begin .acceso-btn .acceso-icono { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); }
 body.tema-begin .acceso-btn--mentores { background: var(--begin-celeste); color: #fff; border: 0; }
 body.tema-begin .acceso-btn--hotmart { background: #000; color: #fff; justify-content: center; }
 body.tema-begin .acceso-btn--whatsapp { background: var(--begin-verde); color: #fff; }
@@ -857,28 +859,45 @@ body.tema-begin .test-pagina-encabezado .btn--ghost { color: #fff; border-color:
 /* Mis Hitos */
 body.tema-begin .hitos-tabs { border-bottom-color: rgba(255,255,255,0.3); }
 body.tema-begin .hitos-tab { color: #B7C7E6; }
-body.tema-begin #hitos-seguimiento-panel .panel__header { display: none; }
-body.tema-begin .hitos-fase-bloque { margin-bottom: 20px !important; }
-body.tema-begin .hitos-fase-titulo {
-  font-size: 17px !important; font-weight: 700 !important;
-  padding: 8px 12px; margin: 0 0 10px !important; border-radius: 2px;
-  color: #fff !important;
-}
-body.tema-begin .hitos-fase-bloque--fase1 .hitos-fase-titulo { background: #8B5CF6; }
-body.tema-begin .hitos-fase-bloque--fase2 .hitos-fase-titulo { background: #22D3EE; color: #0B1B2B !important; }
-body.tema-begin .hitos-fase-bloque--fase3 .hitos-fase-titulo { background: #FF2667; }
-body.tema-begin .hitos-fase-bloque--fase4 .hitos-fase-titulo { background: #1DF2B0; color: #0B1B2B !important; }
-body.tema-begin .hitos-fase-item { font-size: 14px !important; margin: 6px 0 !important; padding-left: 10px; }
+/* (Tabla de hitos por fase: ahora es común a los 3 niveles — ver
+   bloque "MIS HITOS — tabla por fase" más abajo) */
 
 @media (max-width: 640px) {
   body.tema-begin .acceso-btn { font-size: 15px; }
   body.tema-begin .acceso-coach { font-size: 16px; }
   body.tema-begin .proxima-mentoria__cuando { min-width: 0; }
 }
-body.tema-begin #hitos-titulo-vista { display: none; }
+body.tema-alumno-oscuro #hitos-titulo-vista { display: none; }
 body.tema-begin #alumno-astronauta-fase { max-width: 900px; margin-left: auto; margin-right: auto; }
 @media (max-width: 640px) {
   body.tema-begin .acceso-coach { flex-wrap: nowrap; gap: 8px; font-size: 15px; }
   body.tema-begin .acceso-coach__foto { width: 38px; height: 38px; }
   body.tema-begin .acceso-coach__wa { width: 32px; height: 32px; }
 }
+
+/* ============================================
+   MIS HITOS — tabla por fase (los 3 niveles)
+   ============================================ */
+#hitos-seguimiento-panel .panel__header { display: none; }
+.hitos-fase-bloque { margin-bottom: 20px; }
+.hitos-fase-titulo {
+  font-size: 17px; font-weight: 700; line-height: 1.3;
+  padding: 8px 12px; margin: 0 0 10px; border-radius: 2px; color: #fff;
+}
+.hitos-fase-bloque--fase1 .hitos-fase-titulo { background: #8B5CF6; }
+.hitos-fase-bloque--fase2 .hitos-fase-titulo { background: #22D3EE; color: #0B1B2B; }
+.hitos-fase-bloque--fase3 .hitos-fase-titulo { background: #FF2667; }
+.hitos-fase-bloque--fase4 .hitos-fase-titulo { background: #1DF2B0; color: #0B1B2B; }
+.hitos-fase-item { font-size: 14px; margin: 6px 0; padding-left: 10px; }
+body.tema-alumno-oscuro .panel .hitos-fase-titulo { color: #fff; }
+body.tema-alumno-oscuro .panel .hitos-fase-bloque--fase2 .hitos-fase-titulo,
+body.tema-alumno-oscuro .panel .hitos-fase-bloque--fase4 .hitos-fase-titulo { color: #0B1B2B; }
+
+/* Filtros del alumno en Mis Hitos / Hitos de la Comunidad */
+.hitos-filtros-alumno { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px 12px; align-items: end; }
+.hitos-filtros-alumno .field { margin: 0; }
+.hitos-filtros-alumno .btn { justify-self: start; }
+
+/* Próxima mentoría: acciones */
+.proxima-mentoria__acciones { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-top: 12px; }
+.proxima-mentoria__acciones .proxima-mentoria__detalles { margin-top: 0; }

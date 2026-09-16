@@ -30,28 +30,75 @@ function linkifyTexto(texto) {
 let fotosSeleccionadasHito = [];
 
 // Pestaña activa del alumno: 'mis' (su progreso, publicar y sus hitos)
-// o 'comunidad' (feed de todos los hitos de su comunidad).
+// o 'comunidad' (solo el feed de hitos publicados de su comunidad).
 let pestanaHitosAlumno = 'mis';
 let hashHitoProcesado = false;
+// Cada carga tiene un número: si el alumno cambia de pestaña o filtro
+// mientras una carga anterior sigue esperando datos, la anterior se
+// descarta y no pisa la pantalla (causa del astronauta/botón que
+// aparecía en "Hitos de la Comunidad").
+let contadorCargaHitos = 0;
+
+const IDS_FILTROS_ALUMNO = ['hitos-falumno-desde', 'hitos-falumno-hasta', 'hitos-falumno-estudiante', 'hitos-falumno-fase', 'hitos-falumno-hito'];
+
+function limpiarFiltrosAlumno() {
+  IDS_FILTROS_ALUMNO.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = '';
+  });
+}
 
 document.querySelectorAll('[data-hitos-tab]').forEach(btn => {
   btn.addEventListener('click', () => {
+    if (pestanaHitosAlumno === btn.dataset.hitosTab) return;
     pestanaHitosAlumno = btn.dataset.hitosTab;
+    limpiarFiltrosAlumno();
     cargarMisHitos();
   });
 });
 
-function imagenFaseBegin(ciclo) {
+IDS_FILTROS_ALUMNO.forEach(id => {
+  document.getElementById(id)?.addEventListener('change', () => {
+    if (id === 'hitos-falumno-fase') {
+      const hitoEl = document.getElementById('hitos-falumno-hito');
+      if (hitoEl) hitoEl.value = '';
+    }
+    cargarMisHitos();
+  });
+});
+document.getElementById('btn-hitos-falumno-limpiar')?.addEventListener('click', () => {
+  limpiarFiltrosAlumno();
+  cargarMisHitos();
+});
+
+// Carpeta de imágenes de fase según nivel: BEGIN tiene las suyas;
+// NEXT y eXIT usan las de NEXT.
+function carpetaFasesPrograma(programa) {
+  return programa === 'begin' ? 'begin' : 'next';
+}
+
+function imagenFaseCiclo(ciclo) {
   if (!ciclo) return 'inicio';
   if (ciclo.estadoAlumno === 'egresado') return 'final';
   if (ciclo.faseMetodologia && /\d/.test(ciclo.faseMetodologia)) return `fase${ciclo.faseMetodologia.match(/\d/)[0]}`;
   return 'inicio';
 }
 
+// Hasta qué fase ve el checklist: 0 = sin fase marcada por el coach,
+// 1-4 = fase actual, 4 = egresado (ve todas).
+function faseMaximaChecklist(ciclo) {
+  if (!ciclo) return 0;
+  if (ciclo.estadoAlumno === 'egresado') return 4;
+  if (ciclo.faseMetodologia && /\d/.test(ciclo.faseMetodologia)) return Math.min(4, parseInt(ciclo.faseMetodologia.match(/\d/)[0], 10));
+  return 0;
+}
+
 export async function cargarMisHitos() {
   const role = getCurrentRole();
   const uid = auth.currentUser ? auth.currentUser.uid : null;
   if (!uid) return;
+  const cargaId = ++contadorCargaHitos;
+  const cargaVigente = () => cargaId === contadorCargaHitos;
 
   const esAlumno = role === 'alumno';
   const esStaff = !esAlumno;
@@ -69,9 +116,19 @@ export async function cargarMisHitos() {
     btn.setAttribute('aria-selected', activa ? 'true' : 'false');
   });
 
+  // Todo lo que no es de la pestaña actual se oculta de inmediato,
+  // antes de esperar datos.
   document.getElementById('hitos-seguimiento-panel')?.classList.toggle('hidden', !enMisHitos);
   document.getElementById('hitos-publicar-panel')?.classList.toggle('hidden', !enMisHitos);
   document.getElementById('hitos-filtros-panel')?.classList.toggle('hidden', !esStaff);
+  document.getElementById('hitos-filtros-alumno-panel')?.classList.toggle('hidden', !esAlumno);
+  document.getElementById('hitos-falumno-estudiante-campo')?.classList.toggle('hidden', enMisHitos);
+  if (!enMisHitos) {
+    const heroEl = document.getElementById('hitos-hero-fase');
+    if (heroEl) { heroEl.classList.add('hidden'); heroEl.innerHTML = ''; }
+    const contEl = document.getElementById('hitos-contenidos-hotmart');
+    if (contEl) { contEl.classList.add('hidden'); contEl.innerHTML = ''; }
+  }
 
   // --- Determinar alumnoId/proyecto/programa (si es alumno) ---
   let alumnoIdPropio = null;
@@ -95,17 +152,21 @@ export async function cargarMisHitos() {
       }
     }
   }
+  if (!cargaVigente()) return;
 
   // --- Hitos definidos (activos e inactivos — los inactivos igual
   //     hay que poder mostrarlos si ya fueron publicados) ---
-  const [hitosDefSnap, hitosSnap, usuariosSnap] = await Promise.all([
+  const [hitosDefSnap, hitosSnap, usuariosSnap, configSnap] = await Promise.all([
     get(ref(db, 'configuracion/hitosDefinidos')),
     get(ref(db, 'hitos')),
-    get(ref(db, 'usuarios'))
+    get(ref(db, 'usuarios')),
+    enMisHitos ? get(ref(db, 'configuracion/general')) : Promise.resolve(null)
   ]);
+  if (!cargaVigente()) return;
   const hitosDefinidos = hitosDefSnap.exists() ? hitosDefSnap.val() : {};
   const usuarios = usuariosSnap.exists() ? usuariosSnap.val() : {};
   const todosLosHitos = hitosSnap.exists() ? Object.entries(hitosSnap.val()) : [];
+  const config = configSnap && configSnap.exists() ? configSnap.val() : {};
 
   // --- Filtro de visibilidad: BEGIN solo ve BEGIN; Next/eXIT conviven;
   //     staff ve todo. Los "oculto_denuncia" no los ve nadie excepto
@@ -131,40 +192,37 @@ export async function cargarMisHitos() {
     }
   }
 
-  // --- Alumno: imagen de fase (solo BEGIN) y botón de Contenidos en
-  //     Hotmart (link según su nivel, desde Configuración) ---
-  const heroFaseEl = document.getElementById('hitos-hero-fase');
-  if (heroFaseEl) {
-    const mostrarHero = enMisHitos && programaPropio === 'begin';
-    heroFaseEl.classList.toggle('hidden', !mostrarHero);
-    heroFaseEl.innerHTML = mostrarHero
-      ? `<img src="assets/fases/begin/${imagenFaseBegin(cicloPropio)}.webp" alt="Tu fase actual">`
-      : '';
-  }
-  const contenidosEl = document.getElementById('hitos-contenidos-hotmart');
-  if (contenidosEl) {
-    let urlContenidos = '';
-    if (enMisHitos && programaPropio) {
-      const configSnap = await get(ref(db, 'configuracion/general'));
-      const config = configSnap.exists() ? configSnap.val() : {};
-      urlContenidos = programaPropio === 'begin' ? config.contenidoHotmartBegin
+  // --- Pestaña "Mis Hitos": astronauta de la fase (los 3 niveles) y
+  //     botón de Contenidos en Hotmart (link según nivel) ---
+  if (enMisHitos) {
+    const heroFaseEl = document.getElementById('hitos-hero-fase');
+    if (heroFaseEl) {
+      const mostrarHero = !!programaPropio;
+      heroFaseEl.classList.toggle('hidden', !mostrarHero);
+      heroFaseEl.innerHTML = mostrarHero
+        ? `<img src="assets/fases/${carpetaFasesPrograma(programaPropio)}/${imagenFaseCiclo(cicloPropio)}.webp" alt="Tu fase actual">`
+        : '';
+    }
+    const contenidosEl = document.getElementById('hitos-contenidos-hotmart');
+    if (contenidosEl) {
+      const urlContenidos = programaPropio === 'begin' ? config.contenidoHotmartBegin
         : programaPropio === 'next' ? config.contenidoHotmartNext
         : programaPropio === 'exit' ? config.contenidoHotmartExit : '';
+      contenidosEl.classList.toggle('hidden', !urlContenidos);
+      contenidosEl.innerHTML = urlContenidos
+        ? `<a href="${urlContenidos}" target="_blank" rel="noopener" class="btn btn-contenidos-hotmart">Ver Contenidos en <img src="assets/logos/hotmart.png" alt="Hotmart" style="height:18px; width:auto; vertical-align:middle;"> hotmart</a>`
+        : '';
     }
-    contenidosEl.classList.toggle('hidden', !urlContenidos);
-    contenidosEl.innerHTML = urlContenidos
-      ? `<a href="${urlContenidos}" target="_blank" rel="noopener" class="btn btn-contenidos-hotmart">Ver Contenidos en <img src="assets/logos/hotmart.png" alt="Hotmart" style="height:18px; width:auto; vertical-align:middle;"> hotmart</a>`
-      : '';
   }
 
   // --- Seguimiento personal + selector de publicar (solo alumno) ---
-  if (esAlumno && cicloIdPropio) {
+  if (enMisHitos && cicloIdPropio) {
     const misHitosPublicadosDefIds = new Set(
       todosLosHitos.filter(([, h]) => h.proyectoId === cicloIdPropio).map(([, h]) => h.hitoDefId)
     );
-    renderSeguimientoPersonal(hitosDefinidos, misHitosPublicadosDefIds);
+    renderSeguimientoPersonal(hitosDefinidos, misHitosPublicadosDefIds, faseMaximaChecklist(cicloPropio));
     poblarSelectorPublicar(hitosDefinidos, misHitosPublicadosDefIds);
-  } else if (esAlumno) {
+  } else if (enMisHitos) {
     const seg = document.getElementById('hitos-seguimiento-contenido');
     if (seg) seg.innerHTML = '<p class="text-soft">Todavía no tienes un ciclo asignado.</p>';
   }
@@ -191,6 +249,9 @@ export async function cargarMisHitos() {
   const hitosParaFeed = enMisHitos
     ? hitosVisibles.filter(([, h]) => h.proyectoId === cicloIdPropio)
     : hitosVisibles;
+
+  if (esAlumno) poblarFiltrosAlumno(hitosParaFeed, hitosDefinidos, enMisHitos);
+
   renderFeedHitos(hitosParaFeed, usuarios, { esAlumno, esStaff, esDirector, uid, alumnoIdPropio, idsProyectoPropio, enMisHitos });
 
   // --- Link directo a un hito (compartido por WhatsApp) ---
@@ -203,22 +264,49 @@ export async function cargarMisHitos() {
   }
 }
 
-function renderSeguimientoPersonal(hitosDefinidos, misHitosPublicadosDefIds) {
+// Opciones de los filtros del alumno (conserva lo ya elegido si sigue válido)
+function poblarFiltrosAlumno(lista, hitosDefinidos, enMisHitos) {
+  const estudianteEl = document.getElementById('hitos-falumno-estudiante');
+  if (estudianteEl && !enMisHitos) {
+    const actual = estudianteEl.value;
+    const nombres = [...new Set(lista.map(([, h]) => h.nombreAutor).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'es'));
+    estudianteEl.innerHTML = '<option value="">Todos los estudiantes</option>' + nombres.map(n => `<option value="${n.replace(/"/g, '&quot;')}">${n}</option>`).join('');
+    if (nombres.includes(actual)) estudianteEl.value = actual;
+  }
+  const faseEl = document.getElementById('hitos-falumno-fase');
+  const hitoEl = document.getElementById('hitos-falumno-hito');
+  if (hitoEl) {
+    const actual = hitoEl.value;
+    const faseElegida = faseEl ? faseEl.value : '';
+    const defs = Object.entries(hitosDefinidos)
+      .filter(([, h]) => !faseElegida || h.fase === faseElegida)
+      .sort((a, b) => (a[1].fase || '').localeCompare(b[1].fase || '') || (a[1].titulo || '').localeCompare(b[1].titulo || '', 'es', { numeric: true }));
+    hitoEl.innerHTML = '<option value="">Todos los hitos</option>' + defs.map(([id, h]) => `<option value="${id}">${h.titulo}</option>`).join('');
+    if (defs.some(([id]) => id === actual)) hitoEl.value = actual;
+  }
+}
+
+function renderSeguimientoPersonal(hitosDefinidos, misHitosPublicadosDefIds, faseMaxima) {
   const cont = document.getElementById('hitos-seguimiento-contenido');
   if (!cont) return;
-  const activos = Object.entries(hitosDefinidos).filter(([, h]) => h.activo !== false);
+  if (!faseMaxima) {
+    cont.innerHTML = '<p class="text-soft" style="margin:0; text-align:center;">Tu checklist de hitos aparecerá cuando tu coach marque tu fase.</p>';
+    return;
+  }
+  const fasesVisibles = Object.keys(FASES_HITOS).filter(faseClave => parseInt(faseClave.replace('fase', ''), 10) <= faseMaxima);
+  const activos = Object.entries(hitosDefinidos).filter(([, h]) => h.activo !== false && fasesVisibles.includes(h.fase));
   const totalPublicados = activos.filter(([id]) => misHitosPublicadosDefIds.has(id)).length;
 
   cont.innerHTML = `
     <p class="mb-16" style="font-weight:600;">${totalPublicados} de ${activos.length} hitos publicados</p>
-    ${Object.keys(FASES_HITOS).map(faseClave => {
+    ${fasesVisibles.map(faseClave => {
       const deEstaFase = activos.filter(([, h]) => h.fase === faseClave);
       if (!deEstaFase.length) return '';
       return `
-        <div class="hitos-fase-bloque hitos-fase-bloque--${faseClave}" style="margin-bottom:14px;">
-          <p class="text-soft hitos-fase-titulo" style="font-size:12px; font-weight:600; margin-bottom:6px;">${FASES_HITOS[faseClave]}</p>
+        <div class="hitos-fase-bloque hitos-fase-bloque--${faseClave}">
+          <p class="hitos-fase-titulo">${FASES_HITOS[faseClave]}</p>
           ${deEstaFase.map(([id, h]) => `
-            <p class="hitos-fase-item" style="font-size:13px; margin:2px 0;">${misHitosPublicadosDefIds.has(id) ? '✅' : '⬜'} ${h.titulo}</p>`).join('')}
+            <p class="hitos-fase-item">${misHitosPublicadosDefIds.has(id) ? '✅' : '⬜'} ${h.titulo}</p>`).join('')}
         </div>`;
     }).join('')}`;
 }
@@ -312,7 +400,30 @@ function renderFeedHitos(hitosVisibles, usuarios, ctx) {
     );
   }
 
+  // Filtros del alumno (ambas pestañas; estudiante solo en Comunidad)
+  if (ctx.esAlumno) {
+    const fDesde = document.getElementById('hitos-falumno-desde')?.value || '';
+    const fHasta = document.getElementById('hitos-falumno-hasta')?.value || '';
+    const fEstudiante = ctx.enMisHitos ? '' : (document.getElementById('hitos-falumno-estudiante')?.value || '');
+    const fFase = document.getElementById('hitos-falumno-fase')?.value || '';
+    const fHito = document.getElementById('hitos-falumno-hito')?.value || '';
+    const desdeMs = fDesde ? new Date(`${fDesde}T00:00:00`).getTime() : null;
+    const hastaMs = fHasta ? new Date(`${fHasta}T23:59:59.999`).getTime() : null;
+    lista = lista.filter(([, h]) =>
+      (desdeMs === null || h.createdAt >= desdeMs) &&
+      (hastaMs === null || h.createdAt <= hastaMs) &&
+      (!fEstudiante || h.nombreAutor === fEstudiante) &&
+      (!fFase || h.fase === fFase) &&
+      (!fHito || h.hitoDefId === fHito)
+    );
+  }
+
   if (!lista.length) {
+    const hayFiltros = ctx.esAlumno && IDS_FILTROS_ALUMNO.some(id => document.getElementById(id)?.value);
+    if (hayFiltros) {
+      feedEl.innerHTML = '<p class="text-soft">No hay hitos que coincidan con los filtros.</p>';
+      return;
+    }
     feedEl.innerHTML = ctx.enMisHitos
       ? '<p class="text-soft">Aún no has publicado hitos — cuando logres uno, publícalo arriba.</p>'
       : '<p class="text-soft">Todavía no hay hitos publicados por acá.</p>';

@@ -176,6 +176,8 @@ export async function cargarDashboardAlumno(alumnoId) {
   //     tema oscuro base de alumno. NEXT/eXIT mantienen el negro. ---
   const esBeginDashboard = !!(ciclo && ciclo.programa === 'begin');
   document.body.classList.toggle('tema-begin', esBeginDashboard);
+  // BEGIN no ve la Bitácora.
+  document.querySelectorAll('.nav-item[data-nav="bitacora-alumno"]').forEach(el => el.classList.toggle('hidden', esBeginDashboard));
 
   // --- El BOX ahora sí es visible para BEGIN — ve un canal
   //     distinto (ver cargarBoxAlumno), no el de Mentor IA por especialidad.
@@ -438,6 +440,12 @@ async function renderProximaMentoriaDashboard(programa) {
       const fechaLarga = new Intl.DateTimeFormat('es-CL', { day: '2-digit', month: 'long', year: 'numeric', timeZone: zonaHorariaLocal() }).format(s.inicio);
       const horaTexto = s.inicioTimestamp ? formatearHorarioSesion(s.inicioTimestamp) : (s.hora || '');
       const primerNombre = String(datos.nombre || datos.email || '').trim().split(/\s+/)[0];
+      let yaPreguntoEstaSemana = false;
+      try {
+        yaPreguntoEstaSemana = (await responsablesConPreguntaEstaSemana([s])).has(`${s.tipo}:${s.mentorUid}`);
+      } catch (err) {
+        yaPreguntoEstaSemana = false;
+      }
       tarjetaEl.innerHTML = `
         <div class="panel__body">
           <p class="proxima-mentoria__titulo">Próxima Mentoría Grupal Semanal</p>
@@ -452,9 +460,17 @@ async function renderProximaMentoriaDashboard(programa) {
               <span>${horaTexto}</span>
             </div>
           </div>
-          <button type="button" class="proxima-mentoria__detalles" id="btn-proxima-mentoria-detalles">Toca para ver los detalles</button>
+          <div class="proxima-mentoria__acciones">
+            <button type="button" class="proxima-mentoria__detalles" id="btn-proxima-mentoria-detalles">Toca para ver los detalles</button>
+            <button type="button" class="btn btn--primary" id="btn-proxima-mentoria-preguntar" ${yaPreguntoEstaSemana ? 'disabled' : ''}>Hacer Pregunta</button>
+          </div>
+          ${yaPreguntoEstaSemana ? '<p class="text-soft" style="margin:8px 0 0; font-size:12px;">Ya usaste tu pregunta de esta semana para esta persona.</p>' : ''}
         </div>`;
       document.getElementById('btn-proxima-mentoria-detalles')?.addEventListener('click', () => {
+        document.querySelector('.nav-item[data-nav="preguntas-vivo"]')?.click();
+      });
+      document.getElementById('btn-proxima-mentoria-preguntar')?.addEventListener('click', () => {
+        sesionVivoPendienteDeAbrir = { tipo: s.tipo, mentorUid: s.mentorUid, mentoriaId: s.mentoriaId };
         document.querySelector('.nav-item[data-nav="preguntas-vivo"]')?.click();
       });
     }
@@ -1742,7 +1758,17 @@ function renderHorariosRecurrentes(usuarios) {
     const instante = instanteDesdeFechaHoraEnZona(fechaAnclaje.getFullYear(), fechaAnclaje.getMonth() + 1, fechaAnclaje.getDate(), hora, minuto, zonaCreador);
     return { m, instante };
   });
-  conInstante.sort((a, b) => a.instante - b.instante);
+  // Orden de izquierda a derecha: lunes a domingo según el día local de
+  // quien mira y, dentro del mismo día, por hora ascendente.
+  const ORDEN_DIA_LOCAL = { lun: 0, mar: 1, mié: 2, mie: 2, jue: 3, vie: 4, sáb: 5, sab: 5, dom: 6 };
+  const claveOrdenLocal = (instante) => {
+    const fechaObj = new Date(instante);
+    const diaCorto = new Intl.DateTimeFormat('es-CL', { weekday: 'short', timeZone: zonaViewer }).format(fechaObj).replace('.', '').slice(0, 3).toLowerCase();
+    const horaMin = new Intl.DateTimeFormat('es-CL', { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: zonaViewer }).format(fechaObj);
+    const [hh, mm] = horaMin.split(':').map(Number);
+    return (ORDEN_DIA_LOCAL[diaCorto] ?? 7) * 1440 + (hh % 24) * 60 + mm;
+  };
+  conInstante.sort((a, b) => claveOrdenLocal(a.instante) - claveOrdenLocal(b.instante));
 
   contenedor.classList.remove('hidden');
   lista.style.cssText = 'display:flex; gap:8px; justify-content:space-between; flex-wrap:nowrap;';
@@ -1763,6 +1789,10 @@ function renderHorariosRecurrentes(usuarios) {
       </div>`;
   }).join('');
 }
+
+// Sesión elegida desde el Dashboard ("Hacer Pregunta") para abrir al
+// cargar Preguntas en Vivo.
+let sesionVivoPendienteDeAbrir = null;
 
 /* Sesiones en vivo próximas que puede ver un alumno según su programa
    (BEGIN: mentorías exclusivas BEGIN + sesiones grupales de coaches de
@@ -1819,6 +1849,30 @@ async function obtenerSesionesVivoProximas(programa, usuarios) {
   return sesiones;
 }
 
+/* Responsables (coach o mentor) a quienes el proyecto del alumno ya les
+   hizo su pregunta en vivo de esta semana — clave "tipo:uid". */
+async function responsablesConPreguntaEstaSemana(sesiones) {
+  const idsProyectoVivo = await obtenerIdsDelProyecto();
+  const responsablesEnSesiones = [...new Set(sesiones.map(s => `${s.tipo}:${s.mentorUid}`))];
+  const preguntasPorResponsableSnaps = await Promise.all(responsablesEnSesiones.map(clave => {
+    const [tipo, uid] = clave.split(':');
+    return get(ref(db, `${tipo === 'coach' ? 'preguntasVivoBegin' : 'preguntasVivo'}/${uid}`));
+  }));
+  const inicioSemanaVivo = inicioSemanaActual();
+  const mentoresConPreguntaEstaSemana = new Set();
+  preguntasPorResponsableSnaps.forEach((snap, idx) => {
+    if (!snap.exists()) return;
+    const clave = responsablesEnSesiones[idx];
+    Object.values(snap.val()).forEach(preguntasDeSesion => {
+      Object.values(preguntasDeSesion).forEach(p => {
+        if (idsProyectoVivo.includes(p.alumnoId) && p.createdAt >= inicioSemanaVivo) mentoresConPreguntaEstaSemana.add(clave);
+      });
+    });
+  });
+
+  return mentoresConPreguntaEstaSemana;
+}
+
 export async function cargarPreguntasVivo() {
   const listadoEl = document.getElementById('preguntas-vivo-listado');
   if (!listadoEl || !alumnoIdActual) return;
@@ -1839,29 +1893,14 @@ export async function cargarPreguntasVivo() {
   const sesiones = await obtenerSesionesVivoProximas(programaAlumnoPv, usuarios);
 
   if (!sesiones.length) {
+    sesionVivoPendienteDeAbrir = null;
     listadoEl.innerHTML = '<p class="text-soft">No hay sesiones en vivo próximas por ahora.</p>';
     return;
   }
 
   // --- Límite: 1 pregunta en vivo por responsable (mentor o coach), por semana
   //     — compartido entre todo el proyecto, no solo lo propio ---
-  const idsProyectoVivo = await obtenerIdsDelProyecto();
-  const responsablesEnSesiones = [...new Set(sesiones.map(s => `${s.tipo}:${s.mentorUid}`))];
-  const preguntasPorResponsableSnaps = await Promise.all(responsablesEnSesiones.map(clave => {
-    const [tipo, uid] = clave.split(':');
-    return get(ref(db, `${tipo === 'coach' ? 'preguntasVivoBegin' : 'preguntasVivo'}/${uid}`));
-  }));
-  const inicioSemanaVivo = inicioSemanaActual();
-  const mentoresConPreguntaEstaSemana = new Set();
-  preguntasPorResponsableSnaps.forEach((snap, idx) => {
-    if (!snap.exists()) return;
-    const clave = responsablesEnSesiones[idx];
-    Object.values(snap.val()).forEach(preguntasDeSesion => {
-      Object.values(preguntasDeSesion).forEach(p => {
-        if (idsProyectoVivo.includes(p.alumnoId) && p.createdAt >= inicioSemanaVivo) mentoresConPreguntaEstaSemana.add(clave);
-      });
-    });
-  });
+  const mentoresConPreguntaEstaSemana = await responsablesConPreguntaEstaSemana(sesiones);
 
   listadoEl.innerHTML = sesiones.map((s, idx) => {
     const temasMentor = s.tipo === 'coach'
@@ -1898,6 +1937,24 @@ export async function cargarPreguntasVivo() {
 
   const cards = Array.from(listadoEl.querySelectorAll('[data-sesion-idx]'));
   cards.forEach((card, idx) => bindSesionVivo(card, sesiones[idx]));
+
+  // --- Si se llegó desde "Hacer Pregunta" del Dashboard: bajar a esa
+  //     sesión y dejar abierto su campo de pregunta ---
+  if (sesionVivoPendienteDeAbrir) {
+    const pendiente = sesionVivoPendienteDeAbrir;
+    sesionVivoPendienteDeAbrir = null;
+    const idxPendiente = sesiones.findIndex(s => s.tipo === pendiente.tipo && s.mentorUid === pendiente.mentorUid && s.mentoriaId === pendiente.mentoriaId);
+    const cardPendiente = idxPendiente >= 0 ? cards[idxPendiente] : null;
+    if (cardPendiente) {
+      const formPendiente = cardPendiente.querySelector('.pv-form-panel');
+      const btnPendiente = cardPendiente.querySelector('.pv-btn-preguntar');
+      if (formPendiente && btnPendiente && !btnPendiente.disabled) formPendiente.classList.remove('hidden');
+      setTimeout(() => {
+        cardPendiente.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        cardPendiente.querySelector('.pv-pregunta-texto')?.focus({ preventScroll: true });
+      }, 150);
+    }
+  }
 
   function actualizarCountdowns() {
     cards.forEach((card, idx) => {

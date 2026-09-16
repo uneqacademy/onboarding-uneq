@@ -1243,7 +1243,6 @@
            BOX — vista ALUMNO (BEGIN o Inteligente según programa)
            ====================================================== -->
       <section id="view-box-alumno" class="view hidden">
-        <h2 class="titulo-vista-begin titulo-vista-begin--izq">BOX Inteligente</h2>
         <div class="mb-16">
           <p class="text-soft" id="box-alumno-contador">Tienes 1 pregunta por cada Mentor IA por semana</p>
         </div>
@@ -1387,7 +1386,6 @@
            MI FICHA ALUMNO — página propia
            ====================================================== -->
       <section id="view-ficha-alumno-propia" class="view hidden">
-        <h2 class="titulo-vista-begin">Mi Ficha Alumno</h2>
         <div class="panel mb-24">
           <div class="panel__body" id="alumno-mi-ficha"></div>
         </div>
@@ -1413,7 +1411,6 @@
            SOPORTE ALUMNOS — página propia
            ====================================================== -->
       <section id="view-soporte-alumnos" class="view hidden">
-        <h2 class="titulo-vista-begin">Soporte Alumnos</h2>
         <div class="panel mb-24">
           <div class="panel__body" id="soporte-alumnos-contacto"></div>
         </div>
@@ -1438,8 +1435,11 @@
           <button type="button" class="hitos-tab" data-hitos-tab="comunidad" role="tab">Hitos de la Comunidad</button>
         </div>
 
-        <!-- Solo alumno BEGIN: imagen de la fase actual -->
+        <!-- Solo alumno (pestaña Mis Hitos): astronauta de la fase actual -->
         <div class="hitos-hero-fase hidden" id="hitos-hero-fase"></div>
+
+        <!-- Solo alumno: link a contenidos Hotmart de su nivel -->
+        <div class="hidden" id="hitos-contenidos-hotmart" style="text-align:center; margin-bottom:24px;"></div>
 
         <!-- Solo alumno: seguimiento personal -->
         <div class="panel mb-24 hidden" id="hitos-seguimiento-panel">
@@ -1447,8 +1447,6 @@
           <div class="panel__body" id="hitos-seguimiento-contenido"></div>
         </div>
 
-        <!-- Solo alumno: link a contenidos Hotmart de su nivel -->
-        <div class="hidden" id="hitos-contenidos-hotmart" style="text-align:center; margin-bottom:24px;"></div>
 
         <!-- Solo alumno: publicar -->
         <div class="panel mb-24 hidden" id="hitos-publicar-panel">
@@ -1496,6 +1494,26 @@
           </div>
         </div>
 
+        <!-- Solo alumno: filtros del feed (estudiante solo en Hitos de la Comunidad) -->
+        <div class="panel mb-24 hidden" id="hitos-filtros-alumno-panel">
+          <div class="panel__body hitos-filtros-alumno">
+            <div class="field"><label>Desde</label><input type="date" id="hitos-falumno-desde"></div>
+            <div class="field"><label>Hasta</label><input type="date" id="hitos-falumno-hasta"></div>
+            <div class="field" id="hitos-falumno-estudiante-campo"><label>Estudiante</label><select id="hitos-falumno-estudiante"><option value="">Todos los estudiantes</option></select></div>
+            <div class="field"><label>Fase</label>
+              <select id="hitos-falumno-fase">
+                <option value="">Todas las fases</option>
+                <option value="fase1">Fase 1</option>
+                <option value="fase2">Fase 2</option>
+                <option value="fase3">Fase 3</option>
+                <option value="fase4">Fase 4</option>
+              </select>
+            </div>
+            <div class="field"><label>Hito</label><select id="hitos-falumno-hito"><option value="">Todos los hitos</option></select></div>
+            <button type="button" class="btn btn--ghost" id="btn-hitos-falumno-limpiar">Limpiar filtros</button>
+          </div>
+        </div>
+
         <div id="hitos-feed"></div>
       </section>
 
@@ -1532,7 +1550,6 @@
       </section>
 
       <section id="view-preguntas-comunidad" class="view hidden">
-        <h2 class="titulo-vista-begin">Preguntas de la Comunidad</h2>
         <div class="panel mb-24">
           <div class="panel__body" style="display:flex; gap:16px; flex-wrap:wrap;">
             <div class="field" style="flex:1; min-width:200px;">
