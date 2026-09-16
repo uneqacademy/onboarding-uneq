@@ -23,6 +23,16 @@ function escaparHtml(texto) {
   return String(texto || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
+// Resguardo extra: por si a la IA se le escapa algún símbolo de
+// Markdown pese a la instrucción. Los guiones/números de lista SÍ
+// se dejan (están permitidos para pasos o listas) — solo se limpia
+// negrita con asteriscos y numerales de título.
+function limpiarFormatoIA(texto) {
+  return String(texto || '')
+    .replace(/\*\*(.*?)\*\*/g, '$1')
+    .replace(/^#{1,6}\s+/gm, '');
+}
+
 function burbuja(texto, esUsuario) {
   if (esUsuario) {
     return `<div style="display:flex; justify-content:flex-end;">
@@ -73,7 +83,7 @@ function inicializarChatAsistente(sufijo) {
       const resultado = await consultarAsistente({ mensaje, historial: historial.slice(0, -1) });
       const respuesta = (resultado.data && resultado.data.respuesta) || 'No pude generar una respuesta. Intenta de nuevo.';
       document.getElementById('asistente-burbuja-cargando')?.remove();
-      contMensajes.insertAdjacentHTML('beforeend', burbuja(respuesta, false));
+      contMensajes.insertAdjacentHTML('beforeend', burbuja(limpiarFormatoIA(respuesta), false));
       historial.push({ rol: 'asistente', texto: respuesta });
     } catch (err) {
       console.error('Error consultando al Asistente UNEQ:', err);

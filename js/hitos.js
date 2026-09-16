@@ -180,6 +180,20 @@ function programaLabelCorto(p) {
   return p === 'begin' ? 'Begin' : p === 'next' ? 'Next' : p === 'exit' ? 'eXIT' : '—';
 }
 
+function renderMiniaturasReacciones(hitoId, reacciones) {
+  const lista = Object.values(reacciones || {});
+  if (!lista.length) return '';
+  const PLACEHOLDER = 'https://uneqacademy.github.io/onboarding-uneq/assets/logos/isotipo-uneq.png';
+  const primeras5 = lista.slice(0, 5);
+  return `
+    <div style="display:flex; align-items:center; margin-top:8px;">
+      <div style="display:flex;">
+        ${primeras5.map((r, i) => `<img src="${(r && r.fotoUrl) || PLACEHOLDER}" alt="" title="${(r && r.nombre) || ''}" style="width:22px; height:22px; border-radius:50%; object-fit:cover; border:2px solid #fff; margin-left:${i === 0 ? '0' : '-8px'};">`).join('')}
+      </div>
+      ${lista.length > 5 ? `<button type="button" class="btn-ver-todas-reacciones" data-hito-id="${hitoId}" style="background:none; border:none; color:var(--color-accent); font-size:11.5px; cursor:pointer; margin-left:8px; padding:0;">Ver todos (${lista.length})</button>` : ''}
+    </div>`;
+}
+
 function renderComentarios(hitoId, comentarios, esDirector) {
   const lista = Object.entries(comentarios || {})
     .filter(([, c]) => c.estado !== 'oculto_denuncia' || esDirector)
@@ -248,7 +262,7 @@ function renderFeedHitos(hitosVisibles, usuarios, ctx) {
         </div>
         ${h.descripcionHito ? `<p class="text-soft" style="font-size:12px; margin:8px 0 0; font-style:italic;">${h.descripcionHito}</p>` : ''}
         ${h.textoAlumno ? `<p style="margin:8px 0 0; white-space:pre-wrap;">${linkifyTexto(h.textoAlumno)}</p>` : ''}
-        ${(h.fotos || []).map(f => `<img src="${f.url}" alt="" style="max-width:220px; max-height:220px; border-radius:8px; margin:8px 8px 0 0; object-fit:cover;">`).join('')}
+        ${(h.fotos || []).map(f => `<img src="${f.url}" alt="" class="btn-ampliar-foto-hito" data-src="${f.url}" style="max-width:220px; max-height:220px; border-radius:8px; margin:8px 8px 0 0; object-fit:cover; cursor:zoom-in;">`).join('')}
         <p class="text-soft" style="font-size:11px; margin:8px 0 0;">${formatFechaHito(h.createdAt)}</p>
 
         <div style="display:flex; gap:8px; margin-top:12px; flex-wrap:wrap; align-items:center;">
@@ -260,6 +274,7 @@ function renderFeedHitos(hitosVisibles, usuarios, ctx) {
             <button type="button" class="btn btn--ghost btn-aceptar-denuncia-hito" data-hito-id="${hitoId}" style="font-size:12px; padding:4px 10px; color:#C0392B;">Aceptar denuncia (elimina)</button>
             <button type="button" class="btn btn--ghost btn-rechazar-denuncia-hito" data-hito-id="${hitoId}" style="font-size:12px; padding:4px 10px; color:#2F9E8F;">Rechazar</button>` : ''}
         </div>
+        ${renderMiniaturasReacciones(hitoId, h.reacciones)}
 
         <div class="comentarios-hito" style="margin-top:12px; border-top:0.5px solid var(--border); padding-top:10px;">
           ${renderComentarios(hitoId, h.comentarios, ctx.esDirector)}
@@ -406,8 +421,56 @@ if (feedHitosEl) {
       const hitoId = btnReaccion.dataset.hitoId;
       const refReaccion = ref(db, `hitos/${hitoId}/reacciones/${uid}`);
       const yaExiste = (await get(refReaccion)).exists();
-      if (yaExiste) await remove(refReaccion); else await set(refReaccion, true);
+      if (yaExiste) {
+        await remove(refReaccion);
+      } else {
+        const role = getCurrentRole();
+        let nombre = '', fotoUrl = '';
+        if (role === 'alumno') {
+          const mapaSnap = await get(ref(db, `alumnoPorAuthUid/${uid}`));
+          const alumnoId = mapaSnap.exists() ? mapaSnap.val() : null;
+          const alumnoSnap = await get(ref(db, `alumnos/${alumnoId}`));
+          const a = alumnoSnap.exists() ? alumnoSnap.val() : {};
+          nombre = `${a.nombre || ''} ${a.apellido || ''}`.trim();
+          fotoUrl = a.fotoUrl || '';
+        } else {
+          const usuarioSnap = await get(ref(db, `usuarios/${uid}`));
+          const u = usuarioSnap.exists() ? usuarioSnap.val() : {};
+          nombre = u.nombre || '';
+          fotoUrl = u.fotoUrl || '';
+        }
+        await set(refReaccion, { nombre, fotoUrl });
+      }
       await cargarMisHitos();
+      return;
+    }
+
+    const imgAmpliar = ev.target.closest('.btn-ampliar-foto-hito');
+    if (imgAmpliar) {
+      const lightbox = document.getElementById('hito-lightbox-imagen');
+      if (lightbox) {
+        document.getElementById('hito-lightbox-imagen-img').src = imgAmpliar.dataset.src;
+        lightbox.classList.remove('hidden');
+      }
+      return;
+    }
+
+    const btnVerTodasReacciones = ev.target.closest('.btn-ver-todas-reacciones');
+    if (btnVerTodasReacciones) {
+      const hitoId = btnVerTodasReacciones.dataset.hitoId;
+      const snap = await get(ref(db, `hitos/${hitoId}/reacciones`));
+      const lista = Object.values(snap.exists() ? snap.val() : {});
+      const PLACEHOLDER = 'https://uneqacademy.github.io/onboarding-uneq/assets/logos/isotipo-uneq.png';
+      const modal = document.getElementById('hito-modal-reacciones');
+      const listaEl = document.getElementById('hito-modal-reacciones-lista');
+      if (modal && listaEl) {
+        listaEl.innerHTML = lista.map(r => `
+          <div style="display:flex; align-items:center; gap:10px; padding:8px 0; border-bottom:0.5px solid var(--color-border);">
+            <img src="${(r && r.fotoUrl) || PLACEHOLDER}" alt="" style="width:32px; height:32px; border-radius:50%; object-fit:cover;">
+            <span style="font-size:13.5px;">${(r && r.nombre) || 'Alguien'}</span>
+          </div>`).join('');
+        modal.classList.remove('hidden');
+      }
       return;
     }
 
@@ -570,3 +633,22 @@ document.addEventListener('click', (ev) => {
   // Clic afuera del popover y de cualquier botón de emoji -> se cierra.
   if (!ev.target.closest('#emoji-picker-popover')) cerrarEmojiPopover();
 });
+
+// Cierre de la imagen ampliada y de la ventana "Ver todos" — clic
+// afuera del contenido, o en el botón de cerrar de cada una.
+const lightboxImagenHito = document.getElementById('hito-lightbox-imagen');
+if (lightboxImagenHito) {
+  lightboxImagenHito.addEventListener('click', (ev) => {
+    if (ev.target === lightboxImagenHito || ev.target.classList.contains('btn-cerrar-lightbox')) {
+      lightboxImagenHito.classList.add('hidden');
+    }
+  });
+}
+const modalReaccionesHito = document.getElementById('hito-modal-reacciones');
+if (modalReaccionesHito) {
+  modalReaccionesHito.addEventListener('click', (ev) => {
+    if (ev.target === modalReaccionesHito || ev.target.classList.contains('btn-cerrar-modal-reacciones')) {
+      modalReaccionesHito.classList.add('hidden');
+    }
+  });
+}
