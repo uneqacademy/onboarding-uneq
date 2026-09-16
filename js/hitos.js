@@ -2,8 +2,8 @@
    hitos.js — "Mis Hitos" (alumno) / "Hitos Estudiantes" (staff)
    Los alumnos publican hitos predefinidos (uno por proyecto, no se
    puede repetir), con su propio texto y fotos. Sus compañeros (y el
-   staff) comentan y reaccionan. BEGIN solo ve BEGIN; Next/eXIT
-   conviven entre ellos; el staff ve todo junto con etiqueta de
+   staff) comentan y reaccionan. Todos (alumnos y staff) ven los
+   hitos de los 3 programas, cada uno con la etiqueta (logo) de su
    programa. Moderación: cualquier alumno puede denunciar (queda
    oculto hasta que el director decide); el autor puede borrar lo
    suyo en cualquier momento; el director puede eliminar directo.
@@ -168,17 +168,12 @@ export async function cargarMisHitos() {
   const todosLosHitos = hitosSnap.exists() ? Object.entries(hitosSnap.val()) : [];
   const config = configSnap && configSnap.exists() ? configSnap.val() : {};
 
-  // --- Filtro de visibilidad: BEGIN solo ve BEGIN; Next/eXIT conviven;
-  //     staff ve todo. Los "oculto_denuncia" no los ve nadie excepto
-  //     el director (para poder decidir). ---
-  const hitosVisibles = todosLosHitos.filter(([, h]) => {
-    if (h.estado === 'oculto_denuncia' && !esDirector) return false;
-    if (esAlumno) {
-      if (programaPropio === 'begin') return h.programa === 'begin';
-      return h.programa === 'next' || h.programa === 'exit';
-    }
-    return true;
-  }).sort((a, b) => b[1].createdAt - a[1].createdAt);
+  // --- Filtro de visibilidad: alumnos y staff ven los hitos de los 3
+  //     programas (cada publicación lleva la etiqueta de su programa).
+  //     Los "oculto_denuncia" no los ve nadie excepto el director. ---
+  const hitosVisibles = todosLosHitos
+    .filter(([, h]) => !(h.estado === 'oculto_denuncia' && !esDirector))
+    .sort((a, b) => b[1].createdAt - a[1].createdAt);
 
   // --- Link directo a un hito de otro proyecto (compartido por WhatsApp):
   //     se abre en la pestaña "Hitos de la Comunidad" para que aparezca ---
@@ -344,6 +339,13 @@ function programaLabelCorto(p) {
   return p === 'begin' ? 'Begin' : p === 'next' ? 'Next' : p === 'exit' ? 'eXIT' : '—';
 }
 
+// Etiqueta con el logo del programa (píldora negra, porque los logos
+// tienen letras blancas). Sin programa conocido, no muestra nada.
+function etiquetaProgramaHito(p) {
+  if (!['begin', 'next', 'exit'].includes(p)) return '';
+  return `<span class="hito-etiqueta-programa" title="${programaLabelCorto(p)}"><img src="assets/logos/wordmark-${p}.png" alt="${programaLabelCorto(p)}"></span>`;
+}
+
 function renderMiniaturasReacciones(hitoId, reacciones) {
   const lista = Object.values(reacciones || {});
   if (!lista.length) return '';
@@ -443,8 +445,10 @@ function renderFeedHitos(hitosVisibles, usuarios, ctx) {
       <div class="panel__body">
         <div class="flex-between">
           <div>
-            <strong>${h.nombreAutor}</strong>
-            ${ctx.esStaff ? `<span class="badge badge--activo" style="font-size:9px;">${programaLabelCorto(h.programa)}</span>` : ''}
+            <div class="hito-autor">
+              <strong>${h.nombreAutor}</strong>
+              ${etiquetaProgramaHito(h.programa)}
+            </div>
             <p class="text-soft" style="font-size:11px; margin:2px 0 0;">${FASES_HITOS[h.fase] || h.fase} · <strong>${h.tituloHito}</strong></p>
           </div>
           ${esDenunciado ? '<span class="badge" style="background:#FBE4E4; color:#C0392B; font-size:9px;">⚠️ Denunciado</span>' : ''}

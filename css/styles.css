@@ -901,3 +901,11 @@ body.tema-alumno-oscuro .panel .hitos-fase-bloque--fase4 .hitos-fase-titulo { co
 /* Próxima mentoría: acciones */
 .proxima-mentoria__acciones { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-top: 12px; }
 .proxima-mentoria__acciones .proxima-mentoria__detalles { margin-top: 0; }
+
+/* Etiqueta de programa en cada publicación de hitos */
+.hito-autor { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.hito-etiqueta-programa {
+  display: inline-flex; align-items: center;
+  background: #000; border-radius: 5px; padding: 4px 8px; line-height: 0;
+}
+.hito-etiqueta-programa img { height: 13px; width: auto; display: block; }
