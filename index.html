@@ -1243,6 +1243,7 @@
            BOX — vista ALUMNO (BEGIN o Inteligente según programa)
            ====================================================== -->
       <section id="view-box-alumno" class="view hidden">
+        <h2 class="titulo-vista-begin titulo-vista-begin--izq">BOX Inteligente</h2>
         <div class="mb-16">
           <p class="text-soft" id="box-alumno-contador">Tienes 1 pregunta por cada Mentor IA por semana</p>
         </div>
@@ -1365,21 +1366,28 @@
           <div class="panel__header"><h3>Accesos Directos</h3></div>
           <div class="panel__body" id="alumno-accesos-directos"></div>
         </div>
+        <div class="panel mb-24 hidden" id="alumno-fase-panel"></div>
         <div id="alumno-astronauta-fase" class="mb-24"></div>
         <div class="panel mb-24" id="alumno-dias-restantes-panel"></div>
-        <div class="flex-between mb-16">
-          <h3 style="color:#fff;">Mi Último Test Brújula</h3>
-          <button class="btn btn--ghost" id="btn-ver-historial-test-alumno" style="font-size:12px;">Ver historial completo →</button>
+        <div class="flex-between mb-16 alumno-test-encabezado">
+          <h3 style="color:#fff; display:flex; align-items:center; gap:8px;">
+            <svg class="icono-brujula" width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="1.8"/><path d="M15.5 8.5l-2 5-5 2 2-5 5-2z" fill="currentColor"/></svg>
+            Mi Último Test Brújula
+          </h3>
+          <button class="btn btn--ghost" id="btn-ver-historial-test-alumno" style="font-size:12px;">Ver resultado completo →</button>
         </div>
-        <div class="panel">
+        <div class="panel mb-24">
           <div class="panel__body" id="alumno-ultimo-test"></div>
         </div>
+        <div class="panel mb-16" id="alumno-proxima-mentoria"></div>
+        <div id="alumno-grabaciones" class="mb-24"></div>
       </section>
 
       <!-- ======================================================
            MI FICHA ALUMNO — página propia
            ====================================================== -->
       <section id="view-ficha-alumno-propia" class="view hidden">
+        <h2 class="titulo-vista-begin">Mi Ficha Alumno</h2>
         <div class="panel mb-24">
           <div class="panel__body" id="alumno-mi-ficha"></div>
         </div>
@@ -1405,6 +1413,7 @@
            SOPORTE ALUMNOS — página propia
            ====================================================== -->
       <section id="view-soporte-alumnos" class="view hidden">
+        <h2 class="titulo-vista-begin">Soporte Alumnos</h2>
         <div class="panel mb-24">
           <div class="panel__body" id="soporte-alumnos-contacto"></div>
         </div>
@@ -1421,13 +1430,25 @@
            PREGUNTAS EN VIVO — página propia
            ====================================================== -->
       <section id="view-mis-hitos" class="view hidden">
-        <div class="flex-between mb-16"><h2>Mis Hitos</h2></div>
+        <div class="flex-between mb-16"><h2 id="hitos-titulo-vista">Mis Hitos</h2></div>
+
+        <!-- Solo alumno: pestañas Mis Hitos / Hitos de la Comunidad -->
+        <div class="hitos-tabs hidden" id="hitos-tabs" role="tablist">
+          <button type="button" class="hitos-tab is-active" data-hitos-tab="mis" role="tab">Mis Hitos</button>
+          <button type="button" class="hitos-tab" data-hitos-tab="comunidad" role="tab">Hitos de la Comunidad</button>
+        </div>
+
+        <!-- Solo alumno BEGIN: imagen de la fase actual -->
+        <div class="hitos-hero-fase hidden" id="hitos-hero-fase"></div>
 
         <!-- Solo alumno: seguimiento personal -->
         <div class="panel mb-24 hidden" id="hitos-seguimiento-panel">
           <div class="panel__header"><h3>Tu Progreso</h3></div>
           <div class="panel__body" id="hitos-seguimiento-contenido"></div>
         </div>
+
+        <!-- Solo alumno: link a contenidos Hotmart de su nivel -->
+        <div class="hidden" id="hitos-contenidos-hotmart" style="text-align:center; margin-bottom:24px;"></div>
 
         <!-- Solo alumno: publicar -->
         <div class="panel mb-24 hidden" id="hitos-publicar-panel">
@@ -1511,6 +1532,7 @@
       </section>
 
       <section id="view-preguntas-comunidad" class="view hidden">
+        <h2 class="titulo-vista-begin">Preguntas de la Comunidad</h2>
         <div class="panel mb-24">
           <div class="panel__body" style="display:flex; gap:16px; flex-wrap:wrap;">
             <div class="field" style="flex:1; min-width:200px;">
@@ -1549,6 +1571,13 @@
            TEST BRÚJULA — vista ALUMNO (página propia, historial)
            ====================================================== -->
       <section id="view-test-alumno" class="view hidden">
+        <div class="test-pagina-encabezado">
+          <h3>
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="1.8"/><path d="M15.5 8.5l-2 5-5 2 2-5 5-2z" fill="currentColor"/></svg>
+            Mi Último Test Brújula
+          </h3>
+          <button type="button" class="btn btn--ghost hidden" id="btn-test-ver-historial">Ver historial completo</button>
+        </div>
         <div class="panel">
           <div class="panel__body" id="alumno-test-completo"></div>
         </div>
@@ -1734,7 +1763,7 @@
         </div>
         <div class="panel mb-24" data-config-seccion="comunidad">
           <div class="panel__header flex-between">
-            <h3>Comunidad y Soporte</h3>
+            <h3>Soporte</h3>
             <div style="display:flex; gap:8px;">
               <button class="btn btn--ghost hidden btn-editar-config-seccion" data-seccion="comunidad" style="font-size:12px; padding:5px 12px;">✏️ Editar</button>
               <button class="btn btn--primary btn-guardar-config-seccion" data-seccion="comunidad" style="font-size:12px; padding:5px 12px;">Guardar</button>
@@ -1743,7 +1772,6 @@
           <div class="panel__body">
             <p id="config-error-comunidad" class="hidden" style="color:#C0392B; margin-bottom:12px; font-size:13px;"></p>
             <div class="field-grid mb-16">
-              <div class="field"><label>Link Comunidad Hotmart (único, para todos)</label><input id="config-comunidad-hotmart" placeholder="https://..."></div>
               <div class="field"><label>Correo de Soporte</label><input type="email" id="config-correo-soporte" placeholder="soporte@agenciauneq.com"></div>
               <div class="field"><label>WhatsApp de Soporte</label><input id="config-whatsapp-soporte" placeholder="+56 9 1234 5678"></div>
             </div>
@@ -1767,6 +1795,23 @@
               <div class="field"><label>Begin</label><input id="config-contenido-begin" placeholder="https://..."></div>
               <div class="field"><label>Next</label><input id="config-contenido-next" placeholder="https://..."></div>
               <div class="field"><label>eXIT</label><input id="config-contenido-exit" placeholder="https://..."></div>
+            </div>
+          </div>
+        </div>
+        <div class="panel mb-24" data-config-seccion="grabaciones">
+          <div class="panel__header flex-between">
+            <h3>Grabaciones de Mentorías Grupales (por nivel)</h3>
+            <div style="display:flex; gap:8px;">
+              <button class="btn btn--ghost hidden btn-editar-config-seccion" data-seccion="grabaciones" style="font-size:12px; padding:5px 12px;">✏️ Editar</button>
+              <button class="btn btn--primary btn-guardar-config-seccion" data-seccion="grabaciones" style="font-size:12px; padding:5px 12px;">Guardar</button>
+            </div>
+          </div>
+          <div class="panel__body">
+            <p id="config-error-grabaciones" class="hidden" style="color:#C0392B; margin-bottom:12px; font-size:13px;"></p>
+            <div class="field-grid">
+              <div class="field"><label>Begin</label><input id="config-grabaciones-begin" placeholder="https://..."></div>
+              <div class="field"><label>Next</label><input id="config-grabaciones-next" placeholder="https://..."></div>
+              <div class="field"><label>eXIT</label><input id="config-grabaciones-exit" placeholder="https://..."></div>
             </div>
           </div>
         </div>

@@ -63,7 +63,7 @@ const BENEFICIOS = {
     items: [
       'Contenido pregrabado de ejecución práctica — Nivel Inicial, para las 4 fases de la metodología 2E (acceso: 1 año)',
       'BOX Inteligente de consultas específicas por temática disponible 24/7, con Mentor IA, el cual es un CLON entrenado personalmente por el Mentor Humano especialista en esa temática. Las respuestas son revisadas y validadas por el mentor Humano y las complementa en caso de ser necesario (tiempo de respuesta: 10 segundos). Los alumnos podrán enviar hasta 5 preguntas por semana en total, con un máximo de 1 pregunta por Mentor — vigente durante el programa: 3 meses',
-      'Comunidad UNEQ Mentoring en Hotmart (acceso: 6 meses)',
+      'Comunidad Exclusiva en APP propia de UNEQ (acceso: 6 meses)',
       'Sesiones semanales grupales con coach de cabecera capacitado para revisar avances y resolver dudas de contenidos, además de responder preguntas previamente recibidas y algunas en vivo si el tiempo lo permite (vigente durante el programa: 3 meses)',
       '1 sesión mensual grupal con Maca y Felipe (vigente durante el programa: 3 meses)',
       'Acceso a Membresía ONE, con clases todos los miércoles a las 9:00 hrs (acceso: 3 meses)',
@@ -80,7 +80,7 @@ const BENEFICIOS = {
     items: [
       'Contenido pregrabado de ejecución práctica — Nivel Inicial + Nivel Intermedio, para las 4 fases de la metodología 2E (acceso: de por vida)',
       'BOX Inteligente de consultas específicas por temática disponible 24/7, con Mentor IA, el cual es un CLON entrenado personalmente por el Mentor Humano especialista en esa temática. Las respuestas son revisadas y validadas por el mentor Humano y las complementa en caso de ser necesario (tiempo de respuesta: 10 segundos). Los alumnos podrán enviar hasta 8 preguntas por semana en total, con un máximo de 3 preguntas por Mentor — vigente durante el programa: 6 meses',
-      'Comunidad UNEQ Mentoring en Hotmart (vigente durante el programa: 6 meses)',
+      'Comunidad Exclusiva en APP propia de UNEQ (vigente durante el programa: 6 meses)',
       'Coach personalizado disponible de Lunes a viernes de 9:00 a 18:00 hrs. por whatsapp, para accountability, motivación, guía para el consumo de contenidos y resolución de dudas sobre el funcionamiento del programa. (vigente durante el programa: 6 meses)',
       'Mentorías en vivo de lunes a viernes, con temáticas: Lunes Copywriting, Martes Mentalidad-Estrategia-Tráfico, Miércoles Identidad Visual y Redes Sociales, Jueves Ventas Energéticas, Viernes Gestión de Proyectos y Estructuración de Calendarios. Puedes enviar preguntas hasta 12 horas antes para cada sesión y serán respondidas de forma personalizada. (vigente durante el programa: 6 meses)',
       'Acceso a Membresía ONE, con clases todos los miércoles a las 9:00 hrs (acceso: 6 meses)',
@@ -102,7 +102,7 @@ const BENEFICIOS = {
     items: [
       'Contenido pregrabado de ejecución práctica — Nivel Básico, Intermedio y Avanzado, para las 4 fases de la metodología 2E (acceso: de por vida)',
       'BOX Inteligente de consultas específicas por temática disponible 24/7, con Mentor IA, el cual es un CLON entrenado personalmente por el Mentor Humano especialista en esa temática. Las respuestas son revisadas y validadas por el mentor Humano y las complementa en caso de ser necesario (tiempo de respuesta: 10 segundos). Los alumnos podrán enviar hasta 8 preguntas por semana en total, con un máximo de 3 preguntas por Mentor — vigente durante el programa: 6 meses',
-      'Comunidad UNEQ Mentoring en Hotmart (vigente durante el programa: 6 meses)',
+      'Comunidad Exclusiva en APP propia de UNEQ (vigente durante el programa: 6 meses)',
       'Mentorías en vivo de lunes a viernes, con temáticas: Lunes Copywriting, Martes Mentalidad-Estrategia-Tráfico, Miércoles Identidad Visual y Redes Sociales, Jueves Ventas Energéticas, Viernes Gestión de Proyectos y Estructuración de Calendarios. Puedes enviar preguntas hasta 12 horas antes para cada sesión y serán respondidas de forma personalizada. (vigente durante el programa: 6 meses)',
       'Acceso a Membresía ONE, con clases todos los miércoles a las 9:00 hrs (acceso: 1 año)',
       'Acceso al Programa de Acompañamiento Sinergia (acceso: de por vida)',

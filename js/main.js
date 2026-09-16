@@ -24,6 +24,9 @@ export function applyRole(role, nombre, rolesDisponibles) {
   currentRolesDisponibles = (rolesDisponibles && rolesDisponibles.length) ? rolesDisponibles : [role];
 
   document.body.classList.toggle('tema-alumno-oscuro', role === 'alumno');
+  // La estética por nivel (tema-begin) la pone alumno-portal.js al
+  // conocer el programa; cualquier otro rol la quita.
+  if (role !== 'alumno') document.body.classList.remove('tema-begin');
 
   document.querySelectorAll('[data-role="director"]').forEach(el => {
     el.classList.toggle('hidden', role !== 'director');
@@ -52,12 +55,12 @@ export function applyRole(role, nombre, rolesDisponibles) {
     if (role === 'mentor') navBox.textContent = 'BOX Inteligente';
   }
 
-  // "Mis Hitos" — visible para todos: alumno publica, y mentor/coach/
+  // "Mis Hitos" (alumno) / "Hitos Estudiantes" (staff) — visible para todos: alumno publica, y mentor/coach/
   // director acompañan comentando y reaccionando.
   const navHitos = document.querySelector('.nav-item[data-nav="mis-hitos"]');
   if (navHitos) {
     navHitos.classList.remove('hidden');
-    navHitos.textContent = role === 'mentor' ? 'Hitos Estudiantes' : 'Mis Hitos';
+    navHitos.textContent = role === 'alumno' ? 'Mis Hitos' : 'Hitos Estudiantes';
   }
 
   const navMentoriasMentor = document.querySelector('.nav-item[data-nav="mentorias-mentor"]');
@@ -116,7 +119,7 @@ function renderSelectorRol() {
 }
 
 export function showLogin() {
-  document.body.classList.remove('tema-alumno-oscuro');
+  document.body.classList.remove('tema-alumno-oscuro', 'tema-begin');
   document.getElementById('view-splash').classList.add('hidden');
   document.getElementById('app-shell').classList.add('hidden');
   document.getElementById('view-login').classList.remove('hidden');
@@ -220,7 +223,7 @@ export function setNav(section) {
     document.getElementById('topbar-title').textContent = 'Preguntas de la Comunidad';
   } else if (section === 'mis-hitos') {
     showView('view-mis-hitos');
-    document.getElementById('topbar-title').textContent = currentRole === 'mentor' ? 'Hitos Estudiantes' : 'Mis Hitos';
+    document.getElementById('topbar-title').textContent = currentRole === 'alumno' ? 'Mis Hitos' : 'Hitos Estudiantes';
   } else if (section === 'mentorias-mentor') {
     showView('view-mentorias');
     document.getElementById('topbar-title').textContent = 'Mis Mentorías';

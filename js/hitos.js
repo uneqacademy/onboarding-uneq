@@ -1,5 +1,5 @@
 /* ============================================================
-   hitos.js — "Mis Hitos"
+   hitos.js — "Mis Hitos" (alumno) / "Hitos Estudiantes" (staff)
    Los alumnos publican hitos predefinidos (uno por proyecto, no se
    puede repetir), con su propio texto y fotos. Sus compañeros (y el
    staff) comentan y reaccionan. BEGIN solo ve BEGIN; Next/eXIT
@@ -29,6 +29,25 @@ function linkifyTexto(texto) {
 
 let fotosSeleccionadasHito = [];
 
+// Pestaña activa del alumno: 'mis' (su progreso, publicar y sus hitos)
+// o 'comunidad' (feed de todos los hitos de su comunidad).
+let pestanaHitosAlumno = 'mis';
+let hashHitoProcesado = false;
+
+document.querySelectorAll('[data-hitos-tab]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    pestanaHitosAlumno = btn.dataset.hitosTab;
+    cargarMisHitos();
+  });
+});
+
+function imagenFaseBegin(ciclo) {
+  if (!ciclo) return 'inicio';
+  if (ciclo.estadoAlumno === 'egresado') return 'final';
+  if (ciclo.faseMetodologia && /\d/.test(ciclo.faseMetodologia)) return `fase${ciclo.faseMetodologia.match(/\d/)[0]}`;
+  return 'inicio';
+}
+
 export async function cargarMisHitos() {
   const role = getCurrentRole();
   const uid = auth.currentUser ? auth.currentUser.uid : null;
@@ -38,8 +57,20 @@ export async function cargarMisHitos() {
   const esStaff = !esAlumno;
   const esDirector = role === 'director';
 
-  document.getElementById('hitos-seguimiento-panel')?.classList.toggle('hidden', !esAlumno);
-  document.getElementById('hitos-publicar-panel')?.classList.toggle('hidden', !esAlumno);
+  if (!esAlumno) pestanaHitosAlumno = 'mis';
+  const enMisHitos = esAlumno && pestanaHitosAlumno === 'mis';
+
+  const tituloVistaEl = document.getElementById('hitos-titulo-vista');
+  if (tituloVistaEl) tituloVistaEl.textContent = esAlumno ? 'Mis Hitos' : 'Hitos Estudiantes';
+  document.getElementById('hitos-tabs')?.classList.toggle('hidden', !esAlumno);
+  document.querySelectorAll('[data-hitos-tab]').forEach(btn => {
+    const activa = btn.dataset.hitosTab === pestanaHitosAlumno;
+    btn.classList.toggle('is-active', activa);
+    btn.setAttribute('aria-selected', activa ? 'true' : 'false');
+  });
+
+  document.getElementById('hitos-seguimiento-panel')?.classList.toggle('hidden', !enMisHitos);
+  document.getElementById('hitos-publicar-panel')?.classList.toggle('hidden', !enMisHitos);
   document.getElementById('hitos-filtros-panel')?.classList.toggle('hidden', !esStaff);
 
   // --- Determinar alumnoId/proyecto/programa (si es alumno) ---
@@ -47,6 +78,7 @@ export async function cargarMisHitos() {
   let cicloIdPropio = null;
   let programaPropio = null;
   let idsProyectoPropio = [];
+  let cicloPropio = null;
   if (esAlumno) {
     const mapaSnap = await get(ref(db, `alumnoPorAuthUid/${uid}`));
     alumnoIdPropio = mapaSnap.exists() ? mapaSnap.val() : null;
@@ -56,6 +88,7 @@ export async function cargarMisHitos() {
       if (cicloIdPropio) {
         const cicloSnap = await get(ref(db, `ciclos/${cicloIdPropio}`));
         if (cicloSnap.exists()) {
+          cicloPropio = cicloSnap.val();
           programaPropio = cicloSnap.val().programa || null;
           idsProyectoPropio = Array.isArray(cicloSnap.val().alumnoIds) ? cicloSnap.val().alumnoIds : [alumnoIdPropio];
         }
@@ -86,6 +119,44 @@ export async function cargarMisHitos() {
     return true;
   }).sort((a, b) => b[1].createdAt - a[1].createdAt);
 
+  // --- Link directo a un hito de otro proyecto (compartido por WhatsApp):
+  //     se abre en la pestaña "Hitos de la Comunidad" para que aparezca ---
+  const hashInicial = window.location.hash;
+  if (esAlumno && enMisHitos && !hashHitoProcesado && hashInicial && hashInicial.startsWith('#hito-')) {
+    hashHitoProcesado = true;
+    const hitoDestino = hitosVisibles.find(([id]) => `#hito-${id}` === hashInicial);
+    if (hitoDestino && hitoDestino[1].proyectoId !== cicloIdPropio) {
+      pestanaHitosAlumno = 'comunidad';
+      return cargarMisHitos();
+    }
+  }
+
+  // --- Alumno: imagen de fase (solo BEGIN) y botón de Contenidos en
+  //     Hotmart (link según su nivel, desde Configuración) ---
+  const heroFaseEl = document.getElementById('hitos-hero-fase');
+  if (heroFaseEl) {
+    const mostrarHero = enMisHitos && programaPropio === 'begin';
+    heroFaseEl.classList.toggle('hidden', !mostrarHero);
+    heroFaseEl.innerHTML = mostrarHero
+      ? `<img src="assets/fases/begin/${imagenFaseBegin(cicloPropio)}.webp" alt="Tu fase actual">`
+      : '';
+  }
+  const contenidosEl = document.getElementById('hitos-contenidos-hotmart');
+  if (contenidosEl) {
+    let urlContenidos = '';
+    if (enMisHitos && programaPropio) {
+      const configSnap = await get(ref(db, 'configuracion/general'));
+      const config = configSnap.exists() ? configSnap.val() : {};
+      urlContenidos = programaPropio === 'begin' ? config.contenidoHotmartBegin
+        : programaPropio === 'next' ? config.contenidoHotmartNext
+        : programaPropio === 'exit' ? config.contenidoHotmartExit : '';
+    }
+    contenidosEl.classList.toggle('hidden', !urlContenidos);
+    contenidosEl.innerHTML = urlContenidos
+      ? `<a href="${urlContenidos}" target="_blank" rel="noopener" class="btn btn-contenidos-hotmart">Ver Contenidos en <img src="assets/logos/hotmart.png" alt="Hotmart" style="height:18px; width:auto; vertical-align:middle;"> hotmart</a>`
+      : '';
+  }
+
   // --- Seguimiento personal + selector de publicar (solo alumno) ---
   if (esAlumno && cicloIdPropio) {
     const misHitosPublicadosDefIds = new Set(
@@ -115,7 +186,12 @@ export async function cargarMisHitos() {
     });
   }
 
-  renderFeedHitos(hitosVisibles, usuarios, { esAlumno, esStaff, esDirector, uid, alumnoIdPropio, idsProyectoPropio });
+  // Pestaña "Mis Hitos": solo los de su proyecto. "Hitos de la Comunidad":
+  // todos los visibles para su nivel.
+  const hitosParaFeed = enMisHitos
+    ? hitosVisibles.filter(([, h]) => h.proyectoId === cicloIdPropio)
+    : hitosVisibles;
+  renderFeedHitos(hitosParaFeed, usuarios, { esAlumno, esStaff, esDirector, uid, alumnoIdPropio, idsProyectoPropio, enMisHitos });
 
   // --- Link directo a un hito (compartido por WhatsApp) ---
   const hash = window.location.hash;
@@ -139,10 +215,10 @@ function renderSeguimientoPersonal(hitosDefinidos, misHitosPublicadosDefIds) {
       const deEstaFase = activos.filter(([, h]) => h.fase === faseClave);
       if (!deEstaFase.length) return '';
       return `
-        <div style="margin-bottom:14px;">
-          <p class="text-soft" style="font-size:12px; font-weight:600; margin-bottom:6px;">${FASES_HITOS[faseClave]}</p>
+        <div class="hitos-fase-bloque hitos-fase-bloque--${faseClave}" style="margin-bottom:14px;">
+          <p class="text-soft hitos-fase-titulo" style="font-size:12px; font-weight:600; margin-bottom:6px;">${FASES_HITOS[faseClave]}</p>
           ${deEstaFase.map(([id, h]) => `
-            <p style="font-size:13px; margin:2px 0;">${misHitosPublicadosDefIds.has(id) ? '✅' : '⬜'} ${h.titulo}</p>`).join('')}
+            <p class="hitos-fase-item" style="font-size:13px; margin:2px 0;">${misHitosPublicadosDefIds.has(id) ? '✅' : '⬜'} ${h.titulo}</p>`).join('')}
         </div>`;
     }).join('')}`;
 }
@@ -237,7 +313,9 @@ function renderFeedHitos(hitosVisibles, usuarios, ctx) {
   }
 
   if (!lista.length) {
-    feedEl.innerHTML = '<p class="text-soft">Todavía no hay hitos publicados por acá.</p>';
+    feedEl.innerHTML = ctx.enMisHitos
+      ? '<p class="text-soft">Aún no has publicado hitos — cuando logres uno, publícalo arriba.</p>'
+      : '<p class="text-soft">Todavía no hay hitos publicados por acá.</p>';
     return;
   }
 

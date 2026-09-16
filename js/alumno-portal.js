@@ -172,6 +172,11 @@ export async function cargarDashboardAlumno(alumnoId) {
     ciclo = cicloSnap.exists() ? cicloSnap.val() : null;
   }
 
+  // --- Estética por nivel: BEGIN tiene su propio tema (azul) sobre el
+  //     tema oscuro base de alumno. NEXT/eXIT mantienen el negro. ---
+  const esBeginDashboard = !!(ciclo && ciclo.programa === 'begin');
+  document.body.classList.toggle('tema-begin', esBeginDashboard);
+
   // --- El BOX ahora sí es visible para BEGIN — ve un canal
   //     distinto (ver cargarBoxAlumno), no el de Mentor IA por especialidad.
 
@@ -200,7 +205,7 @@ export async function cargarDashboardAlumno(alumnoId) {
         ${PROGRAMAS_ORDEN.map(([clave, logo, label]) => {
           const activo = clave === programaActual;
           return `
-          <div style="display:flex; align-items:center; justify-content:center; padding:${activo ? '12px 22px' : '10px 16px'}; border-radius:var(--radius-md, 10px); border:${activo ? '1.5px solid var(--color-accent, #2563EB)' : '1.5px solid transparent'}; opacity:${activo ? '1' : '0.4'};">
+          <div style="display:flex; align-items:center; justify-content:center; padding:${activo ? '12px 22px' : '10px 16px'}; border-radius:var(--radius-md, 10px); border:${activo ? (esBeginDashboard ? '1.5px solid #fff' : '1.5px solid var(--color-accent, #2563EB)') : '1.5px solid transparent'}; opacity:${activo ? '1' : '0.4'};">
             <img src="${logo}" alt="${label}" style="height:${activo ? '42px' : '30px'}; width:auto; object-fit:contain;">
           </div>`;
         }).join('')}
@@ -211,17 +216,17 @@ export async function cargarDashboardAlumno(alumnoId) {
   //     avance real del alumno (faseMetodologia / estadoAlumno). ---
   const astronautaEl = document.getElementById('alumno-astronauta-fase');
   if (astronautaEl) {
-    // TODO: cuando lleguen los sets de BEGIN y eXIT, cambiar 'next' por
-    // (ciclo ? ciclo.programa : 'next') acá abajo, para que cada quien
-    // vea el set de su propio programa. Por ahora, todos ven el de NEXT.
-    const carpetaStepper = 'next';
+    // BEGIN tiene su propio set (webp con fondo transparente); NEXT y
+    // eXIT usan el de NEXT hasta que llegue el set de eXIT.
+    const carpetaStepper = esBeginDashboard ? 'begin' : 'next';
+    const extensionStepper = esBeginDashboard ? 'webp' : 'jpg';
     let estadoAstro = 'inicio';
     if (ciclo && ciclo.estadoAlumno === 'egresado') {
       estadoAstro = 'final';
     } else if (ciclo && ciclo.faseMetodologia && /\d/.test(ciclo.faseMetodologia)) {
       estadoAstro = `fase${ciclo.faseMetodologia.match(/\d/)[0]}`;
     }
-    astronautaEl.innerHTML = `<img src="assets/stepper/${carpetaStepper}/${estadoAstro}.jpg" alt="Tu avance en la Metodología 2E" style="width:100%; height:auto; display:block; border-radius:var(--radius-md, 10px);">`;
+    astronautaEl.innerHTML = `<img src="assets/stepper/${carpetaStepper}/${estadoAstro}.${extensionStepper}" alt="Tu avance en la Metodología 2E" style="width:100%; height:auto; display:block; border-radius:var(--radius-md, 10px);">`;
   }
 
   // --- Aviso de atraso de pago (automático: alguna cuota vencida y no pagada) ---
@@ -279,7 +284,7 @@ export async function cargarDashboardAlumno(alumnoId) {
     }
     const numeroFase = (ciclo && ciclo.faseMetodologia && /\d/.test(ciclo.faseMetodologia)) ? ciclo.faseMetodologia.match(/\d/)[0] : null;
     const fraseFase = numeroFase
-      ? `Actualmente te encuentras en: <span style="background:#E2E4E8; color:#1B2333; padding:2px 10px; border-radius:6px; font-weight:700;">Fase ${numeroFase}</span> de la Metodología 2E`
+      ? `Actualmente te encuentras en: <span style="background:#E2E4E8; color:#1B2333; padding:2px 10px; border-radius:6px; font-weight:700; white-space:nowrap;">Fase ${numeroFase}</span> de la Metodología 2E`
       : 'Tu fase actual aún no está definida — pronto tu coach la va a actualizar.';
     const mensajeCoach = coach ? encodeURIComponent(`Hola ${coach.nombre || ''}, necesito tu ayuda por favor`) : '';
     const whatsappCoachUrl = coach && coach.telefono ? `https://wa.me/${coach.telefono.replace(/[^0-9]/g, '')}?text=${mensajeCoach}` : '';
@@ -296,43 +301,71 @@ export async function cargarDashboardAlumno(alumnoId) {
       }
     }
 
-    // Íconos genéricos (sin marca de nadie) para Comunidad/Contenidos —
-    // el de Hotmart sí es su logo real (assets/logos/hotmart.png).
-    const iconoComunidad = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="8" cy="8" r="3" stroke="currentColor" stroke-width="1.8"/><circle cx="16" cy="8" r="3" stroke="currentColor" stroke-width="1.8"/><path d="M2 20c0-3 2.5-5 6-5s6 2 6 5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M12 15.5c.7-.3 1.5-.5 2-.5 3.5 0 6 2 6 5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>`;
+    // Íconos genéricos para los botones — el de Hotmart sí es su logo
+    // real (assets/logos/hotmart.png).
     const iconoContenidos = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="3" y="5" width="18" height="12" rx="1.5" stroke="currentColor" stroke-width="1.8"/><path d="M1 20h22" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>`;
+    const iconoPreguntar = `<svg class="acceso-icono" width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M3 5.5A2.5 2.5 0 0 1 5.5 3h8A2.5 2.5 0 0 1 16 5.5v4a2.5 2.5 0 0 1-2.5 2.5H9l-3.5 3v-3A2.5 2.5 0 0 1 3 9.5v-4z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><circle cx="7" cy="7.5" r=".9" fill="currentColor"/><circle cx="9.5" cy="7.5" r=".9" fill="currentColor"/><circle cx="12" cy="7.5" r=".9" fill="currentColor"/><circle cx="17.5" cy="14" r="2.3" stroke="currentColor" stroke-width="1.6"/><path d="M13 21c0-2.3 2-3.8 4.5-3.8S22 18.7 22 21" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>`;
     const iconoWhatsapp = `<svg width="16" height="16" viewBox="0 0 24 24" fill="#fff" xmlns="http://www.w3.org/2000/svg"><path d="M12 2C6.48 2 2 6.48 2 12c0 1.85.5 3.58 1.36 5.07L2 22l5.05-1.33C8.51 21.5 10.2 22 12 22c5.52 0 10-4.48 10-10S17.52 2 12 2zm5.2 14.15c-.22.62-1.28 1.18-1.76 1.24-.45.06-1.02.09-1.65-.1-.38-.12-.87-.28-1.5-.55-2.64-1.14-4.36-3.8-4.5-3.98-.13-.18-1.08-1.43-1.08-2.73 0-1.3.68-1.94.92-2.2.24-.26.53-.33.7-.33.18 0 .35 0 .5.01.16.01.38-.06.6.46.22.53.75 1.83.82 1.96.07.13.11.29.02.47-.09.18-.13.29-.26.44-.13.15-.27.34-.39.46-.13.13-.26.27-.11.53.15.26.68 1.12 1.46 1.81 1 .89 1.85 1.17 2.11 1.3.26.13.41.11.56-.07.15-.18.64-.75.81-1 .17-.26.34-.22.57-.13.24.09 1.5.71 1.76.84.26.13.43.2.5.31.06.11.06.62-.16 1.24z"/></svg>`;
     const logoHotmart = `<img src="assets/logos/hotmart.png" alt="Hotmart" style="height:14px; width:auto; vertical-align:middle;">`;
 
-    accesosEl.innerHTML = `
-      <div class="accesos-directos-botones" style="display:flex; flex-wrap:wrap; gap:10px; margin-bottom:18px;">
-        <button type="button" class="btn btn--primary" id="btn-acceso-preguntar-mentores">Pregunta a los Mentores</button>
-        ${config.comunidadHotmartUrl ? `<a href="${config.comunidadHotmartUrl}" target="_blank" rel="noopener" class="btn" style="background:#000; color:#fff; display:inline-flex; align-items:center; justify-content:center; gap:7px;">Comunidad ${logoHotmart}hotmart ${iconoComunidad}</a>` : ''}
-        ${contenidoUrl ? `<a href="${contenidoUrl}" target="_blank" rel="noopener" class="btn" style="background:#000; color:#fff; display:inline-flex; align-items:center; justify-content:center; gap:7px;">Contenidos en ${logoHotmart}hotmart ${iconoContenidos}</a>` : ''}
-        ${whatsappUrl ? `<a href="${whatsappUrl}" target="_blank" rel="noopener" class="btn" style="background:#25D366; color:#fff;">Grupo WhatsApp Exclusivo</a>` : ''}
-      </div>
-      <div style="line-height:1.6;">
-        <p style="margin:0 0 10px; line-height:1.6; display:flex; align-items:center; gap:10px;">
-          <img src="${coach && coach.fotoUrl ? coach.fotoUrl : PLACEHOLDER_FOTO_ALUMNO}" alt="" style="width:38px; height:38px; border-radius:50%; object-fit:cover; flex-shrink:0; ${coach ? '' : 'display:none;'}">
-          <span>
-            ${coach ? `<strong>Tu Coach es:</strong> <em>${coach.nombre || '—'}</em>${esCoachCabeceraMsg ? ' <span style="font-size:11px;">🚩 Coach de Cabecera</span>' : ''}` : 'Aún no tienes coach asignado'}
-            ${whatsappCoachUrl ? ` <a href="${whatsappCoachUrl}" target="_blank" rel="noopener" aria-label="WhatsApp" style="display:inline-flex; align-items:center; justify-content:center; width:28px; height:28px; border-radius:50%; background:#25D366; vertical-align:middle;">${iconoWhatsapp}</a>` : ''}
-          </span>
-        </p>
-        <p style="margin:0 0 8px; line-height:1.6; text-align:center;">${fraseFase}</p>
+    const botonesAccesos = `
+      <div class="accesos-directos-botones">
+        <button type="button" class="btn btn--primary acceso-btn acceso-btn--mentores" id="btn-acceso-preguntar-mentores"><span>Pregunta a los Mentores</span> ${iconoPreguntar}</button>
+        ${contenidoUrl ? `<a href="${contenidoUrl}" target="_blank" rel="noopener" class="btn acceso-btn acceso-btn--hotmart">Contenidos en ${logoHotmart}hotmart ${iconoContenidos}</a>` : ''}
+        ${whatsappUrl ? `<a href="${whatsappUrl}" target="_blank" rel="noopener" class="btn acceso-btn acceso-btn--whatsapp"><span>Grupo WhatsApp Exclusivo</span> <span class="acceso-icono acceso-icono--wa">${iconoWhatsapp}</span></a>` : ''}
       </div>`;
+    const lineaCoach = `
+        <p class="acceso-coach">
+          <span>
+            ${coach ? `<strong>${esCoachCabeceraMsg && esBeginDashboard ? 'Tu Coach de cabecera:' : 'Tu Coach es:'}</strong> <em>${coach.nombre || '—'}</em>${esCoachCabeceraMsg && !esBeginDashboard ? ' <span style="font-size:11px;">🚩 Coach de Cabecera</span>' : ''}` : 'Aún no tienes coach asignado'}
+          </span>
+          <img src="${coach && coach.fotoUrl ? coach.fotoUrl : PLACEHOLDER_FOTO_ALUMNO}" alt="" class="acceso-coach__foto" style="${coach ? '' : 'display:none;'}">
+          ${whatsappCoachUrl ? `<a href="${whatsappCoachUrl}" target="_blank" rel="noopener" aria-label="WhatsApp" class="acceso-coach__wa">${iconoWhatsapp}</a>` : ''}
+        </p>`;
+    const bloqueDias = fraseDiasRestantes ? `
+      <div class="acceso-dias">
+        <span class="acceso-dias__icono" aria-hidden="true">⏳</span>
+        <p>${fraseDiasRestantes}</p>
+      </div>` : '';
 
     const diasRestantesPanelEl = document.getElementById('alumno-dias-restantes-panel');
-    if (diasRestantesPanelEl) {
-      if (fraseDiasRestantes) {
-        diasRestantesPanelEl.classList.remove('hidden');
-        diasRestantesPanelEl.innerHTML = `
-          <div class="panel__body" style="display:flex; align-items:center; gap:14px;">
-            <span style="font-size:28px;">⏳</span>
-            <p style="margin:0; line-height:1.5;">${fraseDiasRestantes}</p>
-          </div>`;
-      } else {
+    const fasePanelEl = document.getElementById('alumno-fase-panel');
+
+    if (esBeginDashboard) {
+      // BEGIN: días restantes dentro de Accesos Directos; la fase va en su
+      // propia tarjeta, antes de los astronautas.
+      accesosEl.innerHTML = `${botonesAccesos}<div style="line-height:1.6;">${lineaCoach}</div>${bloqueDias}`;
+      if (fasePanelEl) {
+        fasePanelEl.classList.remove('hidden');
+        fasePanelEl.innerHTML = `<div class="panel__body alumno-fase-texto">${fraseFase}</div>`;
+      }
+      if (diasRestantesPanelEl) {
         diasRestantesPanelEl.classList.add('hidden');
         diasRestantesPanelEl.innerHTML = '';
+      }
+    } else {
+      accesosEl.innerHTML = `
+        ${botonesAccesos}
+        <div style="line-height:1.6;">
+          ${lineaCoach}
+          <p style="margin:0 0 8px; line-height:1.6; text-align:center;">${fraseFase}</p>
+        </div>`;
+      if (fasePanelEl) {
+        fasePanelEl.classList.add('hidden');
+        fasePanelEl.innerHTML = '';
+      }
+      if (diasRestantesPanelEl) {
+        if (fraseDiasRestantes) {
+          diasRestantesPanelEl.classList.remove('hidden');
+          diasRestantesPanelEl.innerHTML = `
+            <div class="panel__body" style="display:flex; align-items:center; gap:14px;">
+              <span style="font-size:28px;">⏳</span>
+              <p style="margin:0; line-height:1.5;">${fraseDiasRestantes}</p>
+            </div>`;
+        } else {
+          diasRestantesPanelEl.classList.add('hidden');
+          diasRestantesPanelEl.innerHTML = '';
+        }
       }
     }
 
@@ -350,7 +383,9 @@ export async function cargarDashboardAlumno(alumnoId) {
       const tests = testsSnap.exists() ? Object.values(testsSnap.val()) : [];
       if (tests.length) {
         const ultimo = tests.sort((a, b) => b.completadoAt - a.completadoAt)[0];
-        ultimoTestEl.innerHTML = renderDetalleCompletoTest(ultimo);
+        // En el Dashboard solo el análisis por fase; saboteadores y
+        // bloqueos de venta se ven en la página Test Brújula.
+        ultimoTestEl.innerHTML = renderKpiTest(ultimo);
       } else {
         ultimoTestEl.innerHTML = '<p class="text-soft">Aún no has completado el Test Brújula — tu coach te va a guiar en eso.</p>';
       }
@@ -362,6 +397,76 @@ export async function cargarDashboardAlumno(alumnoId) {
   const btnVerHistorialTest = document.getElementById('btn-ver-historial-test-alumno');
   if (btnVerHistorialTest) {
     btnVerHistorialTest.onclick = () => document.querySelector('.nav-item[data-nav="test-alumno"]')?.click();
+  }
+
+  await renderProximaMentoriaDashboard(ciclo ? ciclo.programa : null);
+}
+
+/* --- Dashboard: "Próxima Mentoría Grupal Semanal" + botón de grabaciones
+       (los 3 niveles). La sesión sale de la misma lista que Preguntas en
+       Vivo; el link de grabaciones, de Configuración según el nivel. --- */
+async function renderProximaMentoriaDashboard(programa) {
+  const tarjetaEl = document.getElementById('alumno-proxima-mentoria');
+  const grabacionesEl = document.getElementById('alumno-grabaciones');
+
+  const [usuariosSnap, configSnap] = await Promise.all([
+    get(ref(db, 'usuarios')),
+    get(ref(db, 'configuracion/general'))
+  ]);
+  const usuarios = usuariosSnap.exists() ? usuariosSnap.val() : {};
+  const config = configSnap.exists() ? configSnap.val() : {};
+
+  if (tarjetaEl) {
+    let sesiones = [];
+    try {
+      sesiones = await obtenerSesionesVivoProximas(programa, usuarios);
+    } catch (err) {
+      sesiones = [];
+    }
+    const s = sesiones[0];
+    if (!s) {
+      tarjetaEl.innerHTML = `
+        <div class="panel__body">
+          <p class="proxima-mentoria__titulo">Próxima Mentoría Grupal Semanal</p>
+          <p class="text-soft" style="margin:0;">Pronto se publicará la próxima mentoría grupal.</p>
+        </div>`;
+    } else {
+      const datos = s.mentorDatos || {};
+      const temas = s.tipo === 'coach'
+        ? 'Sesión grupal semanal — resolución de dudas'
+        : ((Array.isArray(datos.temasBox) && datos.temasBox.length) ? datos.temasBox.slice(0, 3).join(', ') : 'Temáticas no definidas aún');
+      const fechaLarga = new Intl.DateTimeFormat('es-CL', { day: '2-digit', month: 'long', year: 'numeric', timeZone: zonaHorariaLocal() }).format(s.inicio);
+      const horaTexto = s.inicioTimestamp ? formatearHorarioSesion(s.inicioTimestamp) : (s.hora || '');
+      const primerNombre = String(datos.nombre || datos.email || '').trim().split(/\s+/)[0];
+      tarjetaEl.innerHTML = `
+        <div class="panel__body">
+          <p class="proxima-mentoria__titulo">Próxima Mentoría Grupal Semanal</p>
+          <div class="proxima-mentoria__fila">
+            <img src="${datos.fotoUrl || PLACEHOLDER_FOTO_ALUMNO}" alt="" class="proxima-mentoria__foto">
+            <div class="proxima-mentoria__quien">
+              <strong>${primerNombre}</strong>
+              <span class="text-soft">${temas}</span>
+            </div>
+            <div class="proxima-mentoria__cuando">
+              <span>${fechaLarga}</span>
+              <span>${horaTexto}</span>
+            </div>
+          </div>
+          <button type="button" class="proxima-mentoria__detalles" id="btn-proxima-mentoria-detalles">Toca para ver los detalles</button>
+        </div>`;
+      document.getElementById('btn-proxima-mentoria-detalles')?.addEventListener('click', () => {
+        document.querySelector('.nav-item[data-nav="preguntas-vivo"]')?.click();
+      });
+    }
+  }
+
+  if (grabacionesEl) {
+    const urlGrabaciones = programa === 'begin' ? config.grabacionesBegin
+      : programa === 'next' ? config.grabacionesNext
+      : programa === 'exit' ? config.grabacionesExit : '';
+    grabacionesEl.innerHTML = urlGrabaciones
+      ? `<a href="${urlGrabaciones}" target="_blank" rel="noopener" class="btn-grabaciones">Ver las grabaciones de las mentorías grupales <img src="assets/logos/hotmart.png" alt="" style="height:22px; width:auto;"></a>`
+      : '';
   }
 }
 
@@ -587,6 +692,11 @@ export async function cargarTestAlumnoCompleto() {
   }
 
   const [ultimo, ...anteriores] = tests;
+  const btnHistorialPagina = document.getElementById('btn-test-ver-historial');
+  if (btnHistorialPagina) {
+    btnHistorialPagina.classList.toggle('hidden', !anteriores.length);
+    btnHistorialPagina.onclick = () => document.getElementById('alumno-tests-anteriores')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
   el.innerHTML = `
     <div style="margin-bottom:24px;">
       <p class="text-soft mb-16"><strong>Tu test más reciente</strong></p>
@@ -1204,25 +1314,8 @@ export async function cargarPreguntasComunidad() {
   const filtroHastaEl = document.getElementById('comunidad-filtro-hasta');
   if (!listadoEl) return;
 
-  // BEGIN no ve Preguntas de la Comunidad por ahora.
-  const navComunidadEl = document.querySelector('.nav-item[data-nav="preguntas-comunidad"]');
-  let programaComunidad = null;
-  if (alumnoIdActual) {
-    const alumnoSnapCom = await get(ref(db, `alumnos/${alumnoIdActual}`));
-    const cicloIdCom = alumnoSnapCom.exists() ? alumnoSnapCom.val().cicloActualId : null;
-    if (cicloIdCom) {
-      const cicloSnapCom = await get(ref(db, `ciclos/${cicloIdCom}`));
-      programaComunidad = cicloSnapCom.exists() ? (cicloSnapCom.val().programa || null) : null;
-    }
-  }
-  const esBeginComunidad = programaComunidad === 'begin';
-  if (navComunidadEl) navComunidadEl.classList.toggle('hidden', esBeginComunidad);
-  if (esBeginComunidad) {
-    listadoEl.innerHTML = '';
-    document.getElementById('view-preguntas-comunidad')?.classList.add('hidden');
-    setNav('dashboard');
-    return;
-  }
+  // Preguntas de la Comunidad: visible para todos los niveles (BEGIN incluido).
+  document.querySelector('.nav-item[data-nav="preguntas-comunidad"]')?.classList.remove('hidden');
 
   const usuariosSnap = await get(ref(db, 'usuarios'));
   const usuarios = usuariosSnap.exists() ? usuariosSnap.val() : {};
@@ -1342,7 +1435,7 @@ export async function cargarSoporteAlumnos() {
   contactoEl.innerHTML = `
     <div style="display:flex; flex-wrap:wrap; gap:14px; align-items:center;">
       ${config.correoSoporte ? `<span>Correo: <strong>${config.correoSoporte}</strong></span>` : '<span class="text-soft">El correo de soporte aún no está configurado.</span>'}
-      ${whatsappSoporteUrl ? `<a href="${whatsappSoporteUrl}" target="_blank" rel="noopener" class="btn" style="background:#25D366; color:#fff;">💬 WhatsApp Soporte</a>` : ''}
+      ${whatsappSoporteUrl ? `<a href="${whatsappSoporteUrl}" target="_blank" rel="noopener" class="btn btn-whatsapp-soporte">WhatsApp Soporte <svg width="20" height="20" viewBox="0 0 24 24" fill="#fff" aria-hidden="true"><path d="M12 2C6.48 2 2 6.48 2 12c0 1.85.5 3.58 1.36 5.07L2 22l5.05-1.33C8.51 21.5 10.2 22 12 22c5.52 0 10-4.48 10-10S17.52 2 12 2zm0 3.2a6.8 6.8 0 1 1-3.46 12.65l-.25-.15-2.5.66.67-2.44-.16-.26A6.8 6.8 0 0 1 12 5.2zm-2.3 3.1c-.2 0-.5.07-.76.36-.26.28-1 .97-1 2.37s1.02 2.75 1.16 2.94c.14.19 2 3.07 4.87 4.3 2.39 1.02 2.87.82 3.39.77.52-.05 1.67-.68 1.9-1.34.24-.66.24-1.22.17-1.34-.07-.12-.26-.19-.54-.33-.28-.14-1.67-.82-1.93-.92-.26-.09-.45-.14-.64.14-.19.28-.73.92-.9 1.1-.16.2-.33.21-.61.07-.28-.14-1.18-.43-2.25-1.38-.83-.74-1.39-1.65-1.55-1.93-.16-.28-.02-.43.12-.57.13-.13.28-.33.42-.5.14-.16.19-.28.28-.47.1-.19.05-.35-.02-.49-.07-.14-.64-1.53-.87-2.1-.23-.55-.47-.47-.64-.48h-.55z"/></svg></a>` : ''}
     </div>`;
 
   if (embedEl) {
@@ -1671,24 +1764,13 @@ function renderHorariosRecurrentes(usuarios) {
   }).join('');
 }
 
-export async function cargarPreguntasVivo() {
-  const listadoEl = document.getElementById('preguntas-vivo-listado');
-  if (!listadoEl || !alumnoIdActual) return;
-  if (intervaloPreguntasVivo) clearInterval(intervaloPreguntasVivo);
-
-  // --- Programa del alumno: determina qué sesiones puede ver ---
-  const alumnoSnapPv = await get(ref(db, `alumnos/${alumnoIdActual}`));
-  const alumnoDatosPv = alumnoSnapPv.exists() ? alumnoSnapPv.val() : {};
-  let programaAlumnoPv = null;
-  if (alumnoDatosPv.cicloActualId) {
-    const cicloSnapPv = await get(ref(db, `ciclos/${alumnoDatosPv.cicloActualId}`));
-    programaAlumnoPv = cicloSnapPv.exists() ? (cicloSnapPv.val().programa || null) : null;
-  }
-  const usuariosSnap = await get(ref(db, 'usuarios'));
-  const usuarios = usuariosSnap.exists() ? usuariosSnap.val() : {};
-
-  renderHorariosRecurrentes(usuarios);
-  const esBegin = programaAlumnoPv === 'begin';
+/* Sesiones en vivo próximas que puede ver un alumno según su programa
+   (BEGIN: mentorías exclusivas BEGIN + sesiones grupales de coaches de
+   cabecera; NEXT/eXIT: el resto de las mentorías). Ordenadas de la más
+   cercana a la más lejana. Se usa en Preguntas en Vivo y en la tarjeta
+   "Próxima Mentoría Grupal Semanal" del Dashboard. */
+async function obtenerSesionesVivoProximas(programa, usuarios) {
+  const esBegin = programa === 'begin';
   const mentores = ordenarMentores(Object.entries(usuarios).filter(([, u]) => {
     const roles = (u.roles && typeof u.roles === 'object') ? u.roles : (u.rol ? { [u.rol]: true } : {});
     return !!roles.mentor;
@@ -1733,6 +1815,28 @@ export async function cargarPreguntasVivo() {
   const ahora = Date.now();
   sesiones = sesiones.filter(s => (s.inicio.getTime() + 60 * 60 * 1000) > ahora && s.estado !== 'no_dictada');
   sesiones.sort((a, b) => a.inicio - b.inicio);
+
+  return sesiones;
+}
+
+export async function cargarPreguntasVivo() {
+  const listadoEl = document.getElementById('preguntas-vivo-listado');
+  if (!listadoEl || !alumnoIdActual) return;
+  if (intervaloPreguntasVivo) clearInterval(intervaloPreguntasVivo);
+
+  // --- Programa del alumno: determina qué sesiones puede ver ---
+  const alumnoSnapPv = await get(ref(db, `alumnos/${alumnoIdActual}`));
+  const alumnoDatosPv = alumnoSnapPv.exists() ? alumnoSnapPv.val() : {};
+  let programaAlumnoPv = null;
+  if (alumnoDatosPv.cicloActualId) {
+    const cicloSnapPv = await get(ref(db, `ciclos/${alumnoDatosPv.cicloActualId}`));
+    programaAlumnoPv = cicloSnapPv.exists() ? (cicloSnapPv.val().programa || null) : null;
+  }
+  const usuariosSnap = await get(ref(db, 'usuarios'));
+  const usuarios = usuariosSnap.exists() ? usuariosSnap.val() : {};
+
+  renderHorariosRecurrentes(usuarios);
+  const sesiones = await obtenerSesionesVivoProximas(programaAlumnoPv, usuarios);
 
   if (!sesiones.length) {
     listadoEl.innerHTML = '<p class="text-soft">No hay sesiones en vivo próximas por ahora.</p>';

@@ -1,8 +1,8 @@
 /* ============================================================
    configuracion.js
-   Configuración global de la agencia (solo Director): link de
-   Comunidad Hotmart (único), contenido Hotmart por programa,
-   grupos de WhatsApp (Begin / Next+eXIT combinado) y correo de
+   Configuración global de la agencia (solo Director): contenido
+   Hotmart por programa, grabaciones de mentorías grupales por
+   programa, grupos de WhatsApp (Begin / Next+eXIT combinado) y
    soporte. El resto de la app (portal del alumno) lee estos
    valores desde /configuracion/general.
 
@@ -24,7 +24,6 @@ const TAMANO_MAXIMO_ARCHIVO_METODOLOGIA = 10 * 1024 * 1024;
 const CAMPOS_POR_SECCION_CONFIG = {
   metodologia: { metodologiaBase: 'config-metodologia-base' },
   comunidad: {
-    comunidadHotmartUrl: 'config-comunidad-hotmart',
     correoSoporte: 'config-correo-soporte',
     whatsappSoporte: 'config-whatsapp-soporte',
     formSoporteEmbed: 'config-form-soporte-embed'
@@ -33,6 +32,11 @@ const CAMPOS_POR_SECCION_CONFIG = {
     contenidoHotmartBegin: 'config-contenido-begin',
     contenidoHotmartNext: 'config-contenido-next',
     contenidoHotmartExit: 'config-contenido-exit'
+  },
+  grabaciones: {
+    grabacionesBegin: 'config-grabaciones-begin',
+    grabacionesNext: 'config-grabaciones-next',
+    grabacionesExit: 'config-grabaciones-exit'
   },
   whatsapp: {
     whatsappBegin: 'config-whatsapp-begin',
@@ -152,7 +156,6 @@ export async function cargarConfiguracion() {
   const snap = await get(ref(db, 'configuracion/general'));
   const c = snap.exists() ? snap.val() : {};
 
-  document.getElementById('config-comunidad-hotmart').value = c.comunidadHotmartUrl || '';
   document.getElementById('config-metodologia-base').value = c.metodologiaBase || '';
   document.getElementById('config-correo-soporte').value = c.correoSoporte || '';
   document.getElementById('config-whatsapp-soporte').value = c.whatsappSoporte || '';
@@ -160,6 +163,9 @@ export async function cargarConfiguracion() {
   document.getElementById('config-contenido-begin').value = c.contenidoHotmartBegin || '';
   document.getElementById('config-contenido-next').value = c.contenidoHotmartNext || '';
   document.getElementById('config-contenido-exit').value = c.contenidoHotmartExit || '';
+  document.getElementById('config-grabaciones-begin').value = c.grabacionesBegin || '';
+  document.getElementById('config-grabaciones-next').value = c.grabacionesNext || '';
+  document.getElementById('config-grabaciones-exit').value = c.grabacionesExit || '';
   document.getElementById('config-whatsapp-begin').value = c.whatsappBegin || '';
   document.getElementById('config-whatsapp-nextexit').value = c.whatsappNextExit || '';
 
