@@ -29,6 +29,78 @@ function linkifyTexto(texto) {
 
 let fotosSeleccionadasHito = [];
 
+const PLACEHOLDER_FOTO_HITO = 'data:image/svg+xml;utf8,' + encodeURIComponent(
+  '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 80"><rect width="80" height="80" rx="40" fill="#E4E7EC"/><circle cx="40" cy="32" r="14" fill="#9AA4B2"/><ellipse cx="40" cy="70" rx="24" ry="18" fill="#9AA4B2"/></svg>'
+);
+const COMENTARIOS_VISIBLES_POR_DEFECTO = 2;
+
+// Publicaciones con todos sus comentarios desplegados (se mantiene al
+// recargar el feed, p. ej. después de comentar).
+const hitosComentariosExpandidos = new Set();
+// Último render de cada publicación, para desplegar/plegar comentarios
+// sin volver a pedir todo a Firebase.
+const datosRenderHitos = new Map();
+
+// --- Fotos: se leen en vivo (si el alumno cambia su foto, se actualiza
+//     sola) y se guardan en caché durante la sesión. Las reglas permiten
+//     leer solo alumnos/{id}/fotoUrl, ciclos/{id}/alumnoIds y
+//     alumnoPorAuthUid/{uid}. ---
+const cacheFotoAlumno = new Map();
+const cacheIdsProyecto = new Map();
+const cacheAlumnoIdPorAuth = new Map();
+
+function leerConCache(cache, clave, lector) {
+  if (!clave) return Promise.resolve(null);
+  if (!cache.has(clave)) cache.set(clave, lector().catch(() => null));
+  return cache.get(clave);
+}
+function fotoDeAlumno(alumnoId) {
+  return leerConCache(cacheFotoAlumno, alumnoId, async () => {
+    const snap = await get(ref(db, `alumnos/${alumnoId}/fotoUrl`));
+    return snap.exists() ? snap.val() : null;
+  });
+}
+function idsDeProyecto(cicloId) {
+  return leerConCache(cacheIdsProyecto, cicloId, async () => {
+    const snap = await get(ref(db, `ciclos/${cicloId}/alumnoIds`));
+    if (!snap.exists()) return null;
+    const val = snap.val();
+    return Array.isArray(val) ? val.filter(Boolean) : Object.values(val || {}).filter(Boolean);
+  });
+}
+function alumnoIdDeAuth(authUid) {
+  return leerConCache(cacheAlumnoIdPorAuth, authUid, async () => {
+    const snap = await get(ref(db, `alumnoPorAuthUid/${authUid}`));
+    return snap.exists() ? snap.val() : null;
+  });
+}
+
+async function prepararFotosFeed(lista, usuarios) {
+  const fotosPublicacion = new Map(); // hitoId -> [fotoUrl, ...] (1 o 2 si son socios)
+  const fotoPorAutorComentario = new Map(); // authUid -> fotoUrl
+  const autoresComentarios = new Set();
+
+  await Promise.all(lista.map(async ([hitoId, h]) => {
+    let ids = await idsDeProyecto(h.proyectoId);
+    if (!ids || !ids.length) ids = [h.alumnoIdPublicador];
+    // El publicador primero
+    ids = [h.alumnoIdPublicador, ...ids.filter(id => id !== h.alumnoIdPublicador)].filter(Boolean).slice(0, 2);
+    fotosPublicacion.set(hitoId, await Promise.all(ids.map(async id => (await fotoDeAlumno(id)) || PLACEHOLDER_FOTO_HITO)));
+    Object.values(h.comentarios || {}).forEach(c => { if (c && c.autorId) autoresComentarios.add(c.autorId); });
+  }));
+
+  await Promise.all([...autoresComentarios].map(async authUid => {
+    if (usuarios[authUid]) {
+      fotoPorAutorComentario.set(authUid, usuarios[authUid].fotoUrl || PLACEHOLDER_FOTO_HITO);
+      return;
+    }
+    const alumnoId = await alumnoIdDeAuth(authUid);
+    fotoPorAutorComentario.set(authUid, (alumnoId && await fotoDeAlumno(alumnoId)) || PLACEHOLDER_FOTO_HITO);
+  }));
+
+  return { fotosPublicacion, fotoPorAutorComentario };
+}
+
 // Pestaña activa del alumno: 'mis' (su progreso, publicar y sus hitos)
 // o 'comunidad' (solo el feed de hitos publicados de su comunidad).
 let pestanaHitosAlumno = 'mis';
@@ -247,7 +319,9 @@ export async function cargarMisHitos() {
 
   if (esAlumno) poblarFiltrosAlumno(hitosParaFeed, hitosDefinidos, enMisHitos);
 
-  renderFeedHitos(hitosParaFeed, usuarios, { esAlumno, esStaff, esDirector, uid, alumnoIdPropio, idsProyectoPropio, enMisHitos });
+  const fotosFeed = await prepararFotosFeed(hitosParaFeed, usuarios);
+  if (!cargaVigente()) return;
+  renderFeedHitos(hitosParaFeed, usuarios, { esAlumno, esStaff, esDirector, uid, alumnoIdPropio, idsProyectoPropio, enMisHitos, ...fotosFeed });
 
   // --- Link directo a un hito (compartido por WhatsApp) ---
   const hash = window.location.hash;
@@ -360,14 +434,21 @@ function renderMiniaturasReacciones(hitoId, reacciones) {
     </div>`;
 }
 
-function renderComentarios(hitoId, comentarios, esDirector) {
-  const lista = Object.entries(comentarios || {})
-    .filter(([, c]) => c.estado !== 'oculto_denuncia' || esDirector)
+function comentariosVisibles(comentarios, esDirector) {
+  return Object.entries(comentarios || {})
+    .filter(([, c]) => c && (c.estado !== 'oculto_denuncia' || esDirector))
     .sort((a, b) => a[1].createdAt - b[1].createdAt);
-  if (!lista.length) return '<p class="text-soft" style="font-size:12px;">Sin comentarios todavía — ¡sé el primero en animar!</p>';
+}
+
+function renderComentarios(hitoId, comentarios, esDirector, fotoPorAutor, expandido) {
+  const todos = comentariosVisibles(comentarios, esDirector);
+  if (!todos.length) return '<p class="text-soft" style="font-size:12px;">Sin comentarios todavía — ¡sé el primero en animar!</p>';
+  // Plegado: los 2 más recientes (el más nuevo abajo). Desplegado: todos.
+  const lista = expandido ? todos : todos.slice(-COMENTARIOS_VISIBLES_POR_DEFECTO);
   return lista.map(([comentarioId, c]) => `
     <div data-comentario-id="${comentarioId}" style="padding:6px 0; border-bottom:0.5px solid var(--border);">
-      <p style="font-size:12.5px; margin:0;">
+      <p class="hito-comentario" style="font-size:12.5px; margin:0;">
+        <img src="${(fotoPorAutor && fotoPorAutor.get(c.autorId)) || PLACEHOLDER_FOTO_HITO}" alt="" class="hito-comentario__foto">
         <strong>${c.autorNombre || 'Alguien'}</strong>${c.autorTipo === 'staff' ? ' <span class="badge badge--activo" style="font-size:8px;">staff</span>' : ''}
         ${c.estado === 'oculto_denuncia' ? ' <span style="color:#C0392B; font-size:10px;">⚠️ denunciado</span>' : ''}
         : ${linkifyTexto(c.texto)}
@@ -439,6 +520,9 @@ function renderFeedHitos(hitosVisibles, usuarios, ctx) {
     const yaReacciono = h.reacciones && h.reacciones[ctx.uid];
     const totalReacciones = h.reacciones ? Object.keys(h.reacciones).length : 0;
     const esDenunciado = h.estado === 'oculto_denuncia';
+    const totalComentarios = comentariosVisibles(h.comentarios, ctx.esDirector).length;
+    const comentariosExpandidos = hitosComentariosExpandidos.has(hitoId);
+    datosRenderHitos.set(hitoId, { comentarios: h.comentarios, esDirector: ctx.esDirector, fotoPorAutor: ctx.fotoPorAutorComentario });
 
     return `
     <div class="panel mb-16" id="hito-${hitoId}" data-hito-id="${hitoId}" ${esDenunciado ? 'style="border-color:#F5C6C6;"' : ''}>
@@ -446,6 +530,7 @@ function renderFeedHitos(hitosVisibles, usuarios, ctx) {
         <div class="flex-between">
           <div>
             <div class="hito-autor">
+              <span class="hito-autor__fotos">${(ctx.fotosPublicacion && ctx.fotosPublicacion.get(hitoId) || [PLACEHOLDER_FOTO_HITO]).map(url => `<img src="${url}" alt="">`).join('')}</span>
               <strong>${h.nombreAutor}</strong>
               ${etiquetaProgramaHito(h.programa)}
             </div>
@@ -460,7 +545,8 @@ function renderFeedHitos(hitosVisibles, usuarios, ctx) {
 
         <div style="display:flex; gap:8px; margin-top:12px; flex-wrap:wrap; align-items:center;">
           <button type="button" class="btn ${yaReacciono ? 'btn--primary' : 'btn--ghost'} btn-reaccion-hito" data-hito-id="${hitoId}" style="font-size:12px; padding:4px 10px;">❤️ ${totalReacciones}</button>
-          <button type="button" class="btn btn--ghost btn-compartir-hito" data-hito-id="${hitoId}" data-titulo="${h.tituloHito}" style="font-size:12px; padding:4px 10px;">📤 Compartir</button>
+          <button type="button" class="btn ${comentariosExpandidos ? 'btn--primary' : 'btn--ghost'} btn-comentarios-hito" data-hito-id="${hitoId}" aria-expanded="${comentariosExpandidos}" title="Ver todos los comentarios" style="font-size:12px; padding:4px 10px;">💬 <span class="contador-comentarios-hito">${totalComentarios}</span></button>
+          ${esAutor ? `<button type="button" class="btn btn--ghost btn-compartir-hito" data-hito-id="${hitoId}" data-titulo="${h.tituloHito}" style="font-size:12px; padding:4px 10px;">📤 Compartir</button>` : ''}
           ${puedeEliminar ? `<button type="button" class="btn btn--ghost btn-eliminar-hito" data-hito-id="${hitoId}" style="font-size:12px; padding:4px 10px; color:#C0392B;">Eliminar</button>` : ''}
           ${puedeDenunciar ? `<button type="button" class="btn btn--ghost btn-denunciar-hito" data-hito-id="${hitoId}" style="font-size:12px; padding:4px 10px;">Denunciar</button>` : ''}
           ${esDenunciado && ctx.esDirector ? `
@@ -469,8 +555,8 @@ function renderFeedHitos(hitosVisibles, usuarios, ctx) {
         </div>
         ${renderMiniaturasReacciones(hitoId, h.reacciones)}
 
-        <div class="comentarios-hito" style="margin-top:12px; border-top:0.5px solid var(--border); padding-top:10px;">
-          ${renderComentarios(hitoId, h.comentarios, ctx.esDirector)}
+        <div class="comentarios-hito" data-hito-id="${hitoId}" style="margin-top:12px; border-top:0.5px solid var(--border); padding-top:10px;">
+          ${renderComentarios(hitoId, h.comentarios, ctx.esDirector, ctx.fotoPorAutorComentario, comentariosExpandidos)}
         </div>
         <div style="display:flex; gap:8px; margin-top:10px;">
           <input class="input-comentario-hito" data-hito-id="${hitoId}" placeholder="Escribe un comentario de ánimo..." style="flex:1;">
@@ -608,6 +694,22 @@ if (feedHitosEl) {
   feedHitosEl.addEventListener('click', async (ev) => {
     const uid = auth.currentUser ? auth.currentUser.uid : null;
     if (!uid) return;
+
+    const btnComentarios = ev.target.closest('.btn-comentarios-hito');
+    if (btnComentarios) {
+      const hitoId = btnComentarios.dataset.hitoId;
+      const expandir = !hitosComentariosExpandidos.has(hitoId);
+      if (expandir) hitosComentariosExpandidos.add(hitoId); else hitosComentariosExpandidos.delete(hitoId);
+      const datos = datosRenderHitos.get(hitoId);
+      const contenedor = feedHitosEl.querySelector(`.comentarios-hito[data-hito-id="${hitoId}"]`);
+      if (datos && contenedor) {
+        contenedor.innerHTML = renderComentarios(hitoId, datos.comentarios, datos.esDirector, datos.fotoPorAutor, expandir);
+      }
+      btnComentarios.classList.toggle('btn--primary', expandir);
+      btnComentarios.classList.toggle('btn--ghost', !expandir);
+      btnComentarios.setAttribute('aria-expanded', String(expandir));
+      return;
+    }
 
     const btnReaccion = ev.target.closest('.btn-reaccion-hito');
     if (btnReaccion) {

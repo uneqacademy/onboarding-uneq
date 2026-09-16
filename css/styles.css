@@ -909,3 +909,16 @@ body.tema-alumno-oscuro .panel .hitos-fase-bloque--fase4 .hitos-fase-titulo { co
   background: #000; border-radius: 5px; padding: 4px 8px; line-height: 0;
 }
 .hito-etiqueta-programa img { height: 13px; width: auto; display: block; }
+
+/* Fotos en publicaciones de hitos y en comentarios */
+.hito-autor__fotos { display: inline-flex; align-items: center; flex-shrink: 0; }
+.hito-autor__fotos img {
+  width: 40px; height: 40px; border-radius: 50%; object-fit: cover;
+  border: 2px solid #fff; background: #E4E7EC;
+}
+.hito-autor__fotos img + img { margin-left: -12px; }
+.hito-comentario { display: block; }
+.hito-comentario__foto {
+  width: 20px; height: 20px; border-radius: 50%; object-fit: cover;
+  vertical-align: middle; margin-right: 5px; background: #E4E7EC;
+}
