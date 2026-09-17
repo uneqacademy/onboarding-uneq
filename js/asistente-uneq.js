@@ -17,7 +17,7 @@ import { app } from './firebase-config.js';
 import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-functions.js";
 
 const functions = getFunctions(app);
-const consultarAsistente = httpsCallable(functions, 'consultarAsistenteUneq');
+const consultarAsistente = httpsCallable(functions, 'consultarAsistenteUneq', { timeout: 170000 });
 
 function escaparHtml(texto) {
   return String(texto || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
@@ -88,7 +88,10 @@ function inicializarChatAsistente(sufijo) {
     } catch (err) {
       console.error('Error consultando al Asistente UNEQ:', err);
       document.getElementById('asistente-burbuja-cargando')?.remove();
-      contMensajes.insertAdjacentHTML('beforeend', burbuja('Hubo un problema respondiendo. Intenta de nuevo en un momento.', false));
+      const mensajeError = err && err.code === 'functions/unavailable'
+        ? 'El servicio de IA de Google está saturado en este momento. Intenta de nuevo en unos minutos.'
+        : 'Hubo un problema respondiendo. Intenta de nuevo en un momento.';
+      contMensajes.insertAdjacentHTML('beforeend', burbuja(mensajeError, false));
     } finally {
       contMensajes.scrollTop = contMensajes.scrollHeight;
       input.disabled = false;
