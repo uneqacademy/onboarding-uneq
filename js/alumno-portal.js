@@ -488,9 +488,11 @@ async function renderProximaMentoriaDashboard(programa) {
     const urlGrabaciones = programa === 'begin' ? config.grabacionesBegin
       : programa === 'next' ? config.grabacionesNext
       : programa === 'exit' ? config.grabacionesExit : '';
+    // El botón siempre se muestra; si el Director aún no configura el
+    // link de este nivel, queda visible pero inactivo.
     grabacionesEl.innerHTML = urlGrabaciones
       ? `<a href="${urlGrabaciones}" target="_blank" rel="noopener" class="btn-grabaciones">Ver las grabaciones de las mentorías grupales <img src="assets/logos/hotmart.png" alt="" style="height:22px; width:auto;"></a>`
-      : '';
+      : `<span class="btn-grabaciones btn-grabaciones--inactivo" aria-disabled="true" title="Link de grabaciones aún no configurado">Ver las grabaciones de las mentorías grupales <img src="assets/logos/hotmart.png" alt="" style="height:22px; width:auto;"></span>`;
   }
 }
 

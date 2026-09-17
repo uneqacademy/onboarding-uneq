@@ -1084,3 +1084,5 @@ body.tema-alumno-oscuro .panel .hitos-fase-bloque--fase4 .hitos-fase-titulo { co
   .pv-hr-chile { font-size: 12px !important; color: var(--color-ink-soft) !important; }
   #preguntas-vivo-listado [data-sesion-idx] > .panel__body:first-child { align-items: center !important; padding: 20px 28px; }
 }
+.btn-grabaciones--inactivo { opacity: 0.55; cursor: not-allowed; }
+.btn-grabaciones--inactivo:hover { background: transparent; }
