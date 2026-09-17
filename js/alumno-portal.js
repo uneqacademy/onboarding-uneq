@@ -777,8 +777,15 @@ function inicioSemanaActual() {
   return lunes.getTime();
 }
 
-function renderRespuestaBox(respuesta) {
-  if (!respuesta) return '<p class="text-soft" style="margin:6px 0 0;">Aún sin responder.</p>';
+function renderRespuestaBox(respuesta, estadoIA) {
+  if (!respuesta) {
+    // Si Google estaba saturado, la pregunta queda en cola y se reintenta
+    // sola cada 10 minutos (ver reintentarPreguntasBoxEnCola).
+    if (estadoIA && estadoIA.estado === 'en_cola') {
+      return '<p class="text-soft" style="margin:6px 0 0;">Estamos generando tu respuesta — el servicio de IA está con mucha demanda en este momento. Te llegará sola en unos minutos, no necesitas volver a preguntar.</p>';
+    }
+    return '<p class="text-soft" style="margin:6px 0 0;">Aún sin responder.</p>';
+  }
   let html = '<div style="margin-top:8px; padding:10px; background:#EFF6FF; border-radius:8px;">';
   if (respuesta.estadoRevision === 'intervenida') {
     html += '<p class="text-soft" style="margin:0 0 6px; font-size:11px; font-style:italic;">Respuesta complementaria de Mentor</p>';
@@ -1021,7 +1028,7 @@ export async function cargarBoxAlumno() {
               <p style="margin:6px 0;">${linkify(e.pregunta)}</p>
               <div class="hidden" data-detalle-consulta>
                 ${renderImagenesPregunta(e.imagenes, e.archivos)}
-                ${renderRespuestaBox(e.respuesta)}
+                ${renderRespuestaBox(e.respuesta, e.estadoIA)}
               </div>
             </div>`;
         }).join('')
@@ -1404,7 +1411,7 @@ export async function cargarPreguntasComunidad() {
               <p style="margin:4px 0;">${linkify(p.pregunta)}</p>
               <div class="hidden" data-detalle-comunidad>
                 ${renderImagenesPregunta(p.imagenes, p.archivos)}
-                ${renderRespuestaBox(p.respuesta)}
+                ${renderRespuestaBox(p.respuesta, p.estadoIA)}
               </div>
             </div>`;
         }).join('')
