@@ -896,7 +896,7 @@ export { cargarMentoresView };
    por sesión, automático)
    ============================================================ */
 function construirLinkNpsMentoria(mentorId, mentoriaId, tema) {
-  const url = new URL('nps-mentoria.html', window.location.href);
+  const url = new URL('nps-mentoria.html', 'https://app.uneqacademy.com/');
   url.searchParams.set('mentor', mentorId);
   url.searchParams.set('mentoria', mentoriaId);
   url.searchParams.set('tema', tema);

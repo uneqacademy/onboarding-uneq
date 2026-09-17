@@ -91,7 +91,7 @@ function conectarPreviewHorario(idFecha, idHora, idPreview) {
 conectarPreviewHorario('sesion-begin-fecha', 'sesion-begin-hora', 'sesion-begin-preview-horario');
 
 function construirLinkNpsSesionBegin(coachId, sesionId, tema) {
-  const url = new URL('nps-sesion-begin.html', window.location.href);
+  const url = new URL('nps-sesion-begin.html', 'https://app.uneqacademy.com/');
   url.searchParams.set('coach', coachId);
   url.searchParams.set('sesion', sesionId);
   url.searchParams.set('tema', tema);
