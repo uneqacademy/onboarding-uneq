@@ -2,8 +2,8 @@
    configuracion.js
    Configuración global de la agencia (solo Director): contenido
    Hotmart por programa, grabaciones de mentorías grupales por
-   programa, grupos de WhatsApp (Begin / Next+eXIT combinado) y
-   soporte. El resto de la app (portal del alumno) lee estos
+   programa, grupos de WhatsApp (Begin / Next+eXIT combinado),
+   soporte y la identidad (foto + nombre) del Director IA. El resto de la app (portal del alumno) lee estos
    valores desde /configuracion/general.
 
    Las temáticas del BOX ya no las administra el director acá —
@@ -18,6 +18,11 @@ import { ref as storageRef, uploadBytes, getDownloadURL, deleteObject } from "ht
 import { getCurrentRole } from './main.js';
 
 const TAMANO_MAXIMO_ARCHIVO_METODOLOGIA = 10 * 1024 * 1024;
+const TAMANO_MAXIMO_FOTO_DIRECTOR_IA = 5 * 1024 * 1024;
+const RUTA_FOTO_DIRECTOR_IA = 'fotos-perfil-ia/director-ia';
+const PLACEHOLDER_FOTO_DIRECTOR_IA = 'data:image/svg+xml;utf8,' + encodeURIComponent(
+  '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 80"><rect width="80" height="80" rx="40" fill="#1B2A4A"/><text x="40" y="52" font-size="34" text-anchor="middle" fill="#fff">✨</text></svg>'
+);
 
 // Qué campos pertenece a cada sección — para guardar/bloquear cada
 // una por separado, sin tocar las demás.
@@ -33,6 +38,7 @@ const CAMPOS_POR_SECCION_CONFIG = {
     contenidoHotmartNext: 'config-contenido-next',
     contenidoHotmartExit: 'config-contenido-exit'
   },
+  'director-ia': { directorIaNombre: 'config-director-ia-nombre' },
   grabaciones: {
     grabacionesBegin: 'config-grabaciones-begin',
     grabacionesNext: 'config-grabaciones-next',
@@ -50,6 +56,12 @@ function bloquearSeccionConfig(seccion, bloqueado) {
   panel.querySelectorAll('input, textarea').forEach(el => { el.disabled = bloqueado; });
   const btnAgregarArchivo = document.getElementById('btn-agregar-archivo-metodologia');
   if (seccion === 'metodologia' && btnAgregarArchivo) btnAgregarArchivo.disabled = bloqueado;
+  if (seccion === 'director-ia') {
+    ['btn-config-director-ia-foto', 'btn-config-director-ia-quitar-foto'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.disabled = bloqueado;
+    });
+  }
   panel.querySelector('.btn-guardar-config-seccion')?.classList.toggle('hidden', bloqueado);
   panel.querySelector('.btn-editar-config-seccion')?.classList.toggle('hidden', !bloqueado);
 }
@@ -163,6 +175,13 @@ export async function cargarConfiguracion() {
   document.getElementById('config-contenido-begin').value = c.contenidoHotmartBegin || '';
   document.getElementById('config-contenido-next').value = c.contenidoHotmartNext || '';
   document.getElementById('config-contenido-exit').value = c.contenidoHotmartExit || '';
+  const fotoDirectorIaEl = document.getElementById('config-director-ia-foto-preview');
+  if (fotoDirectorIaEl) {
+    fotoDirectorIaEl.src = c.directorIaFotoUrl || PLACEHOLDER_FOTO_DIRECTOR_IA;
+    document.getElementById('btn-config-director-ia-quitar-foto')?.classList.toggle('hidden', !c.directorIaFotoUrl);
+  }
+  const nombreDirectorIaEl = document.getElementById('config-director-ia-nombre');
+  if (nombreDirectorIaEl) nombreDirectorIaEl.value = c.directorIaNombre || '';
   document.getElementById('config-grabaciones-begin').value = c.grabacionesBegin || '';
   document.getElementById('config-grabaciones-next').value = c.grabacionesNext || '';
   document.getElementById('config-grabaciones-exit').value = c.grabacionesExit || '';
@@ -282,6 +301,57 @@ if (btnAgregarHito) {
       alert('No se pudo agregar. Intenta de nuevo.');
     } finally {
       btnAgregarHito.disabled = false;
+    }
+  });
+}
+
+
+/* --- Foto del Director IA (se usa en el chat de los 3 roles) --- */
+const btnFotoDirectorIa = document.getElementById('btn-config-director-ia-foto');
+const inputFotoDirectorIa = document.getElementById('config-director-ia-foto-input');
+const btnQuitarFotoDirectorIa = document.getElementById('btn-config-director-ia-quitar-foto');
+
+if (btnFotoDirectorIa && inputFotoDirectorIa) {
+  btnFotoDirectorIa.addEventListener('click', () => inputFotoDirectorIa.click());
+  inputFotoDirectorIa.addEventListener('change', async () => {
+    const archivo = inputFotoDirectorIa.files[0];
+    inputFotoDirectorIa.value = '';
+    if (!archivo) return;
+    if (archivo.size > TAMANO_MAXIMO_FOTO_DIRECTOR_IA) {
+      alert('La imagen pesa más de 5MB. Elige una más liviana.');
+      return;
+    }
+    btnFotoDirectorIa.disabled = true;
+    try {
+      const fotoRef = storageRef(storage, RUTA_FOTO_DIRECTOR_IA);
+      await uploadBytes(fotoRef, archivo);
+      const url = await getDownloadURL(fotoRef);
+      await update(ref(db, 'configuracion/general'), { directorIaFotoUrl: url });
+      document.getElementById('config-director-ia-foto-preview').src = url;
+      btnQuitarFotoDirectorIa?.classList.remove('hidden');
+    } catch (err) {
+      console.error('Error subiendo la foto del Director IA:', err);
+      alert('No se pudo subir la foto. Intenta de nuevo.');
+    } finally {
+      btnFotoDirectorIa.disabled = false;
+    }
+  });
+}
+
+if (btnQuitarFotoDirectorIa) {
+  btnQuitarFotoDirectorIa.addEventListener('click', async () => {
+    if (!confirm('¿Quitar la foto del Director IA? Volverá el ícono por defecto.')) return;
+    btnQuitarFotoDirectorIa.disabled = true;
+    try {
+      await update(ref(db, 'configuracion/general'), { directorIaFotoUrl: null });
+      try { await deleteObject(storageRef(storage, RUTA_FOTO_DIRECTOR_IA)); } catch (e) { /* si ya no existe, da igual */ }
+      document.getElementById('config-director-ia-foto-preview').src = PLACEHOLDER_FOTO_DIRECTOR_IA;
+      btnQuitarFotoDirectorIa.classList.add('hidden');
+    } catch (err) {
+      console.error('Error quitando la foto del Director IA:', err);
+      alert('No se pudo quitar la foto. Intenta de nuevo.');
+    } finally {
+      btnQuitarFotoDirectorIa.disabled = false;
     }
   });
 }
