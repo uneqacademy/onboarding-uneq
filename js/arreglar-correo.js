@@ -1,27 +1,30 @@
 /* ============================================================
    arreglar-correo.js — página interna arreglar-correo.html, solo
-   para el Director. Llama a la Cloud Function corregirCorreoUsuario
-   (ver index.js) para arreglar un correo mal escrito en Authentication.
+   para el Director. Corrige un correo mal escrito en Authentication.
+
+   No llama a una Cloud Function HTTPS directamente: el proyecto tiene
+   una política de organización de Google Cloud que bloquea hacer
+   públicas funciones nuevas, así que en vez de eso esta página escribe
+   la solicitud en mantenimiento/corregirCorreo/{id} (protegido para
+   que solo el Director pueda escribir ahí) y la función
+   corregirCorreoAlumnoDb (un disparador de la base de datos, que no
+   necesita ser pública) hace el cambio y escribe el resultado en el
+   mismo registro — esta página lo espera y lo muestra.
 
    No está enlazada desde ningún menú; se abre escribiendo la URL
-   directo. Reutiliza la sesión ya iniciada en el resto de la app
-   (mismo dominio → mismo Firebase Auth). Si nadie tiene sesión de
-   Director abierta en el navegador, pide iniciar sesión primero desde
-   la app normal.
+   directo. Reutiliza la sesión ya iniciada en el resto de la app.
 
    Recomendación: una vez que ya no necesites esta herramienta, borra
-   este archivo, arreglar-correo.html y la función corregirCorreoUsuario
-   de index.js, y vuelve a desplegar.
+   este archivo, arreglar-correo.html, el nodo mantenimiento de las
+   reglas y la función corregirCorreoAlumnoDb de index.js, y vuelve a
+   desplegar.
    ============================================================ */
 
 import { app, auth } from './firebase-config.js';
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-auth.js";
-import { getDatabase, ref, get } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-database.js";
-import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-functions.js";
+import { getDatabase, ref, get, push, set, onValue, off } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-database.js";
 
 const db = getDatabase(app);
-const functions = getFunctions(app);
-const corregirCorreo = httpsCallable(functions, 'corregirCorreoUsuario');
 
 const estadoSesionEl = document.getElementById('estado-sesion');
 const formEl = document.getElementById('form-corregir');
@@ -56,13 +59,32 @@ formEl.addEventListener('submit', async (ev) => {
   resultadoEl.className = '';
   btnEl.disabled = true;
   btnEl.textContent = 'Corrigiendo...';
+
   try {
-    const respuesta = await corregirCorreo({ correoActual, correoNuevo });
-    mostrarResultado(`✅ Corregido. La cuenta ahora tiene el correo: ${respuesta.data.correo}`, false);
-    formEl.reset();
+    const solicitudRef = push(ref(db, 'mantenimiento/corregirCorreo'));
+    await set(solicitudRef, { correoActual, correoNuevo, createdAt: Date.now() });
+
+    // Espera a que la función escriba el resultado en el mismo registro
+    // (normalmente toma 1-2 segundos). Si pasan 20s sin respuesta, avisa.
+    const timeoutId = setTimeout(() => {
+      off(solicitudRef);
+      mostrarResultado('No llegó respuesta después de 20 segundos. Revisa en Firebase si la función corregirCorreoAlumnoDb está desplegada.', true);
+      btnEl.disabled = false;
+      btnEl.textContent = 'Corregir correo';
+    }, 20000);
+
+    onValue(solicitudRef, (snap) => {
+      const val = snap.val();
+      if (!val || !val.estado) return; // aún procesando
+      clearTimeout(timeoutId);
+      off(solicitudRef);
+      mostrarResultado(val.estado === 'ok' ? `✅ ${val.mensaje}` : `❌ ${val.mensaje}`, val.estado !== 'ok');
+      if (val.estado === 'ok') formEl.reset();
+      btnEl.disabled = false;
+      btnEl.textContent = 'Corregir correo';
+    });
   } catch (err) {
-    mostrarResultado(`❌ ${err.message || 'No se pudo corregir. Intenta de nuevo.'}`, true);
-  } finally {
+    mostrarResultado(`❌ ${err.message || 'No se pudo enviar la solicitud. Intenta de nuevo.'}`, true);
     btnEl.disabled = false;
     btnEl.textContent = 'Corregir correo';
   }
