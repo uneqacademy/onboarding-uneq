@@ -1,0 +1,247 @@
+/* ============================================================
+   agendamiento.css — módulo de agendamiento (aparte de la app de
+   alumnos). Reutiliza la paleta e identidad de onboarding-uneq
+   (mismas variables que css/styles.css) para que se vea consistente,
+   sin depender de ese archivo ni tocarlo.
+   ============================================================ */
+:root {
+  --color-bg: #F5F6F4;
+  --color-surface: #FFFFFF;
+  --color-surface-alt: #F0F1EE;
+  --color-ink: #1B2333;
+  --color-ink-soft: #5B6472;
+  --color-primary: #1B2A4A;
+  --color-primary-soft: #2A3B63;
+  --color-accent: #2F9E8F;
+  --color-accent-soft: #E3F3F1;
+  --color-warning: #E8A33D;
+  --color-warning-soft: #FBEEDB;
+  --color-danger: #D64545;
+  --color-danger-soft: #FBE4E4;
+  --color-border: #E2E4E8;
+  --radius-md: 10px;
+  --radius-lg: 16px;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; }
+body {
+  background: var(--color-bg);
+  color: var(--color-ink);
+  font-family: 'Inter', system-ui, sans-serif;
+  min-height: 100vh;
+}
+.ag-shell { max-width: 720px; margin: 0 auto; padding: 32px 20px 60px; }
+.ag-marca { display: flex; align-items: center; gap: 10px; margin-bottom: 28px; }
+.ag-marca img { height: 30px; width: auto; }
+.ag-marca span { font-weight: 700; font-size: 15px; letter-spacing: 0.3px; color: var(--color-primary); }
+
+.ag-panel { background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-lg); padding: 24px; margin-bottom: 20px; }
+.ag-panel h2 { font-size: 19px; margin: 0 0 4px; color: var(--color-primary); }
+.ag-panel p.ag-sub { color: var(--color-ink-soft); font-size: 14px; margin: 0 0 20px; }
+
+/* --- Barra de pasos --- */
+.ag-pasos { display: flex; gap: 6px; margin-bottom: 24px; }
+.ag-paso { flex: 1; height: 4px; border-radius: 2px; background: var(--color-border); }
+.ag-paso.is-activo, .ag-paso.is-hecho { background: var(--color-accent); }
+
+/* --- Calendario --- */
+.ag-cal-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+.ag-cal-header h3 { margin: 0; font-size: 16px;  }
+.ag-cal-nav { display: flex; gap: 6px; }
+.ag-cal-nav button {
+  width: 32px; height: 32px; border-radius: 50%; border: 1px solid var(--color-border);
+  background: #fff; cursor: pointer; font-size: 16px; color: var(--color-primary);
+}
+.ag-cal-nav button:disabled { opacity: 0.35; cursor: default; }
+.ag-cal-dias-semana { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; margin-bottom: 6px; }
+.ag-cal-dias-semana span { text-align: center; font-size: 11px; color: var(--color-ink-soft); font-weight: 600; }
+.ag-cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+.ag-cal-dia {
+  aspect-ratio: 1; border-radius: 10px; border: 1px solid transparent;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 14px; background: none; cursor: default; color: var(--color-ink-soft);
+}
+.ag-cal-dia.ag-disponible { background: var(--color-accent-soft); color: var(--color-primary); font-weight: 600; cursor: pointer; }
+.ag-cal-dia.ag-disponible:hover { border-color: var(--color-accent); }
+.ag-cal-dia.ag-seleccionado { background: var(--color-accent); color: #fff; }
+.ag-cal-dia.ag-vacio { visibility: hidden; }
+.ag-cal-leyenda { margin-top: 14px; font-size: 12px; color: var(--color-ink-soft); display: flex; align-items: center; gap: 6px; }
+.ag-cal-leyenda span.dot { width: 10px; height: 10px; border-radius: 50%; background: var(--color-accent-soft); display: inline-block; border: 1px solid var(--color-accent); }
+
+/* --- Horarios --- */
+.ag-horarios-titulo { display: flex; align-items: center; justify-content: space-between; margin: 22px 0 12px; }
+.ag-horarios-titulo h3 { margin: 0; font-size: 15px; }
+.ag-horarios-titulo button { background: none; border: 0; color: var(--color-accent); font-size: 13px; cursor: pointer; font-weight: 600; }
+.ag-horarios-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 10px; }
+.ag-horario-btn {
+  padding: 10px 8px; border-radius: 8px; border: 1.5px solid var(--color-border);
+  background: #fff; font-size: 14px; font-weight: 600; color: var(--color-primary); cursor: pointer;
+}
+.ag-horario-btn:hover { border-color: var(--color-accent); }
+.ag-horario-btn.is-elegido { background: var(--color-primary); border-color: var(--color-primary); color: #fff; }
+.ag-tz-nota { font-size: 12px; color: var(--color-ink-soft); margin-top: 14px; text-align: center; }
+
+/* --- Aviso de reserva temporal --- */
+.ag-reserva-aviso {
+  display: flex; align-items: center; gap: 10px;
+  background: var(--color-warning-soft); border: 1px solid #F0C36D; border-radius: 10px;
+  padding: 12px 16px; margin-bottom: 20px; font-size: 13.5px; color: #6B4A15;
+}
+.ag-reserva-aviso strong { font-variant-numeric: tabular-nums; }
+
+/* --- Formulario de preguntas --- */
+.ag-field { margin-bottom: 16px; }
+.ag-field label { display: block; font-size: 13.5px; font-weight: 600; margin-bottom: 6px; color: var(--color-ink); }
+.ag-field .ag-req { color: var(--color-danger); }
+.ag-field input[type=text], .ag-field input[type=email], .ag-field input[type=tel], .ag-field input[type=number], .ag-field textarea, .ag-field select {
+  width: 100%; padding: 11px 12px; border: 1px solid var(--color-border); border-radius: 8px;
+  font: inherit; font-size: 14.5px; background: #fff; color: var(--color-ink);
+}
+.ag-field textarea { min-height: 90px; resize: vertical; }
+.ag-opciones { display: flex; flex-wrap: wrap; gap: 8px; }
+.ag-opcion-btn { padding: 9px 16px; border-radius: 20px; border: 1.5px solid var(--color-border); background: #fff; font-size: 13.5px; cursor: pointer; }
+.ag-opcion-btn.is-elegida { background: var(--color-primary); border-color: var(--color-primary); color: #fff; }
+
+/* --- Botones generales --- */
+.ag-btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 13px 22px; border-radius: 9px; border: 0; font-size: 15px; font-weight: 600; cursor: pointer; width: 100%; text-decoration: none; text-align: center; }
+.ag-btn--primario { background: var(--color-primary); color: #fff; }
+.ag-btn--primario:disabled { opacity: 0.5; cursor: default; }
+.ag-btn--ghost { background: none; border: 1.5px solid var(--color-border); color: var(--color-ink); }
+.ag-btn--whatsapp { background: #25D366; color: #fff; }
+.ag-acciones { display: flex; gap: 10px; margin-top: 22px; }
+.ag-acciones .ag-btn--ghost { width: auto; padding: 13px 18px; }
+
+/* --- Confirmación --- */
+.ag-confirmacion { text-align: center; }
+.ag-confirmacion .ag-check { width: 56px; height: 56px; border-radius: 50%; background: var(--color-accent-soft); color: var(--color-accent); display: flex; align-items: center; justify-content: center; font-size: 28px; margin: 0 auto 16px; }
+.ag-confirmacion h2 { margin-bottom: 6px; }
+.ag-resumen-cita { background: var(--color-surface-alt); border-radius: 12px; padding: 18px 20px; margin: 20px 0; text-align: left; }
+.ag-resumen-cita dt { font-size: 12px; color: var(--color-ink-soft); margin-top: 10px; }
+.ag-resumen-cita dt:first-child { margin-top: 0; }
+.ag-resumen-cita dd { margin: 2px 0 0; font-size: 15px; font-weight: 600; color: var(--color-primary); }
+
+.ag-cargando, .ag-error { text-align: center; padding: 40px 20px; color: var(--color-ink-soft); }
+.hidden { display: none !important; }
+
+@media (max-width: 480px) {
+  .ag-shell { padding: 20px 14px 50px; }
+  .ag-panel { padding: 18px; }
+}
+
+/* ============================================================
+   PANEL ADMINISTRATIVO (Director Comercial / Closer)
+   Mismo lenguaje visual del sidebar de onboarding-uneq
+   (--color-primary de fondo), adaptado a este módulo.
+   ============================================================ */
+.adm-shell { display: grid; grid-template-columns: 240px 1fr; min-height: 100vh; }
+.adm-sidebar { background: var(--color-primary); color: #fff; padding: 22px 16px; display: flex; flex-direction: column; gap: 22px; }
+.adm-sidebar .ag-marca img { height: 26px; }
+.adm-sidebar .ag-marca span { color: #fff; font-size: 13px; }
+.adm-sidebar .ag-marca small { display: block; color: rgba(255,255,255,0.55); font-size: 10.5px; font-weight: 400; letter-spacing: 0.4px; }
+.adm-nav { display: flex; flex-direction: column; gap: 3px; flex: 1; }
+.adm-nav-item {
+  display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 8px;
+  font-size: 13.5px; color: rgba(255,255,255,0.75); cursor: pointer; background: none; border: 0; text-align: left; font-family: inherit;
+}
+.adm-nav-item:hover { background: rgba(255,255,255,0.08); color: #fff; }
+.adm-nav-item.is-active { background: rgba(255,255,255,0.14); color: #fff; font-weight: 600; }
+.adm-sidebar-footer { font-size: 11.5px; color: rgba(255,255,255,0.55); border-top: 1px solid rgba(255,255,255,0.15); padding-top: 14px; }
+.adm-sidebar-footer strong { color: #fff; display: block; font-size: 12.5px; }
+
+.adm-content { padding: 28px 36px 60px; max-width: 880px; }
+.adm-content h1 { font-size: 22px; margin: 0 0 4px; color: var(--color-primary); }
+.adm-content > p.ag-sub { margin: 0 0 26px; }
+.adm-seccion { display: none; }
+.adm-seccion.is-activa { display: block; }
+
+.adm-fila { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.adm-toast {
+  position: fixed; bottom: 24px; right: 24px; background: var(--color-primary); color: #fff;
+  padding: 12px 20px; border-radius: 8px; font-size: 13.5px; box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+  opacity: 0; transform: translateY(10px); transition: all .25s; pointer-events: none; z-index: 50;
+}
+.adm-toast.is-visible { opacity: 1; transform: translateY(0); }
+
+/* --- Preguntas: lista editable --- */
+.adm-pregunta-card { background: var(--color-surface); border: 1px solid var(--color-border); border-radius: 12px; padding: 16px 18px; margin-bottom: 12px; }
+.adm-pregunta-card__header { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+.adm-pregunta-card__header .badge-tipo { font-size: 11px; background: var(--color-accent-soft); color: var(--color-accent); padding: 3px 9px; border-radius: 10px; font-weight: 600; }
+.adm-pregunta-card__acciones { margin-left: auto; display: flex; gap: 4px; }
+.adm-icon-btn { width: 28px; height: 28px; border-radius: 6px; border: 1px solid var(--color-border); background: #fff; cursor: pointer; font-size: 13px; display: flex; align-items: center; justify-content: center; color: var(--color-ink-soft); }
+.adm-icon-btn:hover { background: var(--color-surface-alt); }
+.adm-icon-btn--danger:hover { color: var(--color-danger); border-color: var(--color-danger); }
+.adm-toggle-obligatoria { display: flex; align-items: center; gap: 6px; font-size: 12.5px; color: var(--color-ink-soft); margin-top: 8px; }
+.adm-opciones-lista { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.adm-opciones-lista .op { background: var(--color-surface-alt); padding: 4px 10px; border-radius: 12px; font-size: 12px; display: flex; align-items: center; gap: 6px; }
+.adm-opciones-lista .op button { border: 0; background: none; cursor: pointer; color: var(--color-ink-soft); font-size: 11px; }
+.adm-btn-agregar-opcion { font-size: 12px; border: 1px dashed var(--color-border); background: none; border-radius: 12px; padding: 4px 10px; cursor: pointer; color: var(--color-accent); }
+
+/* --- Tabla de closers --- */
+.adm-tabla { width: 100%; border-collapse: collapse; background: #fff; border: 1px solid var(--color-border); border-radius: 12px; overflow: hidden; }
+.adm-tabla th, .adm-tabla td { text-align: left; padding: 12px 14px; font-size: 13.5px; border-bottom: 1px solid var(--color-border); }
+.adm-tabla th { background: var(--color-surface-alt); font-size: 11.5px; text-transform: uppercase; letter-spacing: 0.3px; color: var(--color-ink-soft); }
+.adm-tabla tr:last-child td { border-bottom: 0; }
+.adm-badge-estado { font-size: 11.5px; padding: 3px 10px; border-radius: 10px; font-weight: 600; }
+.adm-badge-estado.activo { background: var(--color-accent-soft); color: var(--color-accent); }
+.adm-badge-estado.inactivo { background: var(--color-surface-alt); color: var(--color-ink-soft); }
+
+/* --- Recordatorios --- */
+.adm-recordatorio-card { border: 1px solid var(--color-border); border-radius: 12px; padding: 18px 20px; margin-bottom: 16px; }
+.adm-recordatorio-card h3 { margin: 0 0 4px; font-size: 15px; }
+.adm-canal-opciones { display: flex; gap: 16px; margin: 10px 0 14px; }
+.adm-canal-opciones label { display: flex; align-items: center; gap: 6px; font-size: 13.5px; }
+
+select { width: 100%; padding: 11px 12px; border: 1px solid var(--color-border); border-radius: 8px; font: inherit; font-size: 14.5px; background: #fff; color: var(--color-ink); }
+.ag-field small.ag-hint { display: block; color: var(--color-ink-soft); font-size: 12px; margin-top: 5px; }
+
+@media (max-width: 860px) {
+  .adm-shell { grid-template-columns: 1fr; }
+  .adm-sidebar { flex-direction: row; align-items: center; overflow-x: auto; padding: 14px 16px; gap: 14px; }
+  .adm-nav { flex-direction: row; }
+  .adm-sidebar-footer { display: none; }
+  .adm-content { padding: 20px 16px 50px; }
+  .adm-fila { grid-template-columns: 1fr; }
+}
+
+/* ============================================================
+   PANEL DEL CLOSER
+   ============================================================ */
+.adm-cita-card { background: #fff; border: 1px solid var(--color-border); border-radius: 12px; padding: 16px 18px; margin-bottom: 12px; }
+.adm-cita-card__top { display: flex; align-items: center; gap: 12px; margin-bottom: 4px; }
+.adm-cita-card__fecha { background: var(--color-surface-alt); border-radius: 8px; padding: 6px 10px; font-size: 12.5px; font-weight: 700; color: var(--color-primary); white-space: nowrap; }
+.adm-cita-card__nombre { font-size: 15.5px; font-weight: 700; }
+.adm-cita-card__meta { color: var(--color-ink-soft); font-size: 12.5px; margin: 2px 0 10px; }
+.adm-cita-card__respuestas { background: var(--color-surface-alt); border-radius: 8px; padding: 10px 12px; font-size: 12.5px; margin-bottom: 10px; }
+.adm-cita-card__respuestas dt { font-weight: 600; color: var(--color-ink-soft); margin-top: 6px; }
+.adm-cita-card__respuestas dt:first-child { margin-top: 0; }
+.adm-cita-card__respuestas dd { margin: 1px 0 0; }
+.adm-cita-card__acciones { display: flex; gap: 8px; flex-wrap: wrap; }
+.adm-btn-chico { font-size: 12.5px; padding: 7px 14px; border-radius: 7px; border: 1.5px solid var(--color-border); background: #fff; cursor: pointer; }
+.adm-btn-chico--primario { background: var(--color-primary); color: #fff; border-color: var(--color-primary); }
+.adm-btn-chico--danger { color: var(--color-danger); border-color: var(--color-danger); }
+.adm-btn-chico--accent { background: var(--color-accent); color: #fff; border-color: var(--color-accent); }
+
+.adm-badge-lead { font-size: 11px; padding: 3px 10px; border-radius: 10px; font-weight: 600; }
+.adm-badge-lead.se-presento { background: var(--color-accent-soft); color: var(--color-accent); }
+.adm-badge-lead.en-seguimiento { background: var(--color-warning-soft); color: #8a6112; }
+.adm-badge-lead.cerrado { background: #E4F3E8; color: #2C8C4B; }
+.adm-badge-lead.no-show, .adm-badge-lead.baja { background: var(--color-danger-soft); color: var(--color-danger); }
+
+.adm-bitacora-lista { margin: 10px 0; display: flex; flex-direction: column; gap: 8px; }
+.adm-bitacora-entrada { background: var(--color-surface-alt); border-radius: 8px; padding: 8px 12px; font-size: 13px; }
+.adm-bitacora-entrada time { display: block; font-size: 11px; color: var(--color-ink-soft); margin-bottom: 2px; }
+.adm-bitacora-nueva { display: flex; gap: 8px; margin-top: 6px; }
+.adm-bitacora-nueva input { flex: 1; padding: 9px 12px; border: 1px solid var(--color-border); border-radius: 8px; font: inherit; font-size: 13.5px; }
+
+.adm-subtabs { display: flex; gap: 6px; margin-bottom: 18px; }
+.adm-subtab { padding: 8px 16px; border-radius: 8px; border: 1.5px solid var(--color-border); background: #fff; font-size: 13.5px; cursor: pointer; font-weight: 600; color: var(--color-ink-soft); }
+.adm-subtab.is-activa { background: var(--color-primary); border-color: var(--color-primary); color: #fff; }
+
+/* --- Disponibilidad semanal --- */
+.adm-disp-grid { display: grid; grid-template-columns: 70px repeat(7, 1fr); gap: 4px; }
+.adm-disp-grid .cabecera { text-align: center; font-size: 11.5px; font-weight: 700; color: var(--color-ink-soft); padding: 6px 0; }
+.adm-disp-grid .hora-label { font-size: 11.5px; color: var(--color-ink-soft); display: flex; align-items: center; justify-content: flex-end; padding-right: 6px; }
+.adm-disp-celda { height: 30px; border-radius: 5px; background: var(--color-surface-alt); border: 1px solid var(--color-border); cursor: pointer; }
+.adm-disp-celda.is-activa { background: var(--color-accent); border-color: var(--color-accent); }
+
+.adm-bloqueo-item { display: flex; align-items: center; justify-content: space-between; background: #fff; border: 1px solid var(--color-border); border-radius: 8px; padding: 10px 14px; margin-bottom: 8px; font-size: 13.5px; }

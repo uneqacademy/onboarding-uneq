@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Closer — Agendamiento UNEQ</title>
+<link rel="stylesheet" href="css/agendamiento.css">
+</head>
+<body>
+
+<div id="login-overlay" class="ag-shell" style="max-width:420px; padding-top:80px;">
+  <div class="ag-marca"><img src="assets/logos/isotipo-uneq.png" alt="UNEQ"><span>UNEQ MENTORING<small>AGENDAMIENTO</small></span></div>
+  <div class="ag-panel">
+    <h2>Closer</h2>
+    <p class="ag-sub">Inicia sesión para entrar.</p>
+    <div class="ag-field"><label>Correo</label><input type="email" id="login-correo"></div>
+    <div class="ag-field"><label>Contraseña</label><input type="password" id="login-password"></div>
+    <p id="login-error" class="hidden" style="color:var(--color-danger); font-size:13px; margin-bottom:12px;"></p>
+    <button type="button" class="ag-btn ag-btn--primario" id="btn-login">Iniciar sesión</button>
+  </div>
+</div>
+
+<div class="adm-shell hidden" id="adm-shell">
+  <aside class="adm-sidebar">
+    <div class="ag-marca">
+      <img src="assets/logos/isotipo-uneq.png" alt="UNEQ">
+      <span>UNEQ MENTORING<small>AGENDAMIENTO</small></span>
+    </div>
+    <nav class="adm-nav">
+      <button type="button" class="adm-nav-item is-active" data-seccion="agenda">📅 Mi Agenda</button>
+      <button type="button" class="adm-nav-item" data-seccion="leads">🧑‍🤝‍🧑 Mis Leads</button>
+      <button type="button" class="adm-nav-item" data-seccion="disponibilidad">🕒 Mi Disponibilidad</button>
+      <button type="button" class="adm-nav-item" data-seccion="bloqueos">🚫 Bloqueos</button>
+    </nav>
+    <div class="adm-sidebar-footer">
+      <strong id="closer-nombre-sesion">Carlos Muñoz</strong>
+      Rol: Closer
+    </div>
+  </aside>
+
+  <main class="adm-content">
+
+    <!-- MI AGENDA -->
+    <section class="adm-seccion is-activa" id="sec-agenda">
+      <h1>Mi Agenda</h1>
+      <p class="ag-sub">Tus próximas llamadas. Cuando termine cada una, marca cómo fue.</p>
+      <div id="agenda-lista"></div>
+    </section>
+
+    <!-- MIS LEADS -->
+    <section class="adm-seccion" id="sec-leads">
+      <h1>Mis Leads</h1>
+      <p class="ag-sub">Seguimiento de cada lead desde que se presenta a la llamada.</p>
+      <div class="adm-subtabs">
+        <button type="button" class="adm-subtab is-activa" data-subtab="activos">Activos</button>
+        <button type="button" class="adm-subtab" data-subtab="archivados">Archivados</button>
+      </div>
+      <div id="leads-lista"></div>
+    </section>
+
+    <!-- DISPONIBILIDAD -->
+    <section class="adm-seccion" id="sec-disponibilidad">
+      <h1>Mi Disponibilidad</h1>
+      <p class="ag-sub" id="disp-sub">Marca los horarios en los que puedes recibir llamadas. Se repiten cada semana.</p>
+      <div class="ag-panel">
+        <div class="adm-disp-grid" id="disp-grid"></div>
+        <button type="button" class="ag-btn ag-btn--primario" style="width:auto; margin-top:20px;" id="btn-guardar-disponibilidad">Guardar disponibilidad</button>
+      </div>
+    </section>
+
+    <!-- BLOQUEOS -->
+    <section class="adm-seccion" id="sec-bloqueos">
+      <h1>Bloqueos Puntuales</h1>
+      <p class="ag-sub">Para cuando tienes algo externo y necesitas cerrar un horario que normalmente cubres.</p>
+      <div class="ag-panel">
+        <div class="adm-fila">
+          <div class="ag-field"><label>Fecha</label><input type="date" id="bloqueo-fecha"></div>
+          <div class="ag-field"><label>Desde — Hasta</label>
+            <div style="display:flex; gap:8px;">
+              <input type="time" id="bloqueo-desde">
+              <input type="time" id="bloqueo-hasta">
+            </div>
+          </div>
+        </div>
+        <button type="button" class="ag-btn ag-btn--ghost" style="width:auto;" id="btn-agregar-bloqueo">+ Agregar bloqueo</button>
+      </div>
+      <h2 style="font-size:15px; margin:22px 0 10px;">Próximos bloqueos</h2>
+      <div id="bloqueos-lista"></div>
+    </section>
+
+  </main>
+</div>
+
+<div class="adm-toast" id="toast"></div>
+
+<script type="module" src="js/closer.js"></script>
+</body>
+</html>

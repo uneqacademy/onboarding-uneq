@@ -1,0 +1,313 @@
+{
+  "rules": {
+    ".read": "auth != null && (root.child('usuarios').child(auth.uid).child('roles').child('director').val() === true || root.child('usuarios').child(auth.uid).child('rol').val() === 'director')",
+
+    "agendamiento": {
+      "config": {
+        "general": {
+          ".read": true,
+          ".write": "auth != null && root.child('agendamiento/staff').child(auth.uid).child('rol').val() === 'directorComercial'"
+        },
+        "preguntas": {
+          ".read": true,
+          ".write": "auth != null && root.child('agendamiento/staff').child(auth.uid).child('rol').val() === 'directorComercial'"
+        }
+      },
+
+      "staff": {
+        "$uid": {
+          ".read": "auth != null && (auth.uid === $uid || root.child('agendamiento/staff').child(auth.uid).child('rol').val() === 'directorComercial')",
+          ".write": "auth != null && root.child('agendamiento/staff').child(auth.uid).child('rol').val() === 'directorComercial'"
+        }
+      },
+
+      "disponibilidad": {
+        "$closerId": {
+          ".read": "auth != null && (root.child('agendamiento/staff').child(auth.uid).child('rol').val() === 'directorComercial' || root.child('agendamiento/staff').child(auth.uid).child('rol').val() === 'closer')",
+          ".write": "auth != null && (auth.uid === $closerId || root.child('agendamiento/staff').child(auth.uid).child('rol').val() === 'directorComercial')"
+        }
+      },
+
+      "bloqueos": {
+        "$closerId": {
+          ".read": "auth != null && (root.child('agendamiento/staff').child(auth.uid).child('rol').val() === 'directorComercial' || root.child('agendamiento/staff').child(auth.uid).child('rol').val() === 'closer')",
+          ".write": "auth != null && (auth.uid === $closerId || root.child('agendamiento/staff').child(auth.uid).child('rol').val() === 'directorComercial')"
+        }
+      },
+
+      "cuposPublicos": {
+        ".read": true,
+        ".write": false
+      },
+
+      "solicitudesHold": {
+        "$solicitudId": {
+          ".read": true,
+          ".write": "!data.exists() && (newData.hasChildren(['claveSlot', 'createdAt']) || (data.exists() && !newData.exists()))"
+        }
+      },
+
+      "solicitudesConfirmar": {
+        "$solicitudId": {
+          ".read": true,
+          ".write": "!data.exists() && newData.hasChildren(['holdId', 'claveSlot', 'nombre', 'correo', 'telefono'])"
+        }
+      },
+
+      "solicitudesAccion": {
+        "$solicitudId": {
+          ".read": true,
+          ".write": "!data.exists() && newData.hasChildren(['token', 'accion'])"
+        }
+      },
+
+      "solicitudesCloser": {
+        "$solicitudId": {
+          ".read": "auth != null && root.child('agendamiento/staff').child(auth.uid).child('rol').val() === 'directorComercial'",
+          ".write": "auth != null && root.child('agendamiento/staff').child(auth.uid).child('rol').val() === 'directorComercial' && !data.exists() && newData.hasChildren(['nombre', 'correo'])"
+        }
+      },
+
+      "citas": {
+        ".read": "auth != null && (root.child('agendamiento/staff').child(auth.uid).child('rol').val() === 'directorComercial' || root.child('agendamiento/staff').child(auth.uid).child('rol').val() === 'closer')",
+        ".indexOn": ["estado"],
+        "$citaId": {
+          ".write": false
+        }
+      },
+
+      "citasPorToken": {
+        "$token": {
+          ".read": false,
+          ".write": false
+        }
+      },
+
+      "leadsPorCloser": {
+        "$closerId": {
+          ".read": "auth != null && (auth.uid === $closerId || root.child('agendamiento/staff').child(auth.uid).child('rol').val() === 'directorComercial')",
+          "$leadId": {
+            ".write": "auth != null && (auth.uid === $closerId || root.child('agendamiento/staff').child(auth.uid).child('rol').val() === 'directorComercial')"
+          }
+        }
+      },
+
+      "recienCerrados": {
+        ".read": "auth != null && (root.child('usuarios').child(auth.uid).child('roles').child('director').val() === true || root.child('usuarios').child(auth.uid).child('rol').val() === 'director')",
+        "$id": {
+          ".write": "auth != null && (root.child('agendamiento/staff').child(auth.uid).child('rol').val() === 'closer' && !data.exists() && newData.hasChildren(['nombre', 'telefono', 'programa', 'closerId'])) || ((root.child('usuarios').child(auth.uid).child('roles').child('director').val() === true || root.child('usuarios').child(auth.uid).child('rol').val() === 'director') && data.exists() && !newData.exists())"
+        }
+      }
+    },
+
+    "usuarios": {
+      ".read": "auth != null && ((root.child('usuarios').child(auth.uid).child('roles').child('director').val() === true || root.child('usuarios').child(auth.uid).child('rol').val() === 'director') || (root.child('usuarios').child(auth.uid).child('roles').child('mentor').val() === true || root.child('usuarios').child(auth.uid).child('rol').val() === 'mentor') || root.child('alumnoPorAuthUid').child(auth.uid).exists())",
+      "$uid": {
+        ".read": "auth != null && (auth.uid === $uid || root.child('ciclos').child(root.child('alumnos').child(root.child('alumnoPorAuthUid').child(auth.uid).val()).child('cicloActualId').val()).child('coachId').val() === $uid)",
+        ".write": "auth != null && (auth.uid === $uid || (root.child('usuarios').child(auth.uid).child('roles').child('director').val() === true || root.child('usuarios').child(auth.uid).child('rol').val() === 'director'))",
+        "nombre": { ".read": true },
+        "fotoUrl": { ".read": true },
+        "temasBox": { ".read": true }
+      }
+    },
+
+    "alumnoPorAuthUid": {
+      "$uid": {
+        ".read": "auth != null",
+        ".write": "auth != null && (!data.exists() || (root.child('usuarios').child(auth.uid).child('roles').child('director').val() === true || root.child('usuarios').child(auth.uid).child('rol').val() === 'director'))"
+      }
+    },
+
+    "alumnos": {
+      ".read": "auth != null && !root.child('alumnoPorAuthUid').child(auth.uid).exists()",
+      ".write": "auth != null && !root.child('alumnoPorAuthUid').child(auth.uid).exists()",
+      "$alumnoId": {
+        ".read": "auth != null && (root.child('alumnoPorAuthUid').child(auth.uid).val() === $alumnoId || (root.child('alumnos').child(root.child('alumnoPorAuthUid').child(auth.uid).val()).child('cicloActualId').val() != null && root.child('alumnos').child(root.child('alumnoPorAuthUid').child(auth.uid).val()).child('cicloActualId').val() === data.child('cicloActualId').val()))",
+        "fotoUrl": {
+          ".read": "auth != null",
+          ".write": "auth != null && root.child('alumnoPorAuthUid').child(auth.uid).val() === $alumnoId"
+        }
+      }
+    },
+
+    "ciclos": {
+      ".read": "auth != null && !root.child('alumnoPorAuthUid').child(auth.uid).exists()",
+      ".write": "auth != null && !root.child('alumnoPorAuthUid').child(auth.uid).exists()",
+      "$cicloId": {
+        ".read": "auth != null && root.child('alumnos').child(root.child('alumnoPorAuthUid').child(auth.uid).val()).child('cicloActualId').val() === $cicloId",
+        "alumnoIds": { ".read": "auth != null" }
+      }
+    },
+
+    "acuerdosPago": {
+      ".read": "auth != null && !root.child('alumnoPorAuthUid').child(auth.uid).exists()",
+      ".write": "auth != null",
+      "$cicloId": {
+        ".read": "auth != null && root.child('alumnos').child(root.child('alumnoPorAuthUid').child(auth.uid).val()).child('cicloActualId').val() === $cicloId"
+      }
+    },
+
+    "bitacora": {
+      ".read": "auth != null && !root.child('alumnoPorAuthUid').child(auth.uid).exists()",
+      ".write": "auth != null && !root.child('alumnoPorAuthUid').child(auth.uid).exists()",
+      "$cicloId": {
+        ".read": "auth != null && root.child('alumnos').child(root.child('alumnoPorAuthUid').child(auth.uid).val()).child('cicloActualId').val() === $cicloId"
+      }
+    },
+
+    "box": {
+      "$mentorId": {
+        ".read": "auth != null && (auth.uid === $mentorId || (root.child('usuarios').child(auth.uid).child('roles').child('director').val() === true || root.child('usuarios').child(auth.uid).child('rol').val() === 'director') || root.child('alumnoPorAuthUid').child(auth.uid).exists())",
+        "$preguntaId": {
+          ".write": "auth != null && (auth.uid === $mentorId || (!data.exists() && newData.child('alumnoId').val() === root.child('alumnoPorAuthUid').child(auth.uid).val()) || (data.exists() && !newData.exists() && data.child('alumnoId').val() === root.child('alumnoPorAuthUid').child(auth.uid).val() && data.child('respuesta').val() === null))"
+        }
+      }
+    },
+
+    "boxIndice": {
+      "$alumnoId": {
+        ".read": "auth != null && (root.child('alumnoPorAuthUid').child(auth.uid).val() === $alumnoId || (root.child('alumnos').child(root.child('alumnoPorAuthUid').child(auth.uid).val()).child('cicloActualId').val() != null && root.child('alumnos').child(root.child('alumnoPorAuthUid').child(auth.uid).val()).child('cicloActualId').val() === root.child('alumnos').child($alumnoId).child('cicloActualId').val()))",
+        ".write": "auth != null && root.child('alumnoPorAuthUid').child(auth.uid).val() === $alumnoId"
+      }
+    },
+
+    "mantenimiento": {
+      "corregirCorreo": {
+        ".read": "auth != null && (root.child('usuarios').child(auth.uid).child('roles').child('director').val() === true || root.child('usuarios').child(auth.uid).child('rol').val() === 'director')",
+        ".write": "auth != null && (root.child('usuarios').child(auth.uid).child('roles').child('director').val() === true || root.child('usuarios').child(auth.uid).child('rol').val() === 'director')"
+      }
+    },
+    "asistenteHistorial": {
+      "$uid": {
+        ".read": "auth != null && auth.uid === $uid",
+        ".write": "auth != null && auth.uid === $uid"
+      }
+    },
+    "configuracion": {
+      ".read": "auth != null",
+      ".write": "auth != null && (root.child('usuarios').child(auth.uid).child('roles').child('director').val() === true || root.child('usuarios').child(auth.uid).child('rol').val() === 'director')"
+    },
+
+    "preguntasVivo": {
+      "$mentorId": {
+        ".read": "auth != null && (auth.uid === $mentorId || (root.child('usuarios').child(auth.uid).child('roles').child('director').val() === true || root.child('usuarios').child(auth.uid).child('rol').val() === 'director') || root.child('alumnoPorAuthUid').child(auth.uid).exists())",
+        "$mentoriaId": {
+          "$preguntaId": {
+            ".write": "auth != null && (auth.uid === $mentorId || (!data.exists() && newData.child('alumnoId').val() === root.child('alumnoPorAuthUid').child(auth.uid).val()) || (data.exists() && data.child('alumnoId').val() === root.child('alumnoPorAuthUid').child(auth.uid).val() && data.child('revisada').val() !== true))"
+          }
+        }
+      }
+    },
+
+    "preguntasVivoBegin": {
+      "$coachId": {
+        ".read": "auth != null && (auth.uid === $coachId || (root.child('usuarios').child(auth.uid).child('roles').child('director').val() === true || root.child('usuarios').child(auth.uid).child('rol').val() === 'director') || root.child('alumnoPorAuthUid').child(auth.uid).exists())",
+        "$sesionId": {
+          "$preguntaId": {
+            ".write": "auth != null && (auth.uid === $coachId || (!data.exists() && newData.child('alumnoId').val() === root.child('alumnoPorAuthUid').child(auth.uid).val()) || (data.exists() && data.child('alumnoId').val() === root.child('alumnoPorAuthUid').child(auth.uid).val() && data.child('revisada').val() !== true))"
+          }
+        }
+      }
+    },
+
+    "boxBegin": {
+      ".read": "auth != null && (root.child('usuarios').child(auth.uid).child('roles').child('mentor').val() === true || root.child('usuarios').child(auth.uid).child('rol').val() === 'mentor' || (root.child('usuarios').child(auth.uid).child('roles').child('director').val() === true || root.child('usuarios').child(auth.uid).child('rol').val() === 'director') || root.child('alumnoPorAuthUid').child(auth.uid).exists())",
+      "$preguntaId": {
+        ".write": "auth != null && !data.exists() && newData.child('alumnoId').val() === root.child('alumnoPorAuthUid').child(auth.uid).val()",
+        "respuesta": {
+          ".write": "auth != null && !data.exists() && (root.child('usuarios').child(auth.uid).child('roles').child('mentor').val() === true || root.child('usuarios').child(auth.uid).child('rol').val() === 'mentor')"
+        }
+      }
+    },
+
+    "conocimientoMentor": {
+      "$mentorId": {
+        ".read": "auth != null && (auth.uid === $mentorId || (root.child('usuarios').child(auth.uid).child('roles').child('director').val() === true || root.child('usuarios').child(auth.uid).child('rol').val() === 'director'))",
+        ".write": "auth != null && auth.uid === $mentorId"
+      }
+    },
+
+    "nps": {
+      "$coachId": {
+        ".read": "auth != null && (auth.uid === $coachId || (root.child('usuarios').child(auth.uid).child('roles').child('director').val() === true || root.child('usuarios').child(auth.uid).child('rol').val() === 'director'))",
+        "$entryId": {
+          ".write": "!data.exists() && newData.hasChildren(['areas', 'momento', 'createdAt'])"
+        }
+      }
+    },
+
+    "mentorias": {
+      "$mentorId": {
+        ".read": "auth != null && (auth.uid === $mentorId || (root.child('usuarios').child(auth.uid).child('roles').child('director').val() === true || root.child('usuarios').child(auth.uid).child('rol').val() === 'director') || root.child('alumnoPorAuthUid').child(auth.uid).exists())",
+        ".write": "auth != null && auth.uid === $mentorId"
+      }
+    },
+
+    "sesionesBegin": {
+      "$coachId": {
+        ".read": "auth != null && (auth.uid === $coachId || (root.child('usuarios').child(auth.uid).child('roles').child('director').val() === true || root.child('usuarios').child(auth.uid).child('rol').val() === 'director') || root.child('alumnoPorAuthUid').child(auth.uid).exists())",
+        ".write": "auth != null && auth.uid === $coachId && root.child('usuarios').child(auth.uid).child('coachCabeceraBegin').val() === true"
+      }
+    },
+
+    "npsMentorias": {
+      "$mentorId": {
+        ".read": "auth != null && (auth.uid === $mentorId || (root.child('usuarios').child(auth.uid).child('roles').child('director').val() === true || root.child('usuarios').child(auth.uid).child('rol').val() === 'director'))",
+        "$mentoriaId": {
+          "$entryId": {
+            ".write": "!data.exists() && newData.hasChildren(['puntaje', 'createdAt'])"
+          }
+        }
+      }
+    },
+
+    "npsSesionesBegin": {
+      "$coachId": {
+        ".read": "auth != null && (auth.uid === $coachId || (root.child('usuarios').child(auth.uid).child('roles').child('director').val() === true || root.child('usuarios').child(auth.uid).child('rol').val() === 'director'))",
+        "$sesionId": {
+          "$entryId": {
+            ".write": "!data.exists() && newData.hasChildren(['puntaje', 'createdAt'])"
+          }
+        }
+      }
+    },
+
+    "sugerenciasTemas": {
+      "$mentorId": {
+        ".read": "auth != null && (auth.uid === $mentorId || (root.child('usuarios').child(auth.uid).child('roles').child('director').val() === true || root.child('usuarios').child(auth.uid).child('rol').val() === 'director'))",
+        "$sugerenciaId": {
+          ".write": "auth != null && (auth.uid === $mentorId || (root.child('usuarios').child(auth.uid).child('roles').child('director').val() === true || root.child('usuarios').child(auth.uid).child('rol').val() === 'director'))"
+        }
+      }
+    },
+
+    "hitos": {
+      ".read": "auth != null",
+      "$hitoId": {
+        ".write": "auth != null && ((!data.exists() && newData.child('alumnoIdPublicador').val() === root.child('alumnoPorAuthUid').child(auth.uid).val()) || (data.exists() && !newData.exists() && (data.child('alumnoIdPublicador').val() === root.child('alumnoPorAuthUid').child(auth.uid).val() || root.child('usuarios').child(auth.uid).child('roles').child('director').val() === true || root.child('usuarios').child(auth.uid).child('rol').val() === 'director')))",
+        "estado": {
+          ".write": "auth != null && (root.child('alumnoPorAuthUid').child(auth.uid).exists() || root.child('usuarios').child(auth.uid).child('roles').child('director').val() === true || root.child('usuarios').child(auth.uid).child('rol').val() === 'director')"
+        },
+        "denuncia": {
+          ".write": "auth != null && root.child('alumnoPorAuthUid').child(auth.uid).exists()"
+        },
+        "comentarios": {
+          "$comentarioId": {
+            ".write": "auth != null && ((!data.exists() && newData.child('autorId').val() === auth.uid) || (data.exists() && !newData.exists() && (data.child('autorId').val() === auth.uid || root.child('usuarios').child(auth.uid).child('roles').child('director').val() === true || root.child('usuarios').child(auth.uid).child('rol').val() === 'director')))",
+            "estado": {
+              ".write": "auth != null && (root.child('alumnoPorAuthUid').child(auth.uid).exists() || root.child('usuarios').child(auth.uid).child('roles').child('director').val() === true || root.child('usuarios').child(auth.uid).child('rol').val() === 'director')"
+            },
+            "denuncia": {
+              ".write": "auth != null && root.child('alumnoPorAuthUid').child(auth.uid).exists()"
+            }
+          }
+        },
+        "reacciones": {
+          "$uid": {
+            ".write": "auth != null && auth.uid === $uid"
+          }
+        }
+      }
+    }
+  }
+}

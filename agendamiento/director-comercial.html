@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Director Comercial — Agendamiento UNEQ</title>
+<link rel="stylesheet" href="css/agendamiento.css">
+</head>
+<body>
+
+<div id="login-overlay" class="ag-shell" style="max-width:420px; padding-top:80px;">
+  <div class="ag-marca"><img src="assets/logos/isotipo-uneq.png" alt="UNEQ"><span>UNEQ MENTORING<small>AGENDAMIENTO</small></span></div>
+  <div class="ag-panel">
+    <h2>Director Comercial</h2>
+    <p class="ag-sub">Inicia sesión para entrar.</p>
+    <div class="ag-field"><label>Correo</label><input type="email" id="login-correo"></div>
+    <div class="ag-field"><label>Contraseña</label><input type="password" id="login-password"></div>
+    <p id="login-error" class="hidden" style="color:var(--color-danger); font-size:13px; margin-bottom:12px;"></p>
+    <button type="button" class="ag-btn ag-btn--primario" id="btn-login">Iniciar sesión</button>
+  </div>
+</div>
+
+<div class="adm-shell hidden" id="adm-shell">
+  <aside class="adm-sidebar">
+    <div class="ag-marca">
+      <img src="assets/logos/isotipo-uneq.png" alt="UNEQ">
+      <span>UNEQ MENTORING<small>AGENDAMIENTO</small></span>
+    </div>
+    <nav class="adm-nav">
+      <button type="button" class="adm-nav-item is-active" data-seccion="general">⚙️ General</button>
+      <button type="button" class="adm-nav-item" data-seccion="preguntas">📋 Preguntas Previas</button>
+      <button type="button" class="adm-nav-item" data-seccion="rotacion">🔄 Reparto Rotativo</button>
+      <button type="button" class="adm-nav-item" data-seccion="recordatorios">⏰ Recordatorios</button>
+      <button type="button" class="adm-nav-item" data-seccion="closers">🧑‍💼 Closers</button>
+      <button type="button" class="adm-nav-item" data-seccion="agenda">📅 Agenda General</button>
+    </nav>
+    <div class="adm-sidebar-footer">
+      <strong id="adm-sesion-nombre">Director Comercial</strong>
+      Rol: Director Comercial
+    </div>
+  </aside>
+
+  <main class="adm-content">
+
+    <!-- GENERAL -->
+    <section class="adm-seccion is-activa" id="sec-general">
+      <h1>Configuración General</h1>
+      <p class="ag-sub">Define la ventana de agendamiento y la duración de cada llamada.</p>
+      <div class="ag-panel">
+        <div class="adm-fila">
+          <div class="ag-field">
+            <label>Anticipación mínima para agendar (horas)</label>
+            <input type="number" id="gen-anticipacion" min="0" step="1">
+            <small class="ag-hint">El lead no podrá elegir un horario más cercano que esto.</small>
+          </div>
+          <div class="ag-field">
+            <label>Días máximo hacia el futuro</label>
+            <input type="number" id="gen-dias-futuro" min="1" step="1">
+            <small class="ag-hint">Hasta cuántos días puede ver el calendario.</small>
+          </div>
+        </div>
+        <div class="adm-fila">
+          <div class="ag-field">
+            <label>Duración de la llamada (minutos)</label>
+            <input type="number" id="gen-duracion" min="5" step="5">
+          </div>
+          <div class="ag-field">
+            <label>Colchón entre citas (minutos)</label>
+            <input type="number" id="gen-colchon" min="0" step="5">
+            <small class="ag-hint">Tiempo libre que se deja entre una llamada y la siguiente, para cada closer.</small>
+          </div>
+        </div>
+        <div class="ag-field">
+          <label>Número de WhatsApp para dudas (con código de país, sin +)</label>
+          <input type="text" id="gen-whatsapp-dudas" placeholder="56912345678">
+          <small class="ag-hint">Es el botón "¿Dudas?" que ve el lead en la confirmación.</small>
+        </div>
+        <button type="button" class="ag-btn ag-btn--primario" style="width:auto;" data-guardar="general">Guardar cambios</button>
+      </div>
+    </section>
+
+    <!-- PREGUNTAS -->
+    <section class="adm-seccion" id="sec-preguntas">
+      <h1>Preguntas Previas</h1>
+      <p class="ag-sub">El lead las responde justo antes de confirmar su agenda. El orden aquí es el orden en que las ve.</p>
+      <div id="preguntas-lista"></div>
+      <button type="button" class="ag-btn ag-btn--ghost" id="btn-agregar-pregunta" style="width:auto;">+ Agregar pregunta</button>
+    </section>
+
+    <!-- ROTACIÓN -->
+    <section class="adm-seccion" id="sec-rotacion">
+      <h1>Reparto Rotativo</h1>
+      <p class="ag-sub">Así se reparten las llamadas entre los 3 closers, para que quede parejo.</p>
+      <div class="ag-panel">
+        <div class="ag-field">
+          <label>Reiniciar el conteo cada:</label>
+          <select id="rot-periodo">
+            <option value="semanal">Semana</option>
+            <option value="mensual">Mes</option>
+            <option value="nunca">Nunca (acumulado desde siempre)</option>
+          </select>
+        </div>
+        <p class="ag-tz-nota" style="text-align:left; margin-top:16px;">
+          Entre los closers disponibles en un horario, se asigna a quien tenga <strong>menos citas</strong> en el período elegido.
+          Si hay empate, se lo lleva quien lleva <strong>más tiempo sin recibir una cita nueva</strong>.
+          Al reagendar, se intenta mantener al mismo closer si sigue teniendo cupo.
+        </p>
+        <button type="button" class="ag-btn ag-btn--primario" style="width:auto; margin-top:18px;" data-guardar="rotacion">Guardar cambios</button>
+      </div>
+    </section>
+
+    <!-- RECORDATORIOS -->
+    <section class="adm-seccion" id="sec-recordatorios">
+      <h1>Recordatorios</h1>
+      <p class="ag-sub">Se envían automáticamente antes de cada llamada agendada.</p>
+      <div id="recordatorios-lista"></div>
+      <button type="button" class="ag-btn ag-btn--primario" style="width:auto;" data-guardar="recordatorios">Guardar cambios</button>
+    </section>
+
+    <!-- CLOSERS -->
+    <section class="adm-seccion" id="sec-closers">
+      <h1>Closers</h1>
+      <p class="ag-sub">Quiénes reciben llamadas agendadas. Un closer inactivo no recibe nuevas citas, pero conserva su historial.</p>
+      <table class="adm-tabla" id="tabla-closers">
+        <thead><tr><th>Nombre</th><th>Correo</th><th>Estado</th><th></th></tr></thead>
+        <tbody></tbody>
+      </table>
+      <div class="ag-panel" style="margin-top:20px;">
+        <h2 style="font-size:15px;">Agregar closer</h2>
+        <div class="adm-fila">
+          <div class="ag-field"><label>Nombre</label><input type="text" id="closer-nombre"></div>
+          <div class="ag-field"><label>Correo</label><input type="email" id="closer-correo"></div>
+        </div>
+        <button type="button" class="ag-btn ag-btn--ghost" style="width:auto;" id="btn-agregar-closer">+ Agregar</button>
+        <p class="ag-tz-nota" style="text-align:left; margin-top:10px;">Al conectar esto a Firebase, agregar un closer va a crear también su acceso para iniciar sesión (igual que hoy se hace con un alumno o coach nuevo).</p>
+      </div>
+    </section>
+
+    <!-- AGENDA GENERAL -->
+    <section class="adm-seccion" id="sec-agenda">
+      <h1>Agenda General</h1>
+      <p class="ag-sub">Las próximas llamadas de los 3 closers. (Datos de prueba — en la versión conectada, se lee en vivo desde Firebase.)</p>
+      <table class="adm-tabla" id="tabla-agenda">
+        <thead><tr><th>Fecha</th><th>Hora</th><th>Closer</th><th>Lead</th><th>Estado</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </section>
+
+  </main>
+</div>
+
+<div class="adm-toast" id="toast"></div>
+
+<script type="module" src="js/director-comercial.js"></script>
+</body>
+</html>
