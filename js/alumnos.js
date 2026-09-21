@@ -835,6 +835,15 @@ async function abrirFicha(alumnoId) {
   document.getElementById('datos-genero').value = alumno.genero || 'Femenino';
   setTelefono(alumno.telefono || '');
   document.getElementById('datos-email').value = alumno.email || '';
+  const avisoSyncEl = document.getElementById('datos-email-aviso-sync');
+  if (avisoSyncEl) {
+    if (alumno.avisoSyncCorreo) {
+      avisoSyncEl.textContent = `⚠️ ${alumno.avisoSyncCorreo}`;
+      avisoSyncEl.classList.remove('hidden');
+    } else {
+      avisoSyncEl.classList.add('hidden');
+    }
+  }
   const dir = alumno.direccion || {};
   document.getElementById('datos-direccion-calle').value = dir.calle || '';
   document.getElementById('datos-direccion-numero').value = dir.numero || '';

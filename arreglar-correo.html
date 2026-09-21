@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Corregir correo — Herramienta interna</title>
+<style>
+  body { font-family: system-ui, sans-serif; max-width: 480px; margin: 60px auto; padding: 0 20px; color: #1B2333; }
+  h1 { font-size: 20px; }
+  p.aviso { background: #FFF4E5; border: 1px solid #F0C36D; border-radius: 8px; padding: 12px 14px; font-size: 13.5px; }
+  label { display: block; font-size: 13px; font-weight: 600; margin: 16px 0 6px; }
+  input { width: 100%; padding: 10px 12px; border: 1px solid #D5D7DB; border-radius: 6px; font-size: 14px; box-sizing: border-box; }
+  button { margin-top: 20px; width: 100%; padding: 11px; background: #2B3A8C; color: #fff; border: 0; border-radius: 6px; font-size: 15px; cursor: pointer; }
+  button:disabled { opacity: 0.6; cursor: default; }
+  #resultado { margin-top: 16px; padding: 12px 14px; border-radius: 8px; font-size: 13.5px; display: none; }
+  #resultado.ok { display: block; background: #E7F5EC; border: 1px solid #7FC79A; }
+  #resultado.error { display: block; background: #FBE9E7; border: 1px solid #E4998F; }
+  #estado-sesion { font-size: 13px; color: #6E7380; }
+</style>
+</head>
+<body>
+  <h1>Corregir correo de una cuenta</h1>
+  <p class="aviso">Herramienta interna, solo para el Director. Corrige el correo guardado en Authentication cuando quedó mal escrito (p. ej. <code>gmail.co</code> en vez de <code>gmail.com</code>). La contraseña de la persona no se toca.</p>
+
+  <p id="estado-sesion">Verificando sesión…</p>
+
+  <form id="form-corregir" class="hidden">
+    <label for="correo-actual">Correo actual (el que está mal, tal como aparece en Authentication)</label>
+    <input type="email" id="correo-actual" required placeholder="asandovalcordova@gmail.co">
+
+    <label for="correo-nuevo">Correo correcto</label>
+    <input type="email" id="correo-nuevo" required placeholder="asandovalcordova@gmail.com">
+
+    <button type="submit" id="btn-corregir">Corregir correo</button>
+  </form>
+
+  <div id="resultado"></div>
+
+  <script type="module" src="js/arreglar-correo.js"></script>
+</body>
+</html>
