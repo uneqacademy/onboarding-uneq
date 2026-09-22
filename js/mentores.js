@@ -14,6 +14,7 @@ import { ref, get, set, update, push } from "https://www.gstatic.com/firebasejs/
 import { ref as storageRef, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-storage.js";
 import { initializeApp, deleteApp } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-app.js";
 import { getAuth, createUserWithEmailAndPassword, signOut as signOutSecundaria, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-auth.js";
+import { aplicarClampTexto } from './texto-clamp.js';
 import { getCurrentRole, setNav } from './main.js';
 import { programaLabel } from './ciclos.js';
 
@@ -1277,7 +1278,8 @@ export async function cargarBoxMentor() {
         <div class="flex-between" style="align-items:flex-start; gap:10px;">
           <div style="flex:1; min-width:0;">
             <strong>${p.alumnoNombre || 'Alumno'}</strong> <span class="text-soft" style="font-size:12px;">— ${fecha}</span>
-            <p style="margin:6px 0 0;">${p.pregunta || ''}</p>
+            <p class="texto-clamp" data-clamp style="margin:6px 0 0;">${p.preguntaFormateada || p.pregunta || ''}</p>
+            <button type="button" class="btn-ver-mas-texto hidden" data-clamp-btn></button>
           </div>
           <div style="display:flex; align-items:center; gap:8px; flex-shrink:0;">
             <span class="badge badge--activo" style="font-size:10px; white-space:nowrap;">${p.tematica || 'Sin tema'}</span>
@@ -1299,6 +1301,7 @@ export async function cargarBoxMentor() {
         </div>
       `;
       contenedor.appendChild(bloque);
+      aplicarClampTexto(bloque);
 
       const selectTematicaPregunta = bloque.querySelector('.select-tematica-pregunta');
       const btnGuardarTematicaPregunta = bloque.querySelector('.btn-guardar-tematica-pregunta');
@@ -1317,7 +1320,7 @@ export async function cargarBoxMentor() {
       }
 
       bloque.addEventListener('click', (ev) => {
-        if (ev.target.closest('[data-detalle-box-mentor]')) return;
+        if (ev.target.closest('[data-detalle-box-mentor]') || ev.target.closest('[data-clamp-btn]')) return;
         const detalle = bloque.querySelector('[data-detalle-box-mentor]');
         const flecha = bloque.querySelector('[data-flecha-box-mentor]');
         const ahoraOculto = detalle.classList.toggle('hidden');

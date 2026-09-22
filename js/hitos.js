@@ -1,3 +1,4 @@
+import { aplicarClampTexto } from './texto-clamp.js';
 /* ============================================================
    hitos.js — "Mis Hitos" (alumno) / "Hitos Estudiantes" (staff)
    Los alumnos publican hitos predefinidos (uno por proyecto, no se
@@ -101,47 +102,10 @@ async function prepararFotosFeed(lista, usuarios) {
   return { fotosPublicacion, fotoPorAutorComentario };
 }
 
-// Pestaña activa del alumno: 'mis' (su progreso, publicar y sus hitos)
-// o 'comunidad' (solo el feed de hitos publicados de su comunidad).
-let pestanaHitosAlumno = 'mis';
-let hashHitoProcesado = false;
-// Cada carga tiene un número: si el alumno cambia de pestaña o filtro
-// mientras una carga anterior sigue esperando datos, la anterior se
-// descarta y no pisa la pantalla (causa del astronauta/botón que
-// aparecía en "Hitos de la Comunidad").
+// Cada carga tiene un número: si cambia un filtro mientras una carga
+// anterior sigue esperando datos, la anterior se descarta y no pisa
+// la pantalla.
 let contadorCargaHitos = 0;
-
-const IDS_FILTROS_ALUMNO = ['hitos-falumno-desde', 'hitos-falumno-hasta', 'hitos-falumno-estudiante', 'hitos-falumno-fase', 'hitos-falumno-hito'];
-
-function limpiarFiltrosAlumno() {
-  IDS_FILTROS_ALUMNO.forEach(id => {
-    const el = document.getElementById(id);
-    if (el) el.value = '';
-  });
-}
-
-document.querySelectorAll('[data-hitos-tab]').forEach(btn => {
-  btn.addEventListener('click', () => {
-    if (pestanaHitosAlumno === btn.dataset.hitosTab) return;
-    pestanaHitosAlumno = btn.dataset.hitosTab;
-    limpiarFiltrosAlumno();
-    cargarMisHitos();
-  });
-});
-
-IDS_FILTROS_ALUMNO.forEach(id => {
-  document.getElementById(id)?.addEventListener('change', () => {
-    if (id === 'hitos-falumno-fase') {
-      const hitoEl = document.getElementById('hitos-falumno-hito');
-      if (hitoEl) hitoEl.value = '';
-    }
-    cargarMisHitos();
-  });
-});
-document.getElementById('btn-hitos-falumno-limpiar')?.addEventListener('click', () => {
-  limpiarFiltrosAlumno();
-  cargarMisHitos();
-});
 
 // Carpeta de imágenes de fase según nivel: BEGIN tiene las suyas;
 // NEXT y eXIT usan las de NEXT.
@@ -165,7 +129,94 @@ function faseMaximaChecklist(ciclo) {
   return 0;
 }
 
+// "Mis Hitos" — solo alumno: su progreso, publicar, y lo que él mismo
+// ya publicó (sin filtros; para ver el resto de la comunidad, ve a
+// "Comunidad UNEQ").
 export async function cargarMisHitos() {
+  const role = getCurrentRole();
+  const uid = auth.currentUser ? auth.currentUser.uid : null;
+  if (!uid || role !== 'alumno') return;
+  const cargaId = ++contadorCargaHitos;
+  const cargaVigente = () => cargaId === contadorCargaHitos;
+
+  let alumnoIdPropio = null, cicloIdPropio = null, programaPropio = null, idsProyectoPropio = [], cicloPropio = null;
+  const mapaSnap = await get(ref(db, `alumnoPorAuthUid/${uid}`));
+  alumnoIdPropio = mapaSnap.exists() ? mapaSnap.val() : null;
+  if (alumnoIdPropio) {
+    const alumnoSnap = await get(ref(db, `alumnos/${alumnoIdPropio}`));
+    cicloIdPropio = alumnoSnap.exists() ? alumnoSnap.val().cicloActualId : null;
+    if (cicloIdPropio) {
+      const cicloSnap = await get(ref(db, `ciclos/${cicloIdPropio}`));
+      if (cicloSnap.exists()) {
+        cicloPropio = cicloSnap.val();
+        programaPropio = cicloSnap.val().programa || null;
+        idsProyectoPropio = Array.isArray(cicloSnap.val().alumnoIds) ? cicloSnap.val().alumnoIds : [alumnoIdPropio];
+      }
+    }
+  }
+  if (!cargaVigente()) return;
+
+  const [hitosDefSnap, hitosSnap, usuariosSnap, configSnap] = await Promise.all([
+    get(ref(db, 'configuracion/hitosDefinidos')),
+    get(ref(db, 'hitos')),
+    get(ref(db, 'usuarios')),
+    get(ref(db, 'configuracion/general'))
+  ]);
+  if (!cargaVigente()) return;
+  const hitosDefinidos = hitosDefSnap.exists() ? hitosDefSnap.val() : {};
+  const usuarios = usuariosSnap.exists() ? usuariosSnap.val() : {};
+  const todosLosHitos = hitosSnap.exists() ? Object.entries(hitosSnap.val()) : [];
+  const config = configSnap.exists() ? configSnap.val() : {};
+
+  // Astronauta de la fase + botón Contenidos en Hotmart
+  const heroFaseEl = document.getElementById('hitos-hero-fase');
+  if (heroFaseEl) {
+    const mostrarHero = !!programaPropio;
+    heroFaseEl.classList.toggle('hidden', !mostrarHero);
+    heroFaseEl.innerHTML = mostrarHero
+      ? `<img src="assets/fases/${carpetaFasesPrograma(programaPropio)}/${imagenFaseCiclo(cicloPropio)}.webp" alt="Tu fase actual">`
+      : '';
+  }
+  const contenidosEl = document.getElementById('hitos-contenidos-hotmart');
+  if (contenidosEl) {
+    const urlContenidos = programaPropio === 'begin' ? config.contenidoHotmartBegin
+      : programaPropio === 'next' ? config.contenidoHotmartNext
+      : programaPropio === 'exit' ? config.contenidoHotmartExit : '';
+    contenidosEl.classList.toggle('hidden', !urlContenidos);
+    contenidosEl.innerHTML = urlContenidos
+      ? `<a href="${urlContenidos}" target="_blank" rel="noopener" class="btn btn-contenidos-hotmart">Ver Contenidos en <img src="assets/logos/hotmart.png" alt="Hotmart" style="height:18px; width:auto; vertical-align:middle;"> hotmart</a>`
+      : '';
+  }
+
+  document.getElementById('hitos-seguimiento-panel')?.classList.remove('hidden');
+  document.getElementById('hitos-publicar-panel')?.classList.remove('hidden');
+  if (cicloIdPropio) {
+    const misHitosPublicadosDefIds = new Set(
+      todosLosHitos.filter(([, h]) => h.proyectoId === cicloIdPropio).map(([, h]) => h.hitoDefId)
+    );
+    renderSeguimientoPersonal(hitosDefinidos, misHitosPublicadosDefIds, faseMaximaChecklist(cicloPropio));
+    poblarSelectorPublicar(hitosDefinidos, misHitosPublicadosDefIds);
+  } else {
+    const seg = document.getElementById('hitos-seguimiento-contenido');
+    if (seg) seg.innerHTML = '<p class="text-soft">Todavía no tienes un ciclo asignado.</p>';
+  }
+
+  const hitosPropios = todosLosHitos
+    .filter(([, h]) => h.proyectoId === cicloIdPropio && !(h.estado === 'oculto_denuncia'))
+    .sort((a, b) => b[1].createdAt - a[1].createdAt);
+
+  const fotosFeed = await prepararFotosFeed(hitosPropios, usuarios);
+  if (!cargaVigente()) return;
+  renderFeedHitos(hitosPropios, usuarios, {
+    esAlumno: true, esStaff: false, esDirector: false, uid, alumnoIdPropio, idsProyectoPropio, enMisHitos: true,
+    ids: { feed: 'hitos-feed' }, ...fotosFeed
+  });
+}
+
+// "Hitos de la Comunidad" (dentro de Comunidad UNEQ) — visible para
+// alumno, mentor, coach y director. Filtros propios de esta pestaña
+// (ver chc-* en index.html), separados de "Mis Hitos".
+export async function cargarHitosComunidad() {
   const role = getCurrentRole();
   const uid = auth.currentUser ? auth.currentUser.uid : null;
   if (!uid) return;
@@ -176,185 +227,122 @@ export async function cargarMisHitos() {
   const esStaff = !esAlumno;
   const esDirector = role === 'director';
 
-  if (!esAlumno) pestanaHitosAlumno = 'mis';
-  const enMisHitos = esAlumno && pestanaHitosAlumno === 'mis';
+  document.getElementById('chc-filtros-staff-panel')?.classList.toggle('hidden', !esStaff);
+  document.getElementById('chc-filtros-alumno-panel')?.classList.toggle('hidden', !esAlumno);
 
-  const tituloVistaEl = document.getElementById('hitos-titulo-vista');
-  if (tituloVistaEl) tituloVistaEl.textContent = esAlumno ? 'Mis Hitos' : 'Hitos Estudiantes';
-  document.getElementById('hitos-tabs')?.classList.toggle('hidden', !esAlumno);
-  document.querySelectorAll('[data-hitos-tab]').forEach(btn => {
-    const activa = btn.dataset.hitosTab === pestanaHitosAlumno;
-    btn.classList.toggle('is-active', activa);
-    btn.setAttribute('aria-selected', activa ? 'true' : 'false');
-  });
-
-  // Todo lo que no es de la pestaña actual se oculta de inmediato,
-  // antes de esperar datos.
-  document.getElementById('hitos-seguimiento-panel')?.classList.toggle('hidden', !enMisHitos);
-  document.getElementById('hitos-publicar-panel')?.classList.toggle('hidden', !enMisHitos);
-  document.getElementById('hitos-filtros-panel')?.classList.toggle('hidden', !esStaff);
-  document.getElementById('hitos-filtros-alumno-panel')?.classList.toggle('hidden', !esAlumno);
-  document.getElementById('hitos-falumno-estudiante-campo')?.classList.toggle('hidden', enMisHitos);
-  if (!enMisHitos) {
-    const heroEl = document.getElementById('hitos-hero-fase');
-    if (heroEl) { heroEl.classList.add('hidden'); heroEl.innerHTML = ''; }
-    const contEl = document.getElementById('hitos-contenidos-hotmart');
-    if (contEl) { contEl.classList.add('hidden'); contEl.innerHTML = ''; }
-  }
-
-  // --- Determinar alumnoId/proyecto/programa (si es alumno) ---
-  let alumnoIdPropio = null;
-  let cicloIdPropio = null;
-  let programaPropio = null;
-  let idsProyectoPropio = [];
-  let cicloPropio = null;
-  if (esAlumno) {
-    const mapaSnap = await get(ref(db, `alumnoPorAuthUid/${uid}`));
-    alumnoIdPropio = mapaSnap.exists() ? mapaSnap.val() : null;
-    if (alumnoIdPropio) {
-      const alumnoSnap = await get(ref(db, `alumnos/${alumnoIdPropio}`));
-      cicloIdPropio = alumnoSnap.exists() ? alumnoSnap.val().cicloActualId : null;
-      if (cicloIdPropio) {
-        const cicloSnap = await get(ref(db, `ciclos/${cicloIdPropio}`));
-        if (cicloSnap.exists()) {
-          cicloPropio = cicloSnap.val();
-          programaPropio = cicloSnap.val().programa || null;
-          idsProyectoPropio = Array.isArray(cicloSnap.val().alumnoIds) ? cicloSnap.val().alumnoIds : [alumnoIdPropio];
-        }
-      }
-    }
-  }
-  if (!cargaVigente()) return;
-
-  // --- Hitos definidos (activos e inactivos — los inactivos igual
-  //     hay que poder mostrarlos si ya fueron publicados) ---
-  const [hitosDefSnap, hitosSnap, usuariosSnap, configSnap] = await Promise.all([
+  const [hitosDefSnap, hitosSnap, usuariosSnap, ciclosSnap] = await Promise.all([
     get(ref(db, 'configuracion/hitosDefinidos')),
     get(ref(db, 'hitos')),
     get(ref(db, 'usuarios')),
-    enMisHitos ? get(ref(db, 'configuracion/general')) : Promise.resolve(null)
+    esStaff ? get(ref(db, 'ciclos')) : Promise.resolve(null)
   ]);
   if (!cargaVigente()) return;
   const hitosDefinidos = hitosDefSnap.exists() ? hitosDefSnap.val() : {};
   const usuarios = usuariosSnap.exists() ? usuariosSnap.val() : {};
-  const todosLosHitos = hitosSnap.exists() ? Object.entries(hitosSnap.val()) : [];
-  const config = configSnap && configSnap.exists() ? configSnap.val() : {};
+  const ciclos = ciclosSnap && ciclosSnap.exists() ? ciclosSnap.val() : {};
 
-  // --- Filtro de visibilidad: alumnos y staff ven los hitos de los 3
-  //     programas (cada publicación lleva la etiqueta de su programa).
-  //     Los "oculto_denuncia" no los ve nadie excepto el director. ---
+  // Coach asignado de cada hito (vía su proyecto/ciclo) — se calcula
+  // en memoria porque el hito no guarda el coach, solo su proyectoId.
+  const coachPorProyecto = {};
+  Object.entries(ciclos).forEach(([cid, c]) => { coachPorProyecto[cid] = c.coachId || ''; });
+
+  const todosLosHitos = hitosSnap.exists() ? Object.entries(hitosSnap.val()) : [];
   const hitosVisibles = todosLosHitos
     .filter(([, h]) => !(h.estado === 'oculto_denuncia' && !esDirector))
+    .map(([id, h]) => [id, { ...h, coachId: coachPorProyecto[h.proyectoId] || '' }])
     .sort((a, b) => b[1].createdAt - a[1].createdAt);
 
-  // --- Link directo a un hito de otro proyecto (compartido por WhatsApp):
-  //     se abre en la pestaña "Hitos de la Comunidad" para que aparezca ---
-  const hashInicial = window.location.hash;
-  if (esAlumno && enMisHitos && !hashHitoProcesado && hashInicial && hashInicial.startsWith('#hito-')) {
-    hashHitoProcesado = true;
-    const hitoDestino = hitosVisibles.find(([id]) => `#hito-${id}` === hashInicial);
-    if (hitoDestino && hitoDestino[1].proyectoId !== cicloIdPropio) {
-      pestanaHitosAlumno = 'comunidad';
-      return cargarMisHitos();
-    }
-  }
+  // Link directo a un hito compartido por WhatsApp
+  const hash = window.location.hash;
 
-  // --- Pestaña "Mis Hitos": astronauta de la fase (los 3 niveles) y
-  //     botón de Contenidos en Hotmart (link según nivel) ---
-  if (enMisHitos) {
-    const heroFaseEl = document.getElementById('hitos-hero-fase');
-    if (heroFaseEl) {
-      const mostrarHero = !!programaPropio;
-      heroFaseEl.classList.toggle('hidden', !mostrarHero);
-      heroFaseEl.innerHTML = mostrarHero
-        ? `<img src="assets/fases/${carpetaFasesPrograma(programaPropio)}/${imagenFaseCiclo(cicloPropio)}.webp" alt="Tu fase actual">`
-        : '';
-    }
-    const contenidosEl = document.getElementById('hitos-contenidos-hotmart');
-    if (contenidosEl) {
-      const urlContenidos = programaPropio === 'begin' ? config.contenidoHotmartBegin
-        : programaPropio === 'next' ? config.contenidoHotmartNext
-        : programaPropio === 'exit' ? config.contenidoHotmartExit : '';
-      contenidosEl.classList.toggle('hidden', !urlContenidos);
-      contenidosEl.innerHTML = urlContenidos
-        ? `<a href="${urlContenidos}" target="_blank" rel="noopener" class="btn btn-contenidos-hotmart">Ver Contenidos en <img src="assets/logos/hotmart.png" alt="Hotmart" style="height:18px; width:auto; vertical-align:middle;"> hotmart</a>`
-        : '';
-    }
-  }
-
-  // --- Seguimiento personal + selector de publicar (solo alumno) ---
-  if (enMisHitos && cicloIdPropio) {
-    const misHitosPublicadosDefIds = new Set(
-      todosLosHitos.filter(([, h]) => h.proyectoId === cicloIdPropio).map(([, h]) => h.hitoDefId)
-    );
-    renderSeguimientoPersonal(hitosDefinidos, misHitosPublicadosDefIds, faseMaximaChecklist(cicloPropio));
-    poblarSelectorPublicar(hitosDefinidos, misHitosPublicadosDefIds);
-  } else if (enMisHitos) {
-    const seg = document.getElementById('hitos-seguimiento-contenido');
-    if (seg) seg.innerHTML = '<p class="text-soft">Todavía no tienes un ciclo asignado.</p>';
-  }
-
-  // --- Filtros de staff: poblar selector de alumno ---
   if (esStaff) {
     const filtroAlumnoEl = document.getElementById('hitos-filtro-alumno');
     if (filtroAlumnoEl && !filtroAlumnoEl.dataset.cargado) {
       const nombresUnicos = [...new Set(todosLosHitos.map(([, h]) => h.nombreAutor))].sort((a, b) => a.localeCompare(b, 'es'));
-      filtroAlumnoEl.innerHTML = '<option value="">Todos los alumnos</option>' + nombresUnicos.map(n => `<option value="${n}">${n}</option>`).join('');
+      filtroAlumnoEl.innerHTML = '<option value="">Todos los alumnos</option>' + nombresUnicos.map(n => `<option value="${n.replace(/"/g, '&quot;')}">${n}</option>`).join('');
       filtroAlumnoEl.dataset.cargado = '1';
     }
-    ['hitos-filtro-alumno', 'hitos-filtro-programa', 'hitos-filtro-fase', 'hitos-filtro-denunciados'].forEach(id => {
+    const filtroCoachEl = document.getElementById('chc-f-coach');
+    if (filtroCoachEl && !filtroCoachEl.dataset.cargado) {
+      const coaches = Object.entries(usuarios).filter(([, u]) => {
+        const roles = (u.roles && typeof u.roles === 'object') ? u.roles : (u.rol ? { [u.rol]: true } : {});
+        return !!roles.coach;
+      }).sort((a, b) => (a[1].nombre || '').localeCompare(b[1].nombre || '', 'es'));
+      filtroCoachEl.innerHTML = '<option value="">Todos</option>' + coaches.map(([id, c]) => `<option value="${id}">${c.nombre || c.email}</option>`).join('');
+      filtroCoachEl.dataset.cargado = '1';
+    }
+    const idHitoFiltro = 'chc-f-hito';
+    if (!document.getElementById(idHitoFiltro)?.dataset.cargado) {
+      const faseEl = document.getElementById('chc-f-fase');
+      const actualizarHitos = () => {
+        const hitoEl = document.getElementById(idHitoFiltro);
+        if (!hitoEl) return;
+        const actual = hitoEl.value;
+        const faseElegida = faseEl ? faseEl.value : '';
+        const defs = Object.entries(hitosDefinidos).filter(([, h]) => !faseElegida || h.fase === faseElegida);
+        hitoEl.innerHTML = '<option value="">Todos</option>' + defs.map(([id, h]) => `<option value="${id}">${h.titulo}</option>`).join('');
+        if (defs.some(([id]) => id === actual)) hitoEl.value = actual;
+      };
+      faseEl?.addEventListener('change', () => { actualizarHitos(); cargarHitosComunidad(); });
+      actualizarHitos();
+      document.getElementById(idHitoFiltro).dataset.cargado = '1';
+    }
+    ['hitos-filtro-alumno', 'hitos-filtro-programa', 'chc-f-coach', 'chc-f-fase', 'chc-f-hito', 'chc-f-denunciados', 'chc-f-desde-staff', 'chc-f-hasta-staff'].forEach(id => {
       const el = document.getElementById(id);
-      if (el && !el.dataset.conectado) {
-        el.addEventListener('change', cargarMisHitos);
-        el.dataset.conectado = '1';
-      }
+      if (el && !el.dataset.conectado) { el.addEventListener('change', cargarHitosComunidad); el.dataset.conectado = '1'; }
     });
+    document.getElementById('chc-btn-limpiar-staff')?.addEventListener('click', () => {
+      ['hitos-filtro-alumno', 'hitos-filtro-programa', 'chc-f-coach', 'chc-f-fase', 'chc-f-hito', 'chc-f-desde-staff', 'chc-f-hasta-staff'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+      const chk = document.getElementById('chc-f-denunciados'); if (chk) chk.checked = false;
+      cargarHitosComunidad();
+    }, { once: true });
   }
 
-  // Pestaña "Mis Hitos": solo los de su proyecto. "Hitos de la Comunidad":
-  // todos los visibles para su nivel.
-  const hitosParaFeed = enMisHitos
-    ? hitosVisibles.filter(([, h]) => h.proyectoId === cicloIdPropio)
-    : hitosVisibles;
+  if (esAlumno) poblarFiltrosComunidadAlumno(hitosVisibles, hitosDefinidos);
 
-  if (esAlumno) poblarFiltrosAlumno(hitosParaFeed, hitosDefinidos, enMisHitos);
-
-  const fotosFeed = await prepararFotosFeed(hitosParaFeed, usuarios);
+  const fotosFeed = await prepararFotosFeed(hitosVisibles, usuarios);
   if (!cargaVigente()) return;
-  renderFeedHitos(hitosParaFeed, usuarios, { esAlumno, esStaff, esDirector, uid, alumnoIdPropio, idsProyectoPropio, enMisHitos, ...fotosFeed });
+  renderFeedHitos(hitosVisibles, usuarios, {
+    esAlumno, esStaff, esDirector, uid, alumnoIdPropio: null, idsProyectoPropio: [], enMisHitos: false,
+    ids: {
+      feed: 'chc-feed', contador: 'chc-contador',
+      staffAlumno: 'hitos-filtro-alumno', staffPrograma: 'hitos-filtro-programa', staffCoach: 'chc-f-coach',
+      staffFase: 'chc-f-fase', staffHito: 'chc-f-hito', staffDenunciados: 'chc-f-denunciados',
+      staffDesde: 'chc-f-desde-staff', staffHasta: 'chc-f-hasta-staff',
+      alumnoDesde: 'chc-f-desde', alumnoHasta: 'chc-f-hasta', alumnoFase: 'chc-f-fase-alumno', alumnoHito: 'chc-f-hito-alumno'
+    },
+    ...fotosFeed
+  });
 
-  // --- Link directo a un hito (compartido por WhatsApp) ---
-  const hash = window.location.hash;
   if (hash && hash.startsWith('#hito-')) {
-    const elDestino = document.getElementById(hash.slice(1));
-    if (elDestino) {
-      setTimeout(() => elDestino.scrollIntoView({ behavior: 'smooth', block: 'center' }), 200);
-    }
+    setTimeout(() => { document.getElementById(hash.slice(1))?.scrollIntoView({ behavior: 'smooth', block: 'center' }); }, 200);
   }
 }
 
-// Opciones de los filtros del alumno (conserva lo ya elegido si sigue válido)
-function poblarFiltrosAlumno(lista, hitosDefinidos, enMisHitos) {
-  const estudianteEl = document.getElementById('hitos-falumno-estudiante');
-  if (estudianteEl && !enMisHitos) {
-    const actual = estudianteEl.value;
-    const nombres = [...new Set(lista.map(([, h]) => h.nombreAutor).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'es'));
-    estudianteEl.innerHTML = '<option value="">Todos los estudiantes</option>' + nombres.map(n => `<option value="${n.replace(/"/g, '&quot;')}">${n}</option>`).join('');
-    if (nombres.includes(actual)) estudianteEl.value = actual;
-  }
-  const faseEl = document.getElementById('hitos-falumno-fase');
-  const hitoEl = document.getElementById('hitos-falumno-hito');
+// Filtros del alumno en "Hitos de la Comunidad" (fecha, fase→hito).
+function poblarFiltrosComunidadAlumno(lista, hitosDefinidos) {
+  const faseEl = document.getElementById('chc-f-fase-alumno');
+  const hitoEl = document.getElementById('chc-f-hito-alumno');
   if (hitoEl) {
     const actual = hitoEl.value;
     const faseElegida = faseEl ? faseEl.value : '';
     const defs = Object.entries(hitosDefinidos)
       .filter(([, h]) => !faseElegida || h.fase === faseElegida)
       .sort((a, b) => (a[1].fase || '').localeCompare(b[1].fase || '') || (a[1].titulo || '').localeCompare(b[1].titulo || '', 'es', { numeric: true }));
-    hitoEl.innerHTML = '<option value="">Todos los hitos</option>' + defs.map(([id, h]) => `<option value="${id}">${h.titulo}</option>`).join('');
+    hitoEl.innerHTML = '<option value="">Todos</option>' + defs.map(([id, h]) => `<option value="${id}">${h.titulo}</option>`).join('');
     if (defs.some(([id]) => id === actual)) hitoEl.value = actual;
   }
+  if (faseEl && !faseEl.dataset.conectado) { faseEl.addEventListener('change', cargarHitosComunidad); faseEl.dataset.conectado = '1'; }
+  [hitoEl, document.getElementById('chc-f-desde'), document.getElementById('chc-f-hasta')].forEach(el => {
+    if (el && !el.dataset.conectado) { el.addEventListener('change', cargarHitosComunidad); el.dataset.conectado = '1'; }
+  });
+  document.getElementById('chc-btn-limpiar-alumno')?.addEventListener('click', () => {
+    ['chc-f-desde', 'chc-f-hasta', 'chc-f-fase-alumno', 'chc-f-hito-alumno'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+    cargarHitosComunidad();
+  }, { once: true });
 }
 
+// Opciones de los filtros del alumno (conserva lo ya elegido si sigue válido)
 function renderSeguimientoPersonal(hitosDefinidos, misHitosPublicadosDefIds, faseMaxima) {
   const cont = document.getElementById('hitos-seguimiento-contenido');
   if (!cont) return;
@@ -440,7 +428,22 @@ function comentariosVisibles(comentarios, esDirector) {
     .sort((a, b) => a[1].createdAt - b[1].createdAt);
 }
 
-function renderComentarios(hitoId, comentarios, esDirector, fotoPorAutor, expandido) {
+// Ventana de 24h para editar/eliminar lo propio (Director no tiene límite).
+const VENTANA_EDICION_MS = 24 * 60 * 60 * 1000;
+function dentroDeVentana(createdAt) { return (Date.now() - createdAt) < VENTANA_EDICION_MS; }
+
+function renderRespuestasComentario(hitoId, comentarioId, respuestas, fotoAutorHito, nombreAutorHito, esAutorHito, esDirector) {
+  const lista = Object.entries(respuestas || {}).sort((a, b) => a[1].createdAt - b[1].createdAt);
+  if (!lista.length) return '';
+  return `<div class="hito-comentario-respuestas">${lista.map(([respuestaId, r]) => `
+    <div class="hito-comentario-respuesta" data-respuesta-id="${respuestaId}">
+      <strong>${r.autorNombre || nombreAutorHito}</strong>: ${linkifyTexto(r.texto)}
+      <span class="text-soft" style="font-size:10px; margin-left:6px;">${formatFechaHito(r.createdAt)}</span>
+      ${(esAutorHito && dentroDeVentana(r.createdAt)) || esDirector ? `<button type="button" class="btn-editar-hito btn-eliminar-respuesta-comentario" data-hito-id="${hitoId}" data-comentario-id="${comentarioId}" data-respuesta-id="${respuestaId}" style="margin-left:6px;">Eliminar</button>` : ''}
+    </div>`).join('')}</div>`;
+}
+
+function renderComentarios(hitoId, comentarios, esDirector, fotoPorAutor, expandido, esAutorHito, uidActual) {
   const todos = comentariosVisibles(comentarios, esDirector);
   if (!todos.length) return '<p class="text-soft" style="font-size:12px;">Sin comentarios todavía — ¡sé el primero en animar!</p>';
   // Plegado: los 2 más recientes (el más nuevo abajo). Desplegado: todos.
@@ -451,58 +454,80 @@ function renderComentarios(hitoId, comentarios, esDirector, fotoPorAutor, expand
         <img src="${(fotoPorAutor && fotoPorAutor.get(c.autorId)) || PLACEHOLDER_FOTO_HITO}" alt="" class="hito-comentario__foto">
         <strong>${c.autorNombre || 'Alguien'}</strong>${c.autorTipo === 'staff' ? ' <span class="badge badge--activo" style="font-size:8px;">staff</span>' : ''}
         ${c.estado === 'oculto_denuncia' ? ' <span style="color:#C0392B; font-size:10px;">⚠️ denunciado</span>' : ''}
-        : ${linkifyTexto(c.texto)}
+        : <span class="texto-clamp" data-clamp>${linkifyTexto(c.texto)}</span>
       </p>
-      <div style="display:flex; gap:10px; margin-top:2px;">
+      <button type="button" class="btn-ver-mas-texto hidden" data-clamp-btn></button>
+      <div style="display:flex; gap:10px; margin-top:2px; flex-wrap:wrap;">
         <span class="text-soft" style="font-size:10px;">${formatFechaHito(c.createdAt)}</span>
-        <button type="button" class="btn-eliminar-comentario" data-hito-id="${hitoId}" data-comentario-id="${comentarioId}" data-autor-id="${c.autorId}" style="font-size:10px; background:none; border:none; color:#9CA0A8; cursor:pointer; padding:0;">Eliminar</button>
+        ${(c.autorId === uidActual && dentroDeVentana(c.createdAt)) || esDirector ? `<button type="button" class="btn-eliminar-comentario" data-hito-id="${hitoId}" data-comentario-id="${comentarioId}" data-autor-id="${c.autorId}" style="font-size:10px; background:none; border:none; color:#9CA0A8; cursor:pointer; padding:0;">Eliminar</button>` : ''}
         <button type="button" class="btn-denunciar-comentario" data-hito-id="${hitoId}" data-comentario-id="${comentarioId}" style="font-size:10px; background:none; border:none; color:#9CA0A8; cursor:pointer; padding:0;">Denunciar</button>
+        ${esAutorHito ? `<button type="button" class="btn-responder-comentario" data-hito-id="${hitoId}" data-comentario-id="${comentarioId}">Responder</button>` : ''}
         ${c.estado === 'oculto_denuncia' && esDirector ? `
           <button type="button" class="btn-aceptar-denuncia-comentario" data-hito-id="${hitoId}" data-comentario-id="${comentarioId}" style="font-size:10px; background:none; border:none; color:#C0392B; cursor:pointer; padding:0;">Aceptar denuncia</button>
           <button type="button" class="btn-rechazar-denuncia-comentario" data-hito-id="${hitoId}" data-comentario-id="${comentarioId}" style="font-size:10px; background:none; border:none; color:#2F9E8F; cursor:pointer; padding:0;">Rechazar</button>` : ''}
       </div>
+      ${renderRespuestasComentario(hitoId, comentarioId, c.respuestas, null, c.autorNombre, esAutorHito, esDirector)}
     </div>`).join('');
 }
 
 function renderFeedHitos(hitosVisibles, usuarios, ctx) {
-  const feedEl = document.getElementById('hitos-feed');
+  const ids = ctx.ids || {};
+  const feedEl = document.getElementById(ids.feed || 'hitos-feed');
   if (!feedEl) return;
 
-  // Filtros de staff
+  // Filtros de staff (si esos elementos no existen en esta página, no
+  // filtran nada — así "Mis Hitos", sin filtros, no se ve afectado).
   let lista = hitosVisibles;
   if (ctx.esStaff) {
-    const fAlumno = document.getElementById('hitos-filtro-alumno')?.value || '';
-    const fPrograma = document.getElementById('hitos-filtro-programa')?.value || '';
-    const fFase = document.getElementById('hitos-filtro-fase')?.value || '';
-    const fSoloDenunciados = document.getElementById('hitos-filtro-denunciados')?.checked || false;
+    const fAlumno = document.getElementById(ids.staffAlumno || 'hitos-filtro-alumno')?.value || '';
+    const fPrograma = document.getElementById(ids.staffPrograma || 'hitos-filtro-programa')?.value || '';
+    const fCoach = document.getElementById(ids.staffCoach)?.value || '';
+    const fFase = document.getElementById(ids.staffFase || 'hitos-filtro-fase')?.value || '';
+    const fHito = document.getElementById(ids.staffHito)?.value || '';
+    const fSoloDenunciados = document.getElementById(ids.staffDenunciados || 'hitos-filtro-denunciados')?.checked || false;
+    const fDesde = document.getElementById(ids.staffDesde)?.value || '';
+    const fHasta = document.getElementById(ids.staffHasta)?.value || '';
+    const desdeMs = fDesde ? new Date(`${fDesde}T00:00:00`).getTime() : null;
+    const hastaMs = fHasta ? new Date(`${fHasta}T23:59:59.999`).getTime() : null;
     lista = lista.filter(([, h]) =>
       (!fAlumno || h.nombreAutor === fAlumno) &&
       (!fPrograma || h.programa === fPrograma) &&
+      (!fCoach || h.coachId === fCoach) &&
       (!fFase || h.fase === fFase) &&
-      (!fSoloDenunciados || h.estado === 'oculto_denuncia')
+      (!fHito || h.hitoDefId === fHito) &&
+      (!fSoloDenunciados || h.estado === 'oculto_denuncia') &&
+      (desdeMs === null || h.createdAt >= desdeMs) &&
+      (hastaMs === null || h.createdAt <= hastaMs)
     );
   }
 
-  // Filtros del alumno (ambas pestañas; estudiante solo en Comunidad)
+  // Filtros del alumno
   if (ctx.esAlumno) {
-    const fDesde = document.getElementById('hitos-falumno-desde')?.value || '';
-    const fHasta = document.getElementById('hitos-falumno-hasta')?.value || '';
-    const fEstudiante = ctx.enMisHitos ? '' : (document.getElementById('hitos-falumno-estudiante')?.value || '');
-    const fFase = document.getElementById('hitos-falumno-fase')?.value || '';
-    const fHito = document.getElementById('hitos-falumno-hito')?.value || '';
+    const fDesde = document.getElementById(ids.alumnoDesde)?.value || '';
+    const fHasta = document.getElementById(ids.alumnoHasta)?.value || '';
+    const fFase = document.getElementById(ids.alumnoFase)?.value || '';
+    const fHito = document.getElementById(ids.alumnoHito)?.value || '';
     const desdeMs = fDesde ? new Date(`${fDesde}T00:00:00`).getTime() : null;
     const hastaMs = fHasta ? new Date(`${fHasta}T23:59:59.999`).getTime() : null;
     lista = lista.filter(([, h]) =>
       (desdeMs === null || h.createdAt >= desdeMs) &&
       (hastaMs === null || h.createdAt <= hastaMs) &&
-      (!fEstudiante || h.nombreAutor === fEstudiante) &&
       (!fFase || h.fase === fFase) &&
       (!fHito || h.hitoDefId === fHito)
     );
   }
 
+  if (ids.contador) {
+    const contadorEl = document.getElementById(ids.contador);
+    if (contadorEl) {
+      contadorEl.textContent = `${lista.length} resultado${lista.length === 1 ? '' : 's'}`;
+      contadorEl.classList.toggle('hidden', !ctx.esStaff);
+    }
+  }
+
   if (!lista.length) {
-    const hayFiltros = ctx.esAlumno && IDS_FILTROS_ALUMNO.some(id => document.getElementById(id)?.value);
+    const hayFiltros = [ids.staffAlumno, ids.staffPrograma, ids.staffCoach, ids.staffFase, ids.staffHito, ids.staffDesde, ids.staffHasta, ids.alumnoDesde, ids.alumnoHasta, ids.alumnoFase, ids.alumnoHito]
+      .filter(Boolean).some(id => document.getElementById(id)?.value);
     if (hayFiltros) {
       feedEl.innerHTML = '<p class="text-soft">No hay hitos que coincidan con los filtros.</p>';
       return;
@@ -515,14 +540,16 @@ function renderFeedHitos(hitosVisibles, usuarios, ctx) {
 
   feedEl.innerHTML = lista.map(([hitoId, h]) => {
     const esAutor = ctx.esAlumno && ctx.idsProyectoPropio.includes(h.alumnoIdPublicador);
-    const puedeEliminar = esAutor || ctx.esDirector;
+    const dentroDe24hHito = dentroDeVentana(h.createdAt);
+    const puedeEliminar = (esAutor && dentroDe24hHito) || ctx.esDirector;
+    const puedeEditar = esAutor && dentroDe24hHito;
     const puedeDenunciar = ctx.esAlumno && !esAutor;
     const yaReacciono = h.reacciones && h.reacciones[ctx.uid];
     const totalReacciones = h.reacciones ? Object.keys(h.reacciones).length : 0;
     const esDenunciado = h.estado === 'oculto_denuncia';
     const totalComentarios = comentariosVisibles(h.comentarios, ctx.esDirector).length;
     const comentariosExpandidos = hitosComentariosExpandidos.has(hitoId);
-    datosRenderHitos.set(hitoId, { comentarios: h.comentarios, esDirector: ctx.esDirector, fotoPorAutor: ctx.fotoPorAutorComentario });
+    datosRenderHitos.set(hitoId, { comentarios: h.comentarios, esDirector: ctx.esDirector, fotoPorAutor: ctx.fotoPorAutorComentario, esAutor, uid: ctx.uid });
 
     return `
     <div class="panel mb-16" id="hito-${hitoId}" data-hito-id="${hitoId}" ${esDenunciado ? 'style="border-color:#F5C6C6;"' : ''}>
@@ -539,7 +566,7 @@ function renderFeedHitos(hitosVisibles, usuarios, ctx) {
           ${esDenunciado ? '<span class="badge" style="background:#FBE4E4; color:#C0392B; font-size:9px;">⚠️ Denunciado</span>' : ''}
         </div>
         ${h.descripcionHito ? `<p class="text-soft" style="font-size:12px; margin:8px 0 0; font-style:italic;">${h.descripcionHito}</p>` : ''}
-        ${h.textoAlumno ? `<p style="margin:8px 0 0; white-space:pre-wrap;">${linkifyTexto(h.textoAlumno)}</p>` : ''}
+        ${h.textoAlumno ? `<p class="texto-clamp" data-clamp data-texto-hito data-texto-original="${h.textoAlumno.replace(/"/g, '&quot;')}" style="margin:8px 0 0; white-space:pre-wrap;">${linkifyTexto(h.textoAlumno)}</p><button type="button" class="btn-ver-mas-texto hidden" data-clamp-btn></button>` : ''}
         ${(h.fotos || []).map(f => `<img src="${f.url}" alt="" class="btn-ampliar-foto-hito" data-src="${f.url}" style="max-width:220px; max-height:220px; border-radius:8px; margin:8px 8px 0 0; object-fit:cover; cursor:zoom-in;">`).join('')}
         <p class="text-soft" style="font-size:11px; margin:8px 0 0;">${formatFechaHito(h.createdAt)}</p>
 
@@ -547,6 +574,7 @@ function renderFeedHitos(hitosVisibles, usuarios, ctx) {
           <button type="button" class="btn ${yaReacciono ? 'btn--primary' : 'btn--ghost'} btn-reaccion-hito" data-hito-id="${hitoId}" style="font-size:12px; padding:4px 10px;">❤️ ${totalReacciones}</button>
           <button type="button" class="btn ${comentariosExpandidos ? 'btn--primary' : 'btn--ghost'} btn-comentarios-hito" data-hito-id="${hitoId}" aria-expanded="${comentariosExpandidos}" title="Ver todos los comentarios" style="font-size:12px; padding:4px 10px;">💬 <span class="contador-comentarios-hito">${totalComentarios}</span></button>
           ${esAutor ? `<button type="button" class="btn btn--ghost btn-compartir-hito" data-hito-id="${hitoId}" data-titulo="${h.tituloHito}" style="font-size:12px; padding:4px 10px;">📤 Compartir</button>` : ''}
+          ${puedeEditar ? `<button type="button" class="btn btn--ghost btn-editar-hito-texto" data-hito-id="${hitoId}" style="font-size:12px; padding:4px 10px;">✏️ Editar</button>` : ''}
           ${puedeEliminar ? `<button type="button" class="btn btn--ghost btn-eliminar-hito" data-hito-id="${hitoId}" style="font-size:12px; padding:4px 10px; color:#C0392B;">Eliminar</button>` : ''}
           ${puedeDenunciar ? `<button type="button" class="btn btn--ghost btn-denunciar-hito" data-hito-id="${hitoId}" style="font-size:12px; padding:4px 10px;">Denunciar</button>` : ''}
           ${esDenunciado && ctx.esDirector ? `
@@ -556,7 +584,7 @@ function renderFeedHitos(hitosVisibles, usuarios, ctx) {
         ${renderMiniaturasReacciones(hitoId, h.reacciones)}
 
         <div class="comentarios-hito" data-hito-id="${hitoId}" style="margin-top:12px; border-top:0.5px solid var(--border); padding-top:10px;">
-          ${renderComentarios(hitoId, h.comentarios, ctx.esDirector, ctx.fotoPorAutorComentario, comentariosExpandidos)}
+          ${renderComentarios(hitoId, h.comentarios, ctx.esDirector, ctx.fotoPorAutorComentario, comentariosExpandidos, esAutor, ctx.uid)}
         </div>
         <div style="display:flex; gap:8px; margin-top:10px;">
           <input class="input-comentario-hito" data-hito-id="${hitoId}" placeholder="Escribe un comentario de ánimo..." style="flex:1;">
@@ -566,6 +594,7 @@ function renderFeedHitos(hitosVisibles, usuarios, ctx) {
       </div>
     </div>`;
   }).join('');
+  aplicarClampTexto(feedEl);
 }
 
 const btnPublicarHito = document.getElementById('btn-publicar-hito');
@@ -650,7 +679,7 @@ if (btnPublicarHito) {
   });
 }
 
-async function enviarComentario(hitoId, texto) {
+async function enviarComentario(hitoId, texto, recargarFn) {
   const uid = auth.currentUser ? auth.currentUser.uid : null;
   if (!uid || !texto.trim()) return;
   const role = getCurrentRole();
@@ -674,7 +703,7 @@ async function enviarComentario(hitoId, texto) {
     createdAt: Date.now(),
     estado: 'visible'
   });
-  await cargarMisHitos();
+  await recargarFn();
 }
 
 // Dominio propio (una vez que esté conectado) que arma la tarjeta de
@@ -689,9 +718,16 @@ function compartirHitoWhatsapp(hitoId, titulo) {
   window.open(`https://wa.me/?text=${mensaje}`, '_blank');
 }
 
-const feedHitosEl = document.getElementById('hitos-feed');
-if (feedHitosEl) {
-  feedHitosEl.addEventListener('click', async (ev) => {
+// Reutilizable: engancha toda la interacción de un feed de hitos
+// (reacciones, comentarios, responder, editar, denunciar, compartir)
+// a un contenedor específico — así "Mis Hitos" y "Hitos de la
+// Comunidad" (Comunidad UNEQ) comparten el mismo motor, cada uno con
+// su propio elemento y su propia función de recarga.
+function activarInteraccionFeed(feedEl, recargarFn) {
+  if (!feedEl || feedEl.dataset.interaccionActiva) return;
+  feedEl.dataset.interaccionActiva = '1';
+
+  feedEl.addEventListener('click', async (ev) => {
     const uid = auth.currentUser ? auth.currentUser.uid : null;
     if (!uid) return;
 
@@ -701,9 +737,10 @@ if (feedHitosEl) {
       const expandir = !hitosComentariosExpandidos.has(hitoId);
       if (expandir) hitosComentariosExpandidos.add(hitoId); else hitosComentariosExpandidos.delete(hitoId);
       const datos = datosRenderHitos.get(hitoId);
-      const contenedor = feedHitosEl.querySelector(`.comentarios-hito[data-hito-id="${hitoId}"]`);
+      const contenedor = feedEl.querySelector(`.comentarios-hito[data-hito-id="${hitoId}"]`);
       if (datos && contenedor) {
-        contenedor.innerHTML = renderComentarios(hitoId, datos.comentarios, datos.esDirector, datos.fotoPorAutor, expandir);
+        contenedor.innerHTML = renderComentarios(hitoId, datos.comentarios, datos.esDirector, datos.fotoPorAutor, expandir, datos.esAutor, datos.uid);
+        aplicarClampTexto(contenedor);
       }
       btnComentarios.classList.toggle('btn--primary', expandir);
       btnComentarios.classList.toggle('btn--ghost', !expandir);
@@ -736,7 +773,7 @@ if (feedHitosEl) {
         }
         await set(refReaccion, { nombre, fotoUrl });
       }
-      await cargarMisHitos();
+      await recargarFn();
       return;
     }
 
@@ -779,7 +816,34 @@ if (feedHitosEl) {
     if (btnEliminarHito) {
       if (!confirm('¿Eliminar este hito? Esta acción no se puede deshacer.')) return;
       await remove(ref(db, `hitos/${btnEliminarHito.dataset.hitoId}`));
-      await cargarMisHitos();
+      await recargarFn();
+      return;
+    }
+
+    const btnEditarHito = ev.target.closest('.btn-editar-hito-texto');
+    if (btnEditarHito) {
+      const hitoId = btnEditarHito.dataset.hitoId;
+      const tarjeta = feedEl.querySelector(`[data-hito-id="${hitoId}"]`);
+      const parrafo = tarjeta?.querySelector('[data-texto-hito]');
+      const btnVerMas = tarjeta?.querySelector('[data-clamp-btn]');
+      if (!parrafo) return;
+      const textoActual = parrafo.dataset.textoOriginal || parrafo.textContent;
+      parrafo.classList.add('hidden');
+      if (btnVerMas) btnVerMas.classList.add('hidden');
+      const form = document.createElement('div');
+      form.innerHTML = `<textarea style="width:100%; min-height:80px; margin-top:6px;">${textoActual}</textarea>
+        <div style="display:flex; gap:8px; margin-top:6px;">
+          <button type="button" class="btn btn--primary btn-guardar-edicion-hito" style="font-size:12px; padding:5px 12px;">Guardar</button>
+          <button type="button" class="btn btn--ghost btn-cancelar-edicion-hito" style="font-size:12px; padding:5px 12px;">Cancelar</button>
+        </div>`;
+      parrafo.insertAdjacentElement('afterend', form);
+      form.querySelector('.btn-cancelar-edicion-hito').addEventListener('click', () => { form.remove(); parrafo.classList.remove('hidden'); if (btnVerMas) btnVerMas.classList.remove('hidden'); });
+      form.querySelector('.btn-guardar-edicion-hito').addEventListener('click', async () => {
+        const nuevoTexto = form.querySelector('textarea').value.trim();
+        if (!nuevoTexto) return;
+        await update(ref(db, `hitos/${hitoId}`), { textoAlumno: nuevoTexto });
+        await recargarFn();
+      });
       return;
     }
 
@@ -789,7 +853,7 @@ if (feedHitosEl) {
       const hitoId = btnDenunciarHito.dataset.hitoId;
       await update(ref(db, `hitos/${hitoId}`), { estado: 'oculto_denuncia' });
       await update(ref(db, `hitos/${hitoId}/denuncia`), { denunciadoPor: uid, createdAt: Date.now() });
-      await cargarMisHitos();
+      await recargarFn();
       return;
     }
 
@@ -797,7 +861,7 @@ if (feedHitosEl) {
     if (btnAceptarDenunciaHito) {
       if (!confirm('¿Eliminar este hito denunciado? Esta acción no se puede deshacer.')) return;
       await remove(ref(db, `hitos/${btnAceptarDenunciaHito.dataset.hitoId}`));
-      await cargarMisHitos();
+      await recargarFn();
       return;
     }
 
@@ -806,17 +870,17 @@ if (feedHitosEl) {
       const hitoId = btnRechazarDenunciaHito.dataset.hitoId;
       await update(ref(db, `hitos/${hitoId}`), { estado: 'visible' });
       await remove(ref(db, `hitos/${hitoId}/denuncia`));
-      await cargarMisHitos();
+      await recargarFn();
       return;
     }
 
     const btnEnviarComentario = ev.target.closest('.btn-enviar-comentario-hito');
     if (btnEnviarComentario) {
       const hitoId = btnEnviarComentario.dataset.hitoId;
-      const input = feedHitosEl.querySelector(`.input-comentario-hito[data-hito-id="${hitoId}"]`);
+      const input = feedEl.querySelector(`.input-comentario-hito[data-hito-id="${hitoId}"]`);
       if (input && input.value.trim()) {
         btnEnviarComentario.disabled = true;
-        await enviarComentario(hitoId, input.value);
+        await enviarComentario(hitoId, input.value, recargarFn);
       }
       return;
     }
@@ -825,7 +889,7 @@ if (feedHitosEl) {
     if (btnEliminarComentario) {
       if (!confirm('¿Eliminar este comentario?')) return;
       await remove(ref(db, `hitos/${btnEliminarComentario.dataset.hitoId}/comentarios/${btnEliminarComentario.dataset.comentarioId}`));
-      await cargarMisHitos();
+      await recargarFn();
       return;
     }
 
@@ -835,7 +899,7 @@ if (feedHitosEl) {
       const { hitoId, comentarioId } = btnDenunciarComentario.dataset;
       await update(ref(db, `hitos/${hitoId}/comentarios/${comentarioId}`), { estado: 'oculto_denuncia' });
       await update(ref(db, `hitos/${hitoId}/comentarios/${comentarioId}/denuncia`), { denunciadoPor: uid, createdAt: Date.now() });
-      await cargarMisHitos();
+      await recargarFn();
       return;
     }
 
@@ -844,7 +908,7 @@ if (feedHitosEl) {
       if (!confirm('¿Eliminar este comentario denunciado?')) return;
       const { hitoId, comentarioId } = btnAceptarDenunciaComentario.dataset;
       await remove(ref(db, `hitos/${hitoId}/comentarios/${comentarioId}`));
-      await cargarMisHitos();
+      await recargarFn();
       return;
     }
 
@@ -853,18 +917,74 @@ if (feedHitosEl) {
       const { hitoId, comentarioId } = btnRechazarDenunciaComentario.dataset;
       await update(ref(db, `hitos/${hitoId}/comentarios/${comentarioId}`), { estado: 'visible' });
       await remove(ref(db, `hitos/${hitoId}/comentarios/${comentarioId}/denuncia`));
-      await cargarMisHitos();
+      await recargarFn();
+      return;
+    }
+
+    const btnResponderComentario = ev.target.closest('.btn-responder-comentario');
+    if (btnResponderComentario) {
+      const { hitoId, comentarioId } = btnResponderComentario.dataset;
+      const yaAbierto = feedEl.querySelector(`.form-responder-comentario[data-comentario-id="${comentarioId}"]`);
+      if (yaAbierto) { yaAbierto.remove(); return; }
+      const contenedorComentario = btnResponderComentario.closest('[data-comentario-id]');
+      const form = document.createElement('div');
+      form.className = 'form-responder-comentario';
+      form.dataset.comentarioId = comentarioId;
+      form.innerHTML = `<input type="text" placeholder="Escribe tu respuesta..."><button type="button" class="btn btn--primary btn-enviar-respuesta-comentario" style="font-size:11px; padding:5px 12px;">Enviar</button>`;
+      contenedorComentario.insertAdjacentElement('afterend', form);
+      form.querySelector('input').focus();
+      return;
+    }
+
+    const btnEnviarRespuesta = ev.target.closest('.btn-enviar-respuesta-comentario');
+    if (btnEnviarRespuesta) {
+      const form = btnEnviarRespuesta.closest('.form-responder-comentario');
+      const input = form.querySelector('input');
+      const comentarioId = form.dataset.comentarioId;
+      const tarjeta = btnEnviarRespuesta.closest('[data-hito-id]');
+      const hitoId = tarjeta ? tarjeta.dataset.hitoId : form.closest('[data-hito-id]')?.dataset.hitoId;
+      if (!input.value.trim() || !hitoId) return;
+      btnEnviarRespuesta.disabled = true;
+      const usuarioSnap = await get(ref(db, `usuarios/${uid}`));
+      let autorNombre = usuarioSnap.exists() ? usuarioSnap.val().nombre : '';
+      if (!autorNombre) {
+        const mapaSnap = await get(ref(db, `alumnoPorAuthUid/${uid}`));
+        const alumnoId = mapaSnap.exists() ? mapaSnap.val() : null;
+        const alumnoSnap = alumnoId ? await get(ref(db, `alumnos/${alumnoId}`)) : null;
+        const a = alumnoSnap && alumnoSnap.exists() ? alumnoSnap.val() : {};
+        autorNombre = `${a.nombre || ''} ${a.apellido || ''}`.trim();
+      }
+      await set(push(ref(db, `hitos/${hitoId}/comentarios/${comentarioId}/respuestas`)), {
+        autorId: uid, autorNombre, texto: input.value.trim(), createdAt: Date.now()
+      });
+      await recargarFn();
+      return;
+    }
+
+    const btnEliminarRespuesta = ev.target.closest('.btn-eliminar-respuesta-comentario');
+    if (btnEliminarRespuesta) {
+      if (!confirm('¿Eliminar esta respuesta?')) return;
+      const { hitoId, comentarioId, respuestaId } = btnEliminarRespuesta.dataset;
+      await remove(ref(db, `hitos/${hitoId}/comentarios/${comentarioId}/respuestas/${respuestaId}`));
+      await recargarFn();
       return;
     }
   });
 
-  feedHitosEl.addEventListener('keypress', async (ev) => {
+  feedEl.addEventListener('keypress', async (ev) => {
     if (ev.key === 'Enter' && ev.target.classList.contains('input-comentario-hito')) {
       const hitoId = ev.target.dataset.hitoId;
-      if (ev.target.value.trim()) await enviarComentario(hitoId, ev.target.value);
+      if (ev.target.value.trim()) await enviarComentario(hitoId, ev.target.value, recargarFn);
+    }
+    if (ev.key === 'Enter' && ev.target.matches('.form-responder-comentario input')) {
+      ev.target.closest('.form-responder-comentario').querySelector('.btn-enviar-respuesta-comentario').click();
     }
   });
 }
+
+const feedHitosEl = document.getElementById('hitos-feed');
+activarInteraccionFeed(feedHitosEl, cargarMisHitos);
+activarInteraccionFeed(document.getElementById('chc-feed'), cargarHitosComunidad);
 
 document.querySelectorAll('.nav-item[data-nav="mis-hitos"]').forEach(item => {
   item.addEventListener('click', cargarMisHitos);

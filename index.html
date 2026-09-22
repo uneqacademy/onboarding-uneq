@@ -113,15 +113,15 @@
         <li class="nav-item hidden" data-nav="mis-datos">Mis Datos</li>
         <li class="nav-item" data-role="director" data-nav="rendimiento-ia">Rendimiento IA</li>
         <li class="nav-item" data-role="director" data-nav="configuracion">Configuración</li>
-        <li class="nav-item" data-role="alumno" data-nav="ficha-alumno-propia">Mi Ficha Alumno</li>
+        <li class="nav-item" data-role="alumno" data-nav="ficha-alumno-propia">Mi Ficha Personal</li>
         <li class="nav-item" data-role="alumno" data-nav="bitacora-alumno">Bitácora</li>
         <li class="nav-item" data-role="alumno" data-nav="test-alumno">Test Brújula</li>
         <li class="nav-item hidden" data-nav="mentorias-mentor">Mis Mentorías</li>
         <li class="nav-item hidden" data-nav="mi-clon-ia">Mi Clon IA</li>
-        <li class="nav-item hidden" data-nav="box-consultas">BOX Inteligente</li>
         <li class="nav-item hidden" data-nav="mis-hitos">Mis Hitos</li>
-        <li class="nav-item" data-role="alumno" data-nav="preguntas-comunidad">Preguntas de la Comunidad</li>
+        <li class="nav-item hidden" data-nav="box-consultas">BOX Inteligente</li>
         <li class="nav-item" data-role="alumno" data-nav="preguntas-vivo">Preguntas en Vivo</li>
+        <li class="nav-item hidden" data-nav="comunidad-uneq">Comunidad UNEQ</li>
         <li class="nav-item" data-role="alumno" data-nav="soporte-alumnos">Soporte Alumnos</li>
       </div>
     </nav>
@@ -149,6 +149,14 @@
         <div class="topbar__title" id="topbar-title">Dashboard</div>
       </div>
       <div class="topbar__right" style="display:flex; align-items:center; gap:8px; position:relative;">
+        <div style="position:relative;" id="notif-contenedor">
+          <button type="button" class="notif-campana hidden" id="notif-btn-campana" aria-label="Notificaciones">
+            🔔<span class="notif-badge hidden" id="notif-badge">0</span>
+          </button>
+          <div class="notif-panel hidden" id="notif-panel">
+            <div id="notif-lista"><p class="notif-vacio">Sin notificaciones por ahora.</p></div>
+          </div>
+        </div>
         <button class="btn btn--ghost" id="btn-logout">Cerrar sesión</button>
       </div>
     </header>
@@ -1440,28 +1448,21 @@
            PREGUNTAS EN VIVO — página propia
            ====================================================== -->
       <section id="view-mis-hitos" class="view hidden">
-        <div class="flex-between mb-16"><h2 id="hitos-titulo-vista">Mis Hitos</h2></div>
+        <div class="flex-between mb-16"><h2>Mis Hitos</h2></div>
 
-        <!-- Solo alumno: pestañas Mis Hitos / Hitos de la Comunidad -->
-        <div class="hitos-tabs hidden" id="hitos-tabs" role="tablist">
-          <button type="button" class="hitos-tab is-active" data-hitos-tab="mis" role="tab">Mis Hitos</button>
-          <button type="button" class="hitos-tab" data-hitos-tab="comunidad" role="tab">Hitos de la Comunidad</button>
-        </div>
-
-        <!-- Solo alumno (pestaña Mis Hitos): astronauta de la fase actual -->
+        <!-- Astronauta de la fase actual -->
         <div class="hitos-hero-fase hidden" id="hitos-hero-fase"></div>
 
-        <!-- Solo alumno: link a contenidos Hotmart de su nivel -->
+        <!-- Link a contenidos Hotmart de su nivel -->
         <div class="hidden" id="hitos-contenidos-hotmart" style="text-align:center; margin-bottom:24px;"></div>
 
-        <!-- Solo alumno: seguimiento personal -->
+        <!-- Seguimiento personal -->
         <div class="panel mb-24 hidden" id="hitos-seguimiento-panel">
           <div class="panel__header"><h3>Tu Progreso</h3></div>
           <div class="panel__body" id="hitos-seguimiento-contenido"></div>
         </div>
 
-
-        <!-- Solo alumno: publicar -->
+        <!-- Publicar -->
         <div class="panel mb-24 hidden" id="hitos-publicar-panel">
           <div class="panel__header"><h3>Publicar un Hito</h3></div>
           <div class="panel__body">
@@ -1484,50 +1485,209 @@
           </div>
         </div>
 
-        <!-- Solo staff: filtros -->
-        <div class="panel mb-24 hidden" id="hitos-filtros-panel">
-          <div class="panel__body" style="display:flex; gap:10px; flex-wrap:wrap;">
-            <select id="hitos-filtro-alumno"><option value="">Todos los alumnos</option></select>
-            <select id="hitos-filtro-programa">
-              <option value="">Todos los programas</option>
-              <option value="begin">Begin</option>
-              <option value="next">Next</option>
-              <option value="exit">eXIT</option>
-            </select>
-            <select id="hitos-filtro-fase">
-              <option value="">Todas las fases</option>
-              <option value="fase1">Fase 1</option>
-              <option value="fase2">Fase 2</option>
-              <option value="fase3">Fase 3</option>
-              <option value="fase4">Fase 4</option>
-            </select>
-            <label style="display:flex; align-items:center; gap:6px; font-size:12.5px;">
-              <input type="checkbox" id="hitos-filtro-denunciados"> Solo denunciados
-            </label>
-          </div>
-        </div>
-
-        <!-- Solo alumno: filtros del feed (estudiante solo en Hitos de la Comunidad) -->
-        <div class="panel mb-24 hidden" id="hitos-filtros-alumno-panel">
-          <div class="panel__body hitos-filtros-alumno">
-            <div class="field"><label>Desde</label><input type="date" id="hitos-falumno-desde"></div>
-            <div class="field"><label>Hasta</label><input type="date" id="hitos-falumno-hasta"></div>
-            <div class="field" id="hitos-falumno-estudiante-campo"><label>Estudiante</label><select id="hitos-falumno-estudiante"><option value="">Todos los estudiantes</option></select></div>
-            <div class="field"><label>Fase</label>
-              <select id="hitos-falumno-fase">
-                <option value="">Todas las fases</option>
-                <option value="fase1">Fase 1</option>
-                <option value="fase2">Fase 2</option>
-                <option value="fase3">Fase 3</option>
-                <option value="fase4">Fase 4</option>
-              </select>
-            </div>
-            <div class="field"><label>Hito</label><select id="hitos-falumno-hito"><option value="">Todos los hitos</option></select></div>
-            <button type="button" class="btn btn--ghost" id="btn-hitos-falumno-limpiar">Limpiar filtros</button>
-          </div>
-        </div>
-
+        <!-- Lo que tú ya publicaste (sin filtros — para ver el resto de la comunidad, ve a "Comunidad UNEQ") -->
         <div id="hitos-feed"></div>
+      </section>
+
+      <!-- ======================================================
+           COMUNIDAD UNEQ — Hitos de la Comunidad, Preguntas de la
+           Comunidad, Presentación e Historias Reales. Visible para
+           alumno, mentor, coach y director (cada uno ve lo que le
+           corresponde dentro de cada pestaña).
+           ====================================================== -->
+      <section id="view-comunidad-uneq" class="view hidden">
+        <div class="flex-between mb-16"><h2>Comunidad UNEQ</h2></div>
+        <div class="comunidad-subtabs" id="comunidad-subtabs" role="tablist">
+          <button type="button" class="comunidad-subtab is-activa" data-comunidad-tab="hitos" role="tab">Hitos de la Comunidad</button>
+          <button type="button" class="comunidad-subtab" data-comunidad-tab="preguntas" role="tab">Preguntas de la Comunidad</button>
+          <button type="button" class="comunidad-subtab" data-comunidad-tab="presentacion" role="tab">Presentación</button>
+          <button type="button" class="comunidad-subtab" data-comunidad-tab="historias" role="tab">Historias Reales</button>
+        </div>
+
+        <!-- ===== Hitos de la Comunidad ===== -->
+        <div class="comunidad-vista is-activa" id="comunidad-vista-hitos">
+          <!-- Solo staff: filtros -->
+          <div class="panel mb-16 hidden" id="chc-filtros-staff-panel">
+            <div class="panel__body" style="display:flex; gap:10px; flex-wrap:wrap; align-items:flex-end;">
+              <div class="field"><label>Desde</label><input type="date" id="chc-f-desde-staff"></div>
+              <div class="field"><label>Hasta</label><input type="date" id="chc-f-hasta-staff"></div>
+              <div class="field"><label>Programa</label>
+                <select id="chc-f-programa">
+                  <option value="">Todos</option>
+                  <option value="begin">Begin</option>
+                  <option value="next">Next</option>
+                  <option value="exit">eXIT</option>
+                </select>
+              </div>
+              <div class="field"><label>Coach Asignado</label><select id="chc-f-coach"><option value="">Todos</option></select></div>
+              <div class="field"><label>Estudiante</label><select id="chc-f-estudiante"><option value="">Todos</option></select></div>
+              <div class="field"><label>Fase</label>
+                <select id="chc-f-fase">
+                  <option value="">Todas</option>
+                  <option value="fase1">Fase 1</option>
+                  <option value="fase2">Fase 2</option>
+                  <option value="fase3">Fase 3</option>
+                  <option value="fase4">Fase 4</option>
+                </select>
+              </div>
+              <div class="field"><label>Hito</label><select id="chc-f-hito"><option value="">Todos</option></select></div>
+              <label style="display:flex; align-items:center; gap:6px; font-size:12.5px;"><input type="checkbox" id="chc-f-denunciados"> Solo denunciados</label>
+              <button type="button" class="btn btn--ghost" id="chc-btn-limpiar-staff">Limpiar filtros</button>
+            </div>
+          </div>
+          <!-- Solo alumno: filtros -->
+          <div class="panel mb-16 hidden" id="chc-filtros-alumno-panel">
+            <div class="panel__body hitos-filtros-alumno">
+              <div class="field"><label>Desde</label><input type="date" id="chc-f-desde"></div>
+              <div class="field"><label>Hasta</label><input type="date" id="chc-f-hasta"></div>
+              <div class="field"><label>Fase</label>
+                <select id="chc-f-fase-alumno">
+                  <option value="">Todas</option>
+                  <option value="fase1">Fase 1</option>
+                  <option value="fase2">Fase 2</option>
+                  <option value="fase3">Fase 3</option>
+                  <option value="fase4">Fase 4</option>
+                </select>
+              </div>
+              <div class="field"><label>Hito</label><select id="chc-f-hito-alumno"><option value="">Todos</option></select></div>
+              <button type="button" class="btn btn--ghost" id="chc-btn-limpiar-alumno">Limpiar filtros</button>
+            </div>
+          </div>
+          <p class="comunidad-filtros-contador hidden" id="chc-contador"></p>
+          <div id="chc-feed"></div>
+        </div>
+
+        <!-- ===== Preguntas de la Comunidad ===== -->
+        <div class="comunidad-vista" id="comunidad-vista-preguntas">
+          <div class="panel mb-16 hidden" id="cpc-filtros-staff-panel">
+            <div class="panel__body" style="display:flex; gap:10px; flex-wrap:wrap; align-items:flex-end;">
+              <div class="field"><label>Desde</label><input type="date" id="cpc-f-desde-staff"></div>
+              <div class="field"><label>Hasta</label><input type="date" id="cpc-f-hasta-staff"></div>
+              <div class="field"><label>Programa</label>
+                <select id="cpc-f-programa">
+                  <option value="">Todos</option>
+                  <option value="begin">Begin</option>
+                  <option value="next">Next</option>
+                  <option value="exit">eXIT</option>
+                </select>
+              </div>
+              <div class="field"><label>Coach Asignado</label><select id="cpc-f-coach"><option value="">Todos</option></select></div>
+              <div class="field"><label>Estudiante</label><select id="cpc-f-estudiante"><option value="">Todos</option></select></div>
+              <div class="field"><label>Mentor</label><select id="cpc-f-mentor-staff"><option value="">Todos</option></select></div>
+              <div class="field"><label>Temática</label><select id="cpc-f-tema-staff"><option value="">Todas</option></select></div>
+              <button type="button" class="btn btn--ghost" id="cpc-btn-limpiar-staff">Limpiar filtros</button>
+            </div>
+          </div>
+          <div class="panel mb-16" id="cpc-filtros-alumno-panel">
+            <div class="panel__body" style="display:flex; gap:16px; flex-wrap:wrap;">
+              <div class="field" style="flex:1; min-width:200px;">
+                <label>Filtrar por Mentor</label>
+                <select id="comunidad-filtro-mentor"><option value="">Todos</option></select>
+              </div>
+              <div class="field" style="flex:1; min-width:200px;">
+                <label>Filtrar por Temática</label>
+                <select id="comunidad-filtro-tema"><option value="">Todas</option></select>
+              </div>
+              <div class="field" style="min-width:150px;">
+                <label>Desde</label>
+                <input type="date" id="comunidad-filtro-desde">
+              </div>
+              <div class="field" style="min-width:150px;">
+                <label>Hasta</label>
+                <input type="date" id="comunidad-filtro-hasta">
+              </div>
+            </div>
+          </div>
+          <p class="comunidad-filtros-contador hidden" id="cpc-contador"></p>
+          <div class="panel">
+            <div class="panel__body" id="comunidad-listado"></div>
+          </div>
+        </div>
+
+        <!-- ===== Presentación ===== -->
+        <div class="comunidad-vista" id="comunidad-vista-presentacion">
+          <!-- Alumno: candado si aún no tiene una presentación aprobada -->
+          <div class="panel hidden" id="pres-candado-panel">
+            <div class="panel__body presentacion-candado">
+              <div class="icono">🔒</div>
+              <h3>Preséntate a la comunidad</h3>
+              <p class="text-soft" style="max-width:420px; margin:8px auto 20px;">Antes de ver el resto de la comunidad, cuéntanos quién eres. Tu Coach revisa cada presentación antes de publicarla.</p>
+              <textarea id="pres-texto-form" style="width:100%; max-width:480px; min-height:110px;" placeholder="Cuéntanos quién eres, a qué te dedicas, y qué te trae a UNEQ..."></textarea>
+              <p id="pres-form-error" class="hidden" style="color:#C0392B; margin-top:8px; font-size:13px;"></p>
+              <button type="button" class="btn btn--primary" id="pres-btn-enviar" style="margin-top:12px;">Enviar presentación</button>
+            </div>
+          </div>
+          <!-- Alumno: aviso mientras está pendiente de aprobación -->
+          <div class="presentacion-pendiente-banner hidden" id="pres-pendiente-banner">
+            ⏳ Tu presentación está esperando la aprobación de tu Coach. Puedes editarla mientras tanto (hasta 24 horas después de enviarla).
+          </div>
+          <!-- Alumno: su propia presentación, para editar dentro de las 24h -->
+          <div class="panel mb-16 hidden" id="pres-propia-panel">
+            <div class="panel__body">
+              <div class="flex-between"><strong>Tu presentación</strong><span class="badge" id="pres-propia-estado"></span></div>
+              <p class="texto-clamp" data-clamp id="pres-propia-texto" style="margin:8px 0 0; white-space:pre-wrap;"></p>
+              <button type="button" class="btn-ver-mas-texto hidden" data-clamp-btn></button>
+              <button type="button" class="btn btn--ghost hidden" id="pres-btn-editar" style="font-size:12px; padding:5px 12px; margin-top:8px;">✏️ Editar</button>
+            </div>
+          </div>
+
+          <!-- Solo staff: filtros -->
+          <div class="panel mb-16 hidden" id="pres-filtros-staff-panel">
+            <div class="panel__body" style="display:flex; gap:10px; flex-wrap:wrap; align-items:flex-end;">
+              <div class="field"><label>Desde</label><input type="date" id="pres-f-desde-staff"></div>
+              <div class="field"><label>Hasta</label><input type="date" id="pres-f-hasta-staff"></div>
+              <div class="field"><label>Programa</label>
+                <select id="pres-f-programa"><option value="">Todos</option><option value="begin">Begin</option><option value="next">Next</option><option value="exit">eXIT</option></select>
+              </div>
+              <div class="field"><label>Coach Asignado</label><select id="pres-f-coach"><option value="">Todos</option></select></div>
+              <div class="field"><label>Estudiante</label><select id="pres-f-estudiante"><option value="">Todos</option></select></div>
+              <label style="display:flex; align-items:center; gap:6px; font-size:12.5px;"><input type="checkbox" id="pres-f-pendientes"> Solo pendientes de aprobar</label>
+            </div>
+          </div>
+          <!-- Solo alumno: filtro -->
+          <div class="panel mb-16 hidden" id="pres-filtros-alumno-panel">
+            <div class="panel__body" style="display:flex; gap:16px; flex-wrap:wrap;">
+              <div class="field" style="min-width:150px;"><label>Desde</label><input type="date" id="pres-f-desde"></div>
+              <div class="field" style="min-width:150px;"><label>Hasta</label><input type="date" id="pres-f-hasta"></div>
+            </div>
+          </div>
+          <p class="comunidad-filtros-contador hidden" id="pres-contador"></p>
+          <div id="pres-feed"></div>
+        </div>
+
+        <!-- ===== Historias Reales ===== -->
+        <div class="comunidad-vista" id="comunidad-vista-historias">
+          <!-- Solo alumno: publicar -->
+          <div class="panel mb-16 hidden" id="hist-publicar-panel">
+            <div class="panel__header"><h3>Comparte tu Historia</h3></div>
+            <div class="panel__body">
+              <textarea id="hist-texto-form" placeholder="Cuéntale a la comunidad tu logro o tu historia..."></textarea>
+              <p id="hist-form-error" class="hidden" style="color:#C0392B; margin:8px 0;"></p>
+              <button type="button" class="btn btn--primary" id="hist-btn-publicar" style="margin-top:8px;">Publicar</button>
+            </div>
+          </div>
+          <!-- Solo staff: filtros -->
+          <div class="panel mb-16 hidden" id="hist-filtros-staff-panel">
+            <div class="panel__body" style="display:flex; gap:10px; flex-wrap:wrap; align-items:flex-end;">
+              <div class="field"><label>Desde</label><input type="date" id="hist-f-desde-staff"></div>
+              <div class="field"><label>Hasta</label><input type="date" id="hist-f-hasta-staff"></div>
+              <div class="field"><label>Programa</label>
+                <select id="hist-f-programa"><option value="">Todos</option><option value="begin">Begin</option><option value="next">Next</option><option value="exit">eXIT</option></select>
+              </div>
+              <div class="field"><label>Coach Asignado</label><select id="hist-f-coach"><option value="">Todos</option></select></div>
+              <div class="field"><label>Estudiante</label><select id="hist-f-estudiante"><option value="">Todos</option></select></div>
+            </div>
+          </div>
+          <!-- Solo alumno: filtro -->
+          <div class="panel mb-16 hidden" id="hist-filtros-alumno-panel">
+            <div class="panel__body" style="display:flex; gap:16px; flex-wrap:wrap;">
+              <div class="field" style="min-width:150px;"><label>Desde</label><input type="date" id="hist-f-desde"></div>
+              <div class="field" style="min-width:150px;"><label>Hasta</label><input type="date" id="hist-f-hasta"></div>
+            </div>
+          </div>
+          <p class="comunidad-filtros-contador hidden" id="hist-contador"></p>
+          <div id="hist-feed"></div>
+        </div>
       </section>
 
       <section id="view-preguntas-vivo" class="view hidden">
@@ -1559,32 +1719,6 @@
             </div>
             <div class="panel__body" id="preguntas-vivo-historial"></div>
           </div>
-        </div>
-      </section>
-
-      <section id="view-preguntas-comunidad" class="view hidden">
-        <div class="panel mb-24">
-          <div class="panel__body" style="display:flex; gap:16px; flex-wrap:wrap;">
-            <div class="field" style="flex:1; min-width:200px;">
-              <label>Filtrar por Mentor</label>
-              <select id="comunidad-filtro-mentor"><option value="">Todos</option></select>
-            </div>
-            <div class="field" style="flex:1; min-width:200px;">
-              <label>Filtrar por Temática</label>
-              <select id="comunidad-filtro-tema"><option value="">Todas</option></select>
-            </div>
-            <div class="field" style="min-width:150px;">
-              <label>Desde</label>
-              <input type="date" id="comunidad-filtro-desde">
-            </div>
-            <div class="field" style="min-width:150px;">
-              <label>Hasta</label>
-              <input type="date" id="comunidad-filtro-hasta">
-            </div>
-          </div>
-        </div>
-        <div class="panel">
-          <div class="panel__body" id="comunidad-listado"></div>
         </div>
       </section>
 

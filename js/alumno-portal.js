@@ -10,10 +10,11 @@
    ============================================================ */
 
 import { db, auth, storage, firebaseConfig } from './firebase-config.js';
+import { aplicarClampTexto } from './texto-clamp.js';
 import { ref as storageRef, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-storage.js";
 import { ref, get, set, update, push } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-database.js";
 import { initializeApp, deleteApp } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-app.js";
-import { setNav } from './main.js';
+import { setNav, getCurrentRole } from './main.js';
 import { getAuth, createUserWithEmailAndPassword, signOut as signOutSecundaria, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-auth.js";
 import { programaLabel } from './ciclos.js';
 
@@ -777,6 +778,17 @@ function inicioSemanaActual() {
   return lunes.getTime();
 }
 
+function wireToggleRespuestaBox(fila) {
+  const btn = fila.querySelector('[data-toggle-respuesta]');
+  const detalle = fila.querySelector('[data-detalle-respuesta]');
+  if (!btn || !detalle) return;
+  btn.addEventListener('click', (ev) => {
+    ev.stopPropagation();
+    const ahoraOculto = detalle.classList.toggle('hidden');
+    btn.innerHTML = ahoraOculto ? '👁️ Ver Respuesta' : '🙈 Ocultar Respuesta';
+  });
+}
+
 function renderRespuestaBox(respuesta, estadoIA) {
   if (!respuesta) {
     // Si Google estaba saturado, la pregunta queda en cola y se reintenta
@@ -1016,18 +1028,17 @@ export async function cargarBoxAlumno() {
       ? visibles.map(e => {
           const mentorNombre = usuarios[e.mentorId] ? (usuarios[e.mentorId].nombre || usuarios[e.mentorId].email) : 'Mentor';
           return `
-            <div class="panel mb-16" style="padding:14px; cursor:pointer;" data-fila-consulta>
+            <div class="panel mb-16" style="padding:14px;" data-fila-consulta>
               <div class="flex-between">
                 <strong>Para ${mentorNombre}</strong>
-                <div style="display:flex; align-items:center; gap:8px;">
-                  ${!e.respuesta ? `<button type="button" class="btn btn--ghost btn-eliminar-pregunta" data-pregunta-id="${e.preguntaId}" data-mentor-id="${e.mentorId}" style="font-size:11px; padding:2px 8px;">Eliminar</button>` : ''}
-                  <span class="text-soft" style="font-size:16px;" data-flecha-consulta>▾</span>
-                </div>
+                ${!e.respuesta ? `<button type="button" class="btn btn--ghost btn-eliminar-pregunta" data-pregunta-id="${e.preguntaId}" data-mentor-id="${e.mentorId}" style="font-size:11px; padding:2px 8px;">Eliminar</button>` : ''}
               </div>
               <span class="text-soft" style="font-size:12px;">${formatFecha(new Date(e.createdAt).toISOString().slice(0, 10))}</span>
-              <p style="margin:6px 0;">${linkify(e.pregunta)}</p>
-              <div class="hidden" data-detalle-consulta>
-                ${renderImagenesPregunta(e.imagenes, e.archivos)}
+              <p class="texto-clamp" data-clamp style="margin:6px 0;">${linkify(e.pregunta)}</p>
+              <button type="button" class="btn-ver-mas-texto hidden" data-clamp-btn></button>
+              ${renderImagenesPregunta(e.imagenes, e.archivos)}
+              ${e.respuesta || (e.estadoIA && e.estadoIA.estado === 'en_cola') ? `<button type="button" class="btn-toggle-respuesta-box" data-toggle-respuesta>👁️ Ver Respuesta</button>` : '<p class="text-soft" style="margin-top:8px; font-size:12px;">Aún sin responder.</p>'}
+              <div class="hidden" data-detalle-respuesta>
                 ${renderRespuestaBox(e.respuesta, e.estadoIA)}
               </div>
             </div>`;
@@ -1035,13 +1046,8 @@ export async function cargarBoxAlumno() {
       : '<p class="text-soft">Aún no has enviado ninguna consulta con ese filtro.</p>');
 
     listadoEl.querySelectorAll('[data-fila-consulta]').forEach(fila => {
-      fila.addEventListener('click', (ev) => {
-        if (ev.target.closest('.btn-eliminar-pregunta') || ev.target.closest('a')) return;
-        const detalle = fila.querySelector('[data-detalle-consulta]');
-        const flecha = fila.querySelector('[data-flecha-consulta]');
-        const ahoraOculto = detalle.classList.toggle('hidden');
-        flecha.textContent = ahoraOculto ? '▾' : '▴';
-      });
+      aplicarClampTexto(fila);
+      wireToggleRespuestaBox(fila);
     });
 
     if (!mostrarTodas && filtradas.length > LIMITE_INICIAL) {
@@ -1233,18 +1239,26 @@ async function cargarBoxBeginAlumno() {
 
   listadoEl.innerHTML = propias.length
     ? propias.map(([, p]) => `
-        <div class="panel mb-16" style="padding:14px;">
+        <div class="panel mb-16" style="padding:14px;" data-fila-box-begin>
           <span class="badge badge--activo" style="font-size:10px;">${p.tematica || 'Sin temática'}</span>
-          <p style="margin:8px 0 0;">${linkify(p.pregunta || '')}</p>
+          <p class="texto-clamp" data-clamp style="margin:8px 0 0;">${p.preguntaFormateada || linkify(p.pregunta || '')}</p>
+          <button type="button" class="btn-ver-mas-texto hidden" data-clamp-btn></button>
           ${renderImagenesPregunta(p.imagenes, p.archivos)}
           ${p.respuesta
-            ? `<div style="margin-top:10px; padding:10px; background:#F7F8FA; border-radius:8px;">
-                 <strong style="font-size:12px;">Respuesta${p.respuesta.mentorNombre ? ` de ${p.respuesta.mentorNombre}` : ''}</strong>
-                 <p style="margin:4px 0 0; white-space:pre-wrap;">${linkify(p.respuesta.texto || '')}</p>
+            ? `<button type="button" class="btn-toggle-respuesta-box" data-toggle-respuesta>👁️ Ver Respuesta</button>
+               <div class="hidden" data-detalle-respuesta>
+                 <div style="margin-top:10px; padding:10px; background:#F7F8FA; border-radius:8px;">
+                   <strong style="font-size:12px;">Respuesta${p.respuesta.mentorNombre ? ` de ${p.respuesta.mentorNombre}` : ''}</strong>
+                   <p style="margin:4px 0 0; white-space:pre-wrap;">${linkify(p.respuesta.texto || '')}</p>
+                 </div>
                </div>`
             : '<p class="text-soft" style="margin-top:8px; font-size:12px;">Aún sin responder — puede tardar hasta 3 días hábiles.</p>'}
         </div>`).join('')
     : '<p class="text-soft">Todavía no has enviado ninguna pregunta.</p>';
+  listadoEl.querySelectorAll('[data-fila-box-begin]').forEach(fila => {
+    aplicarClampTexto(fila);
+    wireToggleRespuestaBox(fila);
+  });
 }
 
 let imagenesSelBoxBegin = [];
@@ -1340,61 +1354,125 @@ if (btnActualizarBoxBegin) {
    mentores, filtrable por mentor y por temática.
    ============================================================ */
 export async function cargarPreguntasComunidad() {
+  const role = getCurrentRole();
+  const esStaff = role !== 'alumno';
+  const esDirector = role === 'director';
+  const uid = auth.currentUser ? auth.currentUser.uid : null;
+
   const listadoEl = document.getElementById('comunidad-listado');
+  if (!listadoEl) return;
+  document.getElementById('cpc-filtros-alumno-panel')?.classList.toggle('hidden', esStaff);
+  document.getElementById('cpc-filtros-staff-panel')?.classList.toggle('hidden', !esStaff);
+
   const filtroMentorEl = document.getElementById('comunidad-filtro-mentor');
   const filtroTemaEl = document.getElementById('comunidad-filtro-tema');
   const filtroDesdeEl = document.getElementById('comunidad-filtro-desde');
   const filtroHastaEl = document.getElementById('comunidad-filtro-hasta');
-  if (!listadoEl) return;
+  const sMentorEl = document.getElementById('cpc-f-mentor-staff');
+  const sTemaEl = document.getElementById('cpc-f-tema-staff');
+  const sProgramaEl = document.getElementById('cpc-f-programa');
+  const sCoachEl = document.getElementById('cpc-f-coach');
+  const sEstudianteEl = document.getElementById('cpc-f-estudiante');
+  const sDesdeEl = document.getElementById('cpc-f-desde-staff');
+  const sHastaEl = document.getElementById('cpc-f-hasta-staff');
+  const contadorEl = document.getElementById('cpc-contador');
 
-  // Preguntas de la Comunidad: visible para todos los niveles (BEGIN incluido).
-  document.querySelector('.nav-item[data-nav="preguntas-comunidad"]')?.classList.remove('hidden');
-
-  const usuariosSnap = await get(ref(db, 'usuarios'));
+  const [usuariosSnap, ciclosSnap, alumnosSnap] = await Promise.all([
+    get(ref(db, 'usuarios')),
+    esStaff ? get(ref(db, 'ciclos')) : Promise.resolve(null),
+    esStaff ? get(ref(db, 'alumnos')) : Promise.resolve(null)
+  ]);
   const usuarios = usuariosSnap.exists() ? usuariosSnap.val() : {};
+  const ciclos = ciclosSnap && ciclosSnap.exists() ? ciclosSnap.val() : {};
+  const alumnos = alumnosSnap && alumnosSnap.exists() ? alumnosSnap.val() : {};
   const mentores = ordenarMentores(Object.entries(usuarios).filter(([, u]) => {
     const roles = (u.roles && typeof u.roles === 'object') ? u.roles : (u.rol ? { [u.rol]: true } : {});
     return !!roles.mentor;
   }));
 
   if (filtroMentorEl && !filtroMentorEl.dataset.cargado) {
-    filtroMentorEl.innerHTML = '<option value="">Todos</option>' + mentores.map(([uid, m]) => `<option value="${uid}">${m.nombre || m.email}</option>`).join('');
+    filtroMentorEl.innerHTML = '<option value="">Todos</option>' + mentores.map(([uid2, m]) => `<option value="${uid2}">${m.nombre || m.email}</option>`).join('');
     filtroMentorEl.dataset.cargado = '1';
   }
+  if (sMentorEl && !sMentorEl.dataset.cargado) {
+    sMentorEl.innerHTML = '<option value="">Todos</option>' + mentores.map(([uid2, m]) => `<option value="${uid2}">${m.nombre || m.email}</option>`).join('');
+    sMentorEl.dataset.cargado = '1';
+  }
+  if (sCoachEl && !sCoachEl.dataset.cargado) {
+    const coaches = Object.entries(usuarios).filter(([, u]) => {
+      const roles = (u.roles && typeof u.roles === 'object') ? u.roles : (u.rol ? { [u.rol]: true } : {});
+      return !!roles.coach;
+    }).sort((a, b) => (a[1].nombre || '').localeCompare(b[1].nombre || '', 'es'));
+    sCoachEl.innerHTML = '<option value="">Todos</option>' + coaches.map(([id, c]) => `<option value="${id}">${c.nombre || c.email}</option>`).join('');
+    sCoachEl.dataset.cargado = '1';
+  }
 
-  const todasSnaps = await Promise.all(mentores.map(([uid]) => get(ref(db, `box/${uid}`))));
+  const todasSnaps = await Promise.all(mentores.map(([uid2]) => get(ref(db, `box/${uid2}`))));
   let todas = [];
   todasSnaps.forEach((snap, idx) => {
     if (!snap.exists()) return;
     const [mentorUid] = mentores[idx];
-    Object.values(snap.val()).forEach(p => { if (p.respuesta) todas.push(p); });
+    Object.entries(snap.val()).forEach(([preguntaId, p]) => {
+      if (!p.respuesta) return;
+      if (p.estado === 'oculta' && !esDirector) return; // el director oculta desde acá; nadie más la ve
+      const alumno = alumnos[p.alumnoId] || {};
+      const ciclo = alumno.cicloActualId ? ciclos[alumno.cicloActualId] : null;
+      todas.push({ ...p, preguntaId, mentorId: mentorUid, programa: ciclo ? ciclo.programa : '', coachId: ciclo ? ciclo.coachId : '' });
+    });
   });
-  todas.sort((a, b) => b.createdAt - a.createdAt); // más reciente primero
+  todas.sort((a, b) => b.createdAt - a.createdAt);
 
-  // Las temáticas ya no son una lista fija — se arma con las que
-  // realmente aparecen en las preguntas ya hechas.
-  if (filtroTemaEl) {
-    const valorPrevioTema = filtroTemaEl.value;
-    const tematicasPresentes = [...new Set(todas.map(p => p.tematica).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'es'));
-    filtroTemaEl.innerHTML = '<option value="">Todas</option>' + tematicasPresentes.map(t => `<option value="${t}">${t}</option>`).join('');
-    if (valorPrevioTema && tematicasPresentes.includes(valorPrevioTema)) filtroTemaEl.value = valorPrevioTema;
+  // Las temáticas se arman con las que realmente aparecen (cascada:
+  // si se elige un mentor, solo se ofrecen sus propias temáticas).
+  function actualizarTematicas(selMentorEl, selTemaEl) {
+    if (!selTemaEl) return;
+    const mentorElegido = selMentorEl ? selMentorEl.value : '';
+    const base = mentorElegido ? todas.filter(p => p.mentorId === mentorElegido) : todas;
+    const valorPrevio = selTemaEl.value;
+    const tematicasPresentes = [...new Set(base.map(p => p.tematica).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'es'));
+    selTemaEl.innerHTML = '<option value="">Todas</option>' + tematicasPresentes.map(t => `<option value="${t}">${t}</option>`).join('');
+    if (tematicasPresentes.includes(valorPrevio)) selTemaEl.value = valorPrevio;
+  }
+  actualizarTematicas(filtroMentorEl, filtroTemaEl);
+  actualizarTematicas(sMentorEl, sTemaEl);
+
+  if (sEstudianteEl) {
+    const valorPrevio = sEstudianteEl.value;
+    const programaElegido = sProgramaEl ? sProgramaEl.value : '';
+    const coachElegido = sCoachEl ? sCoachEl.value : '';
+    const nombres = [...new Set(todas
+      .filter(p => (!programaElegido || p.programa === programaElegido) && (!coachElegido || p.coachId === coachElegido))
+      .map(p => p.alumnoNombre).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'es'));
+    sEstudianteEl.innerHTML = '<option value="">Todos</option>' + nombres.map(n => `<option value="${n.replace(/"/g, '&quot;')}">${n}</option>`).join('');
+    if (nombres.includes(valorPrevio)) sEstudianteEl.value = valorPrevio;
   }
 
   const PAGE_SIZE = 10;
   let cantidadVisible = PAGE_SIZE;
 
   function render() {
-    const filtroMentor = filtroMentorEl ? filtroMentorEl.value : '';
-    const filtroTema = filtroTemaEl ? filtroTemaEl.value : '';
-    const fDesde = filtroDesdeEl && filtroDesdeEl.value ? new Date(filtroDesdeEl.value + 'T00:00:00').getTime() : null;
-    const fHasta = filtroHastaEl && filtroHastaEl.value ? new Date(filtroHastaEl.value + 'T23:59:59').getTime() : null;
-
-    const filtradas = todas.filter(p =>
-      (!filtroMentor || p.mentorId === filtroMentor) &&
-      (!filtroTema || p.tematica === filtroTema) &&
-      (!fDesde || p.createdAt >= fDesde) &&
-      (!fHasta || p.createdAt <= fHasta)
-    );
+    let filtradas;
+    if (esStaff) {
+      const fMentor = sMentorEl?.value || '', fTema = sTemaEl?.value || '', fPrograma = sProgramaEl?.value || '';
+      const fCoach = sCoachEl?.value || '', fEstudiante = sEstudianteEl?.value || '';
+      const fDesde = sDesdeEl?.value ? new Date(sDesdeEl.value + 'T00:00:00').getTime() : null;
+      const fHasta = sHastaEl?.value ? new Date(sHastaEl.value + 'T23:59:59').getTime() : null;
+      filtradas = todas.filter(p =>
+        (!fMentor || p.mentorId === fMentor) && (!fTema || p.tematica === fTema) &&
+        (!fPrograma || p.programa === fPrograma) && (!fCoach || p.coachId === fCoach) &&
+        (!fEstudiante || p.alumnoNombre === fEstudiante) &&
+        (!fDesde || p.createdAt >= fDesde) && (!fHasta || p.createdAt <= fHasta)
+      );
+      if (contadorEl) { contadorEl.textContent = `${filtradas.length} resultado${filtradas.length === 1 ? '' : 's'}`; contadorEl.classList.remove('hidden'); }
+    } else {
+      const filtroMentor = filtroMentorEl?.value || '', filtroTema = filtroTemaEl?.value || '';
+      const fDesde = filtroDesdeEl?.value ? new Date(filtroDesdeEl.value + 'T00:00:00').getTime() : null;
+      const fHasta = filtroHastaEl?.value ? new Date(filtroHastaEl.value + 'T23:59:59').getTime() : null;
+      filtradas = todas.filter(p =>
+        (!filtroMentor || p.mentorId === filtroMentor) && (!filtroTema || p.tematica === filtroTema) &&
+        (!fDesde || p.createdAt >= fDesde) && (!fHasta || p.createdAt <= fHasta)
+      );
+    }
 
     const visibles = filtradas.slice(0, cantidadVisible);
 
@@ -1402,15 +1480,17 @@ export async function cargarPreguntasComunidad() {
       ? visibles.map(p => {
           const mentorNombre = usuarios[p.mentorId] ? (usuarios[p.mentorId].nombre || usuarios[p.mentorId].email) : 'Mentor';
           return `
-            <div class="panel mb-16" style="padding:14px; cursor:pointer;" data-fila-comunidad>
+            <div class="panel mb-16" style="padding:14px;" data-fila-comunidad data-mentor-id="${p.mentorId}" data-pregunta-id="${p.preguntaId}">
               <div class="flex-between">
                 <span class="badge badge--activo" style="font-size:10px;">${p.tematica || 'Sin tema'}</span>
-                <span class="text-soft" style="font-size:16px;" data-flecha-comunidad>▾</span>
+                ${esDirector ? `<button type="button" class="btn btn--ghost btn-moderar-pregunta-comunidad" data-oculta="${p.estado === 'oculta' ? '1' : '0'}" style="font-size:10px; padding:2px 8px; ${p.estado === 'oculta' ? 'color:#C0392B;' : ''}">${p.estado === 'oculta' ? '⚠️ Oculta — Mostrar' : 'Ocultar'}</button>` : ''}
               </div>
-              <p class="text-soft" style="font-size:12px; margin:6px 0 2px;">Pregunta para ${mentorNombre} — ${formatFecha(new Date(p.createdAt).toISOString().slice(0, 10))}</p>
-              <p style="margin:4px 0;">${linkify(p.pregunta)}</p>
-              <div class="hidden" data-detalle-comunidad>
-                ${renderImagenesPregunta(p.imagenes, p.archivos)}
+              <p class="text-soft" style="font-size:12px; margin:6px 0 2px;">${p.alumnoNombre ? `${p.alumnoNombre} — ` : ''}Pregunta para ${mentorNombre} — ${formatFecha(new Date(p.createdAt).toISOString().slice(0, 10))}</p>
+              <p class="texto-clamp" data-clamp style="margin:4px 0;">${p.preguntaFormateada || linkify(p.pregunta)}</p>
+              <button type="button" class="btn-ver-mas-texto hidden" data-clamp-btn></button>
+              ${renderImagenesPregunta(p.imagenes, p.archivos)}
+              <button type="button" class="btn-toggle-respuesta-box" data-toggle-respuesta>👁️ Ver Respuesta</button>
+              <div class="hidden" data-detalle-respuesta>
                 ${renderRespuestaBox(p.respuesta, p.estadoIA)}
               </div>
             </div>`;
@@ -1418,39 +1498,35 @@ export async function cargarPreguntasComunidad() {
       : '<p class="text-soft">No hay preguntas respondidas con ese filtro todavía.</p>');
 
     listadoEl.querySelectorAll('[data-fila-comunidad]').forEach(fila => {
-      fila.addEventListener('click', (ev) => {
-        if (ev.target.closest('a')) return;
-        const detalle = fila.querySelector('[data-detalle-comunidad]');
-        const flecha = fila.querySelector('[data-flecha-comunidad]');
-        const ahoraOculto = detalle.classList.toggle('hidden');
-        flecha.textContent = ahoraOculto ? '▾' : '▴';
+      aplicarClampTexto(fila);
+      wireToggleRespuestaBox(fila);
+      fila.querySelector('.btn-moderar-pregunta-comunidad')?.addEventListener('click', async (ev) => {
+        ev.stopPropagation();
+        const nuevoEstado = ev.target.dataset.oculta === '1' ? null : 'oculta';
+        await update(ref(db, `box/${fila.dataset.mentorId}/${fila.dataset.preguntaId}`), { estado: nuevoEstado });
+        cargarPreguntasComunidad();
       });
     });
 
     if (filtradas.length > cantidadVisible) {
       listadoEl.innerHTML += `<button type="button" class="btn btn--ghost" id="btn-ver-mas-comunidad">Ver 10 más (${filtradas.length - cantidadVisible} restantes)</button>`;
-      document.getElementById('btn-ver-mas-comunidad').addEventListener('click', () => {
-        cantidadVisible += PAGE_SIZE;
-        render();
-      });
+      document.getElementById('btn-ver-mas-comunidad').addEventListener('click', () => { cantidadVisible += PAGE_SIZE; render(); });
     }
   }
 
-  function resetYRender() {
-    cantidadVisible = PAGE_SIZE;
-    render();
-  }
+  function resetYRender() { cantidadVisible = PAGE_SIZE; render(); }
 
   resetYRender();
-  if (filtroMentorEl) filtroMentorEl.onchange = resetYRender;
+  if (filtroMentorEl) filtroMentorEl.onchange = () => { actualizarTematicas(filtroMentorEl, filtroTemaEl); resetYRender(); };
   if (filtroTemaEl) filtroTemaEl.onchange = resetYRender;
   if (filtroDesdeEl) filtroDesdeEl.onchange = resetYRender;
   if (filtroHastaEl) filtroHastaEl.onchange = resetYRender;
+  if (sMentorEl) sMentorEl.onchange = () => { actualizarTematicas(sMentorEl, sTemaEl); resetYRender(); };
+  [sTemaEl, sDesdeEl, sHastaEl].forEach(el => { if (el) el.onchange = resetYRender; });
+  if (sProgramaEl) sProgramaEl.onchange = () => { cargarPreguntasComunidad(); };
+  if (sCoachEl) sCoachEl.onchange = () => { cargarPreguntasComunidad(); };
+  if (sEstudianteEl) sEstudianteEl.onchange = resetYRender;
 }
-
-document.querySelectorAll('.nav-item[data-nav="preguntas-comunidad"]').forEach(item => {
-  item.addEventListener('click', cargarPreguntasComunidad);
-});
 
 /* ============================================================
    Soporte Alumnos: correo, WhatsApp de soporte, y el formulario

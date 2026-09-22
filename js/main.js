@@ -55,13 +55,14 @@ export function applyRole(role, nombre, rolesDisponibles) {
     if (role === 'mentor') navBox.textContent = 'BOX Inteligente';
   }
 
-  // "Mis Hitos" (alumno) / "Hitos Estudiantes" (staff) — visible para todos: alumno publica, y mentor/coach/
-  // director acompañan comentando y reaccionando.
+  // "Mis Hitos" — solo alumno (su propio progreso y lo que él mismo
+  // publicó). Comentar/reaccionar en lo de otros ahora vive en
+  // "Comunidad UNEQ", visible para todos los roles.
   const navHitos = document.querySelector('.nav-item[data-nav="mis-hitos"]');
-  if (navHitos) {
-    navHitos.classList.remove('hidden');
-    navHitos.textContent = role === 'alumno' ? 'Mis Hitos' : 'Hitos Estudiantes';
-  }
+  if (navHitos) navHitos.classList.toggle('hidden', role !== 'alumno');
+
+  const navComunidadUneq = document.querySelector('.nav-item[data-nav="comunidad-uneq"]');
+  if (navComunidadUneq) navComunidadUneq.classList.remove('hidden');
 
   const navMentoriasMentor = document.querySelector('.nav-item[data-nav="mentorias-mentor"]');
   if (navMentoriasMentor) navMentoriasMentor.classList.toggle('hidden', role !== 'mentor');
@@ -211,19 +212,19 @@ export function setNav(section) {
     document.getElementById('topbar-title').textContent = 'Mi Test Brújula';
   } else if (section === 'ficha-alumno-propia') {
     showView('view-ficha-alumno-propia');
-    document.getElementById('topbar-title').textContent = 'Mi Ficha Alumno';
+    document.getElementById('topbar-title').textContent = 'Mi Ficha Personal';
   } else if (section === 'preguntas-vivo') {
     showView('view-preguntas-vivo');
     document.getElementById('topbar-title').textContent = 'Preguntas en Vivo';
   } else if (section === 'soporte-alumnos') {
     showView('view-soporte-alumnos');
     document.getElementById('topbar-title').textContent = 'Soporte Alumnos';
-  } else if (section === 'preguntas-comunidad') {
-    showView('view-preguntas-comunidad');
-    document.getElementById('topbar-title').textContent = 'Preguntas de la Comunidad';
+  } else if (section === 'comunidad-uneq') {
+    showView('view-comunidad-uneq');
+    document.getElementById('topbar-title').textContent = 'Comunidad UNEQ';
   } else if (section === 'mis-hitos') {
     showView('view-mis-hitos');
-    document.getElementById('topbar-title').textContent = currentRole === 'alumno' ? 'Mis Hitos' : 'Hitos Estudiantes';
+    document.getElementById('topbar-title').textContent = 'Mis Hitos';
   } else if (section === 'mentorias-mentor') {
     showView('view-mentorias');
     document.getElementById('topbar-title').textContent = 'Mis Mentorías';

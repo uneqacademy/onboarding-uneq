@@ -20,6 +20,8 @@ import { ref, get, set } from "https://www.gstatic.com/firebasejs/12.17.1/fireba
 import { applyRole, showLogin } from './main.js';
 import { initAlumnosModule } from './alumnos.js';
 import { cargarDashboardAlumno, cargarBoxAlumno } from './alumno-portal.js';
+import './comunidad-uneq.js';
+import { iniciarNotificaciones } from './notificaciones.js';
 
 const inputEmail = document.getElementById('login-email');
 const inputPass = document.getElementById('login-pass');
@@ -199,6 +201,7 @@ onAuthStateChanged(auth, async (user) => {
         applyRole('alumno', `${datosAlumno.nombre || ''} ${datosAlumno.apellido || ''}`.trim() || user.email, ['alumno']);
         await cargarDashboardAlumno(alumnoId);
         await cargarBoxAlumno();
+        iniciarNotificaciones();
         return;
       }
 
