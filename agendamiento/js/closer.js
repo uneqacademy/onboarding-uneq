@@ -54,8 +54,21 @@ document.querySelectorAll('.adm-nav-item').forEach(btn => {
     btn.classList.add('is-active');
     document.querySelectorAll('.adm-seccion').forEach(s => s.classList.remove('is-activa'));
     document.getElementById('sec-' + btn.dataset.seccion).classList.add('is-activa');
+    cerrarCajon();
   });
 });
+
+/* --- Menú tipo cajón (solo se ve en móvil) --- */
+function abrirCajon() {
+  document.getElementById('adm-sidebar').classList.add('is-abierta');
+  document.getElementById('sidebar-backdrop').classList.add('is-visible');
+}
+function cerrarCajon() {
+  document.getElementById('adm-sidebar').classList.remove('is-abierta');
+  document.getElementById('sidebar-backdrop').classList.remove('is-visible');
+}
+document.getElementById('btn-hamburguesa').addEventListener('click', abrirCajon);
+document.getElementById('sidebar-backdrop').addEventListener('click', cerrarCajon);
 document.querySelectorAll('.adm-subtab').forEach(btn => {
   btn.addEventListener('click', () => {
     document.querySelectorAll('.adm-subtab').forEach(b => b.classList.remove('is-activa'));

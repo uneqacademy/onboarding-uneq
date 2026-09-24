@@ -47,8 +47,21 @@ document.querySelectorAll('.adm-nav-item').forEach(btn => {
     btn.classList.add('is-active');
     document.querySelectorAll('.adm-seccion').forEach(s => s.classList.remove('is-activa'));
     document.getElementById('sec-' + btn.dataset.seccion).classList.add('is-activa');
+    cerrarCajon();
   });
 });
+
+/* --- Menú tipo cajón (solo se ve en móvil) --- */
+function abrirCajon() {
+  document.getElementById('adm-sidebar').classList.add('is-abierta');
+  document.getElementById('sidebar-backdrop').classList.add('is-visible');
+}
+function cerrarCajon() {
+  document.getElementById('adm-sidebar').classList.remove('is-abierta');
+  document.getElementById('sidebar-backdrop').classList.remove('is-visible');
+}
+document.getElementById('btn-hamburguesa').addEventListener('click', abrirCajon);
+document.getElementById('sidebar-backdrop').addEventListener('click', cerrarCajon);
 function mostrarToast(texto) {
   const toast = document.getElementById('toast');
   toast.textContent = texto; toast.classList.add('is-visible');
@@ -211,15 +224,15 @@ function renderClosers() {
       : `<span style="display:inline-flex; width:36px; height:36px; border-radius:50%; background:var(--color-borde); align-items:center; justify-content:center; font-size:13px; color:var(--color-ink-soft);">${(c.nombre || '?').charAt(0).toUpperCase()}</span>`;
     return `
     <tr data-id="${c.id}">
-      <td>${foto}</td>
-      <td>${c.nombre} ${c.apellido || ''}</td>
-      <td>${c.correo}</td>
-      <td>${c.whatsapp || '—'}</td>
-      <td>${c.pais || '—'}</td>
-      <td>${cont.recibidas}</td>
-      <td>${cont.realizadas}</td>
-      <td>${cont.cerradas}</td>
-      <td><span class="adm-badge-estado ${c.activo ? 'activo' : 'inactivo'}">${c.activo ? 'Activo' : 'Inactivo'}</span></td>
+      <td class="adm-td-libre">${foto}</td>
+      <td data-th="Nombre">${c.nombre} ${c.apellido || ''}</td>
+      <td data-th="Correo">${c.correo}</td>
+      <td data-th="WhatsApp">${c.whatsapp || '—'}</td>
+      <td data-th="País">${c.pais || '—'}</td>
+      <td data-th="Agendas Recibidas">${cont.recibidas}</td>
+      <td data-th="Llamadas Realizadas">${cont.realizadas}</td>
+      <td data-th="Ventas Cerradas">${cont.cerradas}</td>
+      <td data-th="Estado"><span class="adm-badge-estado ${c.activo ? 'activo' : 'inactivo'}">${c.activo ? 'Activo' : 'Inactivo'}</span></td>
       <td class="adm-acciones-cell">
         <button type="button" class="ag-btn ag-btn--ghost" style="width:auto; padding:6px 10px; font-size:12px;" data-accion="editar">Editar</button>
         <button type="button" class="ag-btn ag-btn--ghost" style="width:auto; padding:6px 10px; font-size:12px;" data-accion="reset-password">Restablecer contraseña</button>
@@ -416,11 +429,11 @@ function renderAgendaGeneral() {
 
   document.querySelector('#tabla-agenda tbody').innerHTML = filtradas.map(c => `
     <tr>
-      <td>${new Date(c.inicioMs).toLocaleDateString('es-CL', { day: '2-digit', month: '2-digit', year: 'numeric' })}</td>
-      <td>${new Date(c.inicioMs).toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit', hour12: false })}</td>
-      <td>${(staffPorId[c.closerUid] && staffPorId[c.closerUid].nombre) || '—'}</td>
-      <td>${c.leadNombre}</td>
-      <td><span class="adm-badge-estado ${c.estado === 'agendada' ? 'activo' : 'inactivo'}">${ETIQUETAS_ESTADO[c.estado] || c.estado}</span></td>
+      <td data-th="Fecha">${new Date(c.inicioMs).toLocaleDateString('es-CL', { day: '2-digit', month: '2-digit', year: 'numeric' })}</td>
+      <td data-th="Hora">${new Date(c.inicioMs).toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit', hour12: false })}</td>
+      <td data-th="Closer">${(staffPorId[c.closerUid] && staffPorId[c.closerUid].nombre) || '—'}</td>
+      <td data-th="Lead">${c.leadNombre}</td>
+      <td data-th="Estado"><span class="adm-badge-estado ${c.estado === 'agendada' ? 'activo' : 'inactivo'}">${ETIQUETAS_ESTADO[c.estado] || c.estado}</span></td>
     </tr>`).join('') || '<tr><td colspan="5" style="color:var(--color-ink-soft);">No hay llamadas en este rango.</td></tr>';
 }
 
