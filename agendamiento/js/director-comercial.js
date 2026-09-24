@@ -7,7 +7,29 @@
 
 import { db } from './firebase-config.js';
 import { ref, get, set, update, push, onValue } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-database.js";
+import { getAuth, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-auth.js";
+import { getStorage, ref as sref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-storage.js";
 import { iniciarSesionStaff } from './staff-auth.js';
+
+const authInstance = getAuth();
+const storageInstance = getStorage();
+
+/* Lista de países (código + nombre en español), generada con Intl para no
+   mantener una lista a mano. Si el navegador no soporta esta API (muy
+   poco común hoy), cae a una lista corta de respaldo. */
+function listaPaises() {
+  try {
+    const codigos = Intl.supportedValuesOf('region').filter(c => /^[A-Z]{2}$/.test(c));
+    const nombres = new Intl.DisplayNames(['es'], { type: 'region' });
+    return codigos.map(c => ({ codigo: c, nombre: nombres.of(c) })).sort((a, b) => a.nombre.localeCompare(b.nombre, 'es'));
+  } catch (err) {
+    return [
+      { codigo: 'CL', nombre: 'Chile' }, { codigo: 'AR', nombre: 'Argentina' }, { codigo: 'PE', nombre: 'Perú' },
+      { codigo: 'CO', nombre: 'Colombia' }, { codigo: 'MX', nombre: 'México' }, { codigo: 'ES', nombre: 'España' },
+      { codigo: 'US', nombre: 'Estados Unidos' }
+    ];
+  }
+}
 
 const TIPOS_PREGUNTA = [
   { valor: 'texto_corto', etiqueta: 'Texto corto' }, { valor: 'texto_largo', etiqueta: 'Texto largo' },
@@ -16,7 +38,7 @@ const TIPOS_PREGUNTA = [
   { valor: 'telefono', etiqueta: 'Teléfono' }, { valor: 'correo', etiqueta: 'Correo' }
 ];
 
-let general = {}, preguntas = [], recordatorios = {}, closers = [];
+let general = {}, preguntas = [], recordatorios = {}, closers = [], citasTodas = [];
 
 /* --- Navegación (igual que antes) --- */
 document.querySelectorAll('.adm-nav-item').forEach(btn => {
@@ -172,14 +194,40 @@ document.querySelector('[data-guardar="recordatorios"]').addEventListener('click
 });
 
 /* --- CLOSERS --- */
+function contarParaCloser(closerId) {
+  const deEsteCloser = citasTodas.filter(c => c.closerUid === closerId);
+  return {
+    recibidas: deEsteCloser.length,
+    realizadas: deEsteCloser.filter(c => c.estado === 'realizada' || c.estado === 'cerrada').length,
+    cerradas: deEsteCloser.filter(c => c.estado === 'cerrada').length
+  };
+}
 function renderClosers() {
   const tbody = document.querySelector('#tabla-closers tbody');
-  tbody.innerHTML = closers.map(c => `
+  tbody.innerHTML = closers.map(c => {
+    const cont = contarParaCloser(c.id);
+    const foto = c.fotoUrl
+      ? `<img src="${c.fotoUrl}" alt="" style="width:36px; height:36px; border-radius:50%; object-fit:cover;">`
+      : `<span style="display:inline-flex; width:36px; height:36px; border-radius:50%; background:var(--color-borde); align-items:center; justify-content:center; font-size:13px; color:var(--color-ink-soft);">${(c.nombre || '?').charAt(0).toUpperCase()}</span>`;
+    return `
     <tr data-id="${c.id}">
-      <td>${c.nombre}</td><td>${c.correo}</td>
+      <td>${foto}</td>
+      <td>${c.nombre} ${c.apellido || ''}</td>
+      <td>${c.correo}</td>
+      <td>${c.whatsapp || '—'}</td>
+      <td>${c.pais || '—'}</td>
+      <td>${cont.recibidas}</td>
+      <td>${cont.realizadas}</td>
+      <td>${cont.cerradas}</td>
       <td><span class="adm-badge-estado ${c.activo ? 'activo' : 'inactivo'}">${c.activo ? 'Activo' : 'Inactivo'}</span></td>
-      <td><button type="button" class="ag-btn ag-btn--ghost" style="width:auto; padding:6px 12px; font-size:12.5px;" data-accion="toggle">${c.activo ? 'Desactivar' : 'Activar'}</button></td>
-    </tr>`).join('');
+      <td class="adm-acciones-cell">
+        <button type="button" class="ag-btn ag-btn--ghost" style="width:auto; padding:6px 10px; font-size:12px;" data-accion="editar">Editar</button>
+        <button type="button" class="ag-btn ag-btn--ghost" style="width:auto; padding:6px 10px; font-size:12px;" data-accion="reset-password">Restablecer contraseña</button>
+        <button type="button" class="ag-btn ag-btn--ghost" style="width:auto; padding:6px 10px; font-size:12px;" data-accion="toggle">${c.activo ? 'Desactivar' : 'Activar'}</button>
+      </td>
+    </tr>`;
+  }).join('');
+
   tbody.querySelectorAll('[data-accion="toggle"]').forEach(btn => {
     btn.addEventListener('click', async () => {
       const id = btn.closest('tr').dataset.id; const c = closers.find(x => x.id === id);
@@ -188,58 +236,207 @@ function renderClosers() {
       renderClosers(); mostrarToast(c.activo ? `${c.nombre} activado` : `${c.nombre} desactivado`);
     });
   });
+  tbody.querySelectorAll('[data-accion="reset-password"]').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const id = btn.closest('tr').dataset.id; const c = closers.find(x => x.id === id);
+      if (!confirm(`¿Enviar correo de restablecer contraseña a ${c.nombre} (${c.correo})?`)) return;
+      btn.disabled = true;
+      try {
+        await sendPasswordResetEmail(authInstance, c.correo);
+        mostrarToast(`✅ Le llegó un correo a ${c.correo} para restablecer su contraseña`);
+      } catch (err) {
+        mostrarToast('⚠️ No se pudo enviar el correo: ' + (err.code || err.message));
+      } finally { btn.disabled = false; }
+    });
+  });
+  tbody.querySelectorAll('[data-accion="editar"]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const id = btn.closest('tr').dataset.id; const c = closers.find(x => x.id === id);
+      cargarCloserEnFormulario(c);
+    });
+  });
 }
+
+function poblarSelectPaises(selectEl, valorActual) {
+  selectEl.innerHTML = listaPaises().map(p => `<option value="${p.nombre}" ${p.nombre === valorActual ? 'selected' : ''}>${p.nombre}</option>`).join('');
+}
+poblarSelectPaises(document.getElementById('closer-pais'), '');
+
+function limpiarFormularioCloser() {
+  document.getElementById('closer-id-edicion').value = '';
+  document.getElementById('closer-nombre').value = '';
+  document.getElementById('closer-apellido').value = '';
+  document.getElementById('closer-correo').value = '';
+  document.getElementById('closer-whatsapp').value = '';
+  document.getElementById('closer-fecha-nacimiento').value = '';
+  poblarSelectPaises(document.getElementById('closer-pais'), '');
+  document.getElementById('closer-foto').value = '';
+  const preview = document.getElementById('closer-foto-preview');
+  preview.src = ''; preview.classList.add('hidden');
+  document.getElementById('closer-panel-titulo').textContent = 'Agregar closer';
+  document.getElementById('btn-agregar-closer').textContent = '+ Agregar';
+  document.getElementById('closer-correo').disabled = false;
+  document.getElementById('btn-cancelar-edicion-closer').style.display = 'none';
+}
+function cargarCloserEnFormulario(c) {
+  document.getElementById('closer-id-edicion').value = c.id;
+  document.getElementById('closer-nombre').value = c.nombre || '';
+  document.getElementById('closer-apellido').value = c.apellido || '';
+  document.getElementById('closer-correo').value = c.correo || '';
+  document.getElementById('closer-correo').disabled = true; // el correo no se cambia al editar (es el login)
+  document.getElementById('closer-whatsapp').value = c.whatsapp || '';
+  document.getElementById('closer-fecha-nacimiento').value = c.fechaNacimiento || '';
+  poblarSelectPaises(document.getElementById('closer-pais'), c.pais || '');
+  const preview = document.getElementById('closer-foto-preview');
+  if (c.fotoUrl) { preview.src = c.fotoUrl; preview.classList.remove('hidden'); } else { preview.classList.add('hidden'); }
+  document.getElementById('closer-panel-titulo').textContent = `Editando a ${c.nombre}`;
+  document.getElementById('btn-agregar-closer').textContent = 'Guardar cambios';
+  document.getElementById('btn-cancelar-edicion-closer').style.display = '';
+  document.getElementById('sec-closers').scrollIntoView({ behavior: 'smooth', block: 'end' });
+}
+document.getElementById('btn-cancelar-edicion-closer').addEventListener('click', limpiarFormularioCloser);
+
+async function subirFotoCloser(uid, archivo) {
+  const storageRef = sref(storageInstance, `fotos-perfil/${uid}`);
+  await uploadBytes(storageRef, archivo);
+  return await getDownloadURL(storageRef);
+}
+
 document.getElementById('btn-agregar-closer').addEventListener('click', async () => {
+  const idEdicion = document.getElementById('closer-id-edicion').value;
   const nombre = document.getElementById('closer-nombre').value.trim();
+  const apellido = document.getElementById('closer-apellido').value.trim();
   const correo = document.getElementById('closer-correo').value.trim();
-  if (!nombre || !correo) { mostrarToast('⚠️ Completa nombre y correo'); return; }
+  const whatsapp = document.getElementById('closer-whatsapp').value.trim();
+  const fechaNacimiento = document.getElementById('closer-fecha-nacimiento').value;
+  const pais = document.getElementById('closer-pais').value;
+  const archivoFoto = document.getElementById('closer-foto').files[0] || null;
+
+  if (!nombre || !apellido || !correo || !whatsapp || !fechaNacimiento || !pais) {
+    mostrarToast('⚠️ Completa todos los campos obligatorios'); return;
+  }
+
   const btn = document.getElementById('btn-agregar-closer');
-  btn.disabled = true; btn.textContent = 'Creando...';
+  btn.disabled = true;
+
+  if (idEdicion) {
+    // --- Editar closer existente ---
+    btn.textContent = 'Guardando...';
+    try {
+      const datos = { nombre, apellido, whatsapp, fechaNacimiento, pais };
+      if (archivoFoto) datos.fotoUrl = await subirFotoCloser(idEdicion, archivoFoto);
+      await update(ref(db, `agendamiento/staff/${idEdicion}`), datos);
+      const c = closers.find(x => x.id === idEdicion);
+      Object.assign(c, datos);
+      renderClosers();
+      limpiarFormularioCloser();
+      mostrarToast(`✅ ${nombre} actualizado`);
+    } catch (err) {
+      mostrarToast('⚠️ No se pudo guardar: ' + err.message);
+    } finally { btn.disabled = false; }
+    return;
+  }
+
+  // --- Agregar closer nuevo ---
+  btn.textContent = 'Creando...';
   try {
     const solicitudRef = push(ref(db, 'agendamiento/solicitudesCloser'));
-    await set(solicitudRef, { nombre, correo, rol: 'closer', createdAt: Date.now() });
-    await new Promise((resolve, reject) => {
+    await set(solicitudRef, { nombre, apellido, correo, whatsapp, fechaNacimiento, pais, rol: 'closer', createdAt: Date.now() });
+    const resultado = await new Promise((resolve, reject) => {
       const timeoutId = setTimeout(() => reject(new Error('timeout')), 15000);
       onValue(solicitudRef, (snap) => {
         const val = snap.val();
         if (!val || !val.resultado) return;
         clearTimeout(timeoutId);
-        if (val.resultado.estado === 'ok') { mostrarToast(`✅ ${nombre} ya puede iniciar sesión — le llegó un correo con su acceso`); resolve(); }
-        else { mostrarToast(`⚠️ ${val.resultado.mensaje}`); reject(new Error(val.resultado.mensaje)); }
+        if (val.resultado.estado === 'ok') resolve(val.resultado);
+        else reject(new Error(val.resultado.mensaje));
       });
     });
-    document.getElementById('closer-nombre').value = ''; document.getElementById('closer-correo').value = '';
-  } catch (err) { /* el toast ya avisó */ }
-  finally { btn.disabled = false; btn.textContent = '+ Agregar'; }
+    if (archivoFoto) {
+      const fotoUrl = await subirFotoCloser(resultado.uid, archivoFoto);
+      await update(ref(db, `agendamiento/staff/${resultado.uid}`), { fotoUrl });
+    }
+    mostrarToast(`✅ ${nombre} ya puede iniciar sesión — le llegó un correo con su acceso`);
+    limpiarFormularioCloser();
+    const staffSnap = await get(ref(db, 'agendamiento/staff'));
+    closers = staffSnap.exists() ? Object.entries(staffSnap.val()).filter(([, s]) => s.rol === 'closer').map(([id, s]) => ({ id, ...s })) : [];
+    renderClosers();
+    actualizarSelectFiltroCloser();
+  } catch (err) {
+    mostrarToast('⚠️ ' + err.message);
+  } finally { btn.disabled = false; btn.textContent = idEdicion ? 'Guardar cambios' : '+ Agregar'; }
 });
 
 /* --- AGENDA GENERAL --- */
-async function renderAgendaGeneral() {
-  const [citasSnap, staffSnap] = await Promise.all([get(ref(db, 'agendamiento/citas')), get(ref(db, 'agendamiento/staff'))]);
-  const staff = staffSnap.exists() ? staffSnap.val() : {};
-  const citas = citasSnap.exists() ? Object.values(citasSnap.val()) : [];
-  const proximas = citas.filter(c => c.estado === 'agendada' && c.inicioMs > Date.now()).sort((a, b) => a.inicioMs - b.inicioMs).slice(0, 30);
-  document.querySelector('#tabla-agenda tbody').innerHTML = proximas.map(c => `
+function actualizarSelectFiltroCloser() {
+  const sel = document.getElementById('filtro-closer');
+  const actual = sel.value;
+  sel.innerHTML = '<option value="">Todos</option>' + closers.map(c => `<option value="${c.id}">${c.nombre} ${c.apellido || ''}</option>`).join('');
+  sel.value = actual;
+}
+
+document.getElementById('filtro-rango').addEventListener('change', (e) => {
+  const esPersonalizado = e.target.value === 'personalizado';
+  document.getElementById('filtro-fecha-desde-cont').style.display = esPersonalizado ? '' : 'none';
+  document.getElementById('filtro-fecha-hasta-cont').style.display = esPersonalizado ? '' : 'none';
+  renderAgendaGeneral();
+});
+document.getElementById('filtro-fecha-desde').addEventListener('change', renderAgendaGeneral);
+document.getElementById('filtro-fecha-hasta').addEventListener('change', renderAgendaGeneral);
+document.getElementById('filtro-closer').addEventListener('change', renderAgendaGeneral);
+document.getElementById('filtro-estado').addEventListener('change', renderAgendaGeneral);
+
+function rangoFechasElegido() {
+  const rango = document.getElementById('filtro-rango').value;
+  const ahora = Date.now();
+  if (rango === 'todo') return { desde: -Infinity, hasta: Infinity };
+  if (rango === 'personalizado') {
+    const desdeStr = document.getElementById('filtro-fecha-desde').value;
+    const hastaStr = document.getElementById('filtro-fecha-hasta').value;
+    return {
+      desde: desdeStr ? new Date(desdeStr + 'T00:00:00').getTime() : -Infinity,
+      hasta: hastaStr ? new Date(hastaStr + 'T23:59:59').getTime() : Infinity
+    };
+  }
+  const dias = Number(rango);
+  return { desde: ahora - dias * 24 * 60 * 60 * 1000, hasta: Infinity };
+}
+const ETIQUETAS_ESTADO = { agendada: 'Agendada', cancelada: 'Cancelada', reagendada: 'Reagendada', realizada: 'Realizada', cerrada: 'Cerrada' };
+function renderAgendaGeneral() {
+  const staffPorId = Object.fromEntries(closers.map(c => [c.id, c]));
+  const { desde, hasta } = rangoFechasElegido();
+  const closerElegido = document.getElementById('filtro-closer').value;
+  const estadoElegido = document.getElementById('filtro-estado').value;
+
+  const filtradas = citasTodas
+    .filter(c => c.inicioMs >= desde && c.inicioMs <= hasta)
+    .filter(c => !closerElegido || c.closerUid === closerElegido)
+    .filter(c => !estadoElegido || c.estado === estadoElegido)
+    .sort((a, b) => b.inicioMs - a.inicioMs);
+
+  document.querySelector('#tabla-agenda tbody').innerHTML = filtradas.map(c => `
     <tr>
-      <td>${new Date(c.inicioMs).toLocaleDateString('es-CL', { day: '2-digit', month: '2-digit' })}</td>
+      <td>${new Date(c.inicioMs).toLocaleDateString('es-CL', { day: '2-digit', month: '2-digit', year: 'numeric' })}</td>
       <td>${new Date(c.inicioMs).toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit', hour12: false })}</td>
-      <td>${(staff[c.closerUid] && staff[c.closerUid].nombre) || '—'}</td>
+      <td>${(staffPorId[c.closerUid] && staffPorId[c.closerUid].nombre) || '—'}</td>
       <td>${c.leadNombre}</td>
-      <td><span class="adm-badge-estado activo">Agendada</span></td>
-    </tr>`).join('') || '<tr><td colspan="5" style="color:var(--color-ink-soft);">No hay llamadas agendadas por ahora.</td></tr>';
+      <td><span class="adm-badge-estado ${c.estado === 'agendada' ? 'activo' : 'inactivo'}">${ETIQUETAS_ESTADO[c.estado] || c.estado}</span></td>
+    </tr>`).join('') || '<tr><td colspan="5" style="color:var(--color-ink-soft);">No hay llamadas en este rango.</td></tr>';
 }
 
 /* --- Arranque --- */
 iniciarSesionStaff('directorComercial', async () => {
-  const [genSnap, preguntasSnap, recordSnap, staffSnap] = await Promise.all([
+  const [genSnap, preguntasSnap, recordSnap, staffSnap, citasSnap] = await Promise.all([
     get(ref(db, 'agendamiento/config/general')), get(ref(db, 'agendamiento/config/preguntas')),
-    get(ref(db, 'agendamiento/config/recordatorios')), get(ref(db, 'agendamiento/staff'))
+    get(ref(db, 'agendamiento/config/recordatorios')), get(ref(db, 'agendamiento/staff')), get(ref(db, 'agendamiento/citas'))
   ]);
   general = genSnap.exists() ? genSnap.val() : {};
   preguntas = preguntasSnap.exists() ? Object.entries(preguntasSnap.val()).map(([id, p]) => ({ id, ...p })).sort((a, b) => (a.orden || 0) - (b.orden || 0)) : [];
   recordatorios = recordSnap.exists() ? recordSnap.val() : {};
   closers = staffSnap.exists() ? Object.entries(staffSnap.val()).filter(([, s]) => s.rol === 'closer').map(([id, s]) => ({ id, ...s })) : [];
+  citasTodas = citasSnap.exists() ? Object.values(citasSnap.val()) : [];
 
   renderGeneral(); renderPreguntas(); renderRotacion(); renderRecordatorios(); renderClosers();
+  actualizarSelectFiltroCloser();
   renderAgendaGeneral();
 });
