@@ -110,6 +110,7 @@
         <li class="nav-item" data-nav="alumnos">Alumnos</li>
         <li class="nav-item" data-role="director" data-nav="coaches">Coaches</li>
         <li class="nav-item" data-role="director" data-nav="mentores">Mentores</li>
+        <li class="nav-item" data-role="director" data-nav="pre-onboarding">Pre-Onboarding</li>
         <li class="nav-item hidden" data-nav="mis-datos">Mis Datos</li>
         <li class="nav-item" data-role="director" data-nav="rendimiento-ia">Rendimiento IA</li>
         <li class="nav-item" data-role="director" data-nav="configuracion">Configuración</li>
@@ -858,6 +859,25 @@
       <!-- ======================================================
            COACHES (solo Director)
            ====================================================== -->
+      <!-- ======================================================
+           PRE-ONBOARDING (solo Director) — leads cerrados por los
+           closers del agendamiento, a la espera de crearles su
+           ficha de Alumno.
+           ====================================================== -->
+      <section id="view-pre-onboarding" class="view hidden">
+        <div class="mb-16">
+          <input type="text" id="filtro-pre-onboarding-nombre" placeholder="Buscar por nombre...">
+        </div>
+        <div class="panel">
+          <div class="panel__body" style="padding:0;">
+            <table class="data-table">
+              <thead><tr><th>Nombre</th><th>Teléfono</th><th>Programa</th><th>Correo Electrónico</th><th>Cerrado</th><th></th></tr></thead>
+              <tbody id="tabla-pre-onboarding-body"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
       <section id="view-coaches" class="view hidden">
         <div class="mb-16" style="text-align:right;">
           <button class="btn btn--accent" id="btn-nuevo-coach">+ Nuevo Coach</button>
