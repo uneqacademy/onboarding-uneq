@@ -122,24 +122,85 @@
       <h1>Closers</h1>
       <p class="ag-sub">Quiénes reciben llamadas agendadas. Un closer inactivo no recibe nuevas citas, pero conserva su historial.</p>
       <table class="adm-tabla" id="tabla-closers">
-        <thead><tr><th>Nombre</th><th>Correo</th><th>Estado</th><th></th></tr></thead>
+        <thead><tr>
+          <th>Foto</th><th>Nombre</th><th>Correo</th><th>WhatsApp</th><th>País</th>
+          <th>Agendas Recibidas</th><th>Llamadas Realizadas</th><th>Ventas Cerradas</th>
+          <th>Estado</th><th>Acciones</th>
+        </tr></thead>
         <tbody></tbody>
       </table>
       <div class="ag-panel" style="margin-top:20px;">
-        <h2 style="font-size:15px;">Agregar closer</h2>
+        <h2 style="font-size:15px;" id="closer-panel-titulo">Agregar closer</h2>
+        <input type="hidden" id="closer-id-edicion" value="">
         <div class="adm-fila">
-          <div class="ag-field"><label>Nombre</label><input type="text" id="closer-nombre"></div>
-          <div class="ag-field"><label>Correo</label><input type="email" id="closer-correo"></div>
+          <div class="ag-field"><label>Nombre <span class="ag-req">*</span></label><input type="text" id="closer-nombre"></div>
+          <div class="ag-field"><label>Apellido <span class="ag-req">*</span></label><input type="text" id="closer-apellido"></div>
+        </div>
+        <div class="adm-fila">
+          <div class="ag-field"><label>Correo <span class="ag-req">*</span></label><input type="email" id="closer-correo"></div>
+          <div class="ag-field"><label>WhatsApp <span class="ag-req">*</span></label><input type="tel" id="closer-whatsapp" placeholder="+56912345678"></div>
+        </div>
+        <div class="adm-fila">
+          <div class="ag-field"><label>Fecha de nacimiento <span class="ag-req">*</span></label><input type="date" id="closer-fecha-nacimiento"></div>
+          <div class="ag-field"><label>País <span class="ag-req">*</span></label><select id="closer-pais"></select></div>
+        </div>
+        <div class="ag-field">
+          <label>Foto (opcional)</label>
+          <input type="file" id="closer-foto" accept="image/*">
+          <img id="closer-foto-preview" src="" alt="" class="hidden" style="width:64px; height:64px; border-radius:50%; object-fit:cover; margin-top:8px;">
         </div>
         <button type="button" class="ag-btn ag-btn--ghost" style="width:auto;" id="btn-agregar-closer">+ Agregar</button>
-        <p class="ag-tz-nota" style="text-align:left; margin-top:10px;">Al conectar esto a Firebase, agregar un closer va a crear también su acceso para iniciar sesión (igual que hoy se hace con un alumno o coach nuevo).</p>
+        <button type="button" class="ag-btn ag-btn--ghost" style="width:auto; display:none;" id="btn-cancelar-edicion-closer">Cancelar edición</button>
+        <p class="ag-tz-nota" style="text-align:left; margin-top:10px;">Al agregar un closer se crea también su acceso para iniciar sesión, y le llega un correo con sus datos.</p>
       </div>
     </section>
 
     <!-- AGENDA GENERAL -->
     <section class="adm-seccion" id="sec-agenda">
       <h1>Agenda General</h1>
-      <p class="ag-sub">Las próximas llamadas de los 3 closers. (Datos de prueba — en la versión conectada, se lee en vivo desde Firebase.)</p>
+      <p class="ag-sub">Todas las llamadas de los closers, con filtros por fecha, closer y estado.</p>
+      <div class="ag-panel" style="margin-bottom:16px;">
+        <div class="adm-fila">
+          <div class="ag-field">
+            <label>Rango de fechas</label>
+            <select id="filtro-rango">
+              <option value="7">Últimos 7 días</option>
+              <option value="30">Últimos 30 días</option>
+              <option value="60">Últimos 60 días</option>
+              <option value="90">Últimos 90 días</option>
+              <option value="180">Últimos 6 meses</option>
+              <option value="365">Último año</option>
+              <option value="todo">Todo el período</option>
+              <option value="personalizado">Personalizado…</option>
+            </select>
+          </div>
+          <div class="ag-field" id="filtro-fecha-desde-cont" style="display:none;">
+            <label>Desde</label>
+            <input type="date" id="filtro-fecha-desde">
+          </div>
+          <div class="ag-field" id="filtro-fecha-hasta-cont" style="display:none;">
+            <label>Hasta</label>
+            <input type="date" id="filtro-fecha-hasta">
+          </div>
+        </div>
+        <div class="adm-fila">
+          <div class="ag-field">
+            <label>Closer</label>
+            <select id="filtro-closer"><option value="">Todos</option></select>
+          </div>
+          <div class="ag-field">
+            <label>Estado</label>
+            <select id="filtro-estado">
+              <option value="">Todos</option>
+              <option value="agendada">Agendada</option>
+              <option value="cancelada">Cancelada</option>
+              <option value="reagendada">Reagendada</option>
+              <option value="realizada">Realizada</option>
+              <option value="cerrada">Cerrada</option>
+            </select>
+          </div>
+        </div>
+      </div>
       <table class="adm-tabla" id="tabla-agenda">
         <thead><tr><th>Fecha</th><th>Hora</th><th>Closer</th><th>Lead</th><th>Estado</th></tr></thead>
         <tbody></tbody>
