@@ -56,6 +56,17 @@
         <button type="button" class="adm-subtab is-activa" data-subtab="activos">Activos</button>
         <button type="button" class="adm-subtab" data-subtab="archivados">Archivados</button>
       </div>
+      <div class="ag-field" style="max-width:260px; margin:14px 0 4px;">
+        <label>Filtrar por estado</label>
+        <select id="filtro-estado-lead">
+          <option value="">Todos</option>
+          <option value="se_presento">Se presenta a llamada</option>
+          <option value="en_seguimiento">En Seguimiento</option>
+          <option value="cerrado">Cerrado</option>
+          <option value="no_show">No-Show</option>
+          <option value="baja">Dado de baja</option>
+        </select>
+      </div>
       <div id="leads-lista"></div>
     </section>
 
