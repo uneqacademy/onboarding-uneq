@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Closer — Agendamiento UNEQ</title>
-<link rel="stylesheet" href="css/agendamiento.css">
+<link rel="stylesheet" href="css/agendamiento.css?v=2">
 </head>
 <body>
 
@@ -21,7 +21,12 @@
 </div>
 
 <div class="adm-shell hidden" id="adm-shell">
-  <aside class="adm-sidebar">
+  <div class="adm-topbar">
+    <button type="button" class="adm-hamburguesa" id="btn-hamburguesa" aria-label="Abrir menú">☰</button>
+    <div class="ag-marca"><img src="assets/logos/isotipo-uneq.png" alt="UNEQ"><span>UNEQ MENTORING</span></div>
+  </div>
+  <div class="adm-sidebar-backdrop" id="sidebar-backdrop"></div>
+  <aside class="adm-sidebar" id="adm-sidebar">
     <div class="ag-marca">
       <img src="assets/logos/isotipo-uneq.png" alt="UNEQ">
       <span>UNEQ MENTORING<small>AGENDAMIENTO</small></span>
@@ -143,6 +148,6 @@
 
 <div class="adm-toast" id="toast"></div>
 
-<script type="module" src="js/closer.js?v=2"></script>
+<script type="module" src="js/closer.js?v=3"></script>
 </body>
 </html>
