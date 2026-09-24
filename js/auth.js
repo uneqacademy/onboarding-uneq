@@ -19,6 +19,7 @@ import {
 import { ref, get, set } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-database.js";
 import { applyRole, showLogin } from './main.js';
 import { initAlumnosModule } from './alumnos.js';
+import { cargarPreOnboarding } from './pre-onboarding.js';
 import { cargarDashboardAlumno, cargarBoxAlumno } from './alumno-portal.js';
 import './comunidad-uneq.js';
 import { iniciarNotificaciones } from './notificaciones.js';
@@ -247,6 +248,7 @@ onAuthStateChanged(auth, async (user) => {
     const rolActivo = roles.includes('director') ? 'director' : roles.includes('coach') ? 'coach' : 'mentor';
     applyRole(rolActivo, perfil.nombre || user.email, roles);
     await initAlumnosModule();
+    if (rolActivo === 'director') await cargarPreOnboarding();
   } catch (err) {
     mostrarError('Error al cargar tu perfil. Intenta de nuevo.');
     await signOut(auth);
