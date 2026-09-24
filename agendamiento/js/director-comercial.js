@@ -7,7 +7,7 @@
 
 import { db } from './firebase-config.js';
 import { ref, get, set, update, push, onValue } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-database.js";
-import { getAuth, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-auth.js";
+import { getAuth, sendPasswordResetEmail, EmailAuthProvider, reauthenticateWithCredential, updateEmail, updatePassword } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-auth.js";
 import { getStorage, ref as sref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-storage.js";
 import { iniciarSesionStaff } from './staff-auth.js';
 
@@ -39,6 +39,7 @@ const TIPOS_PREGUNTA = [
 ];
 
 let general = {}, preguntas = [], recordatorios = {}, closers = [], citasTodas = [];
+let miUid = null, misDatos = {};
 
 /* --- Navegación (igual que antes) --- */
 document.querySelectorAll('.adm-nav-item').forEach(btn => {
@@ -437,8 +438,75 @@ function renderAgendaGeneral() {
     </tr>`).join('') || '<tr><td colspan="5" style="color:var(--color-ink-soft);">No hay llamadas en este rango.</td></tr>';
 }
 
+/* --- MIS DATOS --- */
+function renderMisDatos() {
+  document.getElementById('misdatos-nombre').value = misDatos.nombre || '';
+  document.getElementById('misdatos-correo').value = misDatos.correo || '';
+}
+document.getElementById('btn-guardar-misdatos').addEventListener('click', async () => {
+  const nombre = document.getElementById('misdatos-nombre').value.trim();
+  const correo = document.getElementById('misdatos-correo').value.trim();
+  if (!nombre || !correo) { mostrarToast('⚠️ Completa nombre y correo'); return; }
+
+  const btn = document.getElementById('btn-guardar-misdatos');
+  btn.disabled = true; btn.textContent = 'Guardando...';
+  try {
+    const correoCambio = correo !== misDatos.correo;
+    if (correoCambio) {
+      const actual = prompt('Escribe tu contraseña actual para confirmar el cambio de correo:');
+      if (!actual) { btn.disabled = false; btn.textContent = 'Guardar cambios'; return; }
+      const usuario = authInstance.currentUser;
+      const credencial = EmailAuthProvider.credential(usuario.email, actual);
+      await reauthenticateWithCredential(usuario, credencial);
+      await updateEmail(usuario, correo);
+    }
+    await update(ref(db, `agendamiento/staff/${miUid}`), { nombre, correo });
+    misDatos = { ...misDatos, nombre, correo };
+    document.getElementById('adm-sesion-nombre').textContent = nombre;
+    mostrarToast('✅ Datos actualizados');
+  } catch (err) {
+    if (err.code === 'auth/wrong-password' || err.code === 'auth/invalid-credential') {
+      mostrarToast('⚠️ Tu contraseña actual no es correcta');
+    } else if (err.code === 'auth/operation-not-allowed' || err.code === 'auth/requires-recent-login') {
+      mostrarToast('⚠️ Tu proyecto de Firebase requiere verificar el correo nuevo antes de aplicarlo. Avísame para ajustarlo.');
+    } else {
+      mostrarToast('⚠️ No se pudo guardar: ' + (err.code || err.message));
+    }
+  } finally { btn.disabled = false; btn.textContent = 'Guardar cambios'; }
+});
+
+document.getElementById('btn-cambiar-password-misdatos').addEventListener('click', async () => {
+  const actual = document.getElementById('misdatos-password-actual').value;
+  const nueva = document.getElementById('misdatos-password-nueva').value;
+  const repetir = document.getElementById('misdatos-password-repetir').value;
+
+  if (!actual || !nueva || !repetir) { mostrarToast('⚠️ Completa las 3 contraseñas'); return; }
+  if (nueva.length < 6) { mostrarToast('⚠️ La contraseña nueva debe tener al menos 6 caracteres'); return; }
+  if (nueva !== repetir) { mostrarToast('⚠️ La contraseña nueva no coincide en ambos campos'); return; }
+
+  const btn = document.getElementById('btn-cambiar-password-misdatos');
+  btn.disabled = true; btn.textContent = 'Cambiando...';
+  try {
+    const usuario = authInstance.currentUser;
+    const credencial = EmailAuthProvider.credential(usuario.email, actual);
+    await reauthenticateWithCredential(usuario, credencial);
+    await updatePassword(usuario, nueva);
+    document.getElementById('misdatos-password-actual').value = '';
+    document.getElementById('misdatos-password-nueva').value = '';
+    document.getElementById('misdatos-password-repetir').value = '';
+    mostrarToast('✅ Contraseña actualizada');
+  } catch (err) {
+    if (err.code === 'auth/wrong-password' || err.code === 'auth/invalid-credential') {
+      mostrarToast('⚠️ Tu contraseña actual no es correcta');
+    } else {
+      mostrarToast('⚠️ No se pudo cambiar: ' + (err.code || err.message));
+    }
+  } finally { btn.disabled = false; btn.textContent = 'Cambiar contraseña'; }
+});
+
 /* --- Arranque --- */
-iniciarSesionStaff('directorComercial', async () => {
+iniciarSesionStaff('directorComercial', async (uid) => {
+  miUid = uid;
   const [genSnap, preguntasSnap, recordSnap, staffSnap, citasSnap] = await Promise.all([
     get(ref(db, 'agendamiento/config/general')), get(ref(db, 'agendamiento/config/preguntas')),
     get(ref(db, 'agendamiento/config/recordatorios')), get(ref(db, 'agendamiento/staff')), get(ref(db, 'agendamiento/citas'))
@@ -448,8 +516,11 @@ iniciarSesionStaff('directorComercial', async () => {
   recordatorios = recordSnap.exists() ? recordSnap.val() : {};
   closers = staffSnap.exists() ? Object.entries(staffSnap.val()).filter(([, s]) => s.rol === 'closer').map(([id, s]) => ({ id, ...s })) : [];
   citasTodas = citasSnap.exists() ? Object.values(citasSnap.val()) : [];
+  misDatos = staffSnap.exists() && staffSnap.val()[miUid] ? staffSnap.val()[miUid] : {};
 
   renderGeneral(); renderPreguntas(); renderRotacion(); renderRecordatorios(); renderClosers();
   actualizarSelectFiltroCloser();
   renderAgendaGeneral();
+  renderMisDatos();
+  if (misDatos.nombre) document.getElementById('adm-sesion-nombre').textContent = misDatos.nombre;
 });
