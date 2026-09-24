@@ -11,7 +11,25 @@
 
 import { db } from './firebase-config.js';
 import { ref, get, set, update, push, remove } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-database.js";
+import { getStorage, ref as sref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-storage.js";
 import { iniciarSesionStaff } from './staff-auth.js';
+
+const storageInstance = getStorage();
+
+/* Lista de países (código + nombre en español), vía Intl del navegador. */
+function listaPaises() {
+  try {
+    const codigos = Intl.supportedValuesOf('region').filter(c => /^[A-Z]{2}$/.test(c));
+    const nombres = new Intl.DisplayNames(['es'], { type: 'region' });
+    return codigos.map(c => ({ codigo: c, nombre: nombres.of(c) })).sort((a, b) => a.nombre.localeCompare(b.nombre, 'es'));
+  } catch (err) {
+    return [
+      { codigo: 'CL', nombre: 'Chile' }, { codigo: 'AR', nombre: 'Argentina' }, { codigo: 'PE', nombre: 'Perú' },
+      { codigo: 'CO', nombre: 'Colombia' }, { codigo: 'MX', nombre: 'México' }, { codigo: 'ES', nombre: 'España' },
+      { codigo: 'US', nombre: 'Estados Unidos' }
+    ];
+  }
+}
 
 const DIAS_SEMANA = ['lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado', 'domingo'];
 const DIAS_SEMANA_LABEL = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
@@ -23,8 +41,9 @@ const ETIQUETAS_ESTADO = {
 const PROGRAMAS = [{ v: 'begin', t: 'Begin' }, { v: 'next', t: 'Next' }, { v: 'exit', t: 'eXIT' }];
 
 let miUid = null;
-let citasAgenda = [], leads = [], disponibilidad = {}, bloqueos = [];
+let citasAgenda = [], leads = [], disponibilidad = {}, bloqueos = [], miPerfil = {};
 let subtabLeadsActual = 'activos';
+let arrastrandoDisponibilidad = false, valorArrastreDisponibilidad = null;
 
 document.querySelectorAll('.adm-nav-item').forEach(btn => {
   btn.addEventListener('click', () => {
@@ -184,15 +203,47 @@ function renderDisponibilidad() {
     DIAS_SEMANA.forEach(dia => { const activa = disponibilidad[dia] && disponibilidad[dia][hIdx]; html += `<div class="adm-disp-celda ${activa ? 'is-activa' : ''}" data-dia="${dia}" data-h="${hIdx}"></div>`; });
   });
   grid.innerHTML = html;
+
+  /* --- Selección por arrastre: mantiene presionado y pasa por varias
+     celdas para prenderlas o apagarlas de una vez. Un clic simple (sin
+     arrastrar) sigue funcionando igual que antes, para ajustes de a uno. --- */
+  function aplicarCelda(celda, valor) {
+    const dia = celda.dataset.dia, h = Number(celda.dataset.h);
+    if (!disponibilidad[dia]) disponibilidad[dia] = HORAS_GRID.map(() => false);
+    disponibilidad[dia][h] = valor;
+    celda.classList.toggle('is-activa', valor);
+  }
   grid.querySelectorAll('.adm-disp-celda').forEach(celda => {
-    celda.addEventListener('click', () => {
+    celda.addEventListener('mousedown', (e) => {
+      e.preventDefault();
+      arrastrandoDisponibilidad = true;
       const dia = celda.dataset.dia, h = Number(celda.dataset.h);
-      if (!disponibilidad[dia]) disponibilidad[dia] = HORAS_GRID.map(() => false);
-      disponibilidad[dia][h] = !disponibilidad[dia][h];
-      celda.classList.toggle('is-activa');
+      const actual = !!(disponibilidad[dia] && disponibilidad[dia][h]);
+      valorArrastreDisponibilidad = !actual;
+      aplicarCelda(celda, valorArrastreDisponibilidad);
     });
+    celda.addEventListener('mouseenter', () => {
+      if (arrastrandoDisponibilidad) aplicarCelda(celda, valorArrastreDisponibilidad);
+    });
+    celda.addEventListener('touchstart', (e) => {
+      e.preventDefault();
+      arrastrandoDisponibilidad = true;
+      const dia = celda.dataset.dia, h = Number(celda.dataset.h);
+      const actual = !!(disponibilidad[dia] && disponibilidad[dia][h]);
+      valorArrastreDisponibilidad = !actual;
+      aplicarCelda(celda, valorArrastreDisponibilidad);
+    }, { passive: false });
   });
+  grid.addEventListener('touchmove', (e) => {
+    if (!arrastrandoDisponibilidad) return;
+    e.preventDefault();
+    const touch = e.touches[0];
+    const el = document.elementFromPoint(touch.clientX, touch.clientY);
+    if (el && el.classList.contains('adm-disp-celda')) aplicarCelda(el, valorArrastreDisponibilidad);
+  }, { passive: false });
 }
+document.addEventListener('mouseup', () => { arrastrandoDisponibilidad = false; });
+document.addEventListener('touchend', () => { arrastrandoDisponibilidad = false; });
 document.getElementById('btn-guardar-disponibilidad').addEventListener('click', async () => {
   await set(ref(db, `agendamiento/disponibilidad/${miUid}`), disponibilidad);
   mostrarToast('✅ Disponibilidad guardada');
@@ -230,6 +281,57 @@ document.getElementById('btn-agregar-bloqueo').addEventListener('click', async (
   mostrarToast('✅ Bloqueo agregado');
 });
 
+/* --- MI PERFIL --- */
+async function cargarPerfil() {
+  const snap = await get(ref(db, `agendamiento/staff/${miUid}`));
+  miPerfil = snap.exists() ? snap.val() : {};
+}
+function poblarSelectPaisesPerfil() {
+  const sel = document.getElementById('perfil-pais');
+  sel.innerHTML = listaPaises().map(p => `<option value="${p.nombre}" ${p.nombre === miPerfil.pais ? 'selected' : ''}>${p.nombre}</option>`).join('');
+}
+function renderPerfil() {
+  document.getElementById('perfil-nombre').value = miPerfil.nombre || '';
+  document.getElementById('perfil-apellido').value = miPerfil.apellido || '';
+  document.getElementById('perfil-correo').value = miPerfil.correo || '';
+  document.getElementById('perfil-whatsapp').value = miPerfil.whatsapp || '';
+  document.getElementById('perfil-fecha-nacimiento').value = miPerfil.fechaNacimiento || '';
+  poblarSelectPaisesPerfil();
+  const preview = document.getElementById('perfil-foto-preview');
+  if (miPerfil.fotoUrl) { preview.src = miPerfil.fotoUrl; preview.classList.remove('hidden'); } else { preview.classList.add('hidden'); }
+}
+document.getElementById('btn-guardar-perfil').addEventListener('click', async () => {
+  const nombre = document.getElementById('perfil-nombre').value.trim();
+  const apellido = document.getElementById('perfil-apellido').value.trim();
+  const whatsapp = document.getElementById('perfil-whatsapp').value.trim();
+  const fechaNacimiento = document.getElementById('perfil-fecha-nacimiento').value;
+  const pais = document.getElementById('perfil-pais').value;
+  const archivoFoto = document.getElementById('perfil-foto').files[0] || null;
+
+  if (!nombre || !apellido || !whatsapp || !fechaNacimiento || !pais) {
+    mostrarToast('⚠️ Completa todos los campos obligatorios'); return;
+  }
+
+  const btn = document.getElementById('btn-guardar-perfil');
+  btn.disabled = true; btn.textContent = 'Guardando...';
+  try {
+    const datos = { nombre, apellido, whatsapp, fechaNacimiento, pais };
+    if (archivoFoto) {
+      const storageRef = sref(storageInstance, `fotos-perfil/${miUid}`);
+      await uploadBytes(storageRef, archivoFoto);
+      datos.fotoUrl = await getDownloadURL(storageRef);
+    }
+    await update(ref(db, `agendamiento/staff/${miUid}`), datos);
+    miPerfil = { ...miPerfil, ...datos };
+    document.getElementById('closer-nombre-sesion').textContent = `${miPerfil.nombre} ${miPerfil.apellido || ''}`.trim();
+    document.getElementById('perfil-foto').value = '';
+    renderPerfil();
+    mostrarToast('✅ Perfil actualizado');
+  } catch (err) {
+    mostrarToast('⚠️ No se pudo guardar: ' + err.message);
+  } finally { btn.disabled = false; btn.textContent = 'Guardar cambios'; }
+});
+
 /* --- Arranque --- */
 iniciarSesionStaff('closer', async (uid) => {
   miUid = uid;
@@ -237,4 +339,6 @@ iniciarSesionStaff('closer', async (uid) => {
   await cargarLeads(); renderLeads();
   await cargarDisponibilidad(); renderDisponibilidad();
   await cargarBloqueos(); renderBloqueos();
+  await cargarPerfil(); renderPerfil();
+  if (miPerfil.nombre) document.getElementById('closer-nombre-sesion').textContent = `${miPerfil.nombre} ${miPerfil.apellido || ''}`.trim();
 });
