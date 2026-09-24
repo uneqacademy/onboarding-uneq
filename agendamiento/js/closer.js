@@ -43,6 +43,7 @@ const PROGRAMAS = [{ v: 'begin', t: 'Begin' }, { v: 'next', t: 'Next' }, { v: 'e
 let miUid = null;
 let citasAgenda = [], leads = [], disponibilidad = {}, bloqueos = [], miPerfil = {};
 let subtabLeadsActual = 'activos';
+let filtroEstadoLeadActual = '';
 let arrastrandoDisponibilidad = false, valorArrastreDisponibilidad = null;
 
 document.querySelectorAll('.adm-nav-item').forEach(btn => {
@@ -60,6 +61,10 @@ document.querySelectorAll('.adm-subtab').forEach(btn => {
     subtabLeadsActual = btn.dataset.subtab;
     renderLeads();
   });
+});
+document.getElementById('filtro-estado-lead').addEventListener('change', (e) => {
+  filtroEstadoLeadActual = e.target.value;
+  renderLeads();
 });
 function mostrarToast(texto) {
   const toast = document.getElementById('toast');
@@ -123,8 +128,11 @@ async function cargarLeads() {
 }
 function renderLeads() {
   const cont = document.getElementById('leads-lista');
-  const filtrados = leads.filter(l => (subtabLeadsActual === 'activos') === !l.archivada).sort((a, b) => b.createdAt - a.createdAt);
-  if (!filtrados.length) { cont.innerHTML = `<p style="color:var(--color-ink-soft);">${subtabLeadsActual === 'activos' ? 'No tienes leads activos por ahora.' : 'Aún no tienes leads archivados.'}</p>`; return; }
+  const filtrados = leads
+    .filter(l => (subtabLeadsActual === 'activos') === !l.archivada)
+    .filter(l => !filtroEstadoLeadActual || l.estado === filtroEstadoLeadActual)
+    .sort((a, b) => b.createdAt - a.createdAt);
+  if (!filtrados.length) { cont.innerHTML = `<p style="color:var(--color-ink-soft);">No hay leads que calcen con este filtro.</p>`; return; }
 
   cont.innerHTML = filtrados.map(l => {
     const et = ETIQUETAS_ESTADO[l.estado];
@@ -175,7 +183,7 @@ function renderLeads() {
         const programa = btn.dataset.programa;
         await update(refLead, { estado: 'cerrado', archivada: true, programa });
         await set(push(ref(db, `agendamiento/leadsPorCloser/${miUid}/${lead.id}/bitacora`)), { texto: `¡Cerró ${PROGRAMAS.find(p => p.v === programa).t}! Pasa a Recién Cerrados.`, fecha: Date.now() });
-        await set(push(ref(db, 'agendamiento/recienCerrados')), { nombre: lead.nombre, telefono: lead.telefono, programa, closerId: miUid, createdAt: Date.now() });
+        await set(push(ref(db, 'agendamiento/recienCerrados')), { nombre: lead.nombre, correo: lead.correo, telefono: lead.telefono, programa, closerId: miUid, createdAt: Date.now() });
         await cargarLeads(); renderLeads(); mostrarToast('✅ Cierre registrado — pasa a Recién Cerrados');
       });
     });
