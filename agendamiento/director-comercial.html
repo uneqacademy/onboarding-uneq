@@ -38,6 +38,7 @@
       <button type="button" class="adm-nav-item" data-seccion="recordatorios">⏰ Recordatorios</button>
       <button type="button" class="adm-nav-item" data-seccion="closers">🧑‍💼 Closers</button>
       <button type="button" class="adm-nav-item" data-seccion="agenda">📅 Agenda General</button>
+      <button type="button" class="adm-nav-item" data-seccion="mis-datos">🧾 Mis Datos</button>
     </nav>
     <div class="adm-sidebar-footer">
       <strong id="adm-sesion-nombre">Director Comercial</strong>
@@ -212,11 +213,35 @@
       </table>
     </section>
 
+    <!-- MIS DATOS -->
+    <section class="adm-seccion" id="sec-mis-datos">
+      <h1>Mis Datos</h1>
+      <p class="ag-sub">Tu nombre y correo de acceso como Director Comercial.</p>
+      <div class="ag-panel">
+        <div class="adm-fila">
+          <div class="ag-field"><label>Nombre <span class="ag-req">*</span></label><input type="text" id="misdatos-nombre"></div>
+          <div class="ag-field"><label>Correo <span class="ag-req">*</span></label><input type="email" id="misdatos-correo"></div>
+        </div>
+        <p class="ag-tz-nota" style="text-align:left; margin-bottom:14px;">Si cambias el correo, te vamos a pedir tu contraseña actual para confirmarlo — es el correo con el que inicias sesión.</p>
+        <button type="button" class="ag-btn ag-btn--primario" style="width:auto;" id="btn-guardar-misdatos">Guardar cambios</button>
+      </div>
+
+      <div class="ag-panel" style="margin-top:20px;">
+        <h2 style="font-size:15px;">Cambiar contraseña</h2>
+        <div class="adm-fila">
+          <div class="ag-field"><label>Contraseña actual</label><input type="password" id="misdatos-password-actual"></div>
+          <div class="ag-field"><label>Contraseña nueva (mín. 6 caracteres)</label><input type="password" id="misdatos-password-nueva"></div>
+        </div>
+        <div class="ag-field"><label>Repetir contraseña nueva</label><input type="password" id="misdatos-password-repetir"></div>
+        <button type="button" class="ag-btn ag-btn--ghost" style="width:auto;" id="btn-cambiar-password-misdatos">Cambiar contraseña</button>
+      </div>
+    </section>
+
   </main>
 </div>
 
 <div class="adm-toast" id="toast"></div>
 
-<script type="module" src="js/director-comercial.js?v=3"></script>
+<script type="module" src="js/director-comercial.js?v=4"></script>
 </body>
 </html>
