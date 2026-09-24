@@ -12,9 +12,11 @@
 import { db } from './firebase-config.js';
 import { ref, get, set, update, push, remove } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-database.js";
 import { getStorage, ref as sref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-storage.js";
+import { getAuth, EmailAuthProvider, reauthenticateWithCredential, updatePassword } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-auth.js";
 import { iniciarSesionStaff } from './staff-auth.js';
 
 const storageInstance = getStorage();
+const authInstance = getAuth();
 
 /* Lista de países (código + nombre en español), vía Intl del navegador. */
 function listaPaises() {
@@ -338,6 +340,35 @@ document.getElementById('btn-guardar-perfil').addEventListener('click', async ()
   } catch (err) {
     mostrarToast('⚠️ No se pudo guardar: ' + err.message);
   } finally { btn.disabled = false; btn.textContent = 'Guardar cambios'; }
+});
+
+document.getElementById('btn-cambiar-password').addEventListener('click', async () => {
+  const actual = document.getElementById('perfil-password-actual').value;
+  const nueva = document.getElementById('perfil-password-nueva').value;
+  const repetir = document.getElementById('perfil-password-repetir').value;
+
+  if (!actual || !nueva || !repetir) { mostrarToast('⚠️ Completa las 3 contraseñas'); return; }
+  if (nueva.length < 6) { mostrarToast('⚠️ La contraseña nueva debe tener al menos 6 caracteres'); return; }
+  if (nueva !== repetir) { mostrarToast('⚠️ La contraseña nueva no coincide en ambos campos'); return; }
+
+  const btn = document.getElementById('btn-cambiar-password');
+  btn.disabled = true; btn.textContent = 'Cambiando...';
+  try {
+    const usuario = authInstance.currentUser;
+    const credencial = EmailAuthProvider.credential(usuario.email, actual);
+    await reauthenticateWithCredential(usuario, credencial);
+    await updatePassword(usuario, nueva);
+    document.getElementById('perfil-password-actual').value = '';
+    document.getElementById('perfil-password-nueva').value = '';
+    document.getElementById('perfil-password-repetir').value = '';
+    mostrarToast('✅ Contraseña actualizada');
+  } catch (err) {
+    if (err.code === 'auth/wrong-password' || err.code === 'auth/invalid-credential') {
+      mostrarToast('⚠️ Tu contraseña actual no es correcta');
+    } else {
+      mostrarToast('⚠️ No se pudo cambiar: ' + (err.code || err.message));
+    }
+  } finally { btn.disabled = false; btn.textContent = 'Cambiar contraseña'; }
 });
 
 /* --- Arranque --- */
