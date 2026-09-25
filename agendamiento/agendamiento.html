@@ -4,16 +4,16 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Agenda tu llamada — UNEQ</title>
-<link rel="stylesheet" href="css/agendamiento.css?v=2">
+<link rel="stylesheet" href="css/agendamiento.css?v=3">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/intl-tel-input@18.2.1/build/css/intlTelInput.css">
 </head>
 <body>
+<header class="ag-encabezado">
+  <span class="ag-encabezado__marca">UNEQ MENTORING</span>
+  <img class="ag-encabezado__foto ag-encabezado__foto--pc" src="assets/logos/encabezado-agendamiento-pc.png" alt="UNEQ Mentoring">
+  <img class="ag-encabezado__foto ag-encabezado__foto--movil" src="assets/logos/encabezado-agendamiento-movil.png" alt="UNEQ Mentoring">
+</header>
 <div class="ag-shell">
-  <div class="ag-marca">
-    <img src="assets/logos/isotipo-uneq.png" alt="UNEQ">
-    <span>UNEQ MENTORING</span>
-  </div>
-
   <div class="ag-pasos">
     <div class="ag-paso" data-paso="1"></div>
     <div class="ag-paso" data-paso="2"></div>
@@ -23,34 +23,35 @@
   <div id="ag-vista-cargando" class="ag-cargando">Cargando disponibilidad…</div>
 
   <!-- Paso 1+2: calendario y horarios -->
-  <div id="ag-vista-calendario" class="ag-panel hidden">
-    <h2>Agenda tu llamada</h2>
-    <p class="ag-sub">Elige el día y horario que más te acomode.</p>
+  <div id="ag-vista-calendario" class="ag-tarjeta hidden">
+    <div class="ag-panel">
+      <h2>Agenda tu llamada</h2>
+      <p class="ag-sub">Elige el día y horario que más te acomode.</p>
 
-    <div class="ag-cal-header">
-      <h3 id="ag-cal-mes"></h3>
-      <div class="ag-cal-nav">
-        <button type="button" id="ag-cal-prev" aria-label="Mes anterior">‹</button>
-        <button type="button" id="ag-cal-next" aria-label="Mes siguiente">›</button>
+      <div class="ag-cal-header">
+        <h3 id="ag-cal-mes"></h3>
+        <p class="ag-cal-leyenda"><span class="dot"></span> Días con cupo disponible</p>
+        <div class="ag-cal-nav">
+          <button type="button" id="ag-cal-prev" aria-label="Mes anterior">‹</button>
+          <button type="button" id="ag-cal-next" aria-label="Mes siguiente">›</button>
+        </div>
       </div>
+      <div class="ag-cal-dias-semana">
+        <span>L</span><span>M</span><span>M</span><span>J</span><span>V</span><span>S</span><span>D</span>
+      </div>
+      <div class="ag-cal-grid" id="ag-cal-grid"></div>
     </div>
-    <div class="ag-cal-dias-semana">
-      <span>L</span><span>M</span><span>M</span><span>J</span><span>V</span><span>S</span><span>D</span>
-    </div>
-    <div class="ag-cal-grid" id="ag-cal-grid"></div>
-    <p class="ag-cal-leyenda"><span class="dot"></span> Días con cupo disponible</p>
 
-    <div id="ag-horarios-bloque" class="hidden">
-      <div class="ag-horarios-titulo">
-        <h3 id="ag-horarios-fecha"></h3>
-      </div>
+    <div id="ag-horarios-bloque" class="ag-horarios-franja hidden">
+      <h3 id="ag-horarios-fecha"></h3>
       <div class="ag-horarios-grid" id="ag-horarios-grid"></div>
-      <p class="ag-tz-nota" id="ag-tz-nota"></p>
     </div>
+    <p class="ag-tz-nota" id="ag-tz-nota"></p>
   </div>
 
   <!-- Paso 3: preguntas -->
-  <div id="ag-vista-preguntas" class="ag-panel hidden">
+  <div id="ag-vista-preguntas" class="ag-tarjeta hidden">
+   <div class="ag-panel">
     <div class="ag-reserva-aviso">
       ⏳ Tu horario quedó reservado por <strong id="ag-reserva-timer">10:00</strong> minutos mientras completas esto.
     </div>
@@ -61,25 +62,33 @@
       <button type="button" class="ag-btn ag-btn--ghost" id="ag-btn-volver-horarios">‹ Volver</button>
       <button type="submit" form="ag-form-preguntas" class="ag-btn ag-btn--primario" id="ag-btn-confirmar">Confirmar agenda</button>
     </div>
+   </div>
   </div>
 
   <!-- Confirmación -->
-  <div id="ag-vista-confirmacion" class="ag-panel ag-confirmacion hidden">
-    <div class="ag-check">✓</div>
-    <h2>¡Tu llamada quedó agendada!</h2>
-    <p class="ag-sub">Te esperamos en el horario que elegiste.</p>
-    <dl class="ag-resumen-cita">
-      <dt>Fecha</dt><dd id="ag-conf-fecha"></dd>
-      <dt>Hora</dt><dd id="ag-conf-hora"></dd>
-    </dl>
-    <button type="button" class="ag-btn ag-btn--primario" id="ag-btn-agregar-calendario">📅 Agregar a mi calendario</button>
+  <div id="ag-vista-confirmacion" class="ag-tarjeta ag-confirmacion hidden">
+   <div class="ag-panel">
+    <div class="ag-confirmacion__fila">
+      <div class="ag-confirmacion__texto">
+        <div class="ag-check">✓</div>
+        <h2>¡Tu llamada quedó agendada!</h2>
+        <p class="ag-sub">Te esperamos en el horario que elegiste</p>
+      </div>
+      <dl class="ag-resumen-cita">
+        <dt>Fecha</dt><dd id="ag-conf-fecha"></dd>
+        <dt>Hora</dt><dd id="ag-conf-hora"></dd>
+      </dl>
+    </div>
+    <button type="button" class="ag-btn ag-btn--primario" id="ag-btn-agregar-calendario"><span class="ag-btn__icono">📅</span> Agregar a mi calendario</button>
     <div style="height:10px;"></div>
-    <a href="#" target="_blank" rel="noopener" class="ag-btn ag-btn--whatsapp" id="ag-btn-whatsapp-dudas">💬 ¿Dudas? Escríbenos por WhatsApp</a>
-    <p class="ag-tz-nota">Te enviamos la confirmación por correo y WhatsApp. Ahí también va el link para reagendar o cancelar si lo necesitas.</p>
+    <a href="#" target="_blank" rel="noopener" class="ag-btn ag-btn--whatsapp" id="ag-btn-whatsapp-dudas"><span class="ag-btn__icono">💬</span> ¿Dudas? Escríbenos por WhatsApp</a>
+    <p class="ag-tz-nota">Te enviamos la confirmación por correo y whatsapp. Ahí también va el link para reagendar o cancelar si lo necesitas.</p>
+   </div>
   </div>
 
   <!-- Modo reagendar/cancelar (?token=...) -->
-  <div id="ag-vista-accion" class="ag-panel ag-confirmacion hidden">
+  <div id="ag-vista-accion" class="ag-tarjeta ag-confirmacion hidden">
+   <div class="ag-panel">
     <h2>Tu llamada con UNEQ</h2>
     <dl class="ag-resumen-cita">
       <dt>Fecha</dt><dd id="ag-accion-fecha"></dd>
@@ -88,13 +97,16 @@
     <button type="button" class="ag-btn ag-btn--primario" id="ag-btn-ir-reagendar">Reagendar</button>
     <div style="height:10px;"></div>
     <button type="button" class="ag-btn ag-btn--ghost" id="ag-btn-cancelar-cita">Cancelar mi llamada</button>
+   </div>
   </div>
 
-  <div id="ag-vista-resultado" class="ag-panel ag-confirmacion hidden">
+  <div id="ag-vista-resultado" class="ag-tarjeta ag-confirmacion hidden">
+   <div class="ag-panel">
     <div class="ag-check" id="ag-resultado-icono">✓</div>
     <h2 id="ag-resultado-titulo"></h2>
     <p class="ag-sub" id="ag-resultado-texto"></p>
-    <a href="#" target="_blank" rel="noopener" class="ag-btn ag-btn--whatsapp hidden" id="ag-resultado-whatsapp">💬 Escríbenos por WhatsApp</a>
+    <a href="#" target="_blank" rel="noopener" class="ag-btn ag-btn--whatsapp hidden" id="ag-resultado-whatsapp"><span class="ag-btn__icono">💬</span> Escríbenos por WhatsApp</a>
+   </div>
   </div>
 
   <div id="ag-vista-error" class="ag-error hidden"></div>
