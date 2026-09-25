@@ -1607,34 +1607,27 @@
         <!-- ===== Presentación ===== -->
         <div class="comunidad-vista" id="comunidad-vista-presentacion">
           <!-- Alumno: candado si aún no tiene una presentación aprobada -->
-          <div class="panel hidden" id="pres-candado-panel">
-            <div class="panel__body presentacion-candado">
-              <div class="icono">🔒</div>
-              <h3>Preséntate a la comunidad</h3>
-              <p class="text-soft" style="max-width:420px; margin:8px auto 20px;">Antes de ver el resto de la comunidad, cuéntanos quién eres. Tu Coach revisa cada presentación antes de publicarla.</p>
-              <textarea id="pres-texto-form" style="width:100%; max-width:480px; min-height:110px;" placeholder="Cuéntanos quién eres, a qué te dedicas, y qué te trae a UNEQ..."></textarea>
-              <div style="max-width:480px; margin:8px auto 0; text-align:left;">
-                <button type="button" class="btn btn--ghost btn-emoji-picker" data-target="pres-texto-form" style="font-size:12px; padding:4px 10px;">😊 Emoji</button>
-                <button type="button" class="btn btn--ghost" id="pres-btn-adjuntar-foto" style="font-size:12px; padding:4px 10px;">📷 Agregar Foto</button>
+          <div class="panel mb-24 hidden" id="pres-candado-panel">
+            <div class="panel__header"><h3>🔒 Preséntate a la Comunidad</h3></div>
+            <div class="panel__body">
+              <p class="text-soft" style="margin:0 0 16px;">Antes de ver el resto de la comunidad, cuéntanos quién eres. Tu Coach revisa cada presentación antes de publicarla.</p>
+              <div class="field mb-16">
+                <label>Cuéntanos quién eres</label>
+                <textarea id="pres-texto-form" placeholder="Cuéntanos quién eres, a qué te dedicas, y qué te trae a UNEQ..."></textarea>
+                <button type="button" class="btn btn--ghost btn-emoji-picker" data-target="pres-texto-form" style="font-size:12px; padding:4px 10px; margin-top:6px;">😊 Emoji</button>
+              </div>
+              <div style="margin-bottom:12px;">
+                <button type="button" class="btn btn--ghost" id="pres-btn-adjuntar-foto">📷 Agregar Foto</button>
                 <input type="file" id="pres-input-foto" accept="image/*" multiple class="hidden">
                 <div id="pres-fotos-preview" style="display:flex; gap:8px; flex-wrap:wrap; margin-top:8px;"></div>
               </div>
-              <p id="pres-form-error" class="hidden" style="color:#C0392B; margin-top:8px; font-size:13px;"></p>
-              <button type="button" class="btn btn--primary" id="pres-btn-enviar" style="margin-top:12px;">Enviar presentación</button>
+              <p id="pres-form-error" class="hidden" style="color:#C0392B; margin-bottom:12px;"></p>
+              <button type="button" class="btn btn--primary" id="pres-btn-enviar">Enviar presentación</button>
             </div>
           </div>
           <!-- Alumno: aviso mientras está pendiente de aprobación -->
           <div class="presentacion-pendiente-banner hidden" id="pres-pendiente-banner">
-            ⏳ Tu presentación está esperando la aprobación de tu Coach. Puedes editarla mientras tanto (hasta 24 horas después de enviarla).
-          </div>
-          <!-- Alumno: su propia presentación, para editar dentro de las 24h -->
-          <div class="panel mb-16 hidden" id="pres-propia-panel">
-            <div class="panel__body">
-              <div class="flex-between"><strong>Tu presentación</strong><span class="badge" id="pres-propia-estado"></span></div>
-              <p class="texto-clamp" data-clamp id="pres-propia-texto" style="margin:8px 0 0; white-space:pre-wrap;"></p>
-              <button type="button" class="btn-ver-mas-texto hidden" data-clamp-btn></button>
-              <button type="button" class="btn btn--ghost hidden" id="pres-btn-editar" style="font-size:12px; padding:5px 12px; margin-top:8px;">✏️ Editar</button>
-            </div>
+            ⏳ Tu presentación está en revisión por tu Coach. La ves abajo con la etiqueta "En Revisión" — la puedes editar o eliminar mientras tanto (hasta 24 horas después de enviarla).
           </div>
 
           <!-- Solo staff: filtros -->
@@ -1667,14 +1660,17 @@
           <div class="panel mb-16 hidden" id="hist-publicar-panel">
             <div class="panel__header"><h3>Comparte tu Historia</h3></div>
             <div class="panel__body">
-              <textarea id="hist-texto-form" placeholder="Cuéntale a la comunidad tu logro o tu historia..."></textarea>
-              <button type="button" class="btn btn--ghost btn-emoji-picker" data-target="hist-texto-form" style="font-size:12px; padding:4px 10px; margin-top:6px;">😊 Emoji</button>
-              <div style="margin:8px 0;">
+              <div class="field mb-16">
+                <label>Cuéntale a la comunidad tu logro o tu historia</label>
+                <textarea id="hist-texto-form" placeholder="Cuéntale a la comunidad tu logro o tu historia..."></textarea>
+                <button type="button" class="btn btn--ghost btn-emoji-picker" data-target="hist-texto-form" style="font-size:12px; padding:4px 10px; margin-top:6px;">😊 Emoji</button>
+              </div>
+              <div style="margin-bottom:12px;">
                 <button type="button" class="btn btn--ghost" id="hist-btn-adjuntar-foto">📷 Agregar Foto</button>
                 <input type="file" id="hist-input-foto" accept="image/*" multiple class="hidden">
                 <div id="hist-fotos-preview" style="display:flex; gap:8px; flex-wrap:wrap; margin-top:8px;"></div>
               </div>
-              <p id="hist-form-error" class="hidden" style="color:#C0392B; margin:8px 0;"></p>
+              <p id="hist-form-error" class="hidden" style="color:#C0392B; margin-bottom:12px;"></p>
               <button type="button" class="btn btn--primary" id="hist-btn-publicar" style="margin-top:8px;">Publicar</button>
             </div>
           </div>

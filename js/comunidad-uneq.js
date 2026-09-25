@@ -136,7 +136,7 @@ function renderTarjetaSocial(basePath, id, item, ctx) {
         <div class="hito-autor">
           <span class="hito-autor__fotos"><img src="${autorFotoUrl || PLACEHOLDER_FOTO}" alt=""></span>
           <strong>${item.alumnoNombre || 'Alumno'}</strong>
-          ${item.estado === 'pendiente' ? '<span class="badge badge--impaga" style="font-size:9px; margin-left:6px;">Pendiente</span>' : ''}
+          ${item.estado === 'pendiente' ? '<span class="badge badge--impaga" style="font-size:9px; margin-left:6px;">En Revisión</span>' : ''}
         </div>
       </div>
       <p class="texto-clamp" data-clamp data-texto-original="${(item.texto || '').replace(/"/g, '&quot;')}" style="margin:8px 0 0; white-space:pre-wrap;">${linkifyTexto(item.texto)}</p>
@@ -458,7 +458,9 @@ async function cargarPresentacion() {
       const contadorEl = document.getElementById('pres-contador');
       if (contadorEl) { contadorEl.textContent = `${lista.length} resultado${lista.length === 1 ? '' : 's'}`; contadorEl.classList.remove('hidden'); }
     } else {
-      lista = lista.filter(p => p.estado === 'aprobada');
+      // "conDatos" ya viene filtrado para dejar pasar tu propia
+      // presentación aunque esté pendiente — acá solo se agrega la
+      // de fecha, sin volver a excluirla.
       const fDesde = document.getElementById('pres-f-desde')?.value ? new Date(document.getElementById('pres-f-desde').value + 'T00:00:00').getTime() : null;
       const fHasta = document.getElementById('pres-f-hasta')?.value ? new Date(document.getElementById('pres-f-hasta').value + 'T23:59:59').getTime() : null;
       lista = lista.filter(p => (!fDesde || p.createdAt >= fDesde) && (!fHasta || p.createdAt <= fHasta));
@@ -474,7 +476,7 @@ async function cargarPresentacion() {
         : '';
       return renderTarjetaSocial(basePath, p.alumnoId, p, {
         esDirector, uid, autorFotoUrl: p.fotoUrl, esDueño,
-        puedeEditar: esDueño && dentro24h, puedeEliminar: esDirector, extraFooterHtml
+        puedeEditar: esDueño && dentro24h, puedeEliminar: (esDueño && dentro24h) || esDirector, extraFooterHtml
       });
     }).join('') : '<p class="text-soft">No hay presentaciones con ese filtro todavía.</p>';
     aplicarClampTexto(feedEl);
@@ -509,28 +511,35 @@ async function renderPropiaPresentacion(ctxAlumno) {
     propioPanel?.classList.add('hidden');
   }
 
-  document.getElementById('pres-btn-enviar')?.addEventListener('click', async (ev) => {
-    const texto = document.getElementById('pres-texto-form').value.trim();
-    const errorEl = document.getElementById('pres-form-error');
-    if (texto.length < 20) { errorEl.textContent = 'Cuéntanos un poco más — al menos unas líneas.'; errorEl.classList.remove('hidden'); return; }
-    if (!ctxAlumno.alumnoId) { errorEl.textContent = 'No pudimos identificar tu ficha de alumno. Recarga la página e intenta de nuevo.'; errorEl.classList.remove('hidden'); return; }
-    errorEl.classList.add('hidden');
-    const btn = ev.currentTarget;
-    btn.disabled = true; btn.textContent = 'Enviando...';
-    try {
-      const fotos = await subirFotos('comunidad-presentaciones', ctxAlumno.alumnoId, fotosSeleccionadasPres);
-      await set(ref(db, `comunidad/presentaciones/${ctxAlumno.alumnoId}`), {
-        texto, estado: 'pendiente', createdAt: Date.now(), alumnoNombre: ctxAlumno.nombre, fotos
-      });
-      fotosSeleccionadasPres.length = 0;
-      activarSubtab('presentacion');
-    } catch (err) {
-      console.error('No se pudo enviar la presentación:', err);
-      errorEl.textContent = 'No se pudo enviar. Intenta de nuevo en un momento.';
-      errorEl.classList.remove('hidden');
-      btn.disabled = false; btn.textContent = 'Enviar presentación';
-    }
-  }, { once: true });
+  const btnEnviarPres = document.getElementById('pres-btn-enviar');
+  if (btnEnviarPres && !btnEnviarPres.dataset.conectado) {
+    btnEnviarPres.dataset.conectado = '1';
+    btnEnviarPres.addEventListener('click', async (ev) => {
+      const texto = document.getElementById('pres-texto-form').value.trim();
+      const errorEl = document.getElementById('pres-form-error');
+      errorEl.classList.add('hidden');
+      if (texto.length < 20) { errorEl.textContent = 'Cuéntanos un poco más — al menos unas líneas.'; errorEl.classList.remove('hidden'); return; }
+      if (!ctxAlumno.alumnoId) { errorEl.textContent = 'No pudimos identificar tu ficha de alumno. Recarga la página e intenta de nuevo.'; errorEl.classList.remove('hidden'); return; }
+      const btn = ev.currentTarget;
+      btn.disabled = true; btn.textContent = 'Enviando...';
+      try {
+        const fotos = await subirFotos('comunidad-presentaciones', ctxAlumno.alumnoId, fotosSeleccionadasPres);
+        await set(ref(db, `comunidad/presentaciones/${ctxAlumno.alumnoId}`), {
+          texto, estado: 'pendiente', createdAt: Date.now(), alumnoNombre: ctxAlumno.nombre, fotos
+        });
+        fotosSeleccionadasPres.length = 0;
+        btn.disabled = false; btn.textContent = 'Enviar presentación';
+        document.getElementById('pres-texto-form').value = '';
+        document.getElementById('pres-fotos-preview').innerHTML = '';
+        activarSubtab('presentacion');
+      } catch (err) {
+        console.error('No se pudo enviar la presentación:', err);
+        errorEl.textContent = 'No se pudo enviar. Intenta de nuevo en un momento.';
+        errorEl.classList.remove('hidden');
+        btn.disabled = false; btn.textContent = 'Enviar presentación';
+      }
+    });
+  }
 }
 
 /* ============================================================
@@ -641,26 +650,31 @@ async function cargarHistoriasReales() {
     document.getElementById(id)?.addEventListener('change', render);
   });
 
-  document.getElementById('hist-btn-publicar')?.addEventListener('click', async (ev) => {
-    const texto = document.getElementById('hist-texto-form').value.trim();
-    const errorEl = document.getElementById('hist-form-error');
-    if (texto.length < 10) { errorEl.textContent = 'Escribe un poco más sobre tu historia.'; errorEl.classList.remove('hidden'); return; }
-    errorEl.classList.add('hidden');
-    const btn = ev.currentTarget;
-    btn.disabled = true; btn.textContent = 'Publicando...';
-    try {
-      const nuevoRef = push(ref(db, 'comunidad/historiasReales'));
-      const fotos = await subirFotos('comunidad-historias', nuevoRef.key, fotosSeleccionadasHist);
-      await set(nuevoRef, { autorId: uid, alumnoNombre: ctxAlumno.nombre, texto, createdAt: Date.now(), fotos });
-      fotosSeleccionadasHist.length = 0;
-      document.getElementById('hist-texto-form').value = '';
-      document.getElementById('hist-fotos-preview').innerHTML = '';
-      cargarHistoriasReales();
-    } catch (err) {
-      console.error('No se pudo publicar la historia:', err);
-      errorEl.textContent = 'No se pudo publicar. Intenta de nuevo en un momento.';
-      errorEl.classList.remove('hidden');
-      btn.disabled = false; btn.textContent = 'Publicar';
-    }
-  }, { once: true });
+  const btnPublicarHist = document.getElementById('hist-btn-publicar');
+  if (btnPublicarHist && !btnPublicarHist.dataset.conectado) {
+    btnPublicarHist.dataset.conectado = '1';
+    btnPublicarHist.addEventListener('click', async (ev) => {
+      const texto = document.getElementById('hist-texto-form').value.trim();
+      const errorEl = document.getElementById('hist-form-error');
+      errorEl.classList.add('hidden');
+      if (texto.length < 10) { errorEl.textContent = 'Escribe un poco más sobre tu historia.'; errorEl.classList.remove('hidden'); return; }
+      const btn = ev.currentTarget;
+      btn.disabled = true; btn.textContent = 'Publicando...';
+      try {
+        const nuevoRef = push(ref(db, 'comunidad/historiasReales'));
+        const fotos = await subirFotos('comunidad-historias', nuevoRef.key, fotosSeleccionadasHist);
+        await set(nuevoRef, { autorId: uid, alumnoNombre: ctxAlumno.nombre, texto, createdAt: Date.now(), fotos });
+        fotosSeleccionadasHist.length = 0;
+        document.getElementById('hist-texto-form').value = '';
+        document.getElementById('hist-fotos-preview').innerHTML = '';
+        btn.disabled = false; btn.textContent = 'Publicar';
+        cargarHistoriasReales();
+      } catch (err) {
+        console.error('No se pudo publicar la historia:', err);
+        errorEl.textContent = 'No se pudo publicar. Intenta de nuevo en un momento.';
+        errorEl.classList.remove('hidden');
+        btn.disabled = false; btn.textContent = 'Publicar';
+      }
+    });
+  }
 }
