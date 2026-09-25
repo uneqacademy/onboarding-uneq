@@ -97,12 +97,20 @@ async function cargarPresentacion() {
     await renderPropiaPresentacion(ctxAlumno);
   }
 
-  const [presSnap, alumnosSnap, ciclosSnap, usuariosSnap] = await Promise.all([
-    get(ref(db, 'comunidad/presentaciones')),
-    get(ref(db, 'alumnos')),
-    get(ref(db, 'ciclos')),
-    esStaff ? get(ref(db, 'usuarios')) : Promise.resolve(null)
-  ]);
+  let presSnap, alumnosSnap, ciclosSnap, usuariosSnap;
+  try {
+    [presSnap, alumnosSnap, ciclosSnap, usuariosSnap] = await Promise.all([
+      get(ref(db, 'comunidad/presentaciones')),
+      get(ref(db, 'alumnos')),
+      get(ref(db, 'ciclos')),
+      esStaff ? get(ref(db, 'usuarios')) : Promise.resolve(null)
+    ]);
+  } catch (err) {
+    console.error('No se pudieron cargar las presentaciones:', err);
+    const feedEl = document.getElementById('pres-feed');
+    if (feedEl) feedEl.innerHTML = '<p class="text-soft">No se pudo cargar la lista. Recarga la página e intenta de nuevo.</p>';
+    return;
+  }
   const alumnos = alumnosSnap.exists() ? alumnosSnap.val() : {};
   const ciclos = ciclosSnap.exists() ? ciclosSnap.val() : {};
   const usuarios = usuariosSnap && usuariosSnap.exists() ? usuariosSnap.val() : {};
@@ -175,13 +183,23 @@ async function cargarPresentacion() {
     aplicarClampTexto(feedEl);
 
     feedEl.querySelectorAll('.btn-aprobar-presentacion').forEach(btn => btn.addEventListener('click', async () => {
-      await update(ref(db, `comunidad/presentaciones/${btn.dataset.alumnoId}`), { estado: 'aprobada' });
-      cargarPresentacion();
+      try {
+        await update(ref(db, `comunidad/presentaciones/${btn.dataset.alumnoId}`), { estado: 'aprobada' });
+        cargarPresentacion();
+      } catch (err) {
+        console.error('No se pudo aprobar la presentación:', err);
+        alert('No se pudo aprobar. Intenta de nuevo.');
+      }
     }));
     feedEl.querySelectorAll('.btn-eliminar-presentacion').forEach(btn => btn.addEventListener('click', async () => {
       if (!confirm('¿Eliminar esta presentación?')) return;
-      await set(ref(db, `comunidad/presentaciones/${btn.dataset.alumnoId}`), null);
-      cargarPresentacion();
+      try {
+        await set(ref(db, `comunidad/presentaciones/${btn.dataset.alumnoId}`), null);
+        cargarPresentacion();
+      } catch (err) {
+        console.error('No se pudo eliminar la presentación:', err);
+        alert('No se pudo eliminar. Intenta de nuevo.');
+      }
     }));
   }
   render();
@@ -217,21 +235,37 @@ async function renderPropiaPresentacion(ctxAlumno) {
     propioPanel?.classList.add('hidden');
   }
 
-  document.getElementById('pres-btn-enviar')?.addEventListener('click', async () => {
+  document.getElementById('pres-btn-enviar')?.addEventListener('click', async (ev) => {
     const texto = document.getElementById('pres-texto-form').value.trim();
     const errorEl = document.getElementById('pres-form-error');
     if (texto.length < 20) { errorEl.textContent = 'Cuéntanos un poco más — al menos unas líneas.'; errorEl.classList.remove('hidden'); return; }
+    if (!ctxAlumno.alumnoId) { errorEl.textContent = 'No pudimos identificar tu ficha de alumno. Recarga la página e intenta de nuevo.'; errorEl.classList.remove('hidden'); return; }
     errorEl.classList.add('hidden');
-    await set(ref(db, `comunidad/presentaciones/${ctxAlumno.alumnoId}`), {
-      texto, estado: 'pendiente', createdAt: Date.now(), alumnoNombre: ctxAlumno.nombre
-    });
-    activarSubtab('presentacion');
+    const btn = ev.currentTarget;
+    btn.disabled = true; btn.textContent = 'Enviando...';
+    try {
+      await set(ref(db, `comunidad/presentaciones/${ctxAlumno.alumnoId}`), {
+        texto, estado: 'pendiente', createdAt: Date.now(), alumnoNombre: ctxAlumno.nombre
+      });
+      activarSubtab('presentacion');
+    } catch (err) {
+      console.error('No se pudo enviar la presentación:', err);
+      errorEl.textContent = 'No se pudo enviar. Intenta de nuevo en un momento.';
+      errorEl.classList.remove('hidden');
+      btn.disabled = false; btn.textContent = 'Enviar presentación';
+    }
   }, { once: true });
 
-  document.getElementById('pres-btn-editar')?.addEventListener('click', () => {
+  document.getElementById('pres-btn-editar')?.addEventListener('click', async () => {
     const nuevoTexto = prompt('Edita tu presentación:', propia.texto);
     if (nuevoTexto === null || !nuevoTexto.trim()) return;
-    update(ref(db, `comunidad/presentaciones/${ctxAlumno.alumnoId}`), { texto: nuevoTexto.trim() }).then(() => cargarPresentacion());
+    try {
+      await update(ref(db, `comunidad/presentaciones/${ctxAlumno.alumnoId}`), { texto: nuevoTexto.trim() });
+      cargarPresentacion();
+    } catch (err) {
+      console.error('No se pudo editar la presentación:', err);
+      alert('No se pudo guardar el cambio. Intenta de nuevo.');
+    }
   }, { once: true });
 }
 
@@ -253,12 +287,20 @@ async function cargarHistoriasReales() {
   let ctxAlumno = { alumnoId: null };
   if (esAlumno) ctxAlumno = await obtenerContextoAlumno(uid);
 
-  const [historiasSnap, alumnosSnap, ciclosSnap, usuariosSnap] = await Promise.all([
-    get(ref(db, 'comunidad/historiasReales')),
-    esStaff ? get(ref(db, 'alumnos')) : Promise.resolve(null),
-    esStaff ? get(ref(db, 'ciclos')) : Promise.resolve(null),
-    esStaff ? get(ref(db, 'usuarios')) : Promise.resolve(null)
-  ]);
+  let historiasSnap, alumnosSnap, ciclosSnap, usuariosSnap;
+  try {
+    [historiasSnap, alumnosSnap, ciclosSnap, usuariosSnap] = await Promise.all([
+      get(ref(db, 'comunidad/historiasReales')),
+      esStaff ? get(ref(db, 'alumnos')) : Promise.resolve(null),
+      esStaff ? get(ref(db, 'ciclos')) : Promise.resolve(null),
+      esStaff ? get(ref(db, 'usuarios')) : Promise.resolve(null)
+    ]);
+  } catch (err) {
+    console.error('No se pudieron cargar las historias:', err);
+    const feedEl = document.getElementById('hist-feed');
+    if (feedEl) feedEl.innerHTML = '<p class="text-soft">No se pudo cargar la lista. Recarga la página e intenta de nuevo.</p>';
+    return;
+  }
   const alumnos = alumnosSnap && alumnosSnap.exists() ? alumnosSnap.val() : {};
   const ciclos = ciclosSnap && ciclosSnap.exists() ? ciclosSnap.val() : {};
   const usuarios = usuariosSnap && usuariosSnap.exists() ? usuariosSnap.val() : {};
@@ -339,14 +381,25 @@ async function cargarHistoriasReales() {
       const id = card.dataset.historiaId;
       card.querySelector('.btn-eliminar-historia')?.addEventListener('click', async () => {
         if (!confirm('¿Eliminar esta historia?')) return;
-        await set(ref(db, `comunidad/historiasReales/${id}`), null);
-        cargarHistoriasReales();
+        try {
+          await set(ref(db, `comunidad/historiasReales/${id}`), null);
+          cargarHistoriasReales();
+        } catch (err) {
+          console.error('No se pudo eliminar la historia:', err);
+          alert('No se pudo eliminar. Intenta de nuevo.');
+        }
       });
-      card.querySelector('.btn-editar-historia')?.addEventListener('click', () => {
+      card.querySelector('.btn-editar-historia')?.addEventListener('click', async () => {
         const parrafo = card.querySelector('[data-clamp]');
         const nuevo = prompt('Edita tu historia:', parrafo.dataset.textoOriginal);
         if (nuevo === null || !nuevo.trim()) return;
-        update(ref(db, `comunidad/historiasReales/${id}`), { texto: nuevo.trim() }).then(() => cargarHistoriasReales());
+        try {
+          await update(ref(db, `comunidad/historiasReales/${id}`), { texto: nuevo.trim() });
+          cargarHistoriasReales();
+        } catch (err) {
+          console.error('No se pudo editar la historia:', err);
+          alert('No se pudo guardar el cambio. Intenta de nuevo.');
+        }
       });
     });
   }
@@ -355,15 +408,24 @@ async function cargarHistoriasReales() {
     document.getElementById(id)?.addEventListener('change', render);
   });
 
-  document.getElementById('hist-btn-publicar')?.addEventListener('click', async () => {
+  document.getElementById('hist-btn-publicar')?.addEventListener('click', async (ev) => {
     const texto = document.getElementById('hist-texto-form').value.trim();
     const errorEl = document.getElementById('hist-form-error');
     if (texto.length < 10) { errorEl.textContent = 'Escribe un poco más sobre tu historia.'; errorEl.classList.remove('hidden'); return; }
     errorEl.classList.add('hidden');
-    await set(push(ref(db, 'comunidad/historiasReales')), {
-      autorId: uid, alumnoNombre: ctxAlumno.nombre, texto, createdAt: Date.now()
-    });
-    document.getElementById('hist-texto-form').value = '';
-    cargarHistoriasReales();
+    const btn = ev.currentTarget;
+    btn.disabled = true; btn.textContent = 'Publicando...';
+    try {
+      await set(push(ref(db, 'comunidad/historiasReales')), {
+        autorId: uid, alumnoNombre: ctxAlumno.nombre, texto, createdAt: Date.now()
+      });
+      document.getElementById('hist-texto-form').value = '';
+      cargarHistoriasReales();
+    } catch (err) {
+      console.error('No se pudo publicar la historia:', err);
+      errorEl.textContent = 'No se pudo publicar. Intenta de nuevo en un momento.';
+      errorEl.classList.remove('hidden');
+      btn.disabled = false; btn.textContent = 'Publicar';
+    }
   }, { once: true });
 }

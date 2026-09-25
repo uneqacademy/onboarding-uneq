@@ -192,9 +192,6 @@ export function setNav(section) {
   } else if (section === 'mentores') {
     showView('view-mentores');
     document.getElementById('topbar-title').textContent = 'Mentores';
-  } else if (section === 'pre-onboarding') {
-    showView('view-pre-onboarding');
-    document.getElementById('topbar-title').textContent = 'Pre-Onboarding';
   } else if (section === 'box-consultas') {
     showView(currentRole === 'alumno' ? 'view-box-alumno' : 'view-box-mentor');
     document.getElementById('topbar-title').textContent = 'BOX Inteligente';
