@@ -170,10 +170,17 @@ body {
   .ag-confirmacion .ag-check { margin: 0 0 14px; }
 }
 
-@media (max-width: 480px) {
-  .ag-encabezado { align-items: flex-start; padding: 16px 16px 0; min-height: 0; flex-wrap: wrap; }
+/* --- Cambio de imagen del encabezado en pantallas de teléfono.
+   Se usa un corte más amplio (700px) que el resto de los ajustes
+   móviles, para que el cambio de foto se active con seguridad en
+   cualquier celular, sin depender de un punto de corte muy justo. --- */
+@media (max-width: 700px) {
+  .ag-encabezado { padding: 14px 16px; }
   .ag-encabezado__foto--pc { display: none; }
-  .ag-encabezado__foto--movil { display: block; height: auto; width: 132px; margin-left: auto; }
+  .ag-encabezado__foto--movil { display: block; height: 78px; width: auto; }
+}
+
+@media (max-width: 480px) {
   .ag-shell { padding: 20px 14px 50px; }
   .ag-panel { padding: 20px 18px; }
   .ag-cal-header { justify-content: flex-start; }
