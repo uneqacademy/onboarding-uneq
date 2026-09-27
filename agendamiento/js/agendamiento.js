@@ -58,6 +58,7 @@ let diaElegido = null, mesVisible = new Date();
 let holdActual = null; // { holdId, claveSlot, expiraEn }
 let holdIntervalo = null;
 let modoReagendar = false;
+let itiInstance = null; // instancia de intl-tel-input (input de WhatsApp)
 
 /* --- Calendario público --- */
 async function cargarCupos() {
@@ -209,6 +210,25 @@ function renderPreguntas() {
     <div class="ag-field"><label>Teléfono (con WhatsApp) <span class="ag-req">*</span></label><input type="tel" name="telefono" required></div>`;
   const listaPreguntas = configGlobal.preguntas.map(([, p]) => p).sort((a, b) => (a.orden || 0) - (b.orden || 0));
   els['ag-form-preguntas'].innerHTML = camposFijos + listaPreguntas.map(renderPregunta).join('');
+
+  /* --- Teléfono con bandera de país y detección automática --- */
+  if (itiInstance) { itiInstance.destroy(); itiInstance = null; }
+  const inputTelefono = els['ag-form-preguntas'].querySelector('input[name="telefono"]');
+  if (inputTelefono && window.intlTelInput) {
+    itiInstance = window.intlTelInput(inputTelefono, {
+      initialCountry: 'auto',
+      separateDialCode: true,
+      preferredCountries: ['cl', 'ar', 'pe', 'co', 'mx'],
+      utilsScript: 'https://cdn.jsdelivr.net/npm/intl-tel-input@18.2.1/build/js/utils.js',
+      geoIpLookup: (callback) => {
+        fetch('https://ipapi.co/json')
+          .then(r => r.json())
+          .then(d => callback((d && d.country_code) || 'cl'))
+          .catch(() => callback('cl'));
+      }
+    });
+  }
+
   els['ag-form-preguntas'].querySelectorAll('.ag-opcion-btn').forEach(btn => {
     btn.addEventListener('click', () => {
       const cont = btn.closest('[data-pregunta-id]');
@@ -231,8 +251,16 @@ els['ag-form-preguntas'].addEventListener('submit', async (ev) => {
   });
   if (faltaAlguna) { alert('Falta responder alguna pregunta obligatoria.'); return; }
 
+  if (itiInstance && !itiInstance.isValidNumber()) {
+    const contInput = els['ag-form-preguntas'].querySelector('input[name="telefono"]');
+    contInput.style.outline = '1.5px solid var(--color-danger)';
+    alert('Revisa tu número de WhatsApp, no parece válido.');
+    return;
+  }
+
   const datos = new FormData(els['ag-form-preguntas']);
-  const nombre = datos.get('nombre'), correo = datos.get('correo'), telefono = datos.get('telefono');
+  const nombre = datos.get('nombre'), correo = datos.get('correo');
+  const telefono = itiInstance ? itiInstance.getNumber() : datos.get('telefono');
   listaPreguntas.forEach(p => {
     if (['texto_corto', 'texto_largo', 'numero', 'telefono', 'correo'].includes(p.tipo)) {
       const v = datos.get(p.id); if (v) respuestas[p.texto] = v;
@@ -258,20 +286,30 @@ function mostrarConfirmacion(resultado) {
   els['ag-conf-fecha'].textContent = new Date(resultado.inicioMs).toLocaleDateString('es-CL', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', timeZone: ZONA_VIEWER });
   els['ag-conf-hora'].textContent = new Intl.DateTimeFormat('es-CL', { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: ZONA_VIEWER }).format(new Date(resultado.inicioMs)) + ' hrs';
   els['ag-btn-whatsapp-dudas'].href = `https://wa.me/${resultado.whatsappDudasNumero}?text=${encodeURIComponent('Hola, tengo una duda sobre mi llamada agendada.')}`;
-  els['ag-btn-agregar-calendario'].onclick = () => descargarIcs(resultado.inicioMs, resultado.duracionMinutos);
+  els['ag-btn-agregar-calendario'].onclick = () => {
+    const link = construirLinkGoogleCalendar(resultado.inicioMs, resultado.duracionMinutos, resultado.meetLink);
+    window.open(link, '_blank', 'noopener');
+  };
   mostrarVista('ag-vista-confirmacion');
 }
-function descargarIcs(inicioMs, duracionMinutos) {
-  const fin = new Date(inicioMs + duracionMinutos * 60000);
+/* --- Abre la pantalla de Google Calendar con el evento prellenado; la persona
+   solo hace clic en Guardar. En el teléfono, si tiene la app de Calendar
+   instalada, el sistema la abre directo ahí; si no, abre en el navegador. --- */
+function construirLinkGoogleCalendar(inicioMs, duracionMinutos, meetLink) {
   const fmt = (d) => new Date(d).toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
-  const ics = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//UNEQ Mentoring//Agendamiento//ES', 'BEGIN:VEVENT',
-    `UID:${inicioMs}@uneqacademy.com`, `DTSTAMP:${fmt(Date.now())}`, `DTSTART:${fmt(inicioMs)}`, `DTEND:${fmt(fin)}`,
-    'SUMMARY:Llamada con UNEQ Mentoring', 'DESCRIPTION:Tu llamada agendada con el equipo de UNEQ.', 'END:VEVENT', 'END:VCALENDAR'].join('\r\n');
-  const blob = new Blob([ics], { type: 'text/calendar;charset=utf-8' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a'); a.href = url; a.download = 'llamada-uneq.ics'; document.body.appendChild(a); a.click(); a.remove();
-  URL.revokeObjectURL(url);
+  const fin = inicioMs + duracionMinutos * 60000;
+  const detalles = meetLink
+    ? `Llamada con el equipo de UNEQ.\n\nÚnete por Google Meet: ${meetLink}`
+    : 'Llamada con el equipo de UNEQ.';
+  const params = new URLSearchParams({
+    action: 'TEMPLATE',
+    text: 'Llamada con UNEQ Mentoring',
+    dates: `${fmt(inicioMs)}/${fmt(fin)}`,
+    details: detalles
+  });
+  return `https://calendar.google.com/calendar/render?${params.toString()}`;
 }
+
 
 els['ag-cal-prev'].addEventListener('click', () => { mesVisible.setMonth(mesVisible.getMonth() - 1); renderCalendario(); });
 els['ag-cal-next'].addEventListener('click', () => { mesVisible.setMonth(mesVisible.getMonth() + 1); renderCalendario(); });
