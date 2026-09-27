@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Closer — Agendamiento UNEQ</title>
-<link rel="stylesheet" href="css/agendamiento.css?v=2">
+<link rel="stylesheet" href="css/agendamiento.css">
 </head>
 <body>
 
@@ -21,12 +21,7 @@
 </div>
 
 <div class="adm-shell hidden" id="adm-shell">
-  <div class="adm-topbar">
-    <button type="button" class="adm-hamburguesa" id="btn-hamburguesa" aria-label="Abrir menú">☰</button>
-    <div class="ag-marca"><img src="assets/logos/isotipo-uneq.png" alt="UNEQ"><span>UNEQ MENTORING</span></div>
-  </div>
-  <div class="adm-sidebar-backdrop" id="sidebar-backdrop"></div>
-  <aside class="adm-sidebar" id="adm-sidebar">
+  <aside class="adm-sidebar">
     <div class="ag-marca">
       <img src="assets/logos/isotipo-uneq.png" alt="UNEQ">
       <span>UNEQ MENTORING<small>AGENDAMIENTO</small></span>
@@ -36,7 +31,6 @@
       <button type="button" class="adm-nav-item" data-seccion="leads">🧑‍🤝‍🧑 Mis Leads</button>
       <button type="button" class="adm-nav-item" data-seccion="disponibilidad">🕒 Mi Disponibilidad</button>
       <button type="button" class="adm-nav-item" data-seccion="bloqueos">🚫 Bloqueos</button>
-      <button type="button" class="adm-nav-item" data-seccion="perfil">👤 Mi Perfil</button>
     </nav>
     <div class="adm-sidebar-footer">
       <strong id="closer-nombre-sesion">Carlos Muñoz</strong>
@@ -60,17 +54,6 @@
       <div class="adm-subtabs">
         <button type="button" class="adm-subtab is-activa" data-subtab="activos">Activos</button>
         <button type="button" class="adm-subtab" data-subtab="archivados">Archivados</button>
-      </div>
-      <div class="ag-field" style="max-width:260px; margin:14px 0 4px;">
-        <label>Filtrar por estado</label>
-        <select id="filtro-estado-lead">
-          <option value="">Todos</option>
-          <option value="se_presento">Se presenta a llamada</option>
-          <option value="en_seguimiento">En Seguimiento</option>
-          <option value="cerrado">Cerrado</option>
-          <option value="no_show">No-Show</option>
-          <option value="baja">Dado de baja</option>
-        </select>
       </div>
       <div id="leads-lista"></div>
     </section>
@@ -105,49 +88,11 @@
       <div id="bloqueos-lista"></div>
     </section>
 
-    <!-- MI PERFIL -->
-    <section class="adm-seccion" id="sec-perfil">
-      <h1>Mi Perfil</h1>
-      <p class="ag-sub">Tus datos, visibles también para tu Director Comercial.</p>
-      <div class="ag-panel">
-        <div style="display:flex; align-items:center; gap:16px; margin-bottom:18px;">
-          <img id="perfil-foto-preview" src="" alt="" class="hidden" style="width:72px; height:72px; border-radius:50%; object-fit:cover;">
-          <div class="ag-field" style="margin-bottom:0;">
-            <label>Foto de perfil</label>
-            <input type="file" id="perfil-foto" accept="image/*">
-          </div>
-        </div>
-        <div class="adm-fila">
-          <div class="ag-field"><label>Nombre <span class="ag-req">*</span></label><input type="text" id="perfil-nombre"></div>
-          <div class="ag-field"><label>Apellido <span class="ag-req">*</span></label><input type="text" id="perfil-apellido"></div>
-        </div>
-        <div class="adm-fila">
-          <div class="ag-field"><label>Correo</label><input type="email" id="perfil-correo" disabled></div>
-          <div class="ag-field"><label>WhatsApp <span class="ag-req">*</span></label><input type="tel" id="perfil-whatsapp" placeholder="+56912345678"></div>
-        </div>
-        <div class="adm-fila">
-          <div class="ag-field"><label>Fecha de nacimiento <span class="ag-req">*</span></label><input type="date" id="perfil-fecha-nacimiento"></div>
-          <div class="ag-field"><label>País <span class="ag-req">*</span></label><select id="perfil-pais"></select></div>
-        </div>
-        <button type="button" class="ag-btn ag-btn--primario" style="width:auto;" id="btn-guardar-perfil">Guardar cambios</button>
-      </div>
-
-      <div class="ag-panel" style="margin-top:20px;">
-        <h2 style="font-size:15px;">Cambiar contraseña</h2>
-        <div class="adm-fila">
-          <div class="ag-field"><label>Contraseña actual</label><input type="password" id="perfil-password-actual"></div>
-          <div class="ag-field"><label>Contraseña nueva (mín. 6 caracteres)</label><input type="password" id="perfil-password-nueva"></div>
-        </div>
-        <div class="ag-field"><label>Repetir contraseña nueva</label><input type="password" id="perfil-password-repetir"></div>
-        <button type="button" class="ag-btn ag-btn--ghost" style="width:auto;" id="btn-cambiar-password">Cambiar contraseña</button>
-      </div>
-    </section>
-
   </main>
 </div>
 
 <div class="adm-toast" id="toast"></div>
 
-<script type="module" src="js/closer.js?v=3"></script>
+<script type="module" src="js/closer.js"></script>
 </body>
 </html>
