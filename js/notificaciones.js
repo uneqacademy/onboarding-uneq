@@ -7,6 +7,7 @@
 import { db, auth } from './firebase-config.js';
 import { ref, get, onValue, update } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-database.js";
 import { getCurrentRole } from './main.js';
+import { irAHitoDesdeNotificacion } from './comunidad-uneq.js';
 
 const TEXTOS_TIPO = {
   comentario: (n) => `${n} comentó tu hito`,
@@ -34,12 +35,13 @@ function renderLista() {
   listaEl.querySelectorAll('.notif-item').forEach(item => {
     item.addEventListener('click', async () => {
       const { notifId, hitoId } = item.dataset;
-      await update(ref(db, `notificaciones/${alumnoIdActual}/${notifId}`), { leida: true });
-      panelEl.classList.add('hidden');
-      if (hitoId) {
-        document.querySelector('.nav-item[data-nav="comunidad-uneq"]')?.click();
-        setTimeout(() => { window.location.hash = `#hito-${hitoId}`; document.getElementById(`hito-${hitoId}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' }); }, 500);
+      try {
+        await update(ref(db, `notificaciones/${alumnoIdActual}/${notifId}`), { leida: true });
+      } catch (err) {
+        console.error('No se pudo marcar la notificación como leída:', err);
       }
+      panelEl.classList.add('hidden');
+      if (hitoId) await irAHitoDesdeNotificacion(hitoId);
     });
   });
 }
@@ -62,7 +64,11 @@ async function iniciarNotificaciones() {
 
   btnCampana?.classList.remove('hidden');
   onValue(ref(db, `notificaciones/${alumnoIdActual}`), (snap) => {
-    notificacionesActuales = snap.exists() ? Object.entries(snap.val()).sort((a, b) => b[1].createdAt - a[1].createdAt).slice(0, 30) : [];
+    const todas = snap.exists() ? Object.entries(snap.val()) : [];
+    // Las leídas ya no se muestran — el clic las "borra" de la lista
+    // que ve el alumno (quedan igual en la base, por si hace falta
+    // revisar historial más adelante).
+    notificacionesActuales = todas.filter(([, n]) => !n.leida).sort((a, b) => b[1].createdAt - a[1].createdAt).slice(0, 30);
     renderLista();
     actualizarBadge();
   });

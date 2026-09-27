@@ -11,7 +11,7 @@
 import { db, auth, storage } from './firebase-config.js';
 import { ref, get, set, update, push, remove } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-database.js";
 import { ref as storageRef, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-storage.js";
-import { getCurrentRole } from './main.js';
+import { getCurrentRole, showView, marcarNavActivo } from './main.js';
 import { aplicarClampTexto } from './texto-clamp.js';
 import { cargarHitosComunidad } from './hitos.js';
 import { cargarPreguntasComunidad } from './alumno-portal.js';
@@ -39,34 +39,62 @@ const CARGADORES = {
   historias: cargarHistoriasReales
 };
 
-function activarSubtab(nombre) {
+async function revisarPresentacionAprobada() {
   const role = getCurrentRole();
-  if (role === 'alumno' && !presentacionAprobada && nombre !== 'presentacion') nombre = 'presentacion';
+  if (role !== 'alumno') { presentacionAprobada = true; return; }
+  const uid = auth.currentUser?.uid;
+  const mapaSnap = uid ? await get(ref(db, `alumnoPorAuthUid/${uid}`)) : null;
+  const alumnoId = mapaSnap && mapaSnap.exists() ? mapaSnap.val() : null;
+  const presSnap = alumnoId ? await get(ref(db, `comunidad/presentaciones/${alumnoId}`)) : null;
+  presentacionAprobada = !!(presSnap && presSnap.exists() && presSnap.val().estado === 'aprobada');
+}
+
+function mostrarSubtab(nombre) {
+  const role = getCurrentRole();
+  if (role === 'alumno' && !presentacionAprobada) nombre = 'presentacion';
   subtabActual = nombre;
   document.querySelectorAll('[data-comunidad-tab]').forEach(btn => btn.classList.toggle('is-activa', btn.dataset.comunidadTab === nombre));
   document.querySelectorAll('.comunidad-vista').forEach(vista => vista.classList.toggle('is-activa', vista.id === `comunidad-vista-${nombre}`));
-  CARGADORES[nombre]?.();
+  return CARGADORES[nombre]?.();
+}
+
+// Punto de entrada único: siempre revisa el estado real de la
+// presentación antes de mostrar cualquier pestaña — así el candado
+// no se puede "saltar" cambiando de pestaña directamente, ni queda
+// pegado en Presentación si ya fue aprobada después de la última vez
+// que se revisó.
+async function irAComunidadUneq(nombreDeseado) {
+  await revisarPresentacionAprobada();
+  await mostrarSubtab(nombreDeseado);
 }
 
 document.querySelectorAll('[data-comunidad-tab]').forEach(btn => {
-  btn.addEventListener('click', () => activarSubtab(btn.dataset.comunidadTab));
+  btn.addEventListener('click', () => irAComunidadUneq(btn.dataset.comunidadTab));
 });
 
 document.querySelectorAll('.nav-item[data-nav="comunidad-uneq"]').forEach(item => {
-  item.addEventListener('click', async () => {
-    const role = getCurrentRole();
-    if (role === 'alumno') {
-      const uid = auth.currentUser?.uid;
-      const mapaSnap = uid ? await get(ref(db, `alumnoPorAuthUid/${uid}`)) : null;
-      const alumnoId = mapaSnap && mapaSnap.exists() ? mapaSnap.val() : null;
-      const presSnap = alumnoId ? await get(ref(db, `comunidad/presentaciones/${alumnoId}`)) : null;
-      presentacionAprobada = !!(presSnap && presSnap.exists() && presSnap.val().estado === 'aprobada');
-    } else {
-      presentacionAprobada = true;
-    }
-    activarSubtab(subtabActual);
-  });
+  item.addEventListener('click', () => irAComunidadUneq(subtabActual));
 });
+
+// Usado por la campanita de notificaciones: entra directo a "Hitos
+// de la Comunidad" (respetando el candado si corresponde) y solo
+// hace scroll una vez que la publicación ya está realmente en
+// pantalla — sin simular clics ni adivinar cuánto tarda la carga.
+export async function irAHitoDesdeNotificacion(hitoId) {
+  showView('view-comunidad-uneq');
+  marcarNavActivo('comunidad-uneq');
+  const topbar = document.getElementById('topbar-title');
+  if (topbar) topbar.textContent = 'Comunidad UNEQ';
+  await irAComunidadUneq('hitos');
+  if (!presentacionAprobada && getCurrentRole() === 'alumno') return; // se quedó en el candado, nada que hacer
+  const elDestino = document.getElementById(`hito-${hitoId}`);
+  if (elDestino) {
+    window.location.hash = `#hito-${hitoId}`;
+    elDestino.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    elDestino.style.outline = '2px solid var(--color-accent)';
+    setTimeout(() => { elDestino.style.outline = ''; }, 2000);
+  }
+}
 
 async function obtenerContextoAlumno(uid) {
   const mapaSnap = await get(ref(db, `alumnoPorAuthUid/${uid}`));
@@ -531,7 +559,7 @@ async function renderPropiaPresentacion(ctxAlumno) {
         btn.disabled = false; btn.textContent = 'Enviar presentación';
         document.getElementById('pres-texto-form').value = '';
         document.getElementById('pres-fotos-preview').innerHTML = '';
-        activarSubtab('presentacion');
+        irAComunidadUneq('presentacion');
       } catch (err) {
         console.error('No se pudo enviar la presentación:', err);
         errorEl.textContent = 'No se pudo enviar. Intenta de nuevo en un momento.';
