@@ -205,6 +205,10 @@ if (btnGuardarAcuerdo) {
         abono: inputAbono.value.trim(),
         cuotas
       });
+      // Recién en este momento el coach empieza a ver a este alumno
+      // en su dashboard — antes de "Guardar Acuerdo", queda solo
+      // visible para el Director.
+      await update(ref(db, `ciclos/${cicloIdActual}`), { acuerdoCerrado: true });
 
       await cargarAcuerdoParaCiclo(cicloIdActual);
     } finally {

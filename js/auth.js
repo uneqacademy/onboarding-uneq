@@ -21,6 +21,7 @@ import { applyRole, showLogin } from './main.js';
 import { initAlumnosModule } from './alumnos.js';
 import { cargarDashboardAlumno, cargarBoxAlumno } from './alumno-portal.js';
 import './comunidad-uneq.js';
+import './pre-onboarding.js';
 import { iniciarNotificaciones } from './notificaciones.js';
 
 const inputEmail = document.getElementById('login-email');

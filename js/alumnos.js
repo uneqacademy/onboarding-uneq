@@ -36,6 +36,32 @@ import './asistente-uneq.js';
 
 let coachesMap = {};       // uid -> nombre, solo se llena para el director
 let currentAlumnoId = null;
+let origenPreOnboardingId = null; // si viene de Pre-Onboarding, se borra ese registro al crear con éxito
+export function limpiarOrigenPreOnboarding() { origenPreOnboardingId = null; }
+
+// Si cancela sin crear, no debe quedar "pegado" a un origen de
+// Pre-Onboarding para la próxima vez que abra este formulario.
+['btn-cancelar-nuevo-alumno', 'btn-cancelar-nuevo-alumno-2', 'btn-nuevo-alumno'].forEach(id => {
+  document.getElementById(id)?.addEventListener('click', () => { origenPreOnboardingId = null; });
+});
+
+// Prellena el formulario de "Nuevo Alumno" con los datos de un lead
+// tomado desde Pre-Onboarding, y recuerda su id para borrarlo de ahí
+// una vez que el alumno quede creado con éxito.
+export function abrirCrearAlumnoDesdePreOnboarding({ id, nombre, telefono, correo, programa }) {
+  origenPreOnboardingId = id;
+  const partes = (nombre || '').trim().split(/\s+/);
+  document.getElementById('nuevo-alumno-nombre').value = partes[0] || '';
+  document.getElementById('nuevo-alumno-apellido').value = partes.slice(1).join(' ');
+  document.getElementById('nuevo-alumno-telefono').value = telefono || '';
+  document.getElementById('nuevo-alumno-email').value = correo || '';
+  if (programa) document.getElementById('nuevo-alumno-programa').value = programa;
+  actualizarCampoMembresiaSegunPrograma();
+  actualizarCampoCoachSegunPrograma('nuevo-alumno-programa', 'campo-nuevo-alumno-coach', 'aviso-nuevo-alumno-begin-sin-coach');
+  showView('view-crear-alumno');
+  marcarNavActivo('alumnos');
+  document.getElementById('topbar-title').textContent = 'Nuevo Alumno';
+}
 let currentCicloId = null;
 let bloqueoActual = false;
 let estadoProcesoActual = null;
@@ -481,8 +507,8 @@ export async function cargarListasAlumnos() {
         tbodyDirector.appendChild(crearFilaAlumno(alumnoId, alumno, ciclo, { coach: true, fechas: true, pago: false }, null, nombreFila));
       }
     } else if (role === 'coach') {
-      const esMio = ciclo && ciclo.coachId === uid;
-      const esBeginDeCabecera = ciclo && ciclo.programa === 'begin' && esCoachCabeceraBegin;
+      const esMio = ciclo && ciclo.coachId === uid && ciclo.acuerdoCerrado === true;
+      const esBeginDeCabecera = ciclo && ciclo.programa === 'begin' && esCoachCabeceraBegin && ciclo.acuerdoCerrado === true;
       if (!ciclo || !(esMio || esBeginDeCabecera)) return;
       if (tbodyDashCoach && !ciclosVistos.dashCoach.has(claveGrupo)) {
         ciclosVistos.dashCoach.add(claveGrupo);
@@ -971,6 +997,8 @@ if (btnCrearAlumno) {
 
     const nombre = document.getElementById('nuevo-alumno-nombre').value.trim();
     const apellido = document.getElementById('nuevo-alumno-apellido').value.trim();
+    const telefonoNuevo = document.getElementById('nuevo-alumno-telefono').value.trim();
+    const emailNuevo = document.getElementById('nuevo-alumno-email').value.trim();
     const programa = document.getElementById('nuevo-alumno-programa').value;
     const esMembresia = programa === 'next' && document.getElementById('nuevo-alumno-membresia').checked;
     const coachId = programa === 'begin' ? null : document.getElementById('nuevo-alumno-coach').value;
@@ -1006,7 +1034,7 @@ if (btnCrearAlumno) {
       const alumnoId = alumnoRef.key;
       await set(alumnoRef, {
         nombre, apellido,
-        rut: '', fechaNacimiento: '', genero: '', telefono: '', direccion: '', ocupacion: '', fotoUrl: '',
+        rut: '', fechaNacimiento: '', genero: '', telefono: telefonoNuevo, email: emailNuevo, direccion: '', ocupacion: '', fotoUrl: '',
         coachId,
         cicloActualId: null,
         ciclosAnteriores: [],
@@ -1024,7 +1052,12 @@ if (btnCrearAlumno) {
           : { montoTotal: monto, moneda, descuento, abono, saldo: monto, cuotas, pdfUrl: '' }
       });
 
-      ['nuevo-alumno-nombre', 'nuevo-alumno-apellido', 'nuevo-alumno-monto', 'nuevo-alumno-descuento', 'nuevo-alumno-abono']
+      if (origenPreOnboardingId) {
+        await set(ref(db, `agendamiento/recienCerrados/${origenPreOnboardingId}`), null).catch(() => {});
+        origenPreOnboardingId = null;
+      }
+
+      ['nuevo-alumno-nombre', 'nuevo-alumno-apellido', 'nuevo-alumno-telefono', 'nuevo-alumno-email', 'nuevo-alumno-monto', 'nuevo-alumno-descuento', 'nuevo-alumno-abono']
         .forEach(id => { document.getElementById(id).value = ''; });
       document.getElementById('nuevo-alumno-programa').value = 'begin';
       document.getElementById('nuevo-alumno-membresia').checked = false;

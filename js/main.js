@@ -189,6 +189,9 @@ export function setNav(section) {
   } else if (section === 'coaches') {
     showView('view-coaches');
     document.getElementById('topbar-title').textContent = 'Coaches';
+  } else if (section === 'pre-onboarding') {
+    showView('view-pre-onboarding');
+    document.getElementById('topbar-title').textContent = 'Pre-Onboarding';
   } else if (section === 'mentores') {
     showView('view-mentores');
     document.getElementById('topbar-title').textContent = 'Mentores';

@@ -108,6 +108,7 @@
       <div class="nav-list">
         <li class="nav-item is-active" data-nav="dashboard">Dashboard</li>
         <li class="nav-item" data-nav="alumnos">Alumnos</li>
+        <li class="nav-item" data-role="director" data-nav="pre-onboarding">Pre-Onboarding</li>
         <li class="nav-item" data-role="director" data-nav="coaches">Coaches</li>
         <li class="nav-item" data-role="director" data-nav="mentores">Mentores</li>
         <li class="nav-item hidden" data-nav="mis-datos">Mis Datos</li>
@@ -722,6 +723,18 @@
       <!-- ======================================================
            ALUMNOS — vista DIRECTOR (lista completa)
            ====================================================== -->
+      <section id="view-pre-onboarding" class="view hidden">
+        <p class="text-soft mb-16">Leads que un closer marcó como "Cierre" en el sistema de agendamiento. Al agregarlos, siguen el proceso normal de creación de alumno.</p>
+        <div class="panel">
+          <div class="panel__header"><h3>Por agregar al proceso</h3></div>
+          <table class="data-table">
+            <thead><tr><th>Nombre</th><th>Teléfono</th><th>Correo</th><th>Programa</th><th></th></tr></thead>
+            <tbody id="tabla-pre-onboarding"></tbody>
+          </table>
+          <p class="text-soft hidden" id="pre-onboarding-vacio" style="padding:16px;">No hay leads pendientes por agregar.</p>
+        </div>
+      </section>
+
       <section id="view-alumnos-director" class="view hidden">
         <div style="display:flex; gap:8px; align-items:center; justify-content:flex-end;" class="mb-16">
           <button class="btn btn--ghost" id="btn-exportar-excel">Descargar Excel</button>
@@ -793,6 +806,8 @@
             <div class="field-grid">
               <div class="field"><label>Nombre</label><input id="nuevo-alumno-nombre" placeholder="Nombre"></div>
               <div class="field"><label>Apellido</label><input id="nuevo-alumno-apellido" placeholder="Apellido"></div>
+              <div class="field"><label>Teléfono (opcional)</label><input id="nuevo-alumno-telefono" placeholder="+56 9..."></div>
+              <div class="field"><label>Correo (opcional)</label><input id="nuevo-alumno-email" type="email" placeholder="correo@ejemplo.com"></div>
             </div>
           </div>
         </div>
