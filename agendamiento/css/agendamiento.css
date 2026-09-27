@@ -195,6 +195,14 @@ body {
 .adm-topbar { display: none; }
 .adm-sidebar-backdrop { display: none; }
 .adm-sidebar { background: var(--color-primary); color: #fff; padding: 22px 16px; display: flex; flex-direction: column; gap: 22px; }
+/* --- Base de .ag-marca: usada en la pantalla de login (Director y
+   Closer, fuera del sidebar) y también dentro del sidebar/topbar,
+   donde las reglas de abajo la refinan (logo blanco, más chico, etc.) --- */
+.ag-marca { display: flex; align-items: center; gap: 10px; margin-bottom: 28px; }
+.ag-marca img { height: 30px; width: auto; }
+.ag-marca span { font-weight: 700; font-size: 15px; letter-spacing: 0.3px; color: var(--color-primary); }
+.ag-marca small { display: block; font-size: 10.5px; font-weight: 400; color: var(--color-ink-soft); letter-spacing: 0.4px; }
+
 .adm-sidebar .ag-marca img { height: 26px; }
 .adm-sidebar .ag-marca span { color: #fff; font-size: 13px; }
 .adm-sidebar .ag-marca small { display: block; color: rgba(255,255,255,0.55); font-size: 10.5px; font-weight: 400; letter-spacing: 0.4px; }
