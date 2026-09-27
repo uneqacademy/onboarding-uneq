@@ -48,12 +48,9 @@ body {
    director-comercial.html y closer.html siguen usando .ag-marca
    sin tocar) --- */
 .ag-encabezado {
-  background: var(--ag-negro); width: 100%; min-height: 96px;
-  display: flex; align-items: center; justify-content: space-between;
-  padding: 18px clamp(16px, 4vw, 48px); gap: 16px; overflow: hidden;
+  background: var(--ag-negro); width: 100%; line-height: 0; overflow: hidden;
 }
-.ag-encabezado__marca { color: #fff; font-weight: 800; font-size: clamp(16px, 2.4vw, 22px); letter-spacing: 0.5px; white-space: nowrap; }
-.ag-encabezado__foto { height: 82px; width: auto; display: block; }
+.ag-encabezado__foto { display: block; width: 100%; height: auto; margin: 0 auto; }
 .ag-encabezado__foto--movil { display: none; }
 
 .ag-tarjeta {
@@ -175,9 +172,8 @@ body {
    móviles, para que el cambio de foto se active con seguridad en
    cualquier celular, sin depender de un punto de corte muy justo. --- */
 @media (max-width: 700px) {
-  .ag-encabezado { padding: 14px 16px; }
   .ag-encabezado__foto--pc { display: none; }
-  .ag-encabezado__foto--movil { display: block; height: 78px; width: auto; }
+  .ag-encabezado__foto--movil { display: block; }
 }
 
 @media (max-width: 480px) {
