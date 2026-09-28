@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Closer — Agendamiento UNEQ</title>
+<script src="js/gtm-config.js?v=2"></script>
+<link rel="stylesheet" href="css/agendamiento.css?v=7">
+</head>
+<body>
+
+<div id="login-overlay" class="ag-shell" style="max-width:420px; padding-top:80px;">
+  <div class="ag-marca"><img src="assets/logos/isotipo-uneq.png" alt="UNEQ"><span>UNEQ MENTORING<small>AGENDAMIENTO</small></span></div>
+  <div class="ag-panel">
+    <h2>Closer</h2>
+    <p class="ag-sub">Inicia sesión para entrar.</p>
+    <div class="ag-field"><label>Correo</label><input type="email" id="login-correo"></div>
+    <div class="ag-field"><label>Contraseña</label><input type="password" id="login-password"></div>
+    <p id="login-error" class="hidden" style="color:var(--color-danger); font-size:13px; margin-bottom:12px;"></p>
+    <button type="button" class="ag-btn ag-btn--primario" id="btn-login">Iniciar sesión</button>
+  </div>
+</div>
+
+<div class="adm-shell hidden" id="adm-shell">
+  <div class="adm-topbar">
+    <button type="button" class="adm-hamburguesa" id="btn-hamburguesa" aria-label="Abrir menú">☰</button>
+    <div class="ag-marca"><img src="assets/logos/isotipo-uneq.png" alt="UNEQ"><span>UNEQ MENTORING</span></div>
+  </div>
+  <div class="adm-sidebar-backdrop" id="sidebar-backdrop"></div>
+  <aside class="adm-sidebar" id="adm-sidebar">
+    <div class="ag-marca">
+      <img src="assets/logos/isotipo-uneq.png" alt="UNEQ">
+      <span>UNEQ MENTORING<small>AGENDAMIENTO</small></span>
+    </div>
+    <nav class="adm-nav">
+      <button type="button" class="adm-nav-item is-active" data-seccion="agenda">📅 Mi Agenda</button>
+      <button type="button" class="adm-nav-item" data-seccion="leads">🧑‍🤝‍🧑 Mis Leads</button>
+      <button type="button" class="adm-nav-item" data-seccion="disponibilidad">🕒 Mi Disponibilidad</button>
+      <button type="button" class="adm-nav-item" data-seccion="bloqueos">🚫 Bloqueos</button>
+      <button type="button" class="adm-nav-item" data-seccion="perfil">👤 Mi Perfil</button>
+    </nav>
+    <div class="adm-sidebar-footer">
+      <strong id="closer-nombre-sesion">Carlos Muñoz</strong>
+      Rol: Closer
+    </div>
+  </aside>
+
+  <main class="adm-content">
+
+    <!-- MI AGENDA -->
+    <section class="adm-seccion is-activa" id="sec-agenda">
+      <h1>Mi Agenda</h1>
+      <p class="ag-sub">Tus próximas llamadas. Cuando termine cada una, marca cómo fue.</p>
+      <div id="agenda-lista"></div>
+    </section>
+
+    <!-- MIS LEADS -->
+    <section class="adm-seccion" id="sec-leads">
+      <h1>Mis Leads</h1>
+      <p class="ag-sub">Seguimiento de cada lead desde que se presenta a la llamada.</p>
+      <div class="adm-subtabs">
+        <button type="button" class="adm-subtab is-activa" data-subtab="activos">Activos</button>
+        <button type="button" class="adm-subtab" data-subtab="archivados">Archivados</button>
+      </div>
+      <div class="ag-field" style="max-width:260px; margin:14px 0 4px;">
+        <label>Filtrar por estado</label>
+        <select id="filtro-estado-lead">
+          <option value="">Todos</option>
+          <option value="se_presento">Se presenta a llamada</option>
+          <option value="en_seguimiento">En Seguimiento</option>
+          <option value="cerrado">Cerrado</option>
+          <option value="no_show">No-Show</option>
+          <option value="baja">Dado de baja</option>
+        </select>
+      </div>
+      <div id="leads-lista"></div>
+    </section>
+
+    <!-- DISPONIBILIDAD -->
+    <section class="adm-seccion" id="sec-disponibilidad">
+      <h1>Mi Disponibilidad</h1>
+      <p class="ag-sub" id="disp-sub">Marca los horarios en los que puedes recibir llamadas. Se repiten cada semana.</p>
+      <div class="ag-panel">
+        <div class="adm-disp-grid" id="disp-grid"></div>
+        <button type="button" class="ag-btn ag-btn--primario" style="width:auto; margin-top:20px;" id="btn-guardar-disponibilidad">Guardar disponibilidad</button>
+      </div>
+    </section>
+
+    <!-- BLOQUEOS -->
+    <section class="adm-seccion" id="sec-bloqueos">
+      <h1>Bloqueos Puntuales</h1>
+      <p class="ag-sub">Para cuando tienes algo externo y necesitas cerrar un horario que normalmente cubres.</p>
+      <div class="ag-panel">
+        <div class="adm-fila">
+          <div class="ag-field"><label>Fecha</label><input type="date" id="bloqueo-fecha"></div>
+          <div class="ag-field"><label>Desde — Hasta</label>
+            <div style="display:flex; gap:8px;">
+              <input type="time" id="bloqueo-desde">
+              <input type="time" id="bloqueo-hasta">
+            </div>
+          </div>
+        </div>
+        <button type="button" class="ag-btn ag-btn--ghost" style="width:auto;" id="btn-agregar-bloqueo">+ Agregar bloqueo</button>
+      </div>
+      <h2 style="font-size:15px; margin:22px 0 10px;">Próximos bloqueos</h2>
+      <div id="bloqueos-lista"></div>
+    </section>
+
+    <!-- MI PERFIL -->
+    <section class="adm-seccion" id="sec-perfil">
+      <h1>Mi Perfil</h1>
+      <p class="ag-sub">Tus datos, visibles también para tu Director Comercial.</p>
+      <div class="ag-panel">
+        <div style="display:flex; align-items:center; gap:16px; margin-bottom:18px;">
+          <img id="perfil-foto-preview" src="" alt="" class="hidden" style="width:72px; height:72px; border-radius:50%; object-fit:cover;">
+          <div class="ag-field" style="margin-bottom:0;">
+            <label>Foto de perfil</label>
+            <input type="file" id="perfil-foto" accept="image/*">
+          </div>
+        </div>
+        <div class="adm-fila">
+          <div class="ag-field"><label>Nombre <span class="ag-req">*</span></label><input type="text" id="perfil-nombre"></div>
+          <div class="ag-field"><label>Apellido <span class="ag-req">*</span></label><input type="text" id="perfil-apellido"></div>
+        </div>
+        <div class="adm-fila">
+          <div class="ag-field"><label>Correo</label><input type="email" id="perfil-correo" disabled></div>
+          <div class="ag-field"><label>WhatsApp <span class="ag-req">*</span></label><input type="tel" id="perfil-whatsapp" placeholder="+56912345678"></div>
+        </div>
+        <div class="adm-fila">
+          <div class="ag-field"><label>Fecha de nacimiento <span class="ag-req">*</span></label><input type="date" id="perfil-fecha-nacimiento"></div>
+          <div class="ag-field"><label>País <span class="ag-req">*</span></label><select id="perfil-pais"></select></div>
+        </div>
+        <button type="button" class="ag-btn ag-btn--primario" style="width:auto;" id="btn-guardar-perfil">Guardar cambios</button>
+      </div>
+
+      <div class="ag-panel" style="margin-top:20px;">
+        <h2 style="font-size:15px;">Cambiar contraseña</h2>
+        <div class="adm-fila">
+          <div class="ag-field"><label>Contraseña actual</label><input type="password" id="perfil-password-actual"></div>
+          <div class="ag-field"><label>Contraseña nueva (mín. 6 caracteres)</label><input type="password" id="perfil-password-nueva"></div>
+        </div>
+        <div class="ag-field"><label>Repetir contraseña nueva</label><input type="password" id="perfil-password-repetir"></div>
+        <button type="button" class="ag-btn ag-btn--ghost" style="width:auto;" id="btn-cambiar-password">Cambiar contraseña</button>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<div class="adm-toast" id="toast"></div>
+
+<script type="module" src="js/closer.js?v=3"></script>
+</body>
+</html>
