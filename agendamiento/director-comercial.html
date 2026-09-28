@@ -4,7 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Director Comercial — Agendamiento UNEQ</title>
-<link rel="stylesheet" href="css/agendamiento.css?v=6">
+<script src="js/gtm-config.js"></script>
+<link rel="stylesheet" href="css/agendamiento.css?v=7">
 </head>
 <body>
 
@@ -37,6 +38,7 @@
       <button type="button" class="adm-nav-item" data-seccion="rotacion">🔄 Reparto Rotativo</button>
       <button type="button" class="adm-nav-item" data-seccion="recordatorios">⏰ Recordatorios</button>
       <button type="button" class="adm-nav-item" data-seccion="closers">🧑‍💼 Closers</button>
+      <button type="button" class="adm-nav-item" data-seccion="disponibilidad">🕒 Disponibilidad</button>
       <button type="button" class="adm-nav-item" data-seccion="agenda">📅 Agenda General</button>
       <button type="button" class="adm-nav-item" data-seccion="mis-datos">🧾 Mis Datos</button>
     </nav>
@@ -161,6 +163,26 @@
       </div>
     </section>
 
+    <!-- DISPONIBILIDAD DE CLOSERS (semana tipo) -->
+    <section class="adm-seccion" id="sec-disponibilidad">
+      <h1>Disponibilidad de closers</h1>
+      <p class="ag-sub">La semana tipo que cada closer marcó en su panel. Es solo de consulta: cada closer edita la suya.</p>
+      <div class="adm-sem-barra">
+        <div class="adm-sem-chips" id="sem-chips"></div>
+        <div class="adm-sem-acciones">
+          <span class="adm-sem-actualizado" id="sem-actualizado"></span>
+          <button type="button" class="ag-btn ag-btn--ghost" id="sem-actualizar">↻ Actualizar</button>
+        </div>
+      </div>
+      <p class="adm-sem-resumen" id="sem-resumen"></p>
+      <p class="adm-sem-estado" id="sem-estado"></p>
+      <div class="adm-sem-scroll"><div class="adm-sem-grid" id="sem-grid"></div></div>
+      <div class="adm-sem-pie">
+        <p class="adm-sem-detalle" id="sem-detalle"></p>
+        <div class="adm-sem-leyenda" id="sem-leyenda"></div>
+      </div>
+    </section>
+
     <!-- AGENDA GENERAL -->
     <section class="adm-seccion" id="sec-agenda">
       <h1>Agenda General</h1>
@@ -242,6 +264,6 @@
 
 <div class="adm-toast" id="toast"></div>
 
-<script type="module" src="js/director-comercial.js?v=4"></script>
+<script type="module" src="js/director-comercial.js?v=5"></script>
 </body>
 </html>
