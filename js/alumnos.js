@@ -507,8 +507,12 @@ export async function cargarListasAlumnos() {
         tbodyDirector.appendChild(crearFilaAlumno(alumnoId, alumno, ciclo, { coach: true, fechas: true, pago: false }, null, nombreFila));
       }
     } else if (role === 'coach') {
-      const esMio = ciclo && ciclo.coachId === uid && ciclo.acuerdoCerrado === true;
-      const esBeginDeCabecera = ciclo && ciclo.programa === 'begin' && esCoachCabeceraBegin && ciclo.acuerdoCerrado === true;
+      // Ocultar SOLO si el ciclo quedó marcado explícitamente como acuerdoCerrado:false
+      // (ciclos nuevos, antes de "Guardar Acuerdo"). Los ciclos anteriores a esta
+      // regla no traen el campo (undefined) y deben seguir visibles para su coach.
+      const acuerdoPendiente = ciclo && ciclo.acuerdoCerrado === false;
+      const esMio = ciclo && ciclo.coachId === uid && !acuerdoPendiente;
+      const esBeginDeCabecera = ciclo && ciclo.programa === 'begin' && esCoachCabeceraBegin && !acuerdoPendiente;
       if (!ciclo || !(esMio || esBeginDeCabecera)) return;
       if (tbodyDashCoach && !ciclosVistos.dashCoach.has(claveGrupo)) {
         ciclosVistos.dashCoach.add(claveGrupo);

@@ -52,6 +52,7 @@ export async function crearCiclo({ alumnoId, coachId, programa, acuerdoPago, mod
     fechaIngreso: null,
     fechaEgreso: null,
     bloqueoCoach: false,
+    acuerdoCerrado: false, // el coach lo ve recién cuando el Director hace "Guardar Acuerdo" (pagos.js)
     facturacionActual: '',
     objetivoFacturacion: '',
     situacionPersonal: '',
