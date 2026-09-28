@@ -48,6 +48,7 @@ document.querySelectorAll('.adm-nav-item').forEach(btn => {
     btn.classList.add('is-active');
     document.querySelectorAll('.adm-seccion').forEach(s => s.classList.remove('is-activa'));
     document.getElementById('sec-' + btn.dataset.seccion).classList.add('is-activa');
+    if (btn.dataset.seccion === 'disponibilidad') cargarSemanaTipo();
     cerrarCajon();
   });
 });
@@ -503,6 +504,159 @@ document.getElementById('btn-cambiar-password-misdatos').addEventListener('click
     }
   } finally { btn.disabled = false; btn.textContent = 'Cambiar contraseña'; }
 });
+
+/* --- DISPONIBILIDAD DE CLOSERS (semana tipo, solo lectura) --- */
+const SEM_DIAS = ['lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado', 'domingo'];
+const SEM_DIAS_LABEL = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
+const SEM_DIAS_LARGO = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
+const SEM_HORAS = Array.from({ length: 21 }, (_, i) => `${String(9 + Math.floor(i / 2)).padStart(2, '0')}:${i % 2 === 0 ? '00' : '30'}`);
+const SEM_COLORES = ['#1257B0', '#2F9E8F', '#E8A33D', '#8E5BD9', '#D64545', '#4D7C0F', '#DB2777', '#0E7490'];
+let semClosers = [];       // [{ id, nombre, color, disp, horas }] — solo closers activos
+let semSeleccion = null;   // null = todos; si no, arreglo de ids
+
+function semCeldaLibre(disp, dia, i) { return !!(disp && disp[dia] && disp[dia][i]); }
+function semActivos() { return semSeleccion ? semClosers.filter(c => semSeleccion.includes(c.id)) : semClosers; }
+function semElegir(id) {
+  if (id === 'todos') semSeleccion = null;
+  else if (semSeleccion === null) semSeleccion = [id];
+  else {
+    semSeleccion = semSeleccion.includes(id) ? semSeleccion.filter(x => x !== id) : semSeleccion.concat(id);
+    if (!semSeleccion.length || semSeleccion.length === semClosers.length) semSeleccion = null;
+  }
+  renderSemanaTipo();
+}
+
+async function cargarSemanaTipo() {
+  const estado = document.getElementById('sem-estado');
+  estado.textContent = 'Cargando disponibilidad…';
+  try {
+    const staffSnap = await get(ref(db, 'agendamiento/staff'));
+    const activos = staffSnap.exists()
+      ? Object.entries(staffSnap.val()).filter(([, s]) => s.rol === 'closer' && s.activo !== false).map(([id, s]) => ({ id, ...s }))
+          .sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0) || a.id.localeCompare(b.id))
+      : [];
+    const dispSnaps = await Promise.all(activos.map(c => get(ref(db, `agendamiento/disponibilidad/${c.id}`))));
+    semClosers = activos.map((c, idx) => {
+      const disp = dispSnaps[idx].exists() ? dispSnaps[idx].val() : null;
+      let celdas = 0;
+      if (disp) SEM_DIAS.forEach(d => SEM_HORAS.forEach((_, i) => { if (disp[d] && disp[d][i]) celdas++; }));
+      return {
+        id: c.id,
+        nombre: `${c.nombre || ''} ${c.apellido || ''}`.trim() || c.correo || 'Closer',
+        color: SEM_COLORES[idx % SEM_COLORES.length],
+        disp: celdas ? disp : null,
+        horas: celdas / 2
+      };
+    });
+    if (semSeleccion) {
+      semSeleccion = semSeleccion.filter(id => semClosers.some(c => c.id === id));
+      if (!semSeleccion.length || semSeleccion.length === semClosers.length) semSeleccion = null;
+    }
+    estado.textContent = '';
+    document.getElementById('sem-actualizado').textContent = `Actualizado a las ${new Date().toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit', hour12: false })}`;
+    renderSemanaTipo();
+  } catch (err) {
+    estado.textContent = 'No pudimos cargar la disponibilidad. Intenta de nuevo con "Actualizar".';
+  }
+}
+
+function renderSemanaTipo() {
+  const chips = document.getElementById('sem-chips');
+  const grid = document.getElementById('sem-grid');
+  const detalle = document.getElementById('sem-detalle');
+  const leyenda = document.getElementById('sem-leyenda');
+  const resumen = document.getElementById('sem-resumen');
+  chips.innerHTML = ''; grid.innerHTML = ''; leyenda.innerHTML = ''; resumen.textContent = '';
+
+  if (!semClosers.length) {
+    document.getElementById('sem-estado').textContent = 'Aún no hay closers activos. Agrega uno en la pestaña Closers.';
+    detalle.textContent = '';
+    return;
+  }
+  document.getElementById('sem-estado').textContent = '';
+
+  const crearChip = (id, on, contenido) => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'adm-sem-chip' + (on ? ' is-on' : '');
+    contenido(b);
+    b.addEventListener('click', () => semElegir(id));
+    chips.appendChild(b);
+  };
+  crearChip('todos', semSeleccion === null, b => { b.textContent = 'Todos'; });
+  semClosers.forEach(c => crearChip(c.id, semSeleccion !== null && semSeleccion.includes(c.id), b => {
+    const punto = document.createElement('span');
+    punto.className = 'adm-sem-punto'; punto.style.background = c.color;
+    b.appendChild(punto);
+    b.appendChild(document.createTextNode(c.nombre));
+    if (!c.disp) {
+      const aviso = document.createElement('span');
+      aviso.className = 'adm-sem-aviso'; aviso.textContent = '⚠ sin horarios';
+      b.appendChild(aviso);
+    }
+  }));
+
+  const activos = semActivos();
+  const multi = activos.length > 1;
+  resumen.textContent = activos.map(c => c.disp
+    ? `${c.nombre}: ${c.horas.toLocaleString('es-CL', { maximumFractionDigits: 1 })} h por semana`
+    : `${c.nombre}: sin disponibilidad cargada`).join('   ·   ');
+
+  grid.appendChild(document.createElement('div'));
+  SEM_DIAS_LABEL.forEach(d => {
+    const cab = document.createElement('div');
+    cab.className = 'adm-sem-cab'; cab.textContent = d;
+    grid.appendChild(cab);
+  });
+  SEM_HORAS.forEach((hora, i) => {
+    const etiqueta = document.createElement('div');
+    etiqueta.className = 'adm-sem-hora' + (i % 2 ? ' is-media' : '');
+    etiqueta.textContent = hora;
+    grid.appendChild(etiqueta);
+    const fin = SEM_HORAS[i + 1] || '19:30';
+    SEM_DIAS.forEach((dia, d) => {
+      const quienes = activos.filter(c => semCeldaLibre(c.disp, dia, i));
+      const cel = document.createElement('div');
+      cel.className = 'adm-sem-celda';
+      if (multi) {
+        cel.classList.add('n' + Math.min(quienes.length, 3));
+        if (quienes.length) cel.textContent = String(quienes.length);
+      } else if (quienes.length) {
+        cel.style.background = activos[0].color; cel.style.borderColor = 'transparent';
+      }
+      const texto = `${SEM_DIAS_LARGO[d]} ${hora} a ${fin} — ${quienes.length ? quienes.map(c => c.nombre).join(', ') : 'nadie disponible'}`;
+      cel.addEventListener('mouseenter', () => { detalle.textContent = texto; });
+      cel.addEventListener('click', () => { detalle.textContent = texto; });
+      grid.appendChild(cel);
+    });
+  });
+
+  const cuadro = (clase, fondo) => {
+    const item = document.createElement('span');
+    item.className = 'adm-sem-leyenda-item';
+    const q = document.createElement('span');
+    q.className = 'cuadro ' + (clase || ''); if (fondo) { q.style.background = fondo; q.style.borderColor = 'transparent'; }
+    item.appendChild(q);
+    return item;
+  };
+  if (multi) {
+    leyenda.appendChild(document.createTextNode('Closers disponibles:'));
+    [0, 1, 2, 3].forEach(n => {
+      const it = cuadro('n' + n);
+      it.appendChild(document.createTextNode(n === 3 ? '3 o más' : String(n)));
+      leyenda.appendChild(it);
+    });
+  } else {
+    const it = cuadro('', activos[0].color);
+    it.appendChild(document.createTextNode('Disponible'));
+    leyenda.appendChild(it);
+  }
+  detalle.textContent = activos.every(c => !c.disp)
+    ? (multi ? 'Ninguno de los closers seleccionados cargó su disponibilidad todavía.' : 'Este closer todavía no cargó su disponibilidad. Pídele que marque sus horarios en «Mi Disponibilidad».')
+    : 'Pasa el cursor (o toca) una celda para ver quién está disponible.';
+}
+document.getElementById('sem-actualizar').addEventListener('click', cargarSemanaTipo);
+/* --- fin disponibilidad de closers --- */
 
 /* --- Arranque --- */
 iniciarSesionStaff('directorComercial', async (uid) => {
