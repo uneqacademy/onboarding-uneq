@@ -26,6 +26,37 @@ const els = {};
  'ag-resultado-icono', 'ag-resultado-titulo', 'ag-resultado-texto', 'ag-resultado-whatsapp'
 ].forEach(id => { els[id] = document.getElementById(id); });
 
+/* --- Seguimiento de pasos (Google Tag Manager) ---
+   Cada vez que la persona avanza a un paso nuevo:
+   1) cambia el "#" al final de la URL (calendario, horarios, datos,
+      confirmada...), sin recargar la página, sin tocar el ?token= y
+      sin agregar entradas al historial (el botón Atrás sigue igual);
+   2) se avisa a GTM con un evento "agendamiento_paso" en el dataLayer.
+   Nunca se envían datos personales ni el token del link. */
+const PASOS_POR_VISTA = {
+  'ag-vista-calendario': ['calendario', 1],
+  'ag-vista-preguntas': ['datos', 3],
+  'ag-vista-confirmacion': ['confirmada', 4],
+  'ag-vista-accion': ['gestionar', 0],
+  'ag-vista-error': ['error', 0]
+};
+let ultimoPasoRegistrado = null;
+function registrarPaso(clave, numero) {
+  if (clave === ultimoPasoRegistrado) return;
+  ultimoPasoRegistrado = clave;
+  const flujo = modoReagendar ? 'reagendar' : (tokenAccion ? 'gestion' : 'nueva');
+  try { history.replaceState(null, '', location.pathname + location.search + '#' + clave); } catch (e) { /* no es grave */ }
+  window.dataLayer = window.dataLayer || [];
+  window.dataLayer.push({
+    event: 'agendamiento_paso',
+    paso_clave: clave,
+    paso_numero: numero,
+    flujo,
+    page_location: location.origin + location.pathname + '#' + clave,
+    page_path: location.pathname + '#' + clave
+  });
+}
+
 function mostrarVista(id) {
   ['ag-vista-cargando', 'ag-vista-calendario', 'ag-vista-preguntas', 'ag-vista-confirmacion', 'ag-vista-accion', 'ag-vista-resultado', 'ag-vista-error'].forEach(v => {
     els[v].classList.toggle('hidden', v !== id);
@@ -35,6 +66,7 @@ function mostrarVista(id) {
     el.classList.toggle('is-hecho', activoIdx !== undefined && idx < activoIdx);
     el.classList.toggle('is-activo', idx === activoIdx);
   });
+  if (PASOS_POR_VISTA[id]) registrarPaso(...PASOS_POR_VISTA[id]);
 }
 function mostrarError(texto) { els['ag-vista-error'].textContent = texto; mostrarVista('ag-vista-error'); }
 
@@ -67,6 +99,27 @@ async function cargarCupos() {
 }
 function claveFecha(d) { return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; }
 
+/* --- Reglas del Director aplicadas también acá ---
+   Los cupos vienen de una caché que se recalcula en el servidor. Para que
+   el calendario respete SIEMPRE la anticipación mínima y el máximo de días
+   hacia el futuro (aunque la caché esté un poco desactualizada), se filtran
+   de nuevo antes de mostrarlos. Los días se cuentan según el día en Chile,
+   que es como están guardados los cupos. */
+function fechaChileHoy() { return new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Santiago' }).format(new Date()); }
+function sumarDiasAFecha(fechaStr, dias) {
+  const d = new Date(fechaStr + 'T12:00:00Z');
+  d.setUTCDate(d.getUTCDate() + dias);
+  return d.toISOString().slice(0, 10);
+}
+function cuposVigentes(clave) {
+  const g = configGlobal.general || {};
+  const diasMax = g.diasMaximoFuturo || 14;
+  const anticipacionMs = (g.anticipacionMinimaHoras ?? 2) * 3600000;
+  if (clave > sumarDiasAFecha(fechaChileHoy(), diasMax)) return {};
+  const limite = Date.now() + anticipacionMs;
+  return Object.fromEntries(Object.entries((configGlobal.cupos || {})[clave] || {}).filter(([ms, c]) => c > 0 && Number(ms) >= limite));
+}
+
 async function iniciarCalendario() {
   const [genSnap, preguntasSnap, cupos] = await Promise.all([
     get(ref(db, 'agendamiento/config/general')), get(ref(db, 'agendamiento/config/preguntas')), cargarCupos()
@@ -92,19 +145,18 @@ function renderCalendario() {
   for (let d = 1; d <= diasEnMes; d++) {
     const fecha = new Date(mesVisible.getFullYear(), mesVisible.getMonth(), d);
     const clave = claveFecha(fecha);
-    const horas = configGlobal.cupos[clave];
-    const hayCupo = horas && Object.values(horas).some(c => c > 0) && fecha >= hoy;
+    const hayCupo = Object.keys(cuposVigentes(clave)).length > 0 && fecha >= hoy;
     const esSeleccionado = diaElegido === clave;
     html += `<button type="button" class="ag-cal-dia ${hayCupo ? 'ag-disponible' : ''} ${esSeleccionado ? 'ag-seleccionado' : ''}" ${hayCupo ? `data-fecha="${clave}"` : 'disabled'}>${d}</button>`;
   }
   els['ag-cal-grid'].innerHTML = html;
   els['ag-cal-prev'].disabled = mesVisible <= new Date(hoy.getFullYear(), hoy.getMonth(), 1);
   els['ag-cal-grid'].querySelectorAll('[data-fecha]').forEach(btn => {
-    btn.addEventListener('click', () => { diaElegido = btn.dataset.fecha; renderCalendario(); renderHorarios(); });
+    btn.addEventListener('click', () => { diaElegido = btn.dataset.fecha; renderCalendario(); renderHorarios(); registrarPaso('horarios', 2); });
   });
 }
 function renderHorarios() {
-  const horas = configGlobal.cupos[diaElegido] || {};
+  const horas = cuposVigentes(diaElegido);
   const fechaObj = new Date(diaElegido + 'T00:00:00');
   els['ag-horarios-fecha'].textContent = fechaObj.toLocaleDateString('es-CL', { weekday: 'long', day: 'numeric', month: 'long' });
   const entradas = Object.entries(horas).filter(([, c]) => c > 0).sort((a, b) => Number(a[0]) - Number(b[0]));
@@ -354,6 +406,7 @@ function mostrarResultadoAccion(ok, texto) {
     els['ag-resultado-whatsapp'].href = `https://wa.me/${configGlobal.general.whatsappDudasNumero || ''}`;
   }
   mostrarVista('ag-vista-resultado');
+  registrarPaso(ok ? 'cancelada' : 'error-cancelacion', 0);
 }
 
 /* --- Arranque --- */
