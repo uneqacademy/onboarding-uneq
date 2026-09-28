@@ -876,6 +876,49 @@ body.tema-begin #alumno-astronauta-fase { max-width: 900px; margin-left: auto; m
 }
 
 /* ============================================
+   TEMA eXIT — solo alumnos eXIT (clase tema-exit en
+   <body>, la pone alumno-portal.js). Se monta sobre
+   tema-alumno-oscuro: negro + dorado. BEGIN y NEXT
+   no cambian. Solo estética (sin lógica).
+   ============================================ */
+body.tema-exit {
+  --exit-oro: #A0823C;
+  --exit-oro-borde: #856C32;
+}
+body.tema-exit .topbar { background: #292929; border-bottom-color: #292929; }
+body.tema-exit .nav-item.is-active { background: var(--exit-oro); color: #fff; font-weight: 600; }
+
+/* Botones principales en dorado (Pregunta a los Mentores, Hacer/Enviar
+   Pregunta, Guardar Contraseña, Descargar Acuerdo, etc.) */
+body.tema-exit .content .btn--primary,
+body.tema-exit .modal-card .btn--primary {
+  background: var(--exit-oro); border-color: var(--exit-oro); color: #fff;
+}
+body.tema-exit .content .btn--primary:hover:not(:disabled),
+body.tema-exit .modal-card .btn--primary:hover:not(:disabled) {
+  background: #B5943F; border-color: #B5943F;
+}
+body.tema-exit .acceso-btn--mentores { background: var(--exit-oro); color: #fff; border: 0; }
+body.tema-exit .acceso-btn--hotmart { background: #000; color: #fff; }
+
+/* "Detalles Mentor" en negro (el gris viene inline desde el JS) */
+body.tema-exit .btn-detalles-mentor { background: #000 !important; color: #fff !important; }
+
+/* Caja de grabaciones con borde dorado */
+body.tema-exit .btn-grabaciones { border-color: var(--exit-oro); }
+body.tema-exit .btn-grabaciones:hover { background: rgba(160, 130, 60, 0.15); }
+
+/* Pestañas de Mis Hitos y detalles en dorado */
+body.tema-exit .hitos-tab.is-active { color: #fff; border-bottom-color: var(--exit-oro); }
+
+/* Menú lateral móvil (cajón) en dorado, ítem activo blanco */
+@media (max-width: 900px) {
+  body.tema-exit .sidebar { background: var(--exit-oro); }
+  body.tema-exit .nav-item:hover { background: rgba(255, 255, 255, 0.14); }
+  body.tema-exit .nav-item.is-active { background: #fff; color: #1B1B1B; }
+}
+
+/* ============================================
    MIS HITOS — tabla por fase (los 3 niveles)
    ============================================ */
 #hitos-seguimiento-panel .panel__header { display: none; }
