@@ -107,10 +107,10 @@ async function prepararFotosFeed(lista, usuarios) {
 // la pantalla.
 let contadorCargaHitos = 0;
 
-// Carpeta de imágenes de fase según nivel: BEGIN tiene las suyas;
-// NEXT y eXIT usan las de NEXT.
+// Carpeta de imágenes de fase según nivel: BEGIN y eXIT tienen las suyas;
+// NEXT usa las de NEXT.
 function carpetaFasesPrograma(programa) {
-  return programa === 'begin' ? 'begin' : 'next';
+  return programa === 'begin' ? 'begin' : (programa === 'exit' ? 'exit' : 'next');
 }
 
 function imagenFaseCiclo(ciclo) {

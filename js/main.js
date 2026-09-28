@@ -26,7 +26,7 @@ export function applyRole(role, nombre, rolesDisponibles) {
   document.body.classList.toggle('tema-alumno-oscuro', role === 'alumno');
   // La estética por nivel (tema-begin) la pone alumno-portal.js al
   // conocer el programa; cualquier otro rol la quita.
-  if (role !== 'alumno') document.body.classList.remove('tema-begin');
+  if (role !== 'alumno') document.body.classList.remove('tema-begin', 'tema-exit');
 
   document.querySelectorAll('[data-role="director"]').forEach(el => {
     el.classList.toggle('hidden', role !== 'director');
@@ -120,7 +120,7 @@ function renderSelectorRol() {
 }
 
 export function showLogin() {
-  document.body.classList.remove('tema-alumno-oscuro', 'tema-begin');
+  document.body.classList.remove('tema-alumno-oscuro', 'tema-begin', 'tema-exit');
   document.getElementById('view-splash').classList.add('hidden');
   document.getElementById('app-shell').classList.add('hidden');
   document.getElementById('view-login').classList.remove('hidden');

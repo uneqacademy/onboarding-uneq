@@ -177,6 +177,8 @@ export async function cargarDashboardAlumno(alumnoId) {
   //     tema oscuro base de alumno. NEXT/eXIT mantienen el negro. ---
   const esBeginDashboard = !!(ciclo && ciclo.programa === 'begin');
   document.body.classList.toggle('tema-begin', esBeginDashboard);
+  const esExitDashboard = !!(ciclo && ciclo.programa === 'exit');
+  document.body.classList.toggle('tema-exit', esExitDashboard);
   // BEGIN no ve la Bitácora.
   document.querySelectorAll('.nav-item[data-nav="bitacora-alumno"]').forEach(el => el.classList.toggle('hidden', esBeginDashboard));
 
@@ -208,7 +210,7 @@ export async function cargarDashboardAlumno(alumnoId) {
         ${PROGRAMAS_ORDEN.map(([clave, logo, label]) => {
           const activo = clave === programaActual;
           return `
-          <div style="display:flex; align-items:center; justify-content:center; padding:${activo ? '12px 22px' : '10px 16px'}; border-radius:var(--radius-md, 10px); border:${activo ? (esBeginDashboard ? '1.5px solid #fff' : '1.5px solid var(--color-accent, #2563EB)') : '1.5px solid transparent'}; opacity:${activo ? '1' : '0.4'};">
+          <div style="display:flex; align-items:center; justify-content:center; padding:${activo ? '12px 22px' : '10px 16px'}; border-radius:var(--radius-md, 10px); border:${activo ? (esBeginDashboard ? '1.5px solid #fff' : (esExitDashboard ? '1.5px solid #856C32' : '1.5px solid var(--color-accent, #2563EB)')) : '1.5px solid transparent'}; opacity:${activo ? '1' : '0.4'};">
             <img src="${logo}" alt="${label}" style="height:${activo ? '42px' : '30px'}; width:auto; object-fit:contain;">
           </div>`;
         }).join('')}
@@ -220,9 +222,9 @@ export async function cargarDashboardAlumno(alumnoId) {
   const astronautaEl = document.getElementById('alumno-astronauta-fase');
   if (astronautaEl) {
     // BEGIN tiene su propio set (webp con fondo transparente); NEXT y
-    // eXIT usan el de NEXT hasta que llegue el set de eXIT.
-    const carpetaStepper = esBeginDashboard ? 'begin' : 'next';
-    const extensionStepper = esBeginDashboard ? 'webp' : 'jpg';
+    // eXIT tiene el suyo (webp); NEXT sigue con el de NEXT (jpg).
+    const carpetaStepper = esBeginDashboard ? 'begin' : (esExitDashboard ? 'exit' : 'next');
+    const extensionStepper = (esBeginDashboard || esExitDashboard) ? 'webp' : 'jpg';
     let estadoAstro = 'inicio';
     if (ciclo && ciclo.estadoAlumno === 'egresado') {
       estadoAstro = 'final';
