@@ -352,3 +352,45 @@ select { width: 100%; padding: 11px 12px; border: 1px solid var(--color-border);
 .adm-disp-celda.is-activa { background: var(--color-accent); border-color: var(--color-accent); }
 
 .adm-bloqueo-item { display: flex; align-items: center; justify-content: space-between; background: #fff; border: 1px solid var(--color-border); border-radius: 8px; padding: 10px 14px; margin-bottom: 8px; font-size: 13.5px; }
+
+/* ============================================================
+   DISPONIBILIDAD DE CLOSERS (Director Comercial) — semana tipo
+   ============================================================ */
+.adm-sem-barra { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 10px; }
+.adm-sem-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.adm-sem-chip {
+  display: inline-flex; align-items: center; gap: 7px; min-height: 34px; padding: 0 14px;
+  border-radius: 18px; border: 1.5px solid var(--color-border); background: #fff;
+  font: inherit; font-size: 13.5px; color: var(--color-ink); cursor: pointer;
+}
+.adm-sem-chip:hover { border-color: var(--color-ink-soft); }
+.adm-sem-chip.is-on { background: var(--ag-azul-claro); border-color: var(--ag-azul); color: var(--ag-azul-oscuro); font-weight: 600; }
+.adm-sem-punto { width: 10px; height: 10px; border-radius: 50%; display: inline-block; flex-shrink: 0; }
+.adm-sem-aviso { color: #8A6112; font-size: 12px; font-weight: 600; }
+.adm-sem-acciones { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+.adm-sem-actualizado { font-size: 12px; color: var(--color-ink-soft); }
+.adm-sem-resumen { font-size: 13px; color: var(--color-ink-soft); margin: 0 0 14px; }
+.adm-sem-estado { font-size: 13.5px; color: var(--color-ink-soft); margin: 0 0 10px; }
+.adm-sem-estado:empty { display: none; }
+.adm-sem-scroll { overflow-x: auto; }
+.adm-sem-grid { display: grid; grid-template-columns: 52px repeat(7, minmax(40px, 1fr)); gap: 3px; min-width: 360px; }
+.adm-sem-cab { text-align: center; font-size: 12px; font-weight: 700; color: var(--color-ink-soft); padding-bottom: 4px; }
+.adm-sem-hora { font-size: 11.5px; color: var(--color-ink-soft); display: flex; align-items: center; justify-content: flex-end; padding-right: 6px; }
+.adm-sem-hora.is-media { color: #98A0AC; }
+.adm-sem-celda {
+  height: 24px; border-radius: 4px; border: 1px solid var(--color-border);
+  display: flex; align-items: center; justify-content: center; font-size: 11.5px; font-weight: 700; cursor: default;
+}
+.adm-sem-celda.n0, .cuadro.n0 { background: transparent; }
+.adm-sem-celda.n1, .cuadro.n1 { background: var(--ag-azul-claro); border-color: transparent; color: var(--ag-azul-oscuro); }
+.adm-sem-celda.n2, .cuadro.n2 { background: #8DB6EB; border-color: transparent; color: #08305E; }
+.adm-sem-celda.n3, .cuadro.n3 { background: var(--ag-azul); border-color: transparent; color: #fff; }
+.adm-sem-pie { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-top: 14px; }
+.adm-sem-detalle { font-size: 13px; color: var(--color-ink-soft); margin: 0; min-height: 20px; }
+.adm-sem-leyenda { display: flex; align-items: center; gap: 12px; font-size: 12px; color: var(--color-ink-soft); flex-wrap: wrap; }
+.adm-sem-leyenda-item { display: inline-flex; align-items: center; gap: 5px; }
+.cuadro { width: 14px; height: 14px; border-radius: 3px; display: inline-block; border: 1px solid var(--color-border); }
+@media (max-width: 720px) {
+  .adm-sem-barra { flex-direction: column; }
+  .adm-sem-acciones { align-self: flex-end; }
+}
