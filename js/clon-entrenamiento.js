@@ -312,7 +312,7 @@ function inicializarChatEntrenamiento() {
   });
 
   onAuthStateChanged(auth, async (usuario) => {
-    if (!usuario || getCurrentRole() !== 'mentor') {
+    if (!usuario) {
       uid = null;
       historialCompleto = [];
       mostrados = 0;
