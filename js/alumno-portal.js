@@ -1904,15 +1904,16 @@ async function obtenerSesionesVivoProximas(programa, usuarios) {
 
   let sesiones = [];
 
-  // --- Mentorías: para BEGIN solo las marcadas "exclusiva BEGIN";
-  //     para NEXT/eXIT, todas las demás (nunca las exclusivas BEGIN) ---
+  // --- Mentorías: las generales (sin marcar) las ven los 3 niveles,
+  //     BEGIN incluido; las marcadas "exclusiva BEGIN" son un extra
+  //     solo para BEGIN y quedan ocultas para NEXT/eXIT ---
   const mentoriasSnaps = await Promise.all(mentores.map(([uid]) => get(ref(db, `mentorias/${uid}`))));
   mentoriasSnaps.forEach((snap, idx) => {
     if (!snap.exists()) return;
     const [mentorUid, mentorDatos] = mentores[idx];
     Object.entries(snap.val()).forEach(([mentoriaId, m]) => {
       if (!m.fecha || !m.hora) return;
-      if (esBegin !== !!m.exclusivaBegin) return; // filtra según programa
+      if (!esBegin && m.exclusivaBegin) return; // NEXT/eXIT nunca ven las exclusivas BEGIN
       const inicio = m.inicioTimestamp ? new Date(m.inicioTimestamp) : new Date(`${m.fecha}T${m.hora}`);
       if (isNaN(inicio.getTime())) return;
       sesiones.push({ tipo: 'mentor', mentorUid, mentorDatos, mentoriaId, ...m, inicio });
