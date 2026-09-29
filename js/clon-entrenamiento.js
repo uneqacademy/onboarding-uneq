@@ -63,10 +63,16 @@ function avatarClon(tamano) {
   return `<div style="${estiloBase} background:var(--color-primary); display:flex; align-items:center; justify-content:center; color:#fff; font-size:${Math.round(tamano / 2.15)}px;">🤖</div>`;
 }
 
-function burbujaMentor(texto) {
-  return `<div style="display:flex; justify-content:flex-end;">
-    <div style="background:var(--color-primary); color:#fff; padding:12px 16px; border-radius:14px; border-top-right-radius:4px; max-width:82%;">
-      <p style="margin:0; font-size:13.5px; line-height:1.5; white-space:pre-wrap;">${escaparHtml(texto)}</p>
+function burbujaMentor(id, texto, guardadoEnsenanza) {
+  const accion = guardadoEnsenanza
+    ? '<span class="badge badge--activo" style="font-size:9px; margin-top:4px;">💾 Guardado como enseñanza</span>'
+    : `<button type="button" class="clon-btn-guardar-ensenanza" data-id="${id}" style="background:none; border:0; padding:0; margin-top:4px; font-size:11px; color:var(--color-ink-soft); cursor:pointer; text-decoration:underline;">💾 Guardar esto como enseñanza</button>`;
+  return `<div style="display:flex; justify-content:flex-end;" data-clon-mentor-id="${id}">
+    <div style="display:flex; flex-direction:column; align-items:flex-end; max-width:82%;">
+      <div style="background:var(--color-primary); color:#fff; padding:12px 16px; border-radius:14px; border-top-right-radius:4px;">
+        <p style="margin:0; font-size:13.5px; line-height:1.5; white-space:pre-wrap;">${escaparHtml(texto)}</p>
+      </div>
+      ${accion}
     </div>
   </div>`;
 }
@@ -134,7 +140,7 @@ function inicializarChatEntrenamiento() {
     contMensajes.querySelectorAll('[data-clon-render]').forEach(el => el.remove());
     const html = visibles.map(m => {
       const interior = m.rol === 'mentor'
-        ? burbujaMentor(m.texto)
+        ? burbujaMentor(m.id, m.texto, m.guardadoEnsenanza)
         : burbujaClon(m.id, m.texto, m.estadoRevision, m.textoCorregido);
       return `<div data-clon-render>${interior}</div>`;
     }).join('');
@@ -192,12 +198,13 @@ function inicializarChatEntrenamiento() {
     btnEnviar.disabled = true;
 
     if (bienvenidaEl) bienvenidaEl.classList.add('hidden');
-    contMensajes.insertAdjacentHTML('beforeend', `<div data-clon-render>${burbujaMentor(mensaje)}</div>`);
+    const idMensajeMentor = await guardarMensaje('mentor', mensaje);
+    contMensajes.insertAdjacentHTML('beforeend', `<div data-clon-render>${burbujaMentor(idMensajeMentor, mensaje, false)}</div>`);
     const contexto = historialCompleto.slice(-MENSAJES_CONTEXTO_IA).map(m => ({ rol: m.rol, texto: m.textoCorregido || m.texto }));
-    await guardarMensaje('mentor', mensaje);
     mostrados = Math.min(historialCompleto.length, Math.max(mostrados + 1, MENSAJES_POR_PAGINA));
     contMensajes.insertAdjacentHTML('beforeend', burbujaCargando());
     contMensajes.scrollTop = contMensajes.scrollHeight;
+    wireAccionesRevision();
 
     try {
       const resultado = await entrenarClonIA({ mensaje, historial: contexto });
@@ -230,7 +237,45 @@ function inicializarChatEntrenamiento() {
     await guardarValidacionEntrenamiento({ pregunta: preguntaOrigen, respuesta: textoFinal, estadoRevision });
   }
 
+  // Para un mensaje TUYO que quieres guardar como enseñanza: busca hacia
+  // atrás la pregunta que dio pie a este intercambio — la respuesta del
+  // Clon inmediatamente anterior ya sabe a qué pregunta contestó; si no
+  // hay ninguna (dos mensajes tuyos seguidos), usa tu mensaje anterior.
+  function encontrarPreguntaAncla(idxMensaje) {
+    for (let i = idxMensaje - 1; i >= 0; i--) {
+      const m = historialCompleto[i];
+      if (m.rol === 'clon') return preguntaPorMensaje[m.id] || '';
+      if (m.rol === 'mentor') return m.textoCorregido || m.texto;
+    }
+    return '';
+  }
+
   function wireAccionesRevision() {
+    contMensajes.querySelectorAll('.clon-btn-guardar-ensenanza').forEach(btn => {
+      if (btn.dataset.wired) return;
+      btn.dataset.wired = '1';
+      btn.addEventListener('click', async () => {
+        const id = btn.dataset.id;
+        const idx = historialCompleto.findIndex(x => x.id === id);
+        const m = historialCompleto[idx];
+        if (!m) return;
+        const pregunta = encontrarPreguntaAncla(idx);
+        if (!pregunta) { alert('No encontré con qué pregunta asociar este mensaje.'); return; }
+        btn.disabled = true;
+        const textoOriginalBoton = btn.textContent;
+        btn.textContent = 'Guardando...';
+        try {
+          await guardarValidacionEntrenamiento({ pregunta, respuesta: m.texto, estadoRevision: 'intervenida' });
+          await set(ref(db, `entrenamientoClonHistorial/${uid}/${id}/guardadoEnsenanza`), true);
+          m.guardadoEnsenanza = true;
+          btn.outerHTML = '<span class="badge badge--activo" style="font-size:9px; margin-top:4px;">💾 Guardado como enseñanza</span>';
+        } catch (err) {
+          alert('No se pudo guardar. Intenta de nuevo.');
+          btn.disabled = false;
+          btn.textContent = textoOriginalBoton;
+        }
+      });
+    });
     contMensajes.querySelectorAll('.clon-btn-confirmar').forEach(btn => {
       if (btn.dataset.wired) return;
       btn.dataset.wired = '1';
