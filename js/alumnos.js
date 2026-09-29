@@ -33,6 +33,7 @@ import './hitos.js';
 import './mis-datos.js';
 import './informe-ia.js';
 import './asistente-uneq.js';
+import './clon-entrenamiento.js';
 
 let coachesMap = {};       // uid -> nombre, solo se llena para el director
 let currentAlumnoId = null;
