@@ -461,7 +461,7 @@ async function cargarPresentacion() {
   const conDatos = todas.map(([alumnoId, p]) => {
     const alumno = alumnos[alumnoId] || {};
     const ciclo = alumno.cicloActualId ? ciclos[alumno.cicloActualId] : null;
-    return { alumnoId, ...p, nombre: `${alumno.nombre || ''} ${alumno.apellido || ''}`.trim() || p.alumnoNombre || 'Alumno', fotoUrl: alumno.fotoUrl || '', programa: ciclo ? ciclo.programa : '', coachId: ciclo ? ciclo.coachId : '' };
+    return { alumnoId, ...p, nombre: `${alumno.nombre || ''} ${alumno.apellido || ''}`.trim() || p.alumnoNombre || 'Alumno', fotoUrl: alumno.fotoUrl || '', programa: p.programa || (ciclo ? ciclo.programa : ''), coachId: ciclo ? ciclo.coachId : '' };
   }).filter(p => esDirector || p.estado === 'aprobada' || p.alumnoId === ctxAlumno.alumnoId || (esCoach && (p.coachId === uid || (p.programa === 'begin' && esCoachCabeceraBegin))))
     .sort((a, b) => b.createdAt - a.createdAt);
 
@@ -569,7 +569,7 @@ async function renderPropiaPresentacion(ctxAlumno) {
       try {
         const fotos = await subirFotos('comunidad-presentaciones', ctxAlumno.alumnoId, fotosSeleccionadasPres);
         await set(ref(db, `comunidad/presentaciones/${ctxAlumno.alumnoId}`), {
-          texto, estado: 'pendiente', createdAt: Date.now(), alumnoNombre: ctxAlumno.nombre, fotos
+          texto, estado: 'pendiente', createdAt: Date.now(), alumnoNombre: ctxAlumno.nombre, fotos, programa: ctxAlumno.programa || null
         });
         fotosSeleccionadasPres.length = 0;
         btn.disabled = false; btn.textContent = 'Enviar presentación';
@@ -633,7 +633,7 @@ async function cargarHistoriasReales() {
     .map(([id, h]) => {
       const alumno = alumnoPorAuthUid[h.autorId] || {};
       const ciclo = alumno.cicloActualId ? ciclos[alumno.cicloActualId] : null;
-      return { id, ...h, fotoUrl: alumno.fotoUrl || '', programa: ciclo ? ciclo.programa : '', coachId: ciclo ? ciclo.coachId : '' };
+      return { id, ...h, fotoUrl: alumno.fotoUrl || '', programa: h.programa || (ciclo ? ciclo.programa : ''), coachId: ciclo ? ciclo.coachId : '' };
     })
     .sort((a, b) => b.createdAt - a.createdAt);
 
@@ -707,7 +707,7 @@ async function cargarHistoriasReales() {
       try {
         const nuevoRef = push(ref(db, 'comunidad/historiasReales'));
         const fotos = await subirFotos('comunidad-historias', nuevoRef.key, fotosSeleccionadasHist);
-        await set(nuevoRef, { autorId: uid, alumnoNombre: ctxAlumno.nombre, texto, createdAt: Date.now(), fotos });
+        await set(nuevoRef, { autorId: uid, alumnoNombre: ctxAlumno.nombre, texto, createdAt: Date.now(), fotos, programa: ctxAlumno.programa || null });
         fotosSeleccionadasHist.length = 0;
         document.getElementById('hist-texto-form').value = '';
         document.getElementById('hist-fotos-preview').innerHTML = '';
