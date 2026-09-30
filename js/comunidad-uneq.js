@@ -411,7 +411,6 @@ async function cargarPresentacion() {
   const esStaff = !esAlumno;
   const esDirector = role === 'director';
   const esCoach = role === 'coach';
-  const esMentor = role === 'mentor';
   const uid = auth.currentUser ? auth.currentUser.uid : null;
   if (!uid) return;
 
@@ -452,7 +451,7 @@ async function cargarPresentacion() {
     const alumno = alumnos[alumnoId] || {};
     const ciclo = alumno.cicloActualId ? ciclos[alumno.cicloActualId] : null;
     return { alumnoId, ...p, nombre: `${alumno.nombre || ''} ${alumno.apellido || ''}`.trim() || p.alumnoNombre || 'Alumno', fotoUrl: alumno.fotoUrl || '', programa: ciclo ? ciclo.programa : '', coachId: ciclo ? ciclo.coachId : '' };
-  }).filter(p => esDirector || esCoach || esMentor || p.estado === 'aprobada' || p.alumnoId === ctxAlumno.alumnoId)
+  }).filter(p => esDirector || p.estado === 'aprobada' || p.alumnoId === ctxAlumno.alumnoId || (esCoach && (p.coachId === uid || (p.programa === 'begin' && esCoachCabeceraBegin))))
     .sort((a, b) => b.createdAt - a.createdAt);
 
   if (esStaff) {
