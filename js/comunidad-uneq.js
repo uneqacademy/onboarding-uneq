@@ -20,6 +20,16 @@ const VENTANA_EDICION_MS = 24 * 60 * 60 * 1000;
 const TAMANO_MAXIMO_FOTO = 10 * 1024 * 1024;
 const PLACEHOLDER_FOTO = 'https://app.uneqacademy.com/assets/logos/isotipo-uneq.png';
 function dentroDeVentana(createdAt) { return (Date.now() - createdAt) < VENTANA_EDICION_MS; }
+
+// Misma etiqueta con el logo del programa que ya usa Hitos — mismo
+// nombre de clase CSS (.hito-etiqueta-programa) a propósito.
+function programaLabelCorto(p) {
+  return p === 'begin' ? 'Begin' : p === 'next' ? 'Next' : p === 'exit' ? 'eXIT' : '—';
+}
+function etiquetaProgramaSocial(p) {
+  if (!['begin', 'next', 'exit'].includes(p)) return '';
+  return `<span class="hito-etiqueta-programa" title="${programaLabelCorto(p)}"><img src="assets/logos/wordmark-${p}.png" alt="${programaLabelCorto(p)}"></span>`;
+}
 function formatFecha(ts) {
   return new Intl.DateTimeFormat('es-CL', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }).format(new Date(ts));
 }
@@ -164,6 +174,7 @@ function renderTarjetaSocial(basePath, id, item, ctx) {
         <div class="hito-autor">
           <span class="hito-autor__fotos"><img src="${autorFotoUrl || PLACEHOLDER_FOTO}" alt=""></span>
           <strong>${item.alumnoNombre || 'Alumno'}</strong>
+          ${etiquetaProgramaSocial(item.programa)}
           ${item.estado === 'pendiente' ? '<span class="badge badge--impaga" style="font-size:9px; margin-left:6px;">En Revisión</span>' : ''}
         </div>
       </div>
