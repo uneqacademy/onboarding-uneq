@@ -542,7 +542,7 @@ function renderFeedHitos(hitosVisibles, usuarios, ctx) {
     const esAutor = ctx.esAlumno && ctx.idsProyectoPropio.includes(h.alumnoIdPublicador);
     const dentroDe24hHito = dentroDeVentana(h.createdAt);
     const puedeEliminar = (esAutor && dentroDe24hHito) || ctx.esDirector;
-    const puedeEditar = esAutor && dentroDe24hHito;
+    const puedeEditar = (esAutor && dentroDe24hHito) || ctx.esDirector;
     const puedeDenunciar = ctx.esAlumno && !esAutor;
     const yaReacciono = h.reacciones && h.reacciones[ctx.uid];
     const totalReacciones = h.reacciones ? Object.keys(h.reacciones).length : 0;

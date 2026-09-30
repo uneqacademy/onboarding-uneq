@@ -411,6 +411,7 @@ async function cargarPresentacion() {
   const esStaff = !esAlumno;
   const esDirector = role === 'director';
   const esCoach = role === 'coach';
+  const esMentor = role === 'mentor';
   const uid = auth.currentUser ? auth.currentUser.uid : null;
   if (!uid) return;
 
@@ -441,13 +442,17 @@ async function cargarPresentacion() {
   const alumnos = alumnosSnap.exists() ? alumnosSnap.val() : {};
   const ciclos = ciclosSnap.exists() ? ciclosSnap.val() : {};
   const usuarios = usuariosSnap && usuariosSnap.exists() ? usuariosSnap.val() : {};
+  // Aprobar una presentación es del Director, del coach asignado al
+  // alumno, o (si es BEGIN) del coach de cabecera BEGIN — no de
+  // cualquier coach.
+  const esCoachCabeceraBegin = esCoach && !!(usuarios[uid] && usuarios[uid].coachCabeceraBegin);
   const todas = presSnap.exists() ? Object.entries(presSnap.val()) : [];
 
   const conDatos = todas.map(([alumnoId, p]) => {
     const alumno = alumnos[alumnoId] || {};
     const ciclo = alumno.cicloActualId ? ciclos[alumno.cicloActualId] : null;
     return { alumnoId, ...p, nombre: `${alumno.nombre || ''} ${alumno.apellido || ''}`.trim() || p.alumnoNombre || 'Alumno', fotoUrl: alumno.fotoUrl || '', programa: ciclo ? ciclo.programa : '', coachId: ciclo ? ciclo.coachId : '' };
-  }).filter(p => esDirector || esCoach || p.estado === 'aprobada' || p.alumnoId === ctxAlumno.alumnoId)
+  }).filter(p => esDirector || esCoach || esMentor || p.estado === 'aprobada' || p.alumnoId === ctxAlumno.alumnoId)
     .sort((a, b) => b.createdAt - a.createdAt);
 
   if (esStaff) {
@@ -499,12 +504,13 @@ async function cargarPresentacion() {
       const basePath = `comunidad/presentaciones/${p.alumnoId}`;
       const esDueño = p.alumnoId === ctxAlumno.alumnoId;
       const dentro24h = dentroDeVentana(p.createdAt);
-      const extraFooterHtml = (esCoach || esDirector) && p.estado !== 'aprobada'
+      const puedeAprobar = esDirector || p.coachId === uid || (p.programa === 'begin' && esCoachCabeceraBegin);
+      const extraFooterHtml = puedeAprobar && p.estado !== 'aprobada'
         ? `<div style="display:flex; gap:8px; padding:0 14px 14px;"><button type="button" class="btn btn--primary btn-aprobar-presentacion" data-alumno-id="${p.alumnoId}" style="font-size:12px; padding:5px 12px;">✓ Aprobar</button></div>`
         : '';
       return renderTarjetaSocial(basePath, p.alumnoId, p, {
         esDirector, uid, autorFotoUrl: p.fotoUrl, esDueño,
-        puedeEditar: esDueño && dentro24h, puedeEliminar: (esDueño && dentro24h) || esDirector, extraFooterHtml
+        puedeEditar: (esDueño && dentro24h) || esDirector, puedeEliminar: (esDueño && dentro24h) || esDirector, extraFooterHtml
       });
     }).join('') : '<p class="text-soft">No hay presentaciones con ese filtro todavía.</p>';
     aplicarClampTexto(feedEl);
@@ -668,7 +674,7 @@ async function cargarHistoriasReales() {
       const dentro24h = dentroDeVentana(h.createdAt);
       return renderTarjetaSocial(basePath, h.id, { ...h, alumnoNombre: h.alumnoNombre }, {
         esDirector, uid, autorFotoUrl: h.fotoUrl, esDueño,
-        puedeEditar: esDueño && dentro24h, puedeEliminar: (esDueño && dentro24h) || esDirector
+        puedeEditar: (esDueño && dentro24h) || esDirector, puedeEliminar: (esDueño && dentro24h) || esDirector
       });
     }).join('') : '<p class="text-soft">Todavía no hay historias que mostrar.</p>';
     aplicarClampTexto(feedEl);
