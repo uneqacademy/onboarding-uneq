@@ -157,9 +157,9 @@ async function revisarPresentacionAprobada() {
   presentacionAprobada = !!(presSnap && presSnap.exists() && presSnap.val().estado === 'aprobada');
 }
 
-function mostrarSubtab(nombre) {
+function mostrarSubtab(nombre, omitirCandado) {
   const role = getCurrentRole();
-  if (role === 'alumno' && !presentacionAprobada) nombre = 'presentacion';
+  if (role === 'alumno' && !presentacionAprobada && !omitirCandado) nombre = 'presentacion';
   subtabActual = nombre;
   document.querySelectorAll('[data-comunidad-tab]').forEach(btn => btn.classList.toggle('is-activa', btn.dataset.comunidadTab === nombre));
   document.querySelectorAll('.comunidad-vista').forEach(vista => vista.classList.toggle('is-activa', vista.id === `comunidad-vista-${nombre}`));
@@ -171,9 +171,13 @@ function mostrarSubtab(nombre) {
 // no se puede "saltar" cambiando de pestaña directamente, ni queda
 // pegado en Presentación si ya fue aprobada después de la última vez
 // que se revisó.
-async function irAComunidadUneq(nombreDeseado) {
+// omitirCandado: solo para irAHitoDesdeNotificacion — una notificación
+// es siempre sobre TU PROPIO hito (alguien comentó/reaccionó ahí), así
+// que el candado de "todavía no ves lo de los demás" no aplica: sería
+// bloquearte el acceso a algo tuyo.
+async function irAComunidadUneq(nombreDeseado, omitirCandado) {
   await revisarPresentacionAprobada();
-  await mostrarSubtab(nombreDeseado);
+  await mostrarSubtab(nombreDeseado, omitirCandado);
 }
 
 document.querySelectorAll('[data-comunidad-tab]').forEach(btn => {
@@ -185,16 +189,16 @@ document.querySelectorAll('.nav-item[data-nav="comunidad-uneq"]').forEach(item =
 });
 
 // Usado por la campanita de notificaciones: entra directo a "Hitos
-// de la Comunidad" (respetando el candado si corresponde) y solo
-// hace scroll una vez que la publicación ya está realmente en
-// pantalla — sin simular clics ni adivinar cuánto tarda la carga.
+// de la Comunidad" — sin el candado, porque una notificación siempre
+// es sobre tu propio hito — y solo hace scroll una vez que la
+// publicación ya está realmente en pantalla — sin simular clics ni
+// adivinar cuánto tarda la carga.
 export async function irAHitoDesdeNotificacion(hitoId) {
   showView('view-comunidad-uneq');
   marcarNavActivo('comunidad-uneq');
   const topbar = document.getElementById('topbar-title');
   if (topbar) topbar.textContent = 'Comunidad UNEQ';
-  await irAComunidadUneq('hitos');
-  if (!presentacionAprobada && getCurrentRole() === 'alumno') return; // se quedó en el candado, nada que hacer
+  await irAComunidadUneq('hitos', true);
   const elDestino = document.getElementById(`hito-${hitoId}`);
   if (elDestino) {
     window.location.hash = `#hito-${hitoId}`;

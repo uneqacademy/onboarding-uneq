@@ -40,7 +40,7 @@ function renderLista() {
       } catch (err) {
         console.error('No se pudo marcar la notificación como leída:', err);
       }
-      panelEl.classList.add('hidden');
+      cerrarPanel();
       if (hitoId) await irAHitoDesdeNotificacion(hitoId);
     });
   });
@@ -74,9 +74,36 @@ async function iniciarNotificaciones() {
   });
 }
 
-btnCampana?.addEventListener('click', () => panelEl.classList.toggle('hidden'));
+// Marca como leídas TODAS las que se alcanzaron a ver en el panel —
+// no hace falta tocar cada una por separado. Se llama al cerrar el
+// panel (de cualquier forma), no al abrirlo, para no hacerlas
+// desaparecer de golpe mientras el alumno todavía las está leyendo.
+async function marcarTodasComoLeidas() {
+  if (!alumnoIdActual || !notificacionesActuales.length) return;
+  const cambios = {};
+  notificacionesActuales.forEach(([id]) => { cambios[`${id}/leida`] = true; });
+  try {
+    await update(ref(db, `notificaciones/${alumnoIdActual}`), cambios);
+  } catch (err) {
+    console.error('No se pudieron marcar las notificaciones como leídas:', err);
+  }
+}
+
+function cerrarPanel() {
+  if (panelEl.classList.contains('hidden')) return; // ya estaba cerrado, nada que marcar
+  panelEl.classList.add('hidden');
+  marcarTodasComoLeidas();
+}
+
+btnCampana?.addEventListener('click', () => {
+  if (panelEl.classList.contains('hidden')) {
+    panelEl.classList.remove('hidden');
+  } else {
+    cerrarPanel();
+  }
+});
 document.addEventListener('click', (ev) => {
-  if (!ev.target.closest('#notif-contenedor')) panelEl?.classList.add('hidden');
+  if (!ev.target.closest('#notif-contenedor')) cerrarPanel();
 });
 
 export { iniciarNotificaciones };
