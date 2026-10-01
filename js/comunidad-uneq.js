@@ -508,13 +508,17 @@ async function cargarPresentacion() {
     await renderPropiaPresentacion(ctxAlumno);
   }
 
-  let presSnap, alumnosSnap, ciclosSnap, usuariosSnap;
+  let presSnap, alumnosSnap, ciclosSnap, usuariosSnap, propioUsuarioSnap;
   try {
-    [presSnap, alumnosSnap, ciclosSnap, usuariosSnap] = await Promise.all([
+    [presSnap, alumnosSnap, ciclosSnap, usuariosSnap, propioUsuarioSnap] = await Promise.all([
       get(ref(db, 'comunidad/presentaciones')),
       get(ref(db, 'alumnos')).catch(() => null),
       get(ref(db, 'ciclos')).catch(() => null),
-      esStaff ? get(ref(db, 'usuarios')) : Promise.resolve(null)
+      esStaff ? get(ref(db, 'usuarios')).catch(() => null) : Promise.resolve(null),
+      // La colección completa de "usuarios" no la puede leer un coach (solo
+      // Director/Mentor/Alumno) — pero su propia ficha sí, siempre. La
+      // necesitamos aparte para saber si ES coach de cabecera BEGIN.
+      esCoach ? get(ref(db, `usuarios/${uid}`)).catch(() => null) : Promise.resolve(null)
     ]);
   } catch (err) {
     console.error('No se pudieron cargar las presentaciones:', err);
@@ -533,7 +537,7 @@ async function cargarPresentacion() {
   // Aprobar una presentación es del Director, del coach asignado al
   // alumno, o (si es BEGIN) del coach de cabecera BEGIN — no de
   // cualquier coach.
-  const esCoachCabeceraBegin = esCoach && !!(usuarios[uid] && usuarios[uid].coachCabeceraBegin);
+  const esCoachCabeceraBegin = esCoach && !!(propioUsuarioSnap && propioUsuarioSnap.exists() && propioUsuarioSnap.val().coachCabeceraBegin);
   const todas = presSnap.exists() ? Object.entries(presSnap.val()) : [];
 
   const conDatos = todas.map(([alumnoId, p]) => {
