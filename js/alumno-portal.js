@@ -1380,11 +1380,11 @@ export async function cargarPreguntasComunidad() {
   const contadorEl = document.getElementById('cpc-contador');
 
   const [usuariosSnap, ciclosSnap, alumnosSnap] = await Promise.all([
-    get(ref(db, 'usuarios')),
+    get(ref(db, 'usuarios')).catch(() => null), // un coach no puede leer esto completo
     esStaff ? get(ref(db, 'ciclos')) : Promise.resolve(null),
     esStaff ? get(ref(db, 'alumnos')) : Promise.resolve(null)
   ]);
-  const usuarios = usuariosSnap.exists() ? usuariosSnap.val() : {};
+  const usuarios = (usuariosSnap && usuariosSnap.exists()) ? usuariosSnap.val() : {};
   const ciclos = ciclosSnap && ciclosSnap.exists() ? ciclosSnap.val() : {};
   const alumnos = alumnosSnap && alumnosSnap.exists() ? alumnosSnap.val() : {};
   const mentores = ordenarMentores(Object.entries(usuarios).filter(([, u]) => {
@@ -1409,10 +1409,13 @@ export async function cargarPreguntasComunidad() {
     sCoachEl.dataset.cargado = '1';
   }
 
-  const todasSnaps = await Promise.all(mentores.map(([uid2]) => get(ref(db, `box/${uid2}`))));
+  // .catch por cada mentor: si las reglas no dejan leer el box de
+  // alguno puntual (no debería pasar tras el ajuste de reglas, pero
+  // así una falla aislada no tira abajo la lista entera).
+  const todasSnaps = await Promise.all(mentores.map(([uid2]) => get(ref(db, `box/${uid2}`)).catch(() => null)));
   let todas = [];
   todasSnaps.forEach((snap, idx) => {
-    if (!snap.exists()) return;
+    if (!snap || !snap.exists()) return;
     const [mentorUid] = mentores[idx];
     Object.entries(snap.val()).forEach(([preguntaId, p]) => {
       if (!p.respuesta) return;

@@ -159,12 +159,12 @@ export async function cargarMisHitos() {
   const [hitosDefSnap, hitosSnap, usuariosSnap, configSnap] = await Promise.all([
     get(ref(db, 'configuracion/hitosDefinidos')),
     get(ref(db, 'hitos')),
-    get(ref(db, 'usuarios')),
+    get(ref(db, 'usuarios')).catch(() => null), // un coach no puede leer esto completo
     get(ref(db, 'configuracion/general'))
   ]);
   if (!cargaVigente()) return;
   const hitosDefinidos = hitosDefSnap.exists() ? hitosDefSnap.val() : {};
-  const usuarios = usuariosSnap.exists() ? usuariosSnap.val() : {};
+  const usuarios = (usuariosSnap && usuariosSnap.exists()) ? usuariosSnap.val() : {};
   const todosLosHitos = hitosSnap.exists() ? Object.entries(hitosSnap.val()) : [];
   const config = configSnap.exists() ? configSnap.val() : {};
 
@@ -233,12 +233,12 @@ export async function cargarHitosComunidad() {
   const [hitosDefSnap, hitosSnap, usuariosSnap, ciclosSnap] = await Promise.all([
     get(ref(db, 'configuracion/hitosDefinidos')),
     get(ref(db, 'hitos')),
-    get(ref(db, 'usuarios')),
+    get(ref(db, 'usuarios')).catch(() => null), // un coach no puede leer esto completo
     esStaff ? get(ref(db, 'ciclos')) : Promise.resolve(null)
   ]);
   if (!cargaVigente()) return;
   const hitosDefinidos = hitosDefSnap.exists() ? hitosDefSnap.val() : {};
-  const usuarios = usuariosSnap.exists() ? usuariosSnap.val() : {};
+  const usuarios = (usuariosSnap && usuariosSnap.exists()) ? usuariosSnap.val() : {};
   const ciclos = ciclosSnap && ciclosSnap.exists() ? ciclosSnap.val() : {};
 
   // Coach asignado de cada hito (vía su proyecto/ciclo) — se calcula

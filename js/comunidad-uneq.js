@@ -728,7 +728,7 @@ async function cargarHistoriasReales() {
       get(ref(db, 'comunidad/historiasReales')),
       get(ref(db, 'alumnos')).catch(() => null),
       esStaff ? get(ref(db, 'ciclos')) : Promise.resolve(null),
-      esStaff ? get(ref(db, 'usuarios')) : Promise.resolve(null)
+      esStaff ? get(ref(db, 'usuarios')).catch(() => null) : Promise.resolve(null)
     ]);
   } catch (err) {
     console.error('No se pudieron cargar las historias:', err);
