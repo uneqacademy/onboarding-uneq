@@ -21,6 +21,27 @@ const TAMANO_MAXIMO_FOTO = 10 * 1024 * 1024;
 const PLACEHOLDER_FOTO = 'https://app.uneqacademy.com/assets/logos/isotipo-uneq.png';
 function dentroDeVentana(createdAt) { return (Date.now() - createdAt) < VENTANA_EDICION_MS; }
 
+// --- Foto de un alumno, leída una por una (mismo patrón que ya usa
+//     hitos.js): alumnos/{id}/fotoUrl es pública para cualquier
+//     autenticado, aunque la colección "alumnos" completa no lo sea
+//     para un alumno. Con caché de sesión para no repetir pedidos. ---
+const cacheFotoAlumno = new Map();
+function fotoDeAlumno(alumnoId) {
+  if (!alumnoId) return Promise.resolve(null);
+  if (!cacheFotoAlumno.has(alumnoId)) {
+    cacheFotoAlumno.set(alumnoId, get(ref(db, `alumnos/${alumnoId}/fotoUrl`)).then(s => s.exists() ? s.val() : null).catch(() => null));
+  }
+  return cacheFotoAlumno.get(alumnoId);
+}
+// Completa, en el sitio, el fotoUrl de cada item que haya quedado sin
+// foto porque la lectura masiva de "alumnos" no estaba permitida
+// (coach/alumno viendo a otros) — solo pide las que de verdad faltan.
+async function completarFotosFaltantes(items) {
+  await Promise.all(items.filter(it => !it.fotoUrl && it.alumnoId).map(async it => {
+    it.fotoUrl = (await fotoDeAlumno(it.alumnoId)) || '';
+  }));
+}
+
 // Misma etiqueta con el logo del programa que ya usa Hitos — mismo
 // nombre de clase CSS (.hito-etiqueta-programa) a propósito.
 function programaLabelCorto(p) {
@@ -31,7 +52,7 @@ function programaLabelCorto(p) {
 //     guardado, igual que ya queda en las nuevas desde el principio.
 //     Idempotente: correrla de nuevo no hace nada si ya no falta ninguna. ---
 async function backfillProgramaEnPublicaciones(boton) {
-  if (!confirm('Esto va a revisar Presentaciones e Historias Reales antiguas y guardarles el programa (Begin/Next/eXIT) directo en la publicación, para que el logo se vea también para los alumnos. ¿Continuar?')) return;
+  if (!confirm('Esto va a revisar Presentaciones e Historias Reales antiguas y completarles el programa (Begin/Next/eXIT) y una referencia al alumno autor, para que el logo de programa y la foto se vean también para los alumnos. ¿Continuar?')) return;
   boton.disabled = true;
   const textoOriginal = boton.textContent;
   boton.textContent = 'Procesando...';
@@ -64,18 +85,23 @@ async function backfillProgramaEnPublicaciones(boton) {
 
     const historias = histSnap.exists() ? Object.entries(histSnap.val()) : [];
     for (const [historiaId, h] of historias) {
-      if (h.programa) continue;
       const alumno = alumnoPorAuthUid[h.autorId];
       const ciclo = alumno && alumno.cicloActualId ? ciclos[alumno.cicloActualId] : null;
-      if (ciclo && ciclo.programa) {
-        await update(ref(db, `comunidad/historiasReales/${historiaId}`), { programa: ciclo.programa });
+      const cambios = {};
+      if (!h.programa && ciclo && ciclo.programa) cambios.programa = ciclo.programa;
+      // alumnoId: para que la foto del autor se pueda resolver después sin
+      // depender de la lectura masiva de "alumnos" (que un alumno no puede
+      // hacer) — con esto puesto, se resuelve de a una, igual que en Hitos.
+      if (!h.alumnoId && alumno) cambios.alumnoId = alumno.id;
+      if (Object.keys(cambios).length) {
+        await update(ref(db, `comunidad/historiasReales/${historiaId}`), cambios);
         actualizadas++;
-      } else {
+      } else if (!h.programa || !h.alumnoId) {
         sinDatos++;
       }
     }
 
-    alert(`Listo. Se actualizaron ${actualizadas} publicaciones.${sinDatos ? `\n${sinDatos} quedaron sin poder resolverse (el alumno ya no tiene un ciclo activo del que sacar el programa) — probablemente alumnos egresados o con la ficha incompleta.` : ''}`);
+    alert(`Listo. Se actualizaron ${actualizadas} publicaciones.${sinDatos ? `\n${sinDatos} quedaron sin poder resolverse del todo (el alumno ya no tiene un ciclo activo, o no se encontró su ficha) — probablemente alumnos egresados o con la ficha incompleta.` : ''}`);
     cargarPresentacion();
     cargarHistoriasReales();
   } catch (err) {
@@ -93,7 +119,7 @@ function asegurarBotonBackfillPrograma() {
   if (!panel) return;
   panel.insertAdjacentHTML('beforeend', `
     <div style="margin-top:10px; padding-top:10px; border-top:1px solid var(--color-border);">
-      <button type="button" id="btn-backfill-programa" class="btn btn--ghost" style="font-size:11px; padding:4px 10px;">🔧 Completar el logo de programa en publicaciones antiguas (Presentaciones + Historias Reales)</button>
+      <button type="button" id="btn-backfill-programa" class="btn btn--ghost" style="font-size:11px; padding:4px 10px;">🔧 Completar programa y foto del autor en publicaciones antiguas (Presentaciones + Historias Reales)</button>
     </div>`);
   document.getElementById('btn-backfill-programa').addEventListener('click', (ev) => backfillProgramaEnPublicaciones(ev.currentTarget));
 }
@@ -547,6 +573,8 @@ async function cargarPresentacion() {
   }).filter(p => esDirector || p.estado === 'aprobada' || p.alumnoId === ctxAlumno.alumnoId || (esCoach && (p.coachId === uid || (p.programa === 'begin' && esCoachCabeceraBegin))))
     .sort((a, b) => b.createdAt - a.createdAt);
 
+  await completarFotosFaltantes(conDatos);
+
   if (esStaff) {
     const coachEl = document.getElementById('pres-f-coach');
     if (coachEl && !coachEl.dataset.cargado) {
@@ -715,9 +743,14 @@ async function cargarHistoriasReales() {
     .map(([id, h]) => {
       const alumno = alumnoPorAuthUid[h.autorId] || {};
       const ciclo = alumno.cicloActualId ? ciclos[alumno.cicloActualId] : null;
-      return { id, ...h, fotoUrl: alumno.fotoUrl || '', programa: h.programa || (ciclo ? ciclo.programa : ''), coachId: ciclo ? ciclo.coachId : '' };
+      // alumnoId: el guardado en la propia historia (nuevas, o antiguas ya
+      // completadas por el backfill) tiene prioridad; si no, el que el
+      // staff puede resolver por autorId con su lectura masiva.
+      return { id, ...h, alumnoId: h.alumnoId || alumno.id || null, fotoUrl: alumno.fotoUrl || '', programa: h.programa || (ciclo ? ciclo.programa : ''), coachId: ciclo ? ciclo.coachId : '' };
     })
     .sort((a, b) => b.createdAt - a.createdAt);
+
+  await completarFotosFaltantes(todas);
 
   if (esStaff) {
     const coachEl = document.getElementById('hist-f-coach');
@@ -789,7 +822,7 @@ async function cargarHistoriasReales() {
       try {
         const nuevoRef = push(ref(db, 'comunidad/historiasReales'));
         const fotos = await subirFotos('comunidad-historias', nuevoRef.key, fotosSeleccionadasHist);
-        await set(nuevoRef, { autorId: uid, alumnoNombre: ctxAlumno.nombre, texto, createdAt: Date.now(), fotos, programa: ctxAlumno.programa || null });
+        await set(nuevoRef, { autorId: uid, alumnoId: ctxAlumno.alumnoId || null, alumnoNombre: ctxAlumno.nombre, texto, createdAt: Date.now(), fotos, programa: ctxAlumno.programa || null });
         fotosSeleccionadasHist.length = 0;
         document.getElementById('hist-texto-form').value = '';
         document.getElementById('hist-fotos-preview').innerHTML = '';
