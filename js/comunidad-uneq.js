@@ -26,6 +26,78 @@ function dentroDeVentana(createdAt) { return (Date.now() - createdAt) < VENTANA_
 function programaLabelCorto(p) {
   return p === 'begin' ? 'Begin' : p === 'next' ? 'Next' : p === 'exit' ? 'eXIT' : '—';
 }
+// --- Herramienta de una sola vez, solo Director: les escribe el
+//     programa directo a las publicaciones antiguas que no lo tengan
+//     guardado, igual que ya queda en las nuevas desde el principio.
+//     Idempotente: correrla de nuevo no hace nada si ya no falta ninguna. ---
+async function backfillProgramaEnPublicaciones(boton) {
+  if (!confirm('Esto va a revisar Presentaciones e Historias Reales antiguas y guardarles el programa (Begin/Next/eXIT) directo en la publicación, para que el logo se vea también para los alumnos. ¿Continuar?')) return;
+  boton.disabled = true;
+  const textoOriginal = boton.textContent;
+  boton.textContent = 'Procesando...';
+  try {
+    const [presSnap, histSnap, alumnosSnap, ciclosSnap] = await Promise.all([
+      get(ref(db, 'comunidad/presentaciones')),
+      get(ref(db, 'comunidad/historiasReales')),
+      get(ref(db, 'alumnos')),
+      get(ref(db, 'ciclos'))
+    ]);
+    const alumnos = alumnosSnap.exists() ? alumnosSnap.val() : {};
+    const ciclos = ciclosSnap.exists() ? ciclosSnap.val() : {};
+    const alumnoPorAuthUid = {};
+    Object.entries(alumnos).forEach(([id, a]) => { if (a.authUid) alumnoPorAuthUid[a.authUid] = { id, ...a }; });
+
+    let actualizadas = 0, sinDatos = 0;
+
+    const presentaciones = presSnap.exists() ? Object.entries(presSnap.val()) : [];
+    for (const [alumnoId, p] of presentaciones) {
+      if (p.programa) continue;
+      const alumno = alumnos[alumnoId];
+      const ciclo = alumno && alumno.cicloActualId ? ciclos[alumno.cicloActualId] : null;
+      if (ciclo && ciclo.programa) {
+        await update(ref(db, `comunidad/presentaciones/${alumnoId}`), { programa: ciclo.programa });
+        actualizadas++;
+      } else {
+        sinDatos++;
+      }
+    }
+
+    const historias = histSnap.exists() ? Object.entries(histSnap.val()) : [];
+    for (const [historiaId, h] of historias) {
+      if (h.programa) continue;
+      const alumno = alumnoPorAuthUid[h.autorId];
+      const ciclo = alumno && alumno.cicloActualId ? ciclos[alumno.cicloActualId] : null;
+      if (ciclo && ciclo.programa) {
+        await update(ref(db, `comunidad/historiasReales/${historiaId}`), { programa: ciclo.programa });
+        actualizadas++;
+      } else {
+        sinDatos++;
+      }
+    }
+
+    alert(`Listo. Se actualizaron ${actualizadas} publicaciones.${sinDatos ? `\n${sinDatos} quedaron sin poder resolverse (el alumno ya no tiene un ciclo activo del que sacar el programa) — probablemente alumnos egresados o con la ficha incompleta.` : ''}`);
+    cargarPresentacion();
+    cargarHistoriasReales();
+  } catch (err) {
+    console.error('Error en el backfill de programa:', err);
+    alert('Hubo un problema. Revisa la consola e intenta de nuevo.');
+  } finally {
+    boton.disabled = false;
+    boton.textContent = textoOriginal;
+  }
+}
+
+function asegurarBotonBackfillPrograma() {
+  if (document.getElementById('btn-backfill-programa')) return;
+  const panel = document.getElementById('pres-filtros-staff-panel');
+  if (!panel) return;
+  panel.insertAdjacentHTML('beforeend', `
+    <div style="margin-top:10px; padding-top:10px; border-top:1px solid var(--color-border);">
+      <button type="button" id="btn-backfill-programa" class="btn btn--ghost" style="font-size:11px; padding:4px 10px;">🔧 Completar el logo de programa en publicaciones antiguas (Presentaciones + Historias Reales)</button>
+    </div>`);
+  document.getElementById('btn-backfill-programa').addEventListener('click', (ev) => backfillProgramaEnPublicaciones(ev.currentTarget));
+}
+
 function etiquetaProgramaSocial(p) {
   if (!['begin', 'next', 'exit'].includes(p)) return '';
   return `<span class="hito-etiqueta-programa" title="${programaLabelCorto(p)}"><img src="assets/logos/wordmark-${p}.png" alt="${programaLabelCorto(p)}"></span>`;
@@ -426,6 +498,7 @@ async function cargarPresentacion() {
   if (!uid) return;
 
   document.getElementById('pres-filtros-staff-panel')?.classList.toggle('hidden', !esStaff);
+  if (esDirector) asegurarBotonBackfillPrograma();
   document.getElementById('pres-filtros-alumno-panel')?.classList.toggle('hidden', !esAlumno);
   wireAdjuntarFoto('pres-btn-adjuntar-foto', 'pres-input-foto', 'pres-fotos-preview', fotosSeleccionadasPres);
 
@@ -439,8 +512,8 @@ async function cargarPresentacion() {
   try {
     [presSnap, alumnosSnap, ciclosSnap, usuariosSnap] = await Promise.all([
       get(ref(db, 'comunidad/presentaciones')),
-      get(ref(db, 'alumnos')),
-      get(ref(db, 'ciclos')),
+      get(ref(db, 'alumnos')).catch(() => null),
+      get(ref(db, 'ciclos')).catch(() => null),
       esStaff ? get(ref(db, 'usuarios')) : Promise.resolve(null)
     ]);
   } catch (err) {
@@ -449,8 +522,13 @@ async function cargarPresentacion() {
     if (feedEl) feedEl.innerHTML = '<p class="text-soft">No se pudo cargar la lista. Recarga la página e intenta de nuevo.</p>';
     return;
   }
-  const alumnos = alumnosSnap.exists() ? alumnosSnap.val() : {};
-  const ciclos = ciclosSnap.exists() ? ciclosSnap.val() : {};
+  // alumnos/ciclos solo los puede leer completos el staff (Director/Coach/
+  // Mentor) — un alumno no tiene permiso para leer la colección entera, así
+  // que ahí la lectura falla silenciosamente (.catch arriba) y usamos {}:
+  // el nombre igual se ve porque ya viene guardado en la propia publicación
+  // (alumnoNombre); la foto cae al genérico de UNEQ en ese caso.
+  const alumnos = (alumnosSnap && alumnosSnap.exists()) ? alumnosSnap.val() : {};
+  const ciclos = (ciclosSnap && ciclosSnap.exists()) ? ciclosSnap.val() : {};
   const usuarios = usuariosSnap && usuariosSnap.exists() ? usuariosSnap.val() : {};
   // Aprobar una presentación es del Director, del coach asignado al
   // alumno, o (si es BEGIN) del coach de cabecera BEGIN — no de
@@ -612,7 +690,7 @@ async function cargarHistoriasReales() {
   try {
     [historiasSnap, alumnosSnap, ciclosSnap, usuariosSnap] = await Promise.all([
       get(ref(db, 'comunidad/historiasReales')),
-      get(ref(db, 'alumnos')),
+      get(ref(db, 'alumnos')).catch(() => null),
       esStaff ? get(ref(db, 'ciclos')) : Promise.resolve(null),
       esStaff ? get(ref(db, 'usuarios')) : Promise.resolve(null)
     ]);
@@ -622,7 +700,7 @@ async function cargarHistoriasReales() {
     if (feedEl) feedEl.innerHTML = '<p class="text-soft">No se pudo cargar la lista. Recarga la página e intenta de nuevo.</p>';
     return;
   }
-  const alumnos = alumnosSnap.exists() ? alumnosSnap.val() : {};
+  const alumnos = (alumnosSnap && alumnosSnap.exists()) ? alumnosSnap.val() : {};
   const ciclos = ciclosSnap && ciclosSnap.exists() ? ciclosSnap.val() : {};
   const usuarios = usuariosSnap && usuariosSnap.exists() ? usuariosSnap.val() : {};
   const alumnoPorAuthUid = {};
