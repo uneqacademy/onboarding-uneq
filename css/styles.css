@@ -355,6 +355,53 @@ a { color: inherit; }
 .field textarea { resize: vertical; min-height: 70px; }
 textarea { width: 100%; max-width: 100%; box-sizing: border-box; resize: vertical; }
 
+/* ============================================================
+   Bitácora: barra de formato básico + editor + vista previa
+   recortada con "Ver más / Ver menos" en el listado guardado.
+   ============================================================ */
+.bitacora-toolbar { display: flex; gap: 4px; margin-bottom: 6px; }
+.bitacora-toolbar-btn {
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  border-radius: var(--radius-sm);
+  padding: 4px 10px;
+  font-size: 12px;
+  cursor: pointer;
+  color: var(--color-ink);
+}
+.bitacora-toolbar-btn:hover { background: var(--color-surface-alt); }
+.bitacora-toolbar-btn.is-activo { background: var(--color-primary); color: #fff; border-color: var(--color-primary); }
+
+.bitacora-editor {
+  width: 100%;
+  min-height: 90px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  padding: 9px 11px;
+  font-family: var(--font-body);
+  font-size: 13.5px;
+  background: var(--color-surface);
+  color: var(--color-ink);
+  overflow-y: auto;
+}
+.bitacora-editor:empty::before { content: attr(data-placeholder); color: var(--color-ink-soft); }
+.bitacora-editor ul { margin: 4px 0; padding-left: 20px; }
+.bitacora-editor p { margin: 0 0 8px; }
+
+.bitacora-nota-preview {
+  margin: 0;
+  max-height: 110px; /* ~5 líneas a este tamaño de letra */
+  overflow: hidden;
+  position: relative;
+}
+.bitacora-nota-preview.expandido { max-height: none; }
+.bitacora-nota-preview ul { margin: 4px 0; padding-left: 20px; }
+.bitacora-nota-preview p { margin: 0 0 8px; }
+.bitacora-btn-vermas {
+  background: none; border: 0; padding: 0; margin-top: 4px;
+  font-size: 12px; color: var(--color-primary); cursor: pointer; text-decoration: underline;
+}
+
 /* input[type="date"] en iOS/Safari trae su propio alto y centra el valor,
    ignorando el padding de arriba — por eso se ve más alto y descuadrado
    que los select/input de al lado. -webkit-appearance:none le quita el
