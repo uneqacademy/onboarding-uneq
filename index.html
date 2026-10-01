@@ -699,9 +699,18 @@
                   <select id="bitacora-canal"><option>WhatsApp</option><option>Videollamada</option><option>Llamada telefónica</option><option>Email</option></select>
                 </div>
               </div>
-              <div class="field mb-16"><label>Notas</label><textarea id="bitacora-notas" placeholder="Registro libre de la conversación/acción..."></textarea></div>
+              <div class="field mb-16">
+                <label>Notas</label>
+                <div class="bitacora-toolbar">
+                  <button type="button" class="bitacora-toolbar-btn" data-cmd="bold" title="Negrita"><strong>N</strong></button>
+                  <button type="button" class="bitacora-toolbar-btn" data-cmd="italic" title="Cursiva"><em>K</em></button>
+                  <button type="button" class="bitacora-toolbar-btn" data-cmd="underline" title="Subrayado"><u>S</u></button>
+                  <button type="button" class="bitacora-toolbar-btn" data-cmd="insertUnorderedList" title="Viñetas">• Lista</button>
+                </div>
+                <div id="bitacora-notas" class="bitacora-editor" contenteditable="true" data-placeholder="Registro libre de la conversación/acción..."></div>
+              </div>
               <div class="flex-between mb-16">
-                <span></span>
+                <button type="button" class="btn btn--ghost hidden" id="btn-cancelar-edicion-bitacora">Cancelar edición</button>
                 <button class="btn btn--accent" id="btn-guardar-bitacora">+ Agregar Entrada</button>
               </div>
               <div id="bitacora-listado"></div>
