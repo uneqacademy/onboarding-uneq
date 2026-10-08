@@ -9,10 +9,11 @@
    queda para la próxima entrega, es su propio bloque de trabajo.
    ============================================================ */
 
-import { db, auth, storage, firebaseConfig } from './firebase-config.js';
+import { db, auth, storage, firebaseConfig, app } from './firebase-config.js';
 import { aplicarClampTexto } from './texto-clamp.js';
 import { ref as storageRef, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-storage.js";
 import { ref, get, set, update, push } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-database.js";
+import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-functions.js";
 import { initializeApp, deleteApp } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-app.js";
 import { setNav, getCurrentRole } from './main.js';
 import { getAuth, createUserWithEmailAndPassword, signOut as signOutSecundaria, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-auth.js";
@@ -499,6 +500,55 @@ async function renderProximaMentoriaDashboard(programa) {
   }
 }
 
+/* --- Nombre público (qué nombre ven los demás en la Comunidad) --- */
+const actualizarNombrePublico = httpsCallable(getFunctions(app), 'actualizarNombrePublico', { timeout: 170000 });
+
+function inicializarNombrePublico(alumnoId, alumno) {
+  const actualEl = document.getElementById('alumno-nombre-publico-actual');
+  const editorEl = document.getElementById('alumno-nombre-publico-editor');
+  const selectEl = document.getElementById('alumno-nombre-publico-select');
+  const apellidoEl = document.getElementById('alumno-nombre-publico-apellido');
+  const btnEditar = document.getElementById('btn-editar-nombre-publico');
+  const btnGuardar = document.getElementById('btn-guardar-nombre-publico');
+  const btnCancelar = document.getElementById('btn-cancelar-nombre-publico');
+  if (!actualEl || !selectEl || !btnEditar || !btnGuardar || !btnCancelar) return;
+
+  const nombres = (alumno.nombre || '').trim().split(/\s+/).filter(Boolean);
+  const primerApellido = (alumno.apellido || '').trim().split(/\s+/)[0] || '';
+  const opciones = [...nombres];
+  if (nombres.length > 1) opciones.push(nombres.join(' '));
+  selectEl.innerHTML = opciones.map(n => `<option value="${n}">${n}</option>`).join('');
+  apellidoEl.textContent = primerApellido;
+
+  const vigente = (alumno.nombrePublico || `${nombres[0] || ''} ${primerApellido}`).trim();
+  actualEl.textContent = vigente;
+  const nombreVigente = opciones.find(n => vigente === `${n} ${primerApellido}`.trim());
+  if (nombreVigente) selectEl.value = nombreVigente;
+
+  btnEditar.addEventListener('click', () => { editorEl.classList.remove('hidden'); btnEditar.classList.add('hidden'); });
+  btnCancelar.addEventListener('click', () => { editorEl.classList.add('hidden'); btnEditar.classList.remove('hidden'); });
+  btnGuardar.addEventListener('click', async () => {
+    const nuevo = `${selectEl.value} ${primerApellido}`.trim();
+    if (!selectEl.value) return;
+    btnGuardar.disabled = true;
+    const textoOriginal = btnGuardar.textContent;
+    btnGuardar.textContent = 'Actualizando tus publicaciones...';
+    try {
+      await actualizarNombrePublico({ nombrePublico: nuevo });
+      alumno.nombrePublico = nuevo;
+      actualEl.textContent = nuevo;
+      editorEl.classList.add('hidden');
+      btnEditar.classList.remove('hidden');
+      alert('Listo: tu nombre público ahora es "' + nuevo + '" en toda la Comunidad.');
+    } catch (err) {
+      alert('No se pudo actualizar tu nombre público. Intenta de nuevo.');
+    } finally {
+      btnGuardar.disabled = false;
+      btnGuardar.textContent = textoOriginal;
+    }
+  });
+}
+
 /* --- Mi Ficha Alumno (página propia) --- */
 export async function cargarFichaAlumnoPropia() {
   const fichaEl = document.getElementById('alumno-mi-ficha');
@@ -529,6 +579,18 @@ export async function cargarFichaAlumnoPropia() {
         <input type="file" id="alumno-foto-input" accept="image/*" class="hidden">
       </div>
     </div>
+    <div class="panel mb-16" style="background:var(--color-surface-alt); padding:12px 14px;">
+      <strong style="font-size:13px;">Nombre público</strong>
+      <p class="text-soft" style="margin:2px 0 8px; font-size:12px;">Es el nombre que ven los demás en la Comunidad UNEQ (presentación, historias, hitos y comentarios).</p>
+      <div id="alumno-nombre-publico-actual" style="font-size:14px; font-weight:600;"></div>
+      <button type="button" class="btn btn--ghost" id="btn-editar-nombre-publico" style="font-size:11px; padding:4px 10px; margin-top:6px;">Cambiar nombre público</button>
+      <div id="alumno-nombre-publico-editor" class="hidden" style="margin-top:8px; display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+        <select id="alumno-nombre-publico-select" class="input" style="max-width:220px;"></select>
+        <strong id="alumno-nombre-publico-apellido"></strong>
+        <button type="button" class="btn btn--primary" id="btn-guardar-nombre-publico" style="font-size:12px; padding:6px 12px;">Guardar</button>
+        <button type="button" class="btn btn--ghost" id="btn-cancelar-nombre-publico" style="font-size:12px; padding:6px 12px;">Cancelar</button>
+      </div>
+    </div>
     <div class="ficha-alumno-datos" style="display:grid; grid-template-columns: repeat(2, 1fr); gap:10px 20px; font-size:13px;">
       <div><strong>Correo:</strong> ${alumno.email || '—'}</div>
       <div><strong>Teléfono:</strong> ${alumno.telefono || '—'}</div>
@@ -537,6 +599,8 @@ export async function cargarFichaAlumnoPropia() {
       <div><strong>Fecha de Ingreso:</strong> ${formatFecha(ciclo ? ciclo.fechaIngreso : null)}</div>
       <div><strong>Fecha de Egreso:</strong> ${formatFecha(ciclo ? ciclo.fechaEgreso : null)}</div>
     </div>`;
+
+  inicializarNombrePublico(alumnoId, alumno);
 
   const btnCambiarFotoAlumno = document.getElementById('btn-cambiar-foto-alumno');
   const inputFotoAlumno = document.getElementById('alumno-foto-input');

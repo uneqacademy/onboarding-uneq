@@ -18,6 +18,15 @@ import { getCurrentRole } from './main.js';
 const FASES_HITOS = { fase1: 'Fase 1: Claridad y Fundamentos', fase2: 'Fase 2: Cliente Soñado', fase3: 'Fase 3: Oferta y Método', fase4: 'Fase 4: Acción y Sistemas' };
 const TAMANO_MAXIMO_FOTO_HITO = 10 * 1024 * 1024;
 
+/* --- Nombre público: el que el alumno eligió mostrar en la Comunidad --- */
+function nombrePublicoDeAlumno(a) {
+  a = a || {};
+  return (a.nombrePublico || `${a.nombre || ''} ${a.apellido || ''}`).trim();
+}
+function primerNombrePublico(a) {
+  return nombrePublicoDeAlumno(a).split(/\s+/)[0] || '';
+}
+
 function formatFechaHito(ts) {
   return new Intl.DateTimeFormat('es-CL', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }).format(new Date(ts));
 }
@@ -626,7 +635,11 @@ if (btnPublicarHito) {
       // Nombre combinado del proyecto (si hay socia, van los 2 nombres)
       const idsProyecto = Array.isArray(ciclo.alumnoIds) ? ciclo.alumnoIds : [alumnoId];
       const nombresSnaps = await Promise.all(idsProyecto.map(id => get(ref(db, `alumnos/${id}`))));
-      const nombreAutor = nombresSnaps.filter(s => s.exists()).map(s => `${s.val().nombre || ''} ${s.val().apellido || ''}`.trim()).filter(Boolean).join(' y ');
+      const alumnosValidos = nombresSnaps.filter(s => s.exists());
+      // Con socios: solo primeros nombres ("Felipe y Diego"); solo, nombre público completo
+      const nombreAutor = alumnosValidos.length > 1
+        ? alumnosValidos.map(s => primerNombrePublico(s.val())).filter(Boolean).join(' y ')
+        : alumnosValidos.map(s => nombrePublicoDeAlumno(s.val())).filter(Boolean).join(' y ');
 
       const hitoDefSnap = await get(ref(db, `configuracion/hitosDefinidos/${hitoDefId}`));
       if (!hitoDefSnap.exists()) throw new Error('Hito no encontrado');
@@ -690,7 +703,7 @@ async function enviarComentario(hitoId, texto, recargarFn) {
     const alumnoId = mapaSnap.exists() ? mapaSnap.val() : null;
     const alumnoSnap = await get(ref(db, `alumnos/${alumnoId}`));
     const a = alumnoSnap.exists() ? alumnoSnap.val() : {};
-    autorNombre = `${a.nombre || ''} ${a.apellido || ''}`.trim();
+    autorNombre = nombrePublicoDeAlumno(a);
   } else {
     const usuarioSnap = await get(ref(db, `usuarios/${uid}`));
     autorNombre = usuarioSnap.exists() ? (usuarioSnap.val().nombre || '') : '';
@@ -763,7 +776,7 @@ function activarInteraccionFeed(feedEl, recargarFn) {
           const alumnoId = mapaSnap.exists() ? mapaSnap.val() : null;
           const alumnoSnap = await get(ref(db, `alumnos/${alumnoId}`));
           const a = alumnoSnap.exists() ? alumnoSnap.val() : {};
-          nombre = `${a.nombre || ''} ${a.apellido || ''}`.trim();
+          nombre = nombrePublicoDeAlumno(a);
           fotoUrl = a.fotoUrl || '';
         } else {
           const usuarioSnap = await get(ref(db, `usuarios/${uid}`));
@@ -952,7 +965,7 @@ function activarInteraccionFeed(feedEl, recargarFn) {
         const alumnoId = mapaSnap.exists() ? mapaSnap.val() : null;
         const alumnoSnap = alumnoId ? await get(ref(db, `alumnos/${alumnoId}`)) : null;
         const a = alumnoSnap && alumnoSnap.exists() ? alumnoSnap.val() : {};
-        autorNombre = `${a.nombre || ''} ${a.apellido || ''}`.trim();
+        autorNombre = nombrePublicoDeAlumno(a);
       }
       await set(push(ref(db, `hitos/${hitoId}/comentarios/${comentarioId}/respuestas`)), {
         autorId: uid, autorNombre, texto: input.value.trim(), createdAt: Date.now()

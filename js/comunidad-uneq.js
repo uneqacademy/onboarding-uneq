@@ -208,13 +208,22 @@ export async function irAHitoDesdeNotificacion(hitoId) {
   }
 }
 
+/* --- Nombre público: el que el alumno eligió mostrar en la Comunidad --- */
+function nombrePublicoDeAlumno(a) {
+  a = a || {};
+  return (a.nombrePublico || `${a.nombre || ''} ${a.apellido || ''}`).trim();
+}
+function primerNombrePublico(a) {
+  return nombrePublicoDeAlumno(a).split(/\s+/)[0] || '';
+}
+
 async function obtenerContextoAlumno(uid) {
   const mapaSnap = await get(ref(db, `alumnoPorAuthUid/${uid}`));
   const alumnoId = mapaSnap.exists() ? mapaSnap.val() : null;
   if (!alumnoId) return { alumnoId: null };
   const alumnoSnap = await get(ref(db, `alumnos/${alumnoId}`));
   const alumno = alumnoSnap.exists() ? alumnoSnap.val() : {};
-  const nombre = `${alumno.nombre || ''} ${alumno.apellido || ''}`.trim();
+  const nombre = nombrePublicoDeAlumno(alumno);
   let programa = '', coachId = '';
   if (alumno.cicloActualId) {
     const cicloSnap = await get(ref(db, `ciclos/${alumno.cicloActualId}`));
@@ -327,7 +336,7 @@ async function datosPerfilActual() {
     const alumnoId = mapaSnap.exists() ? mapaSnap.val() : null;
     const alumnoSnap = alumnoId ? await get(ref(db, `alumnos/${alumnoId}`)) : null;
     const a = alumnoSnap && alumnoSnap.exists() ? alumnoSnap.val() : {};
-    return { nombre: `${a.nombre || ''} ${a.apellido || ''}`.trim(), fotoUrl: a.fotoUrl || '', tipo: 'alumno' };
+    return { nombre: nombrePublicoDeAlumno(a), fotoUrl: a.fotoUrl || '', tipo: 'alumno' };
   }
   const usuarioSnap = await get(ref(db, `usuarios/${uid}`));
   const u = usuarioSnap.exists() ? usuarioSnap.val() : {};
@@ -573,7 +582,7 @@ async function cargarPresentacion() {
   const conDatos = todas.map(([alumnoId, p]) => {
     const alumno = alumnos[alumnoId] || {};
     const ciclo = alumno.cicloActualId ? ciclos[alumno.cicloActualId] : null;
-    return { alumnoId, ...p, nombre: `${alumno.nombre || ''} ${alumno.apellido || ''}`.trim() || p.alumnoNombre || 'Alumno', fotoUrl: alumno.fotoUrl || '', programa: p.programa || (ciclo ? ciclo.programa : ''), coachId: ciclo ? ciclo.coachId : '' };
+    return { alumnoId, ...p, nombre: nombrePublicoDeAlumno(alumno) || p.alumnoNombre || 'Alumno', fotoUrl: alumno.fotoUrl || '', programa: p.programa || (ciclo ? ciclo.programa : ''), coachId: ciclo ? ciclo.coachId : '' };
   }).filter(p => esDirector || p.estado === 'aprobada' || p.alumnoId === ctxAlumno.alumnoId || (esCoach && (p.coachId === uid || (p.programa === 'begin' && esCoachCabeceraBegin))))
     .sort((a, b) => b.createdAt - a.createdAt);
 
