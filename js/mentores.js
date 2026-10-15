@@ -117,7 +117,7 @@ async function cargarMentoresView() {
   mentoresOrdenados
     .forEach(([uid, mentor], idx, listaOrdenada) => {
       const { promedio, total } = calcularNpsResumenMentor(npsMentoriasTodos[uid]);
-      const npsTexto = promedio !== null ? `${promedio.toFixed(1)} ★ (${total})` : '—';
+      const npsTexto = textoNpsGeneral(promedio, total, '—');
 
       const tr = document.createElement('tr');
       tr.innerHTML = `
@@ -128,8 +128,9 @@ async function cargarMentoresView() {
         <td>${mentor.nombre || ''}</td>
         <td>${mentor.email || ''}</td>
         <td><span class="badge ${mentor.activo === false ? 'badge--impaga' : 'badge--activo'}">${mentor.activo === false ? 'Inactivo' : 'Activo'}</span></td>
-        <td>${npsTexto}</td>
+        <td title="Promedio de las evaluaciones de los últimos 60 días">${npsTexto}</td>
         <td style="display:flex; gap:6px; flex-wrap:wrap;">
+          <button class="btn btn--ghost btn-mentorias-mentor" style="font-size:11px; padding:4px 8px;">Mentorías</button>
           <button class="btn btn--ghost btn-gestionar-roles-mentor" style="font-size:11px; padding:4px 8px;">Roles</button>
           <button class="btn btn--ghost btn-editar-datos-mentor" style="font-size:11px; padding:4px 8px;">Editar Datos</button>
           <button class="btn btn--ghost btn-restablecer-password-mentor" style="font-size:11px; padding:4px 8px;">Restablecer Contraseña</button>
@@ -200,6 +201,15 @@ async function cargarMentoresView() {
         });
       });
 
+      let filaMentoriasMentor = null;
+      tr.querySelector('.btn-mentorias-mentor').addEventListener('click', async () => {
+        if (filaMentoriasMentor) { filaMentoriasMentor.remove(); filaMentoriasMentor = null; return; }
+        filaMentoriasMentor = document.createElement('tr');
+        filaMentoriasMentor.innerHTML = '<td colspan="6" class="panel-mentorias-director" style="background:#F7F8FA; padding:14px 16px;"><p class="text-soft" style="font-size:13px; margin:0;">Cargando...</p></td>';
+        tr.insertAdjacentElement('afterend', filaMentoriasMentor);
+        await renderPanelMentoriasDirector(uid, filaMentoriasMentor.querySelector('.panel-mentorias-director'));
+      });
+
       tr.querySelector('.btn-eliminar-mentor').addEventListener('click', async () => {
         const confirmado = confirm(`¿Eliminar a ${mentor.nombre || mentor.email}? Ya no va a poder entrar a la app.`);
         if (!confirmado) return;
@@ -209,6 +219,84 @@ async function cargarMentoresView() {
     });
 
   await cargarTemasMentoresDirector(usuarios);
+}
+
+/* --- Director: todas las mentorías de un mentor (con estado, NPS y comentarios),
+       puede eliminar cualquiera. Eliminar borra SOLO la mentoría: sus evaluaciones
+       NPS y preguntas se conservan y siguen visibles abajo en "eliminadas". --- */
+async function renderPanelMentoriasDirector(mentorUid, contenedor) {
+  const [mentoriasSnap, npsSnap] = await Promise.all([
+    get(ref(db, `mentorias/${mentorUid}`)),
+    get(ref(db, `npsMentorias/${mentorUid}`))
+  ]);
+  const mentorias = mentoriasSnap.exists() ? mentoriasSnap.val() : {};
+  const nps = npsSnap.exists() ? npsSnap.val() : {};
+
+  const promedioDe = (entradas) => {
+    const p = entradas.map(e => e.puntaje).filter(x => typeof x === 'number');
+    return p.length ? `${(p.reduce((a, b) => a + b, 0) / p.length).toFixed(1)} ★ (${p.length})` : '—';
+  };
+  const etiquetaEstado = (m) => m.estado === 'dictada'
+    ? '<span class="badge badge--activo" style="font-size:10px;">✓ Dictada</span>'
+    : (m.estado === 'no_dictada'
+      ? '<span class="badge badge--impaga" style="font-size:10px;">✓ No Dictada</span>'
+      : '<span class="text-soft" style="font-size:11px;">Pendiente</span>');
+
+  const activas = Object.entries(mentorias).sort((a, b) => (b[1].fecha || '').localeCompare(a[1].fecha || ''));
+  const eliminadas = Object.entries(nps)
+    .filter(([mentoriaId]) => !mentorias[mentoriaId])
+    .map(([mentoriaId, resp]) => ({ mentoriaId, entradas: Object.values(resp || {}) }))
+    .filter(x => x.entradas.length)
+    .sort((a, b) => Math.max(...b.entradas.map(e => e.createdAt || 0)) - Math.max(...a.entradas.map(e => e.createdAt || 0)));
+
+  const fila = (id, titulo, extraHtml, entradas, puedeEliminar) => `
+    <div class="mentoria-director-item" data-mentoria-id="${id}" style="padding:10px 0; border-bottom:0.5px solid var(--border); font-size:13px;">
+      <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
+        <div style="flex:1; min-width:200px;">${titulo}</div>
+        <div>${extraHtml}</div>
+        <div>NPS: <strong>${promedioDe(entradas)}</strong></div>
+        <button type="button" class="btn btn--ghost btn-ver-coment-dir" style="font-size:11px; padding:3px 8px;" ${entradas.length ? '' : 'disabled'}>Ver comentarios</button>
+        ${puedeEliminar ? '<button type="button" class="btn btn--ghost btn-eliminar-mentoria-dir" style="font-size:11px; padding:3px 8px; color:#C0392B;">Eliminar</button>' : ''}
+      </div>
+      <div class="coment-dir hidden" style="margin-top:8px; padding:4px 12px; background:#fff; border-radius:8px;">${renderEntradasNps(entradas)}</div>
+    </div>`;
+
+  contenedor.innerHTML = `
+    <strong style="font-size:13px;">Mentorías</strong>
+    ${activas.length ? activas.map(([id, m]) => fila(
+      id,
+      `${formatFechaCorta(m.fecha)} · ${m.inicioTimestamp ? formatearHorarioParaTabla(m.inicioTimestamp) : (m.hora || '—')}${m.exclusivaBegin ? ' <span class="badge badge--activo" style="font-size:9px;">BEGIN</span>' : ''}`,
+      etiquetaEstado(m),
+      nps[id] ? Object.values(nps[id]) : [],
+      true
+    )).join('') : '<p class="text-soft" style="font-size:13px; margin:6px 0 0;">Este mentor no tiene mentorías.</p>'}
+    ${eliminadas.length ? `
+      <strong style="font-size:13px; display:block; margin-top:16px;">Mentorías eliminadas (evaluaciones conservadas)</strong>
+      ${eliminadas.map(x => {
+        const ts = x.entradas.map(e => e.createdAt || 0).filter(Boolean);
+        const rango = ts.length ? `respuestas del ${new Date(Math.min(...ts)).toLocaleDateString('es-CL')} al ${new Date(Math.max(...ts)).toLocaleDateString('es-CL')}` : 'sin fecha';
+        return fila(x.mentoriaId, `Sesión eliminada · ${rango}`, '<span class="text-soft" style="font-size:11px;">Eliminada</span>', x.entradas, false);
+      }).join('')}` : ''}`;
+
+  contenedor.querySelectorAll('.mentoria-director-item').forEach(item => {
+    const id = item.dataset.mentoriaId;
+    const btnComent = item.querySelector('.btn-ver-coment-dir');
+    const cajaComent = item.querySelector('.coment-dir');
+    if (btnComent) btnComent.addEventListener('click', () => cajaComent.classList.toggle('hidden'));
+    const btnEliminar = item.querySelector('.btn-eliminar-mentoria-dir');
+    if (btnEliminar) btnEliminar.addEventListener('click', async () => {
+      if (!confirm('¿Eliminar esta mentoría? Se borra solo la sesión; sus evaluaciones NPS y preguntas se conservan. Esta acción no se puede deshacer.')) return;
+      btnEliminar.disabled = true;
+      try {
+        await set(ref(db, `mentorias/${mentorUid}/${id}`), null);
+        await renderPanelMentoriasDirector(mentorUid, contenedor);
+      } catch (err) {
+        console.error('No se pudo eliminar la mentoría:', err);
+        alert('No se pudo eliminar. Revisa que las reglas nuevas estén publicadas e intenta de nuevo.');
+        btnEliminar.disabled = false;
+      }
+    });
+  });
 }
 
 /* --- Director: ve las temáticas de todos los mentores (solo lectura de
@@ -588,12 +676,45 @@ document.querySelectorAll('.nav-item[data-nav="alumnos"]').forEach(item => {
    MENTOR: mi perfil (foto + NPS resumido — el NPS real llega
    con las mentorías, en la próxima etapa)
    ============================================================ */
+/* --- NPS general del mentor: SOLO evaluaciones de los últimos 60 días.
+       (El NPS de cada sesión y todas las evaluaciones/comentarios
+       históricos NO se tocan: siguen completos.) --- */
+const NPS_VENTANA_DIAS = 60;
+
 function calcularNpsResumenMentor(npsMentoriasData) {
   if (!npsMentoriasData) return { promedio: null, total: 0 };
-  const todasLasEntradas = Object.values(npsMentoriasData).flatMap(m => Object.values(m));
-  const puntajes = todasLasEntradas.map(e => e.puntaje).filter(p => typeof p === 'number');
+  const desde = Date.now() - NPS_VENTANA_DIAS * 24 * 60 * 60 * 1000;
+  const todasLasEntradas = Object.values(npsMentoriasData).flatMap(m => Object.values(m || {}));
+  const puntajes = todasLasEntradas
+    .filter(e => e && typeof e.createdAt === 'number' && e.createdAt >= desde)
+    .map(e => e.puntaje)
+    .filter(p => typeof p === 'number');
   if (!puntajes.length) return { promedio: null, total: 0 };
   return { promedio: puntajes.reduce((a, b) => a + b, 0) / puntajes.length, total: puntajes.length };
+}
+
+function textoNpsGeneral(promedio, total, vacio) {
+  return promedio !== null ? `${promedio.toFixed(1)} ★ (${total}) · 60 días` : vacio;
+}
+
+function escaparHtmlMentores(texto) {
+  return String(texto == null ? '' : texto)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+/* --- Lista de evaluaciones de una sesión (anónimas): puntaje + fecha + comentario --- */
+function renderEntradasNps(entradas) {
+  const lista = [...entradas].sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+  if (!lista.length) return '<p class="text-soft" style="font-size:13px; margin:0;">Aún no hay evaluaciones.</p>';
+  return lista.map(e => {
+    const fecha = e.createdAt ? new Date(e.createdAt).toLocaleDateString('es-CL') : '';
+    return `
+      <div style="padding:8px 0; border-bottom:0.5px solid var(--border); font-size:13px;">
+        <strong>${typeof e.puntaje === 'number' ? e.puntaje : '—'} / 10</strong>
+        <span class="text-soft" style="font-size:11px; margin-left:8px;">${fecha}</span>
+        ${e.comentario ? `<p style="margin:4px 0 0; white-space:pre-wrap;">${escaparHtmlMentores(e.comentario)}</p>` : ''}
+      </div>`;
+  }).join('');
 }
 
 export async function cargarPerfilMentor() {
@@ -632,7 +753,7 @@ export async function cargarPerfilMentor() {
 
   const { promedio, total } = calcularNpsResumenMentor(npsSnap.exists() ? npsSnap.val() : null);
   const npsEl = document.getElementById('mentor-nps-resumen');
-  if (npsEl) npsEl.textContent = promedio !== null ? `${promedio.toFixed(1)} ★ (${total})` : 'Aún sin evaluaciones';
+  if (npsEl) npsEl.textContent = promedio !== null ? textoNpsGeneral(promedio, total, '') : 'Sin evaluaciones en los últimos 60 días';
 
   const bioTextarea = document.getElementById('mentor-bio');
   const bioTexto = document.getElementById('mentor-bio-texto');
@@ -951,12 +1072,12 @@ async function cargarMentoriasView() {
         : '—';
 
       const tr = document.createElement('tr');
-      const noDictada = m.estado === 'no_dictada';
+      const estadoMentoria = m.estado === 'dictada' ? 'dictada' : (m.estado === 'no_dictada' ? 'no_dictada' : '');
       tr.innerHTML = `
         <td>${formatFechaCorta(m.fecha)}${m.exclusivaBegin ? ' <span class="badge badge--activo" style="font-size:9px;" title="Solo la ven alumnos BEGIN">BEGIN</span>' : ''}</td>
         <td>${m.inicioTimestamp ? formatearHorarioParaTabla(m.inicioTimestamp) : (m.hora || '—')}</td>
         <td>${m.link ? `<a href="${m.link}" target="_blank" rel="noopener">Ir al link</a>` : '—'}</td>
-        <td>${promedioTexto}</td>
+        <td>${promedioTexto}${entradas.length ? '<br><button class="btn btn--ghost btn-ver-comentarios-nps" style="font-size:11px; padding:4px 8px; margin-top:4px;">Ver comentarios</button>' : ''}</td>
         <td>
           ${m.resumenUrl ? `<a href="${m.resumenUrl}" target="_blank" rel="noopener">Ver Resumen ↗</a><br>` : ''}
           <button class="btn btn--ghost btn-subir-resumen" style="font-size:11px; padding:4px 8px; margin-top:4px;">${m.resumenUrl ? 'Reemplazar' : 'Subir Resumen'}</button>
@@ -965,18 +1086,37 @@ async function cargarMentoriasView() {
         <td><button class="btn btn--ghost btn-ver-preguntas-vivo" style="font-size:11px; padding:4px 8px;">Ver Preguntas</button></td>
         <td><button class="btn btn--ghost btn-copiar-link-nps-mentoria" style="font-size:11px; padding:4px 8px;">Copiar Link NPS</button></td>
         <td>
-          <button class="btn btn--ghost btn-toggle-no-dictada" style="font-size:11px; padding:4px 8px; ${noDictada ? 'color:#C0392B;' : ''}" ${noDictada ? 'disabled' : ''}>${noDictada ? '✓ No Dictada' : 'Marcar No Dictada'}</button>
+          ${estadoMentoria === 'dictada'
+            ? '<span class="badge badge--activo" style="font-size:11px;">✓ Dictada</span>'
+            : estadoMentoria === 'no_dictada'
+              ? '<span class="badge badge--impaga" style="font-size:11px;">✓ No Dictada</span>'
+              : `<div style="display:flex; gap:6px; flex-wrap:wrap;">
+                   <button class="btn btn--ghost btn-marcar-dictada" style="font-size:11px; padding:4px 8px;">Marcar Dictada</button>
+                   <button class="btn btn--ghost btn-toggle-no-dictada" style="font-size:11px; padding:4px 8px; color:#C0392B;">Marcar No Dictada</button>
+                 </div>`}
         </td>`;
       tbody.appendChild(tr);
 
-      if (!noDictada) {
-        tr.querySelector('.btn-toggle-no-dictada').addEventListener('click', async () => {
-          const confirmado = confirm('¿Marcar esta sesión como "No Dictada"? Esta acción no se puede deshacer — si necesitas agendarla de nuevo, tendrás que crear una mentoría nueva.');
-          if (!confirmado) return;
-          await update(ref(db, `mentorias/${uid}/${mentoriaId}`), { estado: 'no_dictada' });
-          await cargarMentoriasView();
-        });
-      }
+      const cambiarEstadoMentoria = async (nuevoEstado, textoConfirmacion) => {
+        if (!confirm(textoConfirmacion)) return;
+        await update(ref(db, `mentorias/${uid}/${mentoriaId}`), { estado: nuevoEstado });
+        await cargarMentoriasView();
+      };
+      const btnDictada = tr.querySelector('.btn-marcar-dictada');
+      if (btnDictada) btnDictada.addEventListener('click', () => cambiarEstadoMentoria('dictada',
+        '¿Marcar esta sesión como "Dictada"? Una vez marcada queda bloqueada y no podrás cambiarla.'));
+      const btnNoDictada = tr.querySelector('.btn-toggle-no-dictada');
+      if (btnNoDictada) btnNoDictada.addEventListener('click', () => cambiarEstadoMentoria('no_dictada',
+        '¿Marcar esta sesión como "No Dictada"? Una vez marcada queda bloqueada y no podrás cambiarla. Si necesitas agendarla de nuevo, tendrás que crear una mentoría nueva.'));
+
+      let filaComentariosNps = null;
+      const btnComentariosNps = tr.querySelector('.btn-ver-comentarios-nps');
+      if (btnComentariosNps) btnComentariosNps.addEventListener('click', () => {
+        if (filaComentariosNps) { filaComentariosNps.remove(); filaComentariosNps = null; return; }
+        filaComentariosNps = document.createElement('tr');
+        filaComentariosNps.innerHTML = `<td colspan="8" style="background:#F7F8FA; padding:14px 16px;">${renderEntradasNps(entradas)}</td>`;
+        tr.insertAdjacentElement('afterend', filaComentariosNps);
+      });
 
       let filaPreguntasVivo = null;
       tr.querySelector('.btn-ver-preguntas-vivo').addEventListener('click', async () => {
