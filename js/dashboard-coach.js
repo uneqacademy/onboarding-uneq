@@ -12,6 +12,7 @@ import { db, auth, storage } from './firebase-config.js';
 import { ref, get, set, update, push } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-database.js";
 import { ref as storageRef, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-storage.js";
 import { getCurrentRole } from './main.js';
+import { renderEntradasNps } from './panel-sesiones.js';
 
 function formatFechaCortaBegin(fechaStr) {
   if (!fechaStr) return '—';
@@ -120,12 +121,12 @@ async function cargarSesionesBeginTabla(uid) {
         : '—';
 
       const tr = document.createElement('tr');
-      const noDictada = s.estado === 'no_dictada';
+      const estadoSesion = s.estado === 'dictada' ? 'dictada' : (s.estado === 'no_dictada' ? 'no_dictada' : '');
       tr.innerHTML = `
         <td>${formatFechaCortaBegin(s.fecha)}</td>
         <td>${s.inicioTimestamp ? formatearHorarioParaTabla(s.inicioTimestamp) : (s.hora || '—')}</td>
         <td>${s.link ? `<a href="${s.link}" target="_blank" rel="noopener">Ir al link</a>` : '—'}</td>
-        <td>${promedioTexto}</td>
+        <td>${promedioTexto}${entradas.length ? '<br><button class="btn btn--ghost btn-ver-comentarios-nps-begin" style="font-size:11px; padding:4px 8px; margin-top:4px;">Ver comentarios</button>' : ''}</td>
         <td>
           ${s.resumenUrl ? `<a href="${s.resumenUrl}" target="_blank" rel="noopener">Ver Resumen ↗</a><br>` : ''}
           <button class="btn btn--ghost btn-subir-resumen-begin" style="font-size:11px; padding:4px 8px; margin-top:4px;">${s.resumenUrl ? 'Reemplazar' : 'Subir Resumen'}</button>
@@ -134,7 +135,14 @@ async function cargarSesionesBeginTabla(uid) {
         <td><button class="btn btn--ghost btn-ver-preguntas-begin" style="font-size:11px; padding:4px 8px;">Ver Preguntas</button></td>
         <td><button class="btn btn--ghost btn-copiar-link-nps-begin" style="font-size:11px; padding:4px 8px;">Copiar Link NPS</button></td>
         <td>
-          <button class="btn btn--ghost btn-toggle-no-dictada-begin" style="font-size:11px; padding:4px 8px; ${noDictada ? 'color:#C0392B;' : ''}" ${noDictada ? 'disabled' : ''}>${noDictada ? '✓ No Dictada' : 'Marcar No Dictada'}</button>
+          ${estadoSesion === 'dictada'
+            ? '<span class="badge badge--activo" style="font-size:11px;">✓ Dictada</span>'
+            : estadoSesion === 'no_dictada'
+              ? '<span class="badge badge--impaga" style="font-size:11px;">✓ No Dictada</span>'
+              : `<div style="display:flex; gap:6px; flex-wrap:wrap;">
+                   <button class="btn btn--ghost btn-marcar-dictada-begin" style="font-size:11px; padding:4px 8px;">Marcar Dictada</button>
+                   <button class="btn btn--ghost btn-toggle-no-dictada-begin" style="font-size:11px; padding:4px 8px; color:#C0392B;">Marcar No Dictada</button>
+                 </div>`}
         </td>`;
       tbody.appendChild(tr);
 
@@ -149,14 +157,26 @@ async function cargarSesionesBeginTabla(uid) {
         }
       });
 
-      if (!noDictada) {
-        tr.querySelector('.btn-toggle-no-dictada-begin').addEventListener('click', async () => {
-          const confirmado = confirm('¿Marcar esta sesión como "No Dictada"? Esta acción no se puede deshacer — si necesitas agendarla de nuevo, tendrás que crear una sesión nueva.');
-          if (!confirmado) return;
-          await update(ref(db, `sesionesBegin/${uid}/${sesionId}`), { estado: 'no_dictada' });
-          await cargarSesionesBeginTabla(uid);
-        });
-      }
+      const cambiarEstadoSesion = async (nuevoEstado, textoConfirmacion) => {
+        if (!confirm(textoConfirmacion)) return;
+        await update(ref(db, `sesionesBegin/${uid}/${sesionId}`), { estado: nuevoEstado });
+        await cargarSesionesBeginTabla(uid);
+      };
+      const btnDictada = tr.querySelector('.btn-marcar-dictada-begin');
+      if (btnDictada) btnDictada.addEventListener('click', () => cambiarEstadoSesion('dictada',
+        '¿Marcar esta sesión como "Dictada"? Una vez marcada queda bloqueada y no podrás cambiarla.'));
+      const btnNoDictada = tr.querySelector('.btn-toggle-no-dictada-begin');
+      if (btnNoDictada) btnNoDictada.addEventListener('click', () => cambiarEstadoSesion('no_dictada',
+        '¿Marcar esta sesión como "No Dictada"? Una vez marcada queda bloqueada y no podrás cambiarla. Si necesitas agendarla de nuevo, tendrás que crear una sesión nueva.'));
+
+      let filaComentariosNps = null;
+      const btnComentariosNps = tr.querySelector('.btn-ver-comentarios-nps-begin');
+      if (btnComentariosNps) btnComentariosNps.addEventListener('click', () => {
+        if (filaComentariosNps) { filaComentariosNps.remove(); filaComentariosNps = null; return; }
+        filaComentariosNps = document.createElement('tr');
+        filaComentariosNps.innerHTML = `<td colspan="8" style="background:#F7F8FA; padding:14px 16px;">${renderEntradasNps(entradas)}</td>`;
+        tr.insertAdjacentElement('afterend', filaComentariosNps);
+      });
 
       let filaPreguntas = null;
       tr.querySelector('.btn-ver-preguntas-begin').addEventListener('click', async () => {

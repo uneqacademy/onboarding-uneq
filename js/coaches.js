@@ -15,6 +15,7 @@ import { ref, get, set, update } from "https://www.gstatic.com/firebasejs/12.17.
 import { initializeApp, deleteApp } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-app.js";
 import { getAuth, createUserWithEmailAndPassword, signOut as signOutSecundaria, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-auth.js";
 import { getCurrentRole, setNav } from './main.js';
+import { renderPanelSesionesDirector } from './panel-sesiones.js';
 
 const ESTADOS_VIGENTES = ['activo', 'en_proceso_matricula', 'pausado'];
 
@@ -188,6 +189,7 @@ async function cargarCoachesView() {
         <td><span class="badge ${coach.activo === false ? 'badge--impaga' : 'badge--activo'}">${coach.activo === false ? 'Inactivo' : 'Activo'}</span></td>
         <td>${npsTexto}</td>
         <td style="display:flex; gap:6px; flex-wrap:wrap;">
+          ${esCabeceraBegin ? '<button class="btn btn--ghost btn-sesiones-begin" style="font-size:11px; padding:4px 8px;">Sesiones BEGIN</button>' : ''}
           <button class="btn btn--ghost btn-ver-nps" style="font-size:11px; padding:4px 8px;">Ver NPS</button>
           <button class="btn btn--ghost btn-copiar-medio" style="font-size:11px; padding:4px 8px;">Link Medio</button>
           <button class="btn btn--ghost btn-copiar-final" style="font-size:11px; padding:4px 8px;">Link Final</button>
@@ -197,6 +199,16 @@ async function cargarCoachesView() {
           <button class="btn btn--ghost btn-eliminar-coach" style="font-size:11px; padding:4px 8px;">Eliminar</button>
         </td>`;
       tbody.appendChild(tr);
+
+      let filaSesionesBegin = null;
+      const btnSesionesBegin = tr.querySelector('.btn-sesiones-begin');
+      if (btnSesionesBegin) btnSesionesBegin.addEventListener('click', async () => {
+        if (filaSesionesBegin) { filaSesionesBegin.remove(); filaSesionesBegin = null; return; }
+        filaSesionesBegin = document.createElement('tr');
+        filaSesionesBegin.innerHTML = '<td colspan="6" class="panel-sesiones-begin-director" style="background:#F7F8FA; padding:14px 16px;"><p class="text-soft" style="font-size:13px; margin:0;">Cargando...</p></td>';
+        tr.insertAdjacentElement('afterend', filaSesionesBegin);
+        await renderPanelSesionesDirector(uid, filaSesionesBegin.querySelector('.panel-sesiones-begin-director'));
+      });
 
       tr.querySelector('.btn-copiar-medio').addEventListener('click', () => copiarLink(uid, nombreCoach, 'medio'));
       tr.querySelector('.btn-copiar-final').addEventListener('click', () => copiarLink(uid, nombreCoach, 'final'));
