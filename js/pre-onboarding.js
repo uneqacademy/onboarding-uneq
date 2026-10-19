@@ -9,6 +9,7 @@
    ============================================================ */
 
 import { db } from './firebase-config.js';
+import { escaparHtml } from './util-html.js';
 import { ref, get } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-database.js";
 import { getCurrentRole } from './main.js';
 import { abrirCrearAlumnoDesdePreOnboarding } from './alumnos.js';
@@ -39,9 +40,9 @@ async function cargarPreOnboarding() {
   vacioEl.classList.toggle('hidden', lista.length > 0);
   tbody.innerHTML = lista.map(([id, lead]) => `
     <tr data-id="${id}">
-      <td>${lead.nombre || ''}</td>
-      <td>${lead.telefono || ''}</td>
-      <td>${lead.correo || ''}</td>
+      <td>${escaparHtml(lead.nombre || '')}</td>
+      <td>${escaparHtml(lead.telefono || '')}</td>
+      <td>${escaparHtml(lead.correo || '')}</td>
       <td>${ETIQUETA_PROGRAMA[lead.programa] || lead.programa || ''}</td>
       <td><button type="button" class="btn btn--accent btn-agregar-pre-onboarding" style="font-size:12px; padding:6px 14px;">+ Agregar</button></td>
     </tr>`).join('');

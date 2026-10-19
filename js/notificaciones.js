@@ -5,6 +5,7 @@
    ============================================================ */
 
 import { db, auth } from './firebase-config.js';
+import { escaparHtml } from './util-html.js';
 import { ref, get, onValue, update } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-database.js";
 import { getCurrentRole } from './main.js';
 import { irAHitoDesdeNotificacion } from './comunidad-uneq.js';
@@ -28,7 +29,7 @@ function renderLista() {
   }
   listaEl.innerHTML = notificacionesActuales.map(([id, n]) => `
     <button type="button" class="notif-item ${n.leida ? '' : 'no-leida'}" data-notif-id="${id}" data-hito-id="${n.hitoId || ''}">
-      ${TEXTOS_TIPO[n.tipo] ? TEXTOS_TIPO[n.tipo](n.autorNombre || 'Alguien') : 'Novedad en tu hito'}${n.tituloHito ? `: "${n.tituloHito}"` : ''}
+      ${TEXTOS_TIPO[n.tipo] ? TEXTOS_TIPO[n.tipo](escaparHtml(n.autorNombre || 'Alguien')) : 'Novedad en tu hito'}${n.tituloHito ? `: "${escaparHtml(n.tituloHito)}"` : ''}
       <time>${new Date(n.createdAt).toLocaleDateString('es-CL', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}</time>
     </button>`).join('');
 

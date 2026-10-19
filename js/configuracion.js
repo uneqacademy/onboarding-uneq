@@ -13,6 +13,7 @@
    ============================================================ */
 
 import { db, storage } from './firebase-config.js';
+import { escaparHtml } from './util-html.js';
 import { ref, get, set, push, update, remove } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-database.js";
 import { ref as storageRef, uploadBytes, getDownloadURL, deleteObject } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-storage.js";
 import { getCurrentRole } from './main.js';
@@ -109,7 +110,7 @@ async function cargarArchivosMetodologia() {
   }
   cont.innerHTML = archivos.map(([id, a]) => `
     <div class="flex-between" data-archivo-id="${id}" style="padding:8px 0; border-bottom:0.5px solid var(--border);">
-      <span style="font-size:12.5px;">📎 <a href="${a.archivoUrl}" target="_blank" rel="noopener">${a.nombre}</a> ${a.archivoTexto ? '' : '<span class=\"text-soft\" style=\"font-size:11px;\">— procesando...</span>'}</span>
+      <span style="font-size:12.5px;">📎 <a href="${escaparHtml(a.archivoUrl)}" target="_blank" rel="noopener">${escaparHtml(a.nombre)}</a> ${a.archivoTexto ? '' : '<span class=\"text-soft\" style=\"font-size:11px;\">— procesando...</span>'}</span>
       <button type="button" class="btn btn--ghost btn-quitar-archivo-metodologia" style="font-size:11px; padding:3px 8px;">Quitar</button>
     </div>`).join('');
 
@@ -219,8 +220,8 @@ async function cargarHitosDefinidos() {
         ${deEstaFase.length ? deEstaFase.map(([id, h]) => `
           <div class="flex-between" data-hito-id="${id}" data-activo="${h.activo !== false}" style="padding:10px 0; border-bottom:0.5px solid var(--border); ${h.activo === false ? 'opacity:0.5;' : ''}">
             <div style="flex:1;">
-              <strong style="font-size:13px;">${h.titulo}</strong>
-              <p class="text-soft" style="font-size:12px; margin:2px 0 0;">${h.descripcion || ''}</p>
+              <strong style="font-size:13px;">${escaparHtml(h.titulo)}</strong>
+              <p class="text-soft" style="font-size:12px; margin:2px 0 0;">${escaparHtml(h.descripcion || '')}</p>
             </div>
             <div style="display:flex; gap:6px; flex-shrink:0;">
               <button type="button" class="btn btn--ghost btn-editar-hito" style="font-size:11px; padding:3px 8px;">Editar</button>
@@ -253,8 +254,8 @@ async function cargarHitosDefinidos() {
       const hito = hitos.find(([hid]) => hid === id)[1];
       fila.innerHTML = `
         <div style="width:100%;">
-          <input class="mb-16" id="editar-hito-titulo-${id}" value="${hito.titulo.replace(/"/g, '&quot;')}" placeholder="Título">
-          <textarea id="editar-hito-descripcion-${id}" style="min-height:60px;">${hito.descripcion || ''}</textarea>
+          <input class="mb-16" id="editar-hito-titulo-${id}" value="${escaparHtml(hito.titulo)}" placeholder="Título">
+          <textarea id="editar-hito-descripcion-${id}" style="min-height:60px;">${escaparHtml(hito.descripcion || '')}</textarea>
           <div style="display:flex; gap:8px; margin-top:10px;">
             <button type="button" class="btn btn--primary btn-guardar-edicion-hito" style="font-size:11px; padding:4px 10px;">Guardar</button>
             <button type="button" class="btn btn--ghost btn-cancelar-edicion-hito" style="font-size:11px; padding:4px 10px;">Cancelar</button>
