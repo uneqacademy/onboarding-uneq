@@ -384,6 +384,30 @@ if (btnNuevoAlumnoRefrescaCoaches) {
   });
 }
 
+/* --- Indicadores de onboarding de la lista: acceso creado + ficha completa.
+       Todo se calcula con datos que ya existen (authUid y los mismos campos
+       obligatorios de validarDatosGenerales), no se guarda nada nuevo. --- */
+const ETIQUETAS_CAMPO_FICHA = {
+  'datos-nombre': 'Nombre', 'datos-apellido': 'Apellido', 'datos-rut': 'RUT',
+  'datos-fecha-nacimiento': 'Fecha de nacimiento', 'datos-genero': 'Género',
+  'datos-telefono': 'Teléfono', 'datos-email': 'Correo', 'datos-ocupacion': 'Ocupación',
+  'datos-ocupacion-especialidad': 'Especialidad', 'datos-direccion-calle': 'Calle',
+  'datos-direccion-numero': 'Número', 'datos-direccion-comuna': 'Comuna',
+  'datos-direccion-region': 'Región', 'datos-direccion-pais': 'País'
+};
+
+function celdaOnboardingAlumno(alumno) {
+  const conAcceso = !!alumno.authUid;
+  const faltantes = validarDatosGenerales(alumno);
+  const accesoHtml = conAcceso
+    ? '<span class="badge badge--activo" title="El alumno ya tiene usuario para entrar a la app">🔑 Con acceso</span>'
+    : '<span class="badge badge--pendiente" title="Todavía no se le creó el acceso">🔑 Sin acceso</span>';
+  const fichaHtml = faltantes.length === 0
+    ? '<span class="badge badge--activo" title="Todos los datos generales están completos">📋 Ficha completa</span>'
+    : `<span class="badge badge--pendiente" title="Falta: ${escaparHtml(faltantes.map(id => ETIQUETAS_CAMPO_FICHA[id] || id).join(', '))}">📋 Faltan ${faltantes.length} dato${faltantes.length === 1 ? '' : 's'}</span>`;
+  return `<td style="white-space:nowrap;">${accesoHtml} ${fichaHtml}</td>`;
+}
+
 /* --- Construye una fila <tr> de alumno, con columnas según el contexto --- */
 function crearFilaAlumno(alumnoId, alumno, ciclo, columnas, acuerdo, nombreOverride) {
   const tr = document.createElement('tr');
@@ -401,6 +425,7 @@ function crearFilaAlumno(alumnoId, alumno, ciclo, columnas, acuerdo, nombreOverr
   if (columnas.coach) html += `<td>${escaparHtml(coachNombre)}</td>`;
   html += `<td>${programa}</td><td>${estadoProceso}</td>`;
   html += `<td><span class="badge ${claseBadgeEstadoAlumno(estadoAlumno)}">${labelEstadoAlumno(estadoAlumno)}</span></td>`;
+  if (columnas.onboarding) html += celdaOnboardingAlumno(alumno);
   if (columnas.fase) {
     html += `<td>${ciclo ? faseMetodologiaLabel(ciclo.faseMetodologia) : '—'}</td>`;
   }
@@ -502,11 +527,11 @@ export async function cargarListasAlumnos() {
     if (role === 'director') {
       if (tbodyDashDirector && pasaFiltrosDirector(alumno, ciclo, 'dash-director') && !ciclosVistos.dashDirector.has(claveGrupo)) {
         ciclosVistos.dashDirector.add(claveGrupo);
-        tbodyDashDirector.appendChild(crearFilaAlumno(alumnoId, alumno, ciclo, { coach: true, fechas: false, pago: true }, acuerdo, nombreFila));
+        tbodyDashDirector.appendChild(crearFilaAlumno(alumnoId, alumno, ciclo, { coach: true, fechas: false, pago: true, onboarding: true }, acuerdo, nombreFila));
       }
       if (tbodyDirector && pasaFiltrosDirector(alumno, ciclo, 'director') && !ciclosVistos.director.has(claveGrupo)) {
         ciclosVistos.director.add(claveGrupo);
-        tbodyDirector.appendChild(crearFilaAlumno(alumnoId, alumno, ciclo, { coach: true, fechas: true, pago: false }, null, nombreFila));
+        tbodyDirector.appendChild(crearFilaAlumno(alumnoId, alumno, ciclo, { coach: true, fechas: true, pago: false, onboarding: true }, null, nombreFila));
       }
     } else if (role === 'coach') {
       // Ocultar SOLO si el ciclo quedó marcado explícitamente como acuerdoCerrado:false
@@ -518,11 +543,11 @@ export async function cargarListasAlumnos() {
       if (!ciclo || !(esMio || esBeginDeCabecera)) return;
       if (tbodyDashCoach && !ciclosVistos.dashCoach.has(claveGrupo)) {
         ciclosVistos.dashCoach.add(claveGrupo);
-        tbodyDashCoach.appendChild(crearFilaAlumno(alumnoId, alumno, ciclo, { coach: false, fase: true, fechas: true, dias: true, pago: false }, null, nombreFila));
+        tbodyDashCoach.appendChild(crearFilaAlumno(alumnoId, alumno, ciclo, { coach: false, fase: true, fechas: true, dias: true, pago: false, onboarding: true }, null, nombreFila));
       }
       if (tbodyCoach && !ciclosVistos.coach.has(claveGrupo)) {
         ciclosVistos.coach.add(claveGrupo);
-        tbodyCoach.appendChild(crearFilaAlumno(alumnoId, alumno, ciclo, { coach: false, fase: true, fechas: true, dias: true, pago: false }, null, nombreFila));
+        tbodyCoach.appendChild(crearFilaAlumno(alumnoId, alumno, ciclo, { coach: false, fase: true, fechas: true, dias: true, pago: false, onboarding: true }, null, nombreFila));
       }
     }
   });
