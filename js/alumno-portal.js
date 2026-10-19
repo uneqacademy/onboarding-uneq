@@ -68,6 +68,37 @@ async function obtenerIdsDelProyecto() {
 /* ============================================================
    Crear acceso del alumno (desde la ficha, director o coach)
    ============================================================ */
+/* Envía al alumno, por correo, el enlace para crear su contraseña (Cloud Function
+   enviarAccesoAlumno). Si falla, el panel sigue mostrando la contraseña inicial
+   para compartirla a mano, como antes. */
+const enviarAccesoAlumnoFn = httpsCallable(getFunctions(app), 'enviarAccesoAlumno', { timeout: 60000 });
+
+async function enviarCorreoAccesoAlumno(alumnoId) {
+  const estadoEl = document.getElementById('acceso-alumno-envio-estado');
+  const btnReenviar = document.getElementById('btn-reenviar-acceso-alumno');
+  if (btnReenviar) { btnReenviar.dataset.alumnoId = alumnoId; btnReenviar.disabled = true; }
+  if (estadoEl) estadoEl.textContent = 'Enviando correo con el acceso...';
+  try {
+    const r = await enviarAccesoAlumnoFn({ alumnoId });
+    if (estadoEl) estadoEl.textContent = `✉️ Correo enviado a ${r.data.email}. El alumno crea su contraseña desde ahí.`;
+  } catch (err) {
+    const mostrables = ['functions/resource-exhausted', 'functions/failed-precondition', 'functions/permission-denied'];
+    const mensaje = mostrables.includes(err && err.code)
+      ? err.message
+      : 'No se pudo enviar el correo automático. Comparte la contraseña inicial manualmente.';
+    if (estadoEl) estadoEl.textContent = '⚠️ ' + mensaje;
+  } finally {
+    if (btnReenviar) btnReenviar.disabled = false;
+  }
+}
+
+const btnReenviarAccesoAlumno = document.getElementById('btn-reenviar-acceso-alumno');
+if (btnReenviarAccesoAlumno) {
+  btnReenviarAccesoAlumno.addEventListener('click', () => {
+    if (btnReenviarAccesoAlumno.dataset.alumnoId) enviarCorreoAccesoAlumno(btnReenviarAccesoAlumno.dataset.alumnoId);
+  });
+}
+
 const btnCrearAccesoAlumno = document.getElementById('btn-crear-acceso-alumno');
 if (btnCrearAccesoAlumno) {
   btnCrearAccesoAlumno.addEventListener('click', async () => {
@@ -95,6 +126,7 @@ if (btnCrearAccesoAlumno) {
       document.getElementById('acceso-alumno-email').value = email;
       document.getElementById('acceso-alumno-password').value = password;
       document.getElementById('panel-acceso-alumno-creado').classList.remove('hidden');
+      enviarCorreoAccesoAlumno(alumnoId);
       btnCrearAccesoAlumno.classList.add('hidden');
       const bloqueExistente = document.getElementById('bloque-acceso-alumno-existente');
       if (bloqueExistente) bloqueExistente.classList.remove('hidden');

@@ -578,12 +578,14 @@
                 </div>
                 <div class="panel mb-16 hidden" id="panel-acceso-alumno-creado" style="margin-top:16px;">
                   <div class="panel__body">
-                    <p style="margin-bottom:12px;"><strong>✓ Acceso creado</strong> — cópialo y compártelo con el alumno.</p>
+                    <p style="margin-bottom:6px;"><strong>✓ Acceso creado</strong> — le enviamos un correo; si no le llega, copia la contraseña y compártela.</p>
+                    <p id="acceso-alumno-envio-estado" class="text-soft" style="margin-bottom:12px; font-size:13px;"></p>
                     <div class="field-grid mb-16">
                       <div class="field"><label>Correo</label><input id="acceso-alumno-email" readonly></div>
                       <div class="field"><label>Contraseña inicial</label><input id="acceso-alumno-password" readonly></div>
                     </div>
                     <button class="btn btn--ghost" id="btn-copiar-password-alumno">Copiar contraseña</button>
+                    <button class="btn btn--ghost" id="btn-reenviar-acceso-alumno" style="margin-left:8px;">Reenviar correo</button>
                   </div>
                 </div>
               </div>
