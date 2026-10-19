@@ -13,3 +13,14 @@ export function escaparHtml(valor) {
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#39;');
 }
+
+// Escapa el texto y convierte las URLs http(s) en enlaces. Se escapa ANTES
+// de buscar URLs, así una comilla dentro de la URL no puede romper el href.
+export function linkificarSeguro(texto, conSaltos = false) {
+  if (!texto) return '';
+  const html = escaparHtml(texto).replace(
+    /(https?:\/\/[^\s<]+)/g,
+    '<a href="$1" target="_blank" rel="noopener" style="color:#2563EB;">$1</a>'
+  );
+  return conSaltos ? html.replace(/\n/g, '<br>') : html;
+}

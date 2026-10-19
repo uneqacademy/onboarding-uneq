@@ -11,6 +11,7 @@ import { aplicarClampTexto } from './texto-clamp.js';
    ============================================================ */
 
 import { db, auth, storage } from './firebase-config.js';
+import { escaparHtml, linkificarSeguro } from './util-html.js';
 import { ref, get, set, push, update, remove } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-database.js";
 import { ref as storageRef, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-storage.js";
 import { getCurrentRole } from './main.js';
@@ -32,9 +33,7 @@ function formatFechaHito(ts) {
 }
 
 function linkifyTexto(texto) {
-  if (!texto) return '';
-  const escapado = texto.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-  return escapado.replace(/(https?:\/\/[^\s]+)/g, '<a href="$1" target="_blank" rel="noopener">$1</a>').replace(/\n/g, '<br>');
+  return linkificarSeguro(texto, true);
 }
 
 let fotosSeleccionadasHito = [];
@@ -277,7 +276,7 @@ export async function cargarHitosComunidad() {
         const roles = (u.roles && typeof u.roles === 'object') ? u.roles : (u.rol ? { [u.rol]: true } : {});
         return !!roles.coach;
       }).sort((a, b) => (a[1].nombre || '').localeCompare(b[1].nombre || '', 'es'));
-      filtroCoachEl.innerHTML = '<option value="">Todos</option>' + coaches.map(([id, c]) => `<option value="${id}">${c.nombre || c.email}</option>`).join('');
+      filtroCoachEl.innerHTML = '<option value="">Todos</option>' + coaches.map(([id, c]) => `<option value="${escaparHtml(id)}">${escaparHtml(c.nombre || c.email)}</option>`).join('');
       filtroCoachEl.dataset.cargado = '1';
     }
     const idHitoFiltro = 'chc-f-hito';
@@ -289,7 +288,7 @@ export async function cargarHitosComunidad() {
         const actual = hitoEl.value;
         const faseElegida = faseEl ? faseEl.value : '';
         const defs = Object.entries(hitosDefinidos).filter(([, h]) => !faseElegida || h.fase === faseElegida);
-        hitoEl.innerHTML = '<option value="">Todos</option>' + defs.map(([id, h]) => `<option value="${id}">${h.titulo}</option>`).join('');
+        hitoEl.innerHTML = '<option value="">Todos</option>' + defs.map(([id, h]) => `<option value="${escaparHtml(id)}">${escaparHtml(h.titulo)}</option>`).join('');
         if (defs.some(([id]) => id === actual)) hitoEl.value = actual;
       };
       faseEl?.addEventListener('change', () => { actualizarHitos(); cargarHitosComunidad(); });
@@ -338,7 +337,7 @@ function poblarFiltrosComunidadAlumno(lista, hitosDefinidos) {
     const defs = Object.entries(hitosDefinidos)
       .filter(([, h]) => !faseElegida || h.fase === faseElegida)
       .sort((a, b) => (a[1].fase || '').localeCompare(b[1].fase || '') || (a[1].titulo || '').localeCompare(b[1].titulo || '', 'es', { numeric: true }));
-    hitoEl.innerHTML = '<option value="">Todos</option>' + defs.map(([id, h]) => `<option value="${id}">${h.titulo}</option>`).join('');
+    hitoEl.innerHTML = '<option value="">Todos</option>' + defs.map(([id, h]) => `<option value="${escaparHtml(id)}">${escaparHtml(h.titulo)}</option>`).join('');
     if (defs.some(([id]) => id === actual)) hitoEl.value = actual;
   }
   if (faseEl && !faseEl.dataset.conectado) { faseEl.addEventListener('change', cargarHitosComunidad); faseEl.dataset.conectado = '1'; }
@@ -372,7 +371,7 @@ function renderSeguimientoPersonal(hitosDefinidos, misHitosPublicadosDefIds, fas
         <div class="hitos-fase-bloque hitos-fase-bloque--${faseClave}">
           <p class="hitos-fase-titulo">${FASES_HITOS[faseClave]}</p>
           ${deEstaFase.map(([id, h]) => `
-            <p class="hitos-fase-item">${misHitosPublicadosDefIds.has(id) ? '✅' : '⬜'} ${h.titulo}</p>`).join('')}
+            <p class="hitos-fase-item">${misHitosPublicadosDefIds.has(id) ? '✅' : '⬜'} ${escaparHtml(h.titulo)}</p>`).join('')}
         </div>`;
     }).join('')}`;
 }
@@ -384,7 +383,7 @@ function poblarSelectorPublicar(hitosDefinidos, misHitosPublicadosDefIds) {
   select.innerHTML = '<option value="">Selecciona...</option>' + Object.keys(FASES_HITOS).map(faseClave => {
     const deEstaFase = disponibles.filter(([, h]) => h.fase === faseClave);
     if (!deEstaFase.length) return '';
-    return `<optgroup label="${FASES_HITOS[faseClave]}">${deEstaFase.map(([id, h]) => `<option value="${id}">${h.titulo}</option>`).join('')}</optgroup>`;
+    return `<optgroup label="${FASES_HITOS[faseClave]}">${deEstaFase.map(([id, h]) => `<option value="${escaparHtml(id)}">${escaparHtml(h.titulo)}</option>`).join('')}</optgroup>`;
   }).join('');
 }
 
@@ -402,7 +401,7 @@ if (btnAdjuntarFotoHito && inputFotoHito) {
     }
     fotosSeleccionadasHito = seleccionados;
     document.getElementById('hito-fotos-preview').innerHTML = fotosSeleccionadasHito
-      .map(f => `<span class="text-soft" style="font-size:11px; background:#F0F1F3; padding:3px 8px; border-radius:6px;">🖼️ ${f.name}</span>`).join('');
+      .map(f => `<span class="text-soft" style="font-size:11px; background:#F0F1F3; padding:3px 8px; border-radius:6px;">🖼️ ${escaparHtml(f.name)}</span>`).join('');
   });
 }
 
@@ -425,7 +424,7 @@ function renderMiniaturasReacciones(hitoId, reacciones) {
   return `
     <div style="display:flex; align-items:center; margin-top:8px;">
       <div style="display:flex;">
-        ${primeras5.map((r, i) => `<img src="${(r && r.fotoUrl) || PLACEHOLDER}" alt="" title="${(r && r.nombre) || ''}" style="width:22px; height:22px; border-radius:50%; object-fit:cover; border:2px solid #fff; margin-left:${i === 0 ? '0' : '-8px'};">`).join('')}
+        ${primeras5.map((r, i) => `<img src="${escaparHtml((r && r.fotoUrl) || PLACEHOLDER)}" alt="" title="${escaparHtml((r && r.nombre) || '')}" style="width:22px; height:22px; border-radius:50%; object-fit:cover; border:2px solid #fff; margin-left:${i === 0 ? '0' : '-8px'};">`).join('')}
       </div>
       ${lista.length > 5 ? `<button type="button" class="btn-ver-todas-reacciones" data-hito-id="${hitoId}" style="background:none; border:none; color:var(--color-accent); font-size:11.5px; cursor:pointer; margin-left:8px; padding:0;">Ver todos (${lista.length})</button>` : ''}
     </div>`;
@@ -446,7 +445,7 @@ function renderRespuestasComentario(hitoId, comentarioId, respuestas, fotoAutorH
   if (!lista.length) return '';
   return `<div class="hito-comentario-respuestas">${lista.map(([respuestaId, r]) => `
     <div class="hito-comentario-respuesta" data-respuesta-id="${respuestaId}">
-      <strong>${r.autorNombre || nombreAutorHito}</strong>: ${linkifyTexto(r.texto)}
+      <strong>${escaparHtml(r.autorNombre || nombreAutorHito)}</strong>: ${linkifyTexto(r.texto)}
       <span class="text-soft" style="font-size:10px; margin-left:6px;">${formatFechaHito(r.createdAt)}</span>
       ${(esAutorHito && dentroDeVentana(r.createdAt)) || esDirector ? `<button type="button" class="btn-editar-hito btn-eliminar-respuesta-comentario" data-hito-id="${hitoId}" data-comentario-id="${comentarioId}" data-respuesta-id="${respuestaId}" style="margin-left:6px;">Eliminar</button>` : ''}
     </div>`).join('')}</div>`;
@@ -460,8 +459,8 @@ function renderComentarios(hitoId, comentarios, esDirector, fotoPorAutor, expand
   return lista.map(([comentarioId, c]) => `
     <div data-comentario-id="${comentarioId}" style="padding:6px 0; border-bottom:0.5px solid var(--border);">
       <p class="hito-comentario" style="font-size:12.5px; margin:0;">
-        <img src="${(fotoPorAutor && fotoPorAutor.get(c.autorId)) || PLACEHOLDER_FOTO_HITO}" alt="" class="hito-comentario__foto">
-        <strong>${c.autorNombre || 'Alguien'}</strong>${c.autorTipo === 'staff' ? ' <span class="badge badge--activo" style="font-size:8px;">staff</span>' : ''}
+        <img src="${escaparHtml((fotoPorAutor && fotoPorAutor.get(c.autorId)) || PLACEHOLDER_FOTO_HITO)}" alt="" class="hito-comentario__foto">
+        <strong>${escaparHtml(c.autorNombre || 'Alguien')}</strong>${c.autorTipo === 'staff' ? ' <span class="badge badge--activo" style="font-size:8px;">staff</span>' : ''}
         ${c.estado === 'oculto_denuncia' ? ' <span style="color:#C0392B; font-size:10px;">⚠️ denunciado</span>' : ''}
         : <span class="texto-clamp" data-clamp>${linkifyTexto(c.texto)}</span>
       </p>
@@ -566,23 +565,23 @@ function renderFeedHitos(hitosVisibles, usuarios, ctx) {
         <div class="flex-between">
           <div>
             <div class="hito-autor">
-              <span class="hito-autor__fotos">${(ctx.fotosPublicacion && ctx.fotosPublicacion.get(hitoId) || [PLACEHOLDER_FOTO_HITO]).map(url => `<img src="${url}" alt="">`).join('')}</span>
-              <strong>${h.nombreAutor}</strong>
+              <span class="hito-autor__fotos">${(ctx.fotosPublicacion && ctx.fotosPublicacion.get(hitoId) || [PLACEHOLDER_FOTO_HITO]).map(url => `<img src="${escaparHtml(url)}" alt="">`).join('')}</span>
+              <strong>${escaparHtml(h.nombreAutor)}</strong>
               ${etiquetaProgramaHito(h.programa)}
             </div>
-            <p class="text-soft" style="font-size:11px; margin:2px 0 0;">${FASES_HITOS[h.fase] || h.fase} · <strong>${h.tituloHito}</strong></p>
+            <p class="text-soft" style="font-size:11px; margin:2px 0 0;">${escaparHtml(FASES_HITOS[h.fase] || h.fase)} · <strong>${escaparHtml(h.tituloHito)}</strong></p>
           </div>
           ${esDenunciado ? '<span class="badge" style="background:#FBE4E4; color:#C0392B; font-size:9px;">⚠️ Denunciado</span>' : ''}
         </div>
-        ${h.descripcionHito ? `<p class="text-soft" style="font-size:12px; margin:8px 0 0; font-style:italic;">${h.descripcionHito}</p>` : ''}
-        ${h.textoAlumno ? `<p class="texto-clamp" data-clamp data-texto-hito data-texto-original="${h.textoAlumno.replace(/"/g, '&quot;')}" style="margin:8px 0 0; white-space:pre-wrap;">${linkifyTexto(h.textoAlumno)}</p><button type="button" class="btn-ver-mas-texto hidden" data-clamp-btn></button>` : ''}
+        ${h.descripcionHito ? `<p class="text-soft" style="font-size:12px; margin:8px 0 0; font-style:italic;">${escaparHtml(h.descripcionHito)}</p>` : ''}
+        ${h.textoAlumno ? `<p class="texto-clamp" data-clamp data-texto-hito data-texto-original="${escaparHtml(h.textoAlumno)}" style="margin:8px 0 0; white-space:pre-wrap;">${linkifyTexto(h.textoAlumno)}</p><button type="button" class="btn-ver-mas-texto hidden" data-clamp-btn></button>` : ''}
         ${(h.fotos || []).map(f => `<img src="${f.url}" alt="" class="btn-ampliar-foto-hito" data-src="${f.url}" style="max-width:220px; max-height:220px; border-radius:8px; margin:8px 8px 0 0; object-fit:cover; cursor:zoom-in;">`).join('')}
         <p class="text-soft" style="font-size:11px; margin:8px 0 0;">${formatFechaHito(h.createdAt)}</p>
 
         <div style="display:flex; gap:8px; margin-top:12px; flex-wrap:wrap; align-items:center;">
           <button type="button" class="btn ${yaReacciono ? 'btn--primary' : 'btn--ghost'} btn-reaccion-hito" data-hito-id="${hitoId}" style="font-size:12px; padding:4px 10px;">❤️ ${totalReacciones}</button>
           <button type="button" class="btn ${comentariosExpandidos ? 'btn--primary' : 'btn--ghost'} btn-comentarios-hito" data-hito-id="${hitoId}" aria-expanded="${comentariosExpandidos}" title="Ver todos los comentarios" style="font-size:12px; padding:4px 10px;">💬 <span class="contador-comentarios-hito">${totalComentarios}</span></button>
-          ${esAutor ? `<button type="button" class="btn btn--ghost btn-compartir-hito" data-hito-id="${hitoId}" data-titulo="${h.tituloHito}" style="font-size:12px; padding:4px 10px;">📤 Compartir</button>` : ''}
+          ${esAutor ? `<button type="button" class="btn btn--ghost btn-compartir-hito" data-hito-id="${hitoId}" data-titulo="${escaparHtml(h.tituloHito)}" style="font-size:12px; padding:4px 10px;">📤 Compartir</button>` : ''}
           ${puedeEditar ? `<button type="button" class="btn btn--ghost btn-editar-hito-texto" data-hito-id="${hitoId}" style="font-size:12px; padding:4px 10px;">✏️ Editar</button>` : ''}
           ${puedeEliminar ? `<button type="button" class="btn btn--ghost btn-eliminar-hito" data-hito-id="${hitoId}" style="font-size:12px; padding:4px 10px; color:#C0392B;">Eliminar</button>` : ''}
           ${puedeDenunciar ? `<button type="button" class="btn btn--ghost btn-denunciar-hito" data-hito-id="${hitoId}" style="font-size:12px; padding:4px 10px;">Denunciar</button>` : ''}
@@ -811,8 +810,8 @@ function activarInteraccionFeed(feedEl, recargarFn) {
       if (modal && listaEl) {
         listaEl.innerHTML = lista.map(r => `
           <div style="display:flex; align-items:center; gap:10px; padding:8px 0; border-bottom:0.5px solid var(--color-border);">
-            <img src="${(r && r.fotoUrl) || PLACEHOLDER}" alt="" style="width:32px; height:32px; border-radius:50%; object-fit:cover;">
-            <span style="font-size:13.5px;">${(r && r.nombre) || 'Alguien'}</span>
+            <img src="${escaparHtml((r && r.fotoUrl) || PLACEHOLDER)}" alt="" style="width:32px; height:32px; border-radius:50%; object-fit:cover;">
+            <span style="font-size:13.5px;">${escaparHtml((r && r.nombre) || 'Alguien')}</span>
           </div>`).join('');
         modal.classList.remove('hidden');
       }
@@ -844,7 +843,7 @@ function activarInteraccionFeed(feedEl, recargarFn) {
       parrafo.classList.add('hidden');
       if (btnVerMas) btnVerMas.classList.add('hidden');
       const form = document.createElement('div');
-      form.innerHTML = `<textarea style="width:100%; min-height:80px; margin-top:6px;">${textoActual}</textarea>
+      form.innerHTML = `<textarea style="width:100%; min-height:80px; margin-top:6px;">${escaparHtml(textoActual)}</textarea>
         <div style="display:flex; gap:8px; margin-top:6px;">
           <button type="button" class="btn btn--primary btn-guardar-edicion-hito" style="font-size:12px; padding:5px 12px;">Guardar</button>
           <button type="button" class="btn btn--ghost btn-cancelar-edicion-hito" style="font-size:12px; padding:5px 12px;">Cancelar</button>

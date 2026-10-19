@@ -10,7 +10,7 @@
 
 import { db, auth, storage } from './firebase-config.js';
 import { ref, get, set, update, push, remove } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-database.js";
-import { escaparHtml } from './util-html.js';
+import { escaparHtml, linkificarSeguro } from './util-html.js';
 import { ref as storageRef, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-storage.js";
 import { getCurrentRole, showView, marcarNavActivo } from './main.js';
 import { aplicarClampTexto } from './texto-clamp.js';
@@ -133,9 +133,7 @@ function formatFecha(ts) {
   return new Intl.DateTimeFormat('es-CL', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }).format(new Date(ts));
 }
 function linkifyTexto(texto) {
-  if (!texto) return '';
-  const escapado = texto.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-  return escapado.replace(/(https?:\/\/[^\s]+)/g, '<a href="$1" target="_blank" rel="noopener">$1</a>').replace(/\n/g, '<br>');
+  return linkificarSeguro(texto, true);
 }
 
 let subtabActual = 'hitos';
