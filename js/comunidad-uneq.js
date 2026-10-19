@@ -10,6 +10,7 @@
 
 import { db, auth, storage } from './firebase-config.js';
 import { ref, get, set, update, push, remove } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-database.js";
+import { escaparHtml } from './util-html.js';
 import { ref as storageRef, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-storage.js";
 import { getCurrentRole, showView, marcarNavActivo } from './main.js';
 import { aplicarClampTexto } from './texto-clamp.js';
@@ -245,7 +246,7 @@ function renderRespuestasSociales(basePath, comentarioId, respuestas, nombreDue�
   if (!lista.length) return '';
   return `<div class="hito-comentario-respuestas">${lista.map(([respuestaId, r]) => `
     <div class="hito-comentario-respuesta" data-respuesta-id="${respuestaId}">
-      <strong>${r.autorNombre || nombreDueño}</strong>: ${linkifyTexto(r.texto)}
+      <strong>${escaparHtml(r.autorNombre || nombreDueño)}</strong>: ${linkifyTexto(r.texto)}
       <span class="text-soft" style="font-size:10px; margin-left:6px;">${formatFecha(r.createdAt)}</span>
       ${(esDueño && dentroDeVentana(r.createdAt)) || esDirector ? `<button type="button" class="btn-editar-hito btn-eliminar-respuesta-social" data-base-path="${basePath}" data-comentario-id="${comentarioId}" data-respuesta-id="${respuestaId}" style="margin-left:6px;">Eliminar</button>` : ''}
     </div>`).join('')}</div>`;
@@ -259,7 +260,7 @@ function renderComentariosSociales(basePath, comentarios, esDirector, uid, nombr
     <div data-comentario-id="${comentarioId}" style="padding:6px 0; border-bottom:0.5px solid var(--border);">
       <p class="hito-comentario" style="font-size:12.5px; margin:0;">
         <img src="${c.autorFotoUrl || PLACEHOLDER_FOTO}" alt="" class="hito-comentario__foto">
-        <strong>${c.autorNombre || 'Alguien'}</strong>${c.autorTipo === 'staff' ? ' <span class="badge badge--activo" style="font-size:8px;">staff</span>' : ''}
+        <strong>${escaparHtml(c.autorNombre || 'Alguien')}</strong>${c.autorTipo === 'staff' ? ' <span class="badge badge--activo" style="font-size:8px;">staff</span>' : ''}
         : <span class="texto-clamp" data-clamp>${linkifyTexto(c.texto)}</span>
       </p>
       <button type="button" class="btn-ver-mas-texto hidden" data-clamp-btn></button>
@@ -284,7 +285,7 @@ function renderTarjetaSocial(basePath, id, item, ctx) {
       <div class="flex-between">
         <div class="hito-autor">
           <span class="hito-autor__fotos"><img src="${autorFotoUrl || PLACEHOLDER_FOTO}" alt=""></span>
-          <strong>${item.alumnoNombre || 'Alumno'}</strong>
+          <strong>${escaparHtml(item.alumnoNombre || 'Alumno')}</strong>
           ${etiquetaProgramaSocial(item.programa)}
           ${item.estado === 'pendiente' ? '<span class="badge badge--impaga" style="font-size:9px; margin-left:6px;">En Revisión</span>' : ''}
         </div>
@@ -321,7 +322,7 @@ function renderMiniaturasReaccionesSociales(basePath, reacciones) {
   if (!lista.length) return '';
   const primeras5 = lista.slice(0, 5);
   return `<div style="display:flex; align-items:center; margin-top:8px;">
-    <div style="display:flex;">${primeras5.map((r, i) => `<img src="${(r && r.fotoUrl) || PLACEHOLDER_FOTO}" alt="" title="${(r && r.nombre) || ''}" style="width:22px; height:22px; border-radius:50%; object-fit:cover; border:2px solid #fff; margin-left:${i === 0 ? '0' : '-8px'};">`).join('')}</div>
+    <div style="display:flex;">${primeras5.map((r, i) => `<img src="${(r && r.fotoUrl) || PLACEHOLDER_FOTO}" alt="" title="${escaparHtml((r && r.nombre) || '')}" style="width:22px; height:22px; border-radius:50%; object-fit:cover; border:2px solid #fff; margin-left:${i === 0 ? '0' : '-8px'};">`).join('')}</div>
     ${lista.length > 5 ? `<span class="text-soft" style="font-size:11.5px; margin-left:8px;">${lista.length} reacciones</span>` : ''}
   </div>`;
 }
@@ -508,7 +509,7 @@ function wireAdjuntarFoto(btnId, inputId, previewId, storeArr) {
     const pesados = seleccionados.filter(f => f.size > TAMANO_MAXIMO_FOTO);
     if (pesados.length) { alert(`Estas fotos pesan más de 10MB: ${pesados.map(f => f.name).join(', ')}`); input.value = ''; return; }
     storeArr.length = 0; storeArr.push(...seleccionados);
-    document.getElementById(previewId).innerHTML = storeArr.map(f => `<span class="text-soft" style="font-size:11px; background:#F0F1F3; padding:3px 8px; border-radius:6px;">🖼️ ${f.name}</span>`).join('');
+    document.getElementById(previewId).innerHTML = storeArr.map(f => `<span class="text-soft" style="font-size:11px; background:#F0F1F3; padding:3px 8px; border-radius:6px;">🖼️ ${escaparHtml(f.name)}</span>`).join('');
   });
 }
 async function subirFotos(storagePrefix, id, archivos) {
@@ -595,14 +596,14 @@ async function cargarPresentacion() {
         const roles = (u.roles && typeof u.roles === 'object') ? u.roles : (u.rol ? { [u.rol]: true } : {});
         return !!roles.coach;
       }).sort((a, b) => (a[1].nombre || '').localeCompare(b[1].nombre || '', 'es'));
-      coachEl.innerHTML = '<option value="">Todos</option>' + coaches.map(([id, c]) => `<option value="${id}">${c.nombre || c.email}</option>`).join('');
+      coachEl.innerHTML = '<option value="">Todos</option>' + coaches.map(([id, c]) => `<option value="${escaparHtml(id)}">${escaparHtml(c.nombre || c.email)}</option>`).join('');
       coachEl.dataset.cargado = '1';
     }
     const estEl = document.getElementById('pres-f-estudiante');
     if (estEl) {
       const nombres = [...new Set(conDatos.map(p => p.nombre))].sort((a, b) => a.localeCompare(b, 'es'));
       const previo = estEl.value;
-      estEl.innerHTML = '<option value="">Todos</option>' + nombres.map(n => `<option value="${n.replace(/"/g, '&quot;')}">${n}</option>`).join('');
+      estEl.innerHTML = '<option value="">Todos</option>' + nombres.map(n => `<option value="${escaparHtml(n)}">${escaparHtml(n)}</option>`).join('');
       if (nombres.includes(previo)) estEl.value = previo;
     }
   }
@@ -772,14 +773,14 @@ async function cargarHistoriasReales() {
         const roles = (u.roles && typeof u.roles === 'object') ? u.roles : (u.rol ? { [u.rol]: true } : {});
         return !!roles.coach;
       }).sort((a, b) => (a[1].nombre || '').localeCompare(b[1].nombre || '', 'es'));
-      coachEl.innerHTML = '<option value="">Todos</option>' + coaches.map(([id, c]) => `<option value="${id}">${c.nombre || c.email}</option>`).join('');
+      coachEl.innerHTML = '<option value="">Todos</option>' + coaches.map(([id, c]) => `<option value="${escaparHtml(id)}">${escaparHtml(c.nombre || c.email)}</option>`).join('');
       coachEl.dataset.cargado = '1';
     }
     const estEl = document.getElementById('hist-f-estudiante');
     if (estEl) {
       const nombres = [...new Set(todas.map(h => h.alumnoNombre).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'es'));
       const previo = estEl.value;
-      estEl.innerHTML = '<option value="">Todos</option>' + nombres.map(n => `<option value="${n.replace(/"/g, '&quot;')}">${n}</option>`).join('');
+      estEl.innerHTML = '<option value="">Todos</option>' + nombres.map(n => `<option value="${escaparHtml(n)}">${escaparHtml(n)}</option>`).join('');
       if (nombres.includes(previo)) estEl.value = previo;
     }
   }

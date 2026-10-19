@@ -7,6 +7,7 @@
    ============================================================ */
 
 import { db, auth, storage } from './firebase-config.js';
+import { escaparHtml } from './util-html.js';
 import { ref, get, update } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-database.js";
 import { ref as storageRef, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-storage.js";
 import { getCurrentRole } from './main.js';
@@ -24,7 +25,7 @@ export async function cargarMisDatos() {
   const datos = snap.exists() ? snap.val() : {};
 
   document.getElementById('mis-datos-foto-preview').src = datos.fotoUrl || PLACEHOLDER_FOTO_MIS_DATOS;
-  document.getElementById('mis-datos-nombre').innerHTML = `<strong>${datos.nombre || '—'}</strong>`;
+  document.getElementById('mis-datos-nombre').innerHTML = `<strong>${escaparHtml(datos.nombre || '—')}</strong>`;
   const rolActivo = getCurrentRole();
   document.getElementById('mis-datos-rol').textContent =
     (NOMBRES_ROL_MIS_DATOS[rolActivo] || rolActivo || '') + (datos.coachCabeceraBegin === true ? ' 🚩 Coach de Cabecera (BEGIN)' : '');

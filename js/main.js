@@ -5,6 +5,8 @@
    varios helpers que alumnos.js/ciclos.js usan para pintar la UI.
    ============================================================ */
 
+import { escaparHtml } from './util-html.js';
+
 let currentRole = null;
 let currentNombre = '';
 let currentRolesDisponibles = [];
@@ -77,7 +79,7 @@ export function applyRole(role, nombre, rolesDisponibles) {
   if (tabPago) tabPago.classList.toggle('hidden', role !== 'director');
 
   document.getElementById('sidebar-user-info').innerHTML =
-    `Sesión: <strong style="color:#fff;">${nombre}</strong><br>Rol: ${NOMBRES_ROL[role] || role}`;
+    `Sesión: <strong style="color:#fff;">${escaparHtml(nombre)}</strong><br>Rol: ${NOMBRES_ROL[role] || role}`;
 
   renderSelectorRol();
 
