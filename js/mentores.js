@@ -10,7 +10,7 @@
    ============================================================ */
 
 import { db, auth, storage, firebaseConfig } from './firebase-config.js';
-import { escaparHtml } from './util-html.js';
+import { escaparHtml, sanearHtml } from './util-html.js';
 import { ref, get, set, update, push } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-database.js";
 import { ref as storageRef, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-storage.js";
 import { initializeApp, deleteApp } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-app.js";
@@ -1419,7 +1419,7 @@ export async function cargarBoxMentor() {
         <div class="flex-between" style="align-items:flex-start; gap:10px;">
           <div style="flex:1; min-width:0;">
             <strong>${escaparHtml(p.alumnoNombre || 'Alumno')}</strong> <span class="text-soft" style="font-size:12px;">— ${fecha}</span>
-            <p class="texto-clamp" data-clamp style="margin:6px 0 0;">${p.preguntaFormateada || escaparHtml(p.pregunta || '')}</p>
+            <p class="texto-clamp" data-clamp style="margin:6px 0 0;">${p.preguntaFormateada ? sanearHtml(p.preguntaFormateada) : escaparHtml(p.pregunta || '')}</p>
             <button type="button" class="btn-ver-mas-texto hidden" data-clamp-btn></button>
           </div>
           <div style="display:flex; align-items:center; gap:8px; flex-shrink:0;">
