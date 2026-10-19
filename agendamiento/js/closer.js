@@ -81,6 +81,10 @@ document.getElementById('filtro-estado-lead').addEventListener('change', (e) => 
   filtroEstadoLeadActual = e.target.value;
   renderLeads();
 });
+// Escapa texto antes de pintarlo con innerHTML (los leads manuales lo escribe una persona).
+function escHtml(t) {
+  return String(t == null ? '' : t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
 function mostrarToast(texto) {
   const toast = document.getElementById('toast');
   toast.textContent = texto; toast.classList.add('is-visible');
@@ -141,6 +145,69 @@ async function cargarLeads() {
   const snap = await get(ref(db, `agendamiento/leadsPorCloser/${miUid}`));
   leads = snap.exists() ? Object.entries(snap.val()).map(([id, l]) => ({ id, ...l, bitacora: Object.entries(l.bitacora || {}).map(([bid, b]) => ({ id: bid, ...b })) })) : [];
 }
+/* --- Agregar lead manualmente (agendado por fuera de la app) --- */
+const panelNuevoLead = document.getElementById('panel-nuevo-lead');
+function limpiarFormNuevoLead() {
+  ['nombre', 'correo', 'telefono', 'nota'].forEach(c => { document.getElementById('nuevo-lead-' + c).value = ''; });
+  document.getElementById('nuevo-lead-estado').value = 'se_presento';
+}
+document.getElementById('btn-nuevo-lead').addEventListener('click', () => {
+  panelNuevoLead.classList.toggle('hidden');
+  if (!panelNuevoLead.classList.contains('hidden')) document.getElementById('nuevo-lead-nombre').focus();
+});
+document.getElementById('btn-cancelar-nuevo-lead').addEventListener('click', () => { limpiarFormNuevoLead(); panelNuevoLead.classList.add('hidden'); });
+document.getElementById('btn-guardar-nuevo-lead').addEventListener('click', guardarLeadManual);
+
+async function guardarLeadManual() {
+  const nombre = document.getElementById('nuevo-lead-nombre').value.trim();
+  const correo = document.getElementById('nuevo-lead-correo').value.trim();
+  const telefono = document.getElementById('nuevo-lead-telefono').value.trim();
+  const nota = document.getElementById('nuevo-lead-nota').value.trim();
+  const estado = document.getElementById('nuevo-lead-estado').value === 'en_seguimiento' ? 'en_seguimiento' : 'se_presento';
+
+  if (!nombre) { mostrarToast('Escribe el nombre del lead.'); return; }
+  if (!correo && !telefono) { mostrarToast('Agrega al menos un correo o un teléfono.'); return; }
+  if (correo && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(correo)) { mostrarToast('El correo no parece válido.'); return; }
+
+  // Aviso de posible duplicado (mismo correo o mismo teléfono entre tus leads).
+  const soloDigitos = (t) => String(t || '').replace(/\D/g, '');
+  const duplicado = leads.find(l =>
+    (correo && l.correo && l.correo.toLowerCase() === correo.toLowerCase()) ||
+    (soloDigitos(telefono).length >= 8 && soloDigitos(l.telefono) === soloDigitos(telefono)));
+  if (duplicado && !confirm(`Ya tienes un lead con esos datos (${duplicado.nombre}). ¿Agregarlo igual?`)) return;
+
+  const btn = document.getElementById('btn-guardar-nuevo-lead');
+  btn.disabled = true;
+  try {
+    const ahora = Date.now();
+    const leadRef = push(ref(db, `agendamiento/leadsPorCloser/${miUid}`));
+    const bitacora = {};
+    bitacora[push(ref(db, `agendamiento/leadsPorCloser/${miUid}/${leadRef.key}/bitacora`)).key] = {
+      texto: 'Lead agregado manualmente (agendado fuera de la app). ' + (estado === 'se_presento' ? 'Se presenta a la llamada.' : 'Pasa directo a En Seguimiento.'),
+      fecha: ahora
+    };
+    if (nota) bitacora[push(ref(db, `agendamiento/leadsPorCloser/${miUid}/${leadRef.key}/bitacora`)).key] = { texto: nota, fecha: ahora + 1 };
+    const lead = { nombre, estado, programa: null, archivada: false, origen: 'manual', bitacora, createdAt: ahora };
+    if (correo) lead.correo = correo;
+    if (telefono) lead.telefono = telefono;
+    await set(leadRef, lead);
+
+    limpiarFormNuevoLead();
+    panelNuevoLead.classList.add('hidden');
+    // Se vuelve a "Activos" sin filtro para que el lead nuevo se vea de inmediato.
+    filtroEstadoLeadActual = '';
+    document.getElementById('filtro-estado-lead').value = '';
+    await cargarLeads();
+    document.querySelector('.adm-subtab[data-subtab="activos"]').click();
+    mostrarToast('✅ Lead agregado');
+  } catch (err) {
+    console.error('No se pudo agregar el lead:', err);
+    mostrarToast('No se pudo guardar el lead. Intenta de nuevo.');
+  } finally {
+    btn.disabled = false;
+  }
+}
+
 function renderLeads() {
   const cont = document.getElementById('leads-lista');
   const filtrados = leads
@@ -155,9 +222,9 @@ function renderLeads() {
     const bitacoraOrdenada = [...l.bitacora].sort((a, b) => b.fecha - a.fecha);
     return `
     <div class="adm-cita-card" data-id="${l.id}">
-      <div class="adm-cita-card__top"><span class="adm-badge-lead ${et.clase}">${etiquetaTxt}</span><span class="adm-cita-card__nombre">${l.nombre}</span></div>
-      <p class="adm-cita-card__meta">${l.correo} · ${l.telefono}</p>
-      <div class="adm-bitacora-lista">${bitacoraOrdenada.map(b => `<div class="adm-bitacora-entrada"><time>${new Date(b.fecha).toLocaleDateString('es-CL', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</time>${b.texto}</div>`).join('')}</div>
+      <div class="adm-cita-card__top"><span class="adm-badge-lead ${et.clase}">${etiquetaTxt}</span><span class="adm-cita-card__nombre">${escHtml(l.nombre)}</span>${l.origen === 'manual' ? '<span style="font-size:11px; color:var(--color-ink-soft); margin-left:8px;">(agregado manualmente)</span>' : ''}</div>
+      <p class="adm-cita-card__meta">${escHtml([l.correo, l.telefono].filter(Boolean).join(' · ') || 'Sin datos de contacto')}</p>
+      <div class="adm-bitacora-lista">${bitacoraOrdenada.map(b => `<div class="adm-bitacora-entrada"><time>${new Date(b.fecha).toLocaleDateString('es-CL', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</time>${escHtml(b.texto)}</div>`).join('')}</div>
       ${!l.archivada ? `
         <div class="adm-bitacora-nueva"><input type="text" placeholder="Agregar una nota de seguimiento…" data-nota><button type="button" class="adm-btn-chico" data-accion="agregar-nota">Agregar</button></div>
         <div class="adm-cita-card__acciones" style="margin-top:12px;">
