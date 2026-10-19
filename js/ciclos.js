@@ -29,6 +29,32 @@ const LABELS_ESTADO = {
   matricula_finalizada: 'Proceso de Matrícula Finalizado'
 };
 
+// Días máximos razonables en cada estado antes de marcar al alumno como
+// "estancado". Ajustar aquí si el equipo quiere otros plazos.
+export const DIAS_ALERTA_POR_ESTADO = {
+  asignado: 3,
+  en_onboarding: 7,
+  enviado_firma: 3,
+  en_revision: 5,
+  firma_procesada: 3
+};
+
+// Días que lleva el ciclo en su estado actual. Los ciclos anteriores a este
+// cambio no tienen estadoProcesoDesde: se usa createdAt como aproximación.
+// Solo aplica mientras la matrícula está en proceso (no a alumnos activos).
+export function diasEnEstadoProceso(ciclo) {
+  if (!ciclo || ciclo.estadoAlumno !== 'en_proceso_matricula') return null;
+  if (!DIAS_ALERTA_POR_ESTADO[ciclo.estadoProceso]) return null;
+  const desde = ciclo.estadoProcesoDesde || ciclo.createdAt;
+  if (!desde) return null;
+  return Math.max(0, Math.floor((Date.now() - desde) / 86400000));
+}
+
+export function estaEstancado(ciclo) {
+  const dias = diasEnEstadoProceso(ciclo);
+  return dias !== null && dias > DIAS_ALERTA_POR_ESTADO[ciclo.estadoProceso];
+}
+
 export function programaLabel(key) {
   return PROGRAMAS[key] ? PROGRAMAS[key].label : key;
 }
@@ -48,6 +74,7 @@ export async function crearCiclo({ alumnoId, coachId, programa, acuerdoPago, mod
     programa,
     modalidadPago: modalidadPago || null,
     estadoProceso: 'asignado',
+    estadoProcesoDesde: Date.now(),
     estadoAlumno: 'en_proceso_matricula',
     fechaIngreso: null,
     fechaEgreso: null,
@@ -70,18 +97,18 @@ export async function crearCiclo({ alumnoId, coachId, programa, acuerdoPago, mod
 export async function iniciarOnboardingSiCorresponde(cicloId) {
   const snap = await get(ref(db, `ciclos/${cicloId}/estadoProceso`));
   if (snap.exists() && snap.val() === 'asignado') {
-    await update(ref(db, `ciclos/${cicloId}`), { estadoProceso: 'en_onboarding' });
+    await update(ref(db, `ciclos/${cicloId}`), { estadoProceso: 'en_onboarding', estadoProcesoDesde: Date.now() });
   }
 }
 
 /* --- en_onboarding -> enviado_firma (coach genera el acuerdo) --- */
 export async function generarAcuerdoYEnviarRevision(cicloId) {
-  await update(ref(db, `ciclos/${cicloId}`), { estadoProceso: 'enviado_firma' });
+  await update(ref(db, `ciclos/${cicloId}`), { estadoProceso: 'enviado_firma', estadoProcesoDesde: Date.now() });
 }
 
 /* --- enviado_firma -> en_revision (director confirma que lo envió a firmar) --- */
 export async function marcarEnviadoParaFirma(cicloId) {
-  await update(ref(db, `ciclos/${cicloId}`), { estadoProceso: 'en_revision' });
+  await update(ref(db, `ciclos/${cicloId}`), { estadoProceso: 'en_revision', estadoProcesoDesde: Date.now() });
 }
 
 /* --- en_revision -> firma_procesada -> matricula_finalizada (automático e inmediato:
@@ -100,6 +127,7 @@ export async function marcarFirmaProcesada(cicloId, fechaFirmaStr) {
 
   await update(ref(db, `ciclos/${cicloId}`), {
     estadoProceso: 'matricula_finalizada',
+    estadoProcesoDesde: Date.now(),
     estadoAlumno: 'activo',
     fechaIngreso: fechaFirmaStr,
     fechaEgreso,

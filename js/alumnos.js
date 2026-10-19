@@ -14,7 +14,7 @@ import {
   ref as storageRef, uploadBytes, getDownloadURL
 } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-storage.js";
 import {
-  PROGRAMAS, programaLabel, estadoProcesoLabel,
+  PROGRAMAS, programaLabel, estadoProcesoLabel, diasEnEstadoProceso, estaEstancado, DIAS_ALERTA_POR_ESTADO,
   crearCiclo, iniciarOnboardingSiCorresponde, generarAcuerdoYEnviarRevision,
   marcarEnviadoParaFirma, marcarFirmaProcesada, toggleCandado, renderStepper, renderAcciones
 } from './ciclos.js';
@@ -396,6 +396,16 @@ const ETIQUETAS_CAMPO_FICHA = {
   'datos-direccion-region': 'Región', 'datos-direccion-pais': 'País'
 };
 
+function indicadorDiasEnEstado(ciclo) {
+  const dias = diasEnEstadoProceso(ciclo);
+  if (dias === null) return '';
+  const plazo = DIAS_ALERTA_POR_ESTADO[ciclo.estadoProceso];
+  if (estaEstancado(ciclo)) {
+    return ` <span class="badge badge--impaga" title="Lleva ${dias} días en este estado (lo normal es hasta ${plazo})">⏳ ${dias} d</span>`;
+  }
+  return ` <span class="text-soft" style="font-size:11px;" title="Días en este estado">${dias} d</span>`;
+}
+
 function celdaOnboardingAlumno(alumno) {
   const conAcceso = !!alumno.authUid;
   const faltantes = validarDatosGenerales(alumno);
@@ -423,7 +433,7 @@ function crearFilaAlumno(alumnoId, alumno, ciclo, columnas, acuerdo, nombreOverr
 
   let html = `<td><img src="${escaparHtml(alumno.fotoUrl || PLACEHOLDER_FOTO)}" alt="" style="width:28px; height:28px; border-radius:50%; object-fit:cover; vertical-align:middle; margin-right:8px;">${escaparHtml(nombreCompleto)}</td>`;
   if (columnas.coach) html += `<td>${escaparHtml(coachNombre)}</td>`;
-  html += `<td>${programa}</td><td>${estadoProceso}</td>`;
+  html += `<td>${programa}</td><td>${estadoProceso}${indicadorDiasEnEstado(ciclo)}</td>`;
   html += `<td><span class="badge ${claseBadgeEstadoAlumno(estadoAlumno)}">${labelEstadoAlumno(estadoAlumno)}</span></td>`;
   if (columnas.onboarding) html += celdaOnboardingAlumno(alumno);
   if (columnas.fase) {
