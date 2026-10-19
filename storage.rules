@@ -1,69 +1,110 @@
 rules_version = '2';
 service firebase.storage {
   match /b/{bucket}/o {
-    match /acuerdos/{cicloId} {
-      allow read: if request.auth != null;
-      allow write: if request.auth != null;
+
+    function autenticado() {
+      return request.auth != null;
     }
-    match /fotos-alumnos/{alumnoId} {
-      allow read: if request.auth != null;
-      allow write: if request.auth != null;
+    function esDe(uid) {
+      return request.auth != null && request.auth.uid == uid;
     }
+    // Tope por archivo: evita subidas enormes (costo en plan Blaze).
+    function tamanoOk() {
+      return request.resource.size < 25 * 1024 * 1024;
+    }
+    function fotoOk() {
+      return request.resource.size < 10 * 1024 * 1024
+        && request.resource.contentType.matches('image/.*');
+    }
+
+    // --- Carpetas con dueño: solo el propio usuario sube/borra ---
     match /fotos-perfil/{uid} {
-      allow read: if request.auth != null;
-      allow write: if request.auth != null;
-    }
-    match /resumenes-mentorias/{mentorId}/{mentoriaId} {
-      allow read: if request.auth != null;
-      allow write: if request.auth != null;
-    }
-    match /acuerdos-firmados/{cicloId} {
-      allow read: if request.auth != null;
-      allow write: if request.auth != null;
-    }
-    match /box-respuestas/{mentorId}/{preguntaId} {
-      allow read: if request.auth != null;
-      allow write: if request.auth != null;
-    }
-    match /conocimiento-mentor/{mentorId}/{archivoId} {
-      allow read: if request.auth != null;
-      allow write: if request.auth != null;
+      allow read: if autenticado();
+      allow create, update: if esDe(uid) && fotoOk();
+      allow delete: if esDe(uid);
     }
     match /fotos-perfil-ia/{mentorId} {
-      allow read: if request.auth != null;
-      allow write: if request.auth != null;
+      // 'director-ia' es la foto del director (configuracion.js).
+      allow read: if autenticado();
+      allow create, update: if (esDe(mentorId) || mentorId == 'director-ia') && fotoOk();
+      allow delete: if esDe(mentorId) || mentorId == 'director-ia';
     }
-    match /box-begin/{preguntaId}/{archivo} {
-      allow read: if request.auth != null;
-      allow write: if request.auth != null;
+    match /resumenes-mentorias/{mentorId}/{mentoriaId} {
+      allow read: if autenticado();
+      allow create, update: if esDe(mentorId) && tamanoOk();
+      allow delete: if esDe(mentorId);
+    }
+    match /conocimiento-mentor/{mentorId}/{archivoId} {
+      allow read: if autenticado();
+      allow create, update: if esDe(mentorId) && tamanoOk();
+      allow delete: if esDe(mentorId);
     }
     match /resumenes-sesiones-begin/{coachId}/{sesionId} {
-      allow read: if request.auth != null;
-      allow write: if request.auth != null;
+      allow read: if autenticado();
+      allow create, update: if esDe(coachId) && tamanoOk();
+      allow delete: if esDe(coachId);
+    }
+
+    // --- Fotos de alumnos: las suben el propio alumno o el staff ---
+    match /fotos-alumnos/{alumnoId} {
+      allow read: if autenticado();
+      allow create, update: if autenticado() && fotoOk();
+      allow delete: if autenticado();
+    }
+
+    // --- Resto: requieren sesion y tienen tope de tamano ---
+    // Limitacion conocida: Storage no puede leer roles de Realtime Database,
+    // asi que aqui no se distingue alumno de staff. Para restringir contratos
+    // (acuerdos, acuerdos-firmados) solo a staff hace falta usar custom claims.
+    match /acuerdos/{cicloId} {
+      allow read: if autenticado();
+      allow create, update: if autenticado() && tamanoOk();
+      allow delete: if autenticado();
+    }
+    match /acuerdos-firmados/{cicloId} {
+      allow read: if autenticado();
+      allow create, update: if autenticado() && tamanoOk();
+      allow delete: if autenticado();
+    }
+    match /box-respuestas/{mentorId}/{preguntaId} {
+      allow read: if autenticado();
+      allow create, update: if autenticado() && tamanoOk();
+      allow delete: if autenticado();
+    }
+    match /box-begin/{preguntaId}/{archivo} {
+      allow read: if autenticado();
+      allow create, update: if autenticado() && tamanoOk();
+      allow delete: if autenticado();
     }
     match /box-preguntas/{mentorId}/{preguntaId}/{archivo} {
-      allow read: if request.auth != null;
-      allow write: if request.auth != null;
+      allow read: if autenticado();
+      allow create, update: if autenticado() && tamanoOk();
+      allow delete: if autenticado();
     }
     match /preguntas-vivo/{mentorId}/{mentoriaId}/{preguntaId}/{archivo} {
-      allow read: if request.auth != null;
-      allow write: if request.auth != null;
+      allow read: if autenticado();
+      allow create, update: if autenticado() && tamanoOk();
+      allow delete: if autenticado();
     }
     match /hitos/{hitoId}/{archivo} {
-      allow read: if request.auth != null;
-      allow write: if request.auth != null;
+      allow read: if autenticado();
+      allow create, update: if autenticado() && tamanoOk();
+      allow delete: if autenticado();
     }
     match /comunidad-presentaciones/{alumnoId}/{archivo} {
-      allow read: if request.auth != null;
-      allow write: if request.auth != null;
+      allow read: if autenticado();
+      allow create, update: if autenticado() && tamanoOk();
+      allow delete: if autenticado();
     }
     match /comunidad-historias/{historiaId}/{archivo} {
-      allow read: if request.auth != null;
-      allow write: if request.auth != null;
+      allow read: if autenticado();
+      allow create, update: if autenticado() && tamanoOk();
+      allow delete: if autenticado();
     }
     match /metodologia-base/{archivo} {
-      allow read: if request.auth != null;
-      allow write: if request.auth != null;
+      allow read: if autenticado();
+      allow create, update: if autenticado() && tamanoOk();
+      allow delete: if autenticado();
     }
   }
 }

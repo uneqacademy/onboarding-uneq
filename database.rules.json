@@ -104,7 +104,21 @@
       ".read": "auth != null && ((root.child('usuarios').child(auth.uid).child('roles').child('director').val() === true || root.child('usuarios').child(auth.uid).child('rol').val() === 'director') || (root.child('usuarios').child(auth.uid).child('roles').child('mentor').val() === true || root.child('usuarios').child(auth.uid).child('rol').val() === 'mentor') || root.child('alumnoPorAuthUid').child(auth.uid).exists())",
       "$uid": {
         ".read": "auth != null && (auth.uid === $uid || root.child('ciclos').child(root.child('alumnos').child(root.child('alumnoPorAuthUid').child(auth.uid).val()).child('cicloActualId').val()).child('coachId').val() === $uid)",
-        ".write": "auth != null && (auth.uid === $uid || (root.child('usuarios').child(auth.uid).child('roles').child('director').val() === true || root.child('usuarios').child(auth.uid).child('rol').val() === 'director'))",
+        ".write": "auth != null && ((auth.uid === $uid && data.exists()) || (root.child('usuarios').child(auth.uid).child('roles').child('director').val() === true || root.child('usuarios').child(auth.uid).child('rol').val() === 'director'))",
+        "roles": {
+          "$rol": {
+            ".validate": "newData.val() !== true || data.val() === true || (root.child('usuarios').child(auth.uid).child('roles').child('director').val() === true || root.child('usuarios').child(auth.uid).child('rol').val() === 'director')"
+          }
+        },
+        "rol": {
+          ".validate": "!newData.exists() || newData.val() === data.val() || (root.child('usuarios').child(auth.uid).child('roles').child('director').val() === true || root.child('usuarios').child(auth.uid).child('rol').val() === 'director')"
+        },
+        "activo": {
+          ".validate": "data.val() !== false || newData.val() === false || (root.child('usuarios').child(auth.uid).child('roles').child('director').val() === true || root.child('usuarios').child(auth.uid).child('rol').val() === 'director')"
+        },
+        "coachCabeceraBegin": {
+          ".validate": "newData.val() !== true || data.val() === true || (root.child('usuarios').child(auth.uid).child('roles').child('director').val() === true || root.child('usuarios').child(auth.uid).child('rol').val() === 'director')"
+        },
         "nombre": { ".read": true },
         "fotoUrl": { ".read": true },
         "temasBox": { ".read": true }
@@ -114,13 +128,13 @@
     "alumnoPorAuthUid": {
       "$uid": {
         ".read": "auth != null",
-        ".write": "auth != null && (!data.exists() || (root.child('usuarios').child(auth.uid).child('roles').child('director').val() === true || root.child('usuarios').child(auth.uid).child('rol').val() === 'director'))"
+        ".write": "auth != null && ((root.child('usuarios').child(auth.uid).child('roles').child('director').val() === true || root.child('usuarios').child(auth.uid).child('rol').val() === 'director') || ((root.child('usuarios').child(auth.uid).child('roles').child('coach').val() === true || root.child('usuarios').child(auth.uid).child('rol').val() === 'coach') && !data.exists()) || (auth.uid === $uid && !newData.exists() && root.child('usuarios').child(auth.uid).exists()))"
       }
     },
 
     "alumnos": {
       ".read": "auth != null && !root.child('alumnoPorAuthUid').child(auth.uid).exists()",
-      ".write": "auth != null && !root.child('alumnoPorAuthUid').child(auth.uid).exists()",
+      ".write": "auth != null && !root.child('alumnoPorAuthUid').child(auth.uid).exists() && ((root.child('usuarios').child(auth.uid).child('roles').child('director').val() === true || root.child('usuarios').child(auth.uid).child('rol').val() === 'director') || (root.child('usuarios').child(auth.uid).child('roles').child('coach').val() === true || root.child('usuarios').child(auth.uid).child('rol').val() === 'coach'))",
       "$alumnoId": {
         ".read": "auth != null && (root.child('alumnoPorAuthUid').child(auth.uid).val() === $alumnoId || (root.child('alumnos').child(root.child('alumnoPorAuthUid').child(auth.uid).val()).child('cicloActualId').val() != null && root.child('alumnos').child(root.child('alumnoPorAuthUid').child(auth.uid).val()).child('cicloActualId').val() === data.child('cicloActualId').val()))",
         "fotoUrl": {
@@ -132,7 +146,7 @@
 
     "ciclos": {
       ".read": "auth != null && !root.child('alumnoPorAuthUid').child(auth.uid).exists()",
-      ".write": "auth != null && !root.child('alumnoPorAuthUid').child(auth.uid).exists()",
+      ".write": "auth != null && !root.child('alumnoPorAuthUid').child(auth.uid).exists() && ((root.child('usuarios').child(auth.uid).child('roles').child('director').val() === true || root.child('usuarios').child(auth.uid).child('rol').val() === 'director') || (root.child('usuarios').child(auth.uid).child('roles').child('coach').val() === true || root.child('usuarios').child(auth.uid).child('rol').val() === 'coach'))",
       "$cicloId": {
         ".read": "auth != null && root.child('alumnos').child(root.child('alumnoPorAuthUid').child(auth.uid).val()).child('cicloActualId').val() === $cicloId",
         "alumnoIds": { ".read": "auth != null" }
@@ -141,7 +155,7 @@
 
     "acuerdosPago": {
       ".read": "auth != null && !root.child('alumnoPorAuthUid').child(auth.uid).exists()",
-      ".write": "auth != null",
+      ".write": "auth != null && !root.child('alumnoPorAuthUid').child(auth.uid).exists() && ((root.child('usuarios').child(auth.uid).child('roles').child('director').val() === true || root.child('usuarios').child(auth.uid).child('rol').val() === 'director') || (root.child('usuarios').child(auth.uid).child('roles').child('coach').val() === true || root.child('usuarios').child(auth.uid).child('rol').val() === 'coach'))",
       "$cicloId": {
         ".read": "auth != null && root.child('alumnos').child(root.child('alumnoPorAuthUid').child(auth.uid).val()).child('cicloActualId').val() === $cicloId"
       }
@@ -149,7 +163,7 @@
 
     "bitacora": {
       ".read": "auth != null && !root.child('alumnoPorAuthUid').child(auth.uid).exists()",
-      ".write": "auth != null && !root.child('alumnoPorAuthUid').child(auth.uid).exists()",
+      ".write": "auth != null && !root.child('alumnoPorAuthUid').child(auth.uid).exists() && ((root.child('usuarios').child(auth.uid).child('roles').child('director').val() === true || root.child('usuarios').child(auth.uid).child('rol').val() === 'director') || (root.child('usuarios').child(auth.uid).child('roles').child('coach').val() === true || root.child('usuarios').child(auth.uid).child('rol').val() === 'coach'))",
       "$cicloId": {
         ".read": "auth != null && root.child('alumnos').child(root.child('alumnoPorAuthUid').child(auth.uid).val()).child('cicloActualId').val() === $cicloId"
       }
