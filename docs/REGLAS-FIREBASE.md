@@ -37,3 +37,17 @@ Storage
 - Alumno: iniciar sesión; ver su ficha; subir foto; publicar hito/presentación; preguntar al BOX.
 - Negativas (deben fallar): un alumno escribe `usuarios/<su uid>/roles/director = true`;
   un alumno escribe en `acuerdosPago`; un mentor escribe en `alumnos`.
+
+## Mi Ficha: el alumno completa sus datos
+`alumnos/$alumnoId` ahora permite al **propio alumno** (mapeado en `alumnoPorAuthUid`) escribir solo:
+`rut`, `fechaNacimiento`, `genero`, `telefono`, `ocupacion`, `ocupacionEspecialidad`, `direccion` y
+`actualizadoPorAlumnoEn`, y **solo mientras el ciclo esté en `asignado` o `en_onboarding`**.
+Desde que se genera el acuerdo (`enviado_firma` en adelante) esos campos quedan bloqueados para el alumno; el coach ya
+quedaba bloqueado en esos estados por la interfaz, y el director siempre puede editar.
+
+- Nombre, apellido y correo **no** son editables por el alumno.
+- El formato (RUT ≤ 40 caracteres, fecha `AAAA-MM-DD`, género y ocupación de listas fijas, teléfono `+` y 8–15 dígitos,
+  dirección con calle, número, país, región y comuna) se exige **dentro de la regla de escritura del alumno**, no como
+  validación general, para no bloquear al equipo cuando crea fichas.
+- Pruebas en el simulador de reglas (como alumno con ciclo en `asignado`): escribir `alumnos/<su id>/rut` = permitido;
+  `alumnos/<su id>/nombre` = denegado; `alumnos/<id de otro>/rut` = denegado; con el ciclo en `enviado_firma` = denegado.

@@ -140,6 +140,30 @@
         "fotoUrl": {
           ".read": "auth != null",
           ".write": "auth != null && root.child('alumnoPorAuthUid').child(auth.uid).val() === $alumnoId"
+        },
+        "rut": {
+          ".write": "auth != null && root.child('alumnoPorAuthUid').child(auth.uid).val() === $alumnoId && (root.child('ciclos').child(root.child('alumnos').child($alumnoId).child('cicloActualId').val()).child('estadoProceso').val() === 'asignado' || root.child('ciclos').child(root.child('alumnos').child($alumnoId).child('cicloActualId').val()).child('estadoProceso').val() === 'en_onboarding') && newData.isString() && newData.val().length <= 40"
+        },
+        "fechaNacimiento": {
+          ".write": "auth != null && root.child('alumnoPorAuthUid').child(auth.uid).val() === $alumnoId && (root.child('ciclos').child(root.child('alumnos').child($alumnoId).child('cicloActualId').val()).child('estadoProceso').val() === 'asignado' || root.child('ciclos').child(root.child('alumnos').child($alumnoId).child('cicloActualId').val()).child('estadoProceso').val() === 'en_onboarding') && newData.isString() && newData.val().matches(/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/)"
+        },
+        "genero": {
+          ".write": "auth != null && root.child('alumnoPorAuthUid').child(auth.uid).val() === $alumnoId && (root.child('ciclos').child(root.child('alumnos').child($alumnoId).child('cicloActualId').val()).child('estadoProceso').val() === 'asignado' || root.child('ciclos').child(root.child('alumnos').child($alumnoId).child('cicloActualId').val()).child('estadoProceso').val() === 'en_onboarding') && (newData.val() === 'Femenino' || newData.val() === 'Masculino' || newData.val() === 'Otro' || newData.val() === 'Prefiere no decir')"
+        },
+        "telefono": {
+          ".write": "auth != null && root.child('alumnoPorAuthUid').child(auth.uid).val() === $alumnoId && (root.child('ciclos').child(root.child('alumnos').child($alumnoId).child('cicloActualId').val()).child('estadoProceso').val() === 'asignado' || root.child('ciclos').child(root.child('alumnos').child($alumnoId).child('cicloActualId').val()).child('estadoProceso').val() === 'en_onboarding') && newData.isString() && newData.val().matches(/^[+][0-9]{8,15}$/)"
+        },
+        "ocupacion": {
+          ".write": "auth != null && root.child('alumnoPorAuthUid').child(auth.uid).val() === $alumnoId && (root.child('ciclos').child(root.child('alumnos').child($alumnoId).child('cicloActualId').val()).child('estadoProceso').val() === 'asignado' || root.child('ciclos').child(root.child('alumnos').child($alumnoId).child('cicloActualId').val()).child('estadoProceso').val() === 'en_onboarding') && (newData.val() === 'Coach' || newData.val() === 'Terapeuta' || newData.val() === 'Psicólogo/a' || newData.val() === 'Ingeniero/a' || newData.val() === 'Abogado/a' || newData.val() === 'Consultor/a' || newData.val() === 'Otro')"
+        },
+        "ocupacionEspecialidad": {
+          ".write": "auth != null && root.child('alumnoPorAuthUid').child(auth.uid).val() === $alumnoId && (root.child('ciclos').child(root.child('alumnos').child($alumnoId).child('cicloActualId').val()).child('estadoProceso').val() === 'asignado' || root.child('ciclos').child(root.child('alumnos').child($alumnoId).child('cicloActualId').val()).child('estadoProceso').val() === 'en_onboarding') && newData.isString() && newData.val().length <= 120"
+        },
+        "actualizadoPorAlumnoEn": {
+          ".write": "auth != null && root.child('alumnoPorAuthUid').child(auth.uid).val() === $alumnoId && (root.child('ciclos').child(root.child('alumnos').child($alumnoId).child('cicloActualId').val()).child('estadoProceso').val() === 'asignado' || root.child('ciclos').child(root.child('alumnos').child($alumnoId).child('cicloActualId').val()).child('estadoProceso').val() === 'en_onboarding') && newData.isNumber()"
+        },
+        "direccion": {
+          ".write": "auth != null && root.child('alumnoPorAuthUid').child(auth.uid).val() === $alumnoId && (root.child('ciclos').child(root.child('alumnos').child($alumnoId).child('cicloActualId').val()).child('estadoProceso').val() === 'asignado' || root.child('ciclos').child(root.child('alumnos').child($alumnoId).child('cicloActualId').val()).child('estadoProceso').val() === 'en_onboarding') && newData.hasChildren(['calle', 'numero', 'pais', 'region', 'comuna']) && (!newData.child('calle').exists() || (newData.child('calle').isString() && newData.child('calle').val().length <= 120)) && (!newData.child('numero').exists() || (newData.child('numero').isString() && newData.child('numero').val().length <= 120)) && (!newData.child('departamento').exists() || (newData.child('departamento').isString() && newData.child('departamento').val().length <= 120)) && (!newData.child('pais').exists() || (newData.child('pais').isString() && newData.child('pais').val().length <= 120)) && (!newData.child('region').exists() || (newData.child('region').isString() && newData.child('region').val().length <= 120)) && (!newData.child('comuna').exists() || (newData.child('comuna').isString() && newData.child('comuna').val().length <= 120))"
         }
       }
     },

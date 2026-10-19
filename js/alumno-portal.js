@@ -11,6 +11,8 @@
 
 import { db, auth, storage, firebaseConfig, app } from './firebase-config.js';
 import { escaparHtml, linkificarSeguro, notaAHtml, sanearHtml } from './util-html.js';
+import { conectarCascadaDireccion, precargarDireccionGuardada, nombrePaisDesdeCodigo } from './geodata.js';
+import { GENEROS, OCUPACIONES, OCUPACIONES_CON_ESPECIALIDAD, validarFichaAlumno } from './util-ficha.js';
 import { aplicarClampTexto } from './texto-clamp.js';
 import { ref as storageRef, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-storage.js";
 import { ref, get, set, update, push } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-database.js";
@@ -580,6 +582,134 @@ function inicializarNombrePublico(alumnoId, alumno) {
   });
 }
 
+/* --- El alumno completa sus propios datos (Mi Ficha) ---
+   Solo mientras el acuerdo no se ha generado (estados Asignado y En Onboarding): después, los
+   datos del contrato quedan bloqueados y los cambia el equipo. Las reglas de Firebase hacen
+   cumplir lo mismo. Nombre, apellido y correo nunca los edita el alumno. */
+const ESTADOS_FICHA_EDITABLE = ['asignado', 'en_onboarding'];
+
+function opcionesFicha(lista, seleccionado) {
+  return lista.map(o => {
+    const valor = typeof o === 'string' ? o : o.valor;
+    const etiqueta = typeof o === 'string' ? o : o.etiqueta;
+    return `<option value="${escaparHtml(valor)}" ${valor === seleccionado ? 'selected' : ''}>${escaparHtml(etiqueta)}</option>`;
+  }).join('');
+}
+
+function inicializarEdicionFicha(alumnoId, alumno, ciclo) {
+  const cont = document.getElementById('alumno-mis-datos-editor');
+  if (!cont) return;
+
+  const editable = !!ciclo && ESTADOS_FICHA_EDITABLE.includes(ciclo.estadoProceso);
+  if (!editable) {
+    cont.innerHTML = '<p class="text-soft" style="font-size:12px; margin:0;">🔒 Tus datos ya no se pueden editar porque tu acuerdo está en proceso de firma. Si necesitas cambiar algo, escríbele a tu coach.</p>';
+    return;
+  }
+
+  const dir = (alumno.direccion && typeof alumno.direccion === 'object') ? alumno.direccion : {};
+  const falta = validarFichaAlumno({ ...alumno, direccion: dir }).errores.length > 0;
+  const actualizado = alumno.actualizadoPorAlumnoEn
+    ? `<p class="text-soft" style="font-size:12px; margin:6px 0 0;">Última actualización tuya: ${escaparHtml(formatFecha(new Date(alumno.actualizadoPorAlumnoEn).toISOString().slice(0, 10)))}</p>`
+    : '';
+
+  cont.innerHTML = `
+    <div class="panel" style="background:var(--color-surface-alt); padding:14px;">
+      <strong style="font-size:14px;">${falta ? '📝 Completa tus datos' : '✏️ Editar mis datos'}</strong>
+      <p class="text-soft" style="margin:4px 0 10px; font-size:12px;">Se usan para tu acuerdo. Revísalos bien: cuando tu coach genere el acuerdo ya no podrás modificarlos.</p>
+      <button type="button" class="btn btn--primary" id="mf-btn-abrir" style="font-size:12px; padding:6px 14px;">${falta ? 'Completar mis datos' : 'Editar mis datos'}</button>
+      ${actualizado}
+      <form id="mf-form" class="hidden" novalidate style="margin-top:14px;">
+        <div class="field-grid mb-16">
+          <div class="field"><label>RUT / Documento de identidad <span style="color:#C0392B;">*</span></label><input id="mf-rut" value="${escaparHtml(alumno.rut || '')}" placeholder="12.345.678-5"></div>
+          <div class="field"><label>Fecha de nacimiento <span style="color:#C0392B;">*</span></label><input type="date" id="mf-fecha-nacimiento" value="${escaparHtml(alumno.fechaNacimiento || '')}"></div>
+          <div class="field"><label>Género <span style="color:#C0392B;">*</span></label><select id="mf-genero"><option value="">Selecciona...</option>${opcionesFicha(GENEROS, alumno.genero)}</select></div>
+          <div class="field"><label>Teléfono (con código de país) <span style="color:#C0392B;">*</span></label><input type="tel" id="mf-telefono" value="${escaparHtml(alumno.telefono || '')}" placeholder="+56 9 1234 5678"></div>
+          <div class="field"><label>Ocupación <span style="color:#C0392B;">*</span></label><select id="mf-ocupacion"><option value="">Selecciona...</option>${opcionesFicha(OCUPACIONES, alumno.ocupacion)}</select></div>
+          <div class="field ${OCUPACIONES_CON_ESPECIALIDAD.includes(alumno.ocupacion) ? '' : 'hidden'}" id="campo-mf-especialidad"><label>Especialidad <span style="color:#C0392B;">*</span></label><input id="mf-especialidad" value="${escaparHtml(alumno.ocupacionEspecialidad || '')}" placeholder="Ej: Nutrición, Marketing..."></div>
+        </div>
+        <div class="field-grid mb-16">
+          <div class="field"><label>Calle <span style="color:#C0392B;">*</span></label><input id="mf-direccion-calle" value="${escaparHtml(dir.calle || '')}"></div>
+          <div class="field"><label>Número <span style="color:#C0392B;">*</span></label><input id="mf-direccion-numero" value="${escaparHtml(dir.numero || '')}"></div>
+          <div class="field"><label>Departamento/Oficina (opcional)</label><input id="mf-direccion-depto" value="${escaparHtml(dir.departamento || '')}"></div>
+          <div class="field"><label>País <span style="color:#C0392B;">*</span></label><select id="mf-direccion-pais"><option value="">Cargando países...</option></select></div>
+          <div class="field"><label>Región / Estado <span style="color:#C0392B;">*</span></label><select id="mf-direccion-region"><option value="">Elige un país primero</option></select></div>
+          <div class="field"><label>Comuna / Ciudad <span style="color:#C0392B;">*</span></label><div id="campo-mf-direccion-comuna"></div></div>
+        </div>
+        <p class="text-soft" style="font-size:12px; margin:0 0 10px;">Tu nombre, apellido y correo los gestiona el equipo UNEQ; si hay que corregirlos, escríbele a tu coach.</p>
+        <p id="mf-error" class="hidden" style="color:#C0392B; font-size:13px; margin:0 0 10px;"></p>
+        <div style="display:flex; gap:8px;">
+          <button type="button" class="btn btn--primary" id="mf-btn-guardar" style="font-size:12px; padding:6px 14px;">Guardar mis datos</button>
+          <button type="button" class="btn btn--ghost" id="mf-btn-cancelar" style="font-size:12px; padding:6px 14px;">Cancelar</button>
+        </div>
+      </form>
+    </div>`;
+
+  const form = document.getElementById('mf-form');
+  const btnAbrir = document.getElementById('mf-btn-abrir');
+  const errorEl = document.getElementById('mf-error');
+  const selOcupacion = document.getElementById('mf-ocupacion');
+
+  selOcupacion.addEventListener('change', () => {
+    document.getElementById('campo-mf-especialidad').classList.toggle('hidden', !OCUPACIONES_CON_ESPECIALIDAD.includes(selOcupacion.value));
+  });
+
+  btnAbrir.addEventListener('click', async () => {
+    form.classList.remove('hidden');
+    btnAbrir.classList.add('hidden');
+    conectarCascadaDireccion('mf');
+    await precargarDireccionGuardada({ pais: dir.pais, region: dir.region, comuna: dir.comuna }, 'mf');
+  });
+
+  document.getElementById('mf-btn-cancelar').addEventListener('click', () => {
+    form.classList.add('hidden');
+    btnAbrir.classList.remove('hidden');
+    errorEl.classList.add('hidden');
+  });
+
+  document.getElementById('mf-btn-guardar').addEventListener('click', async () => {
+    const valor = id => (document.getElementById(id) ? document.getElementById(id).value : '');
+    const selRegion = document.getElementById('mf-direccion-region');
+    const datos = {
+      rut: valor('mf-rut'),
+      fechaNacimiento: valor('mf-fecha-nacimiento'),
+      genero: valor('mf-genero'),
+      telefono: valor('mf-telefono'),
+      ocupacion: valor('mf-ocupacion'),
+      ocupacionEspecialidad: valor('mf-especialidad'),
+      direccion: {
+        calle: valor('mf-direccion-calle'),
+        numero: valor('mf-direccion-numero'),
+        departamento: valor('mf-direccion-depto'),
+        pais: nombrePaisDesdeCodigo(valor('mf-direccion-pais')),
+        region: selRegion && selRegion.value && selRegion.options[selRegion.selectedIndex] ? selRegion.options[selRegion.selectedIndex].text.trim() : '',
+        comuna: valor('mf-direccion-comuna')
+      }
+    };
+    const { errores, limpio } = validarFichaAlumno(datos);
+    if (errores.length) {
+      errorEl.textContent = errores.join(' ');
+      errorEl.classList.remove('hidden');
+      return;
+    }
+    errorEl.classList.add('hidden');
+
+    const btnGuardar = document.getElementById('mf-btn-guardar');
+    btnGuardar.disabled = true;
+    const textoOriginal = btnGuardar.textContent;
+    btnGuardar.textContent = 'Guardando...';
+    try {
+      await update(ref(db, `alumnos/${alumnoId}`), { ...limpio, actualizadoPorAlumnoEn: Date.now() });
+      alert('Listo: tus datos quedaron guardados.');
+      await cargarFichaAlumnoPropia();
+    } catch (err) {
+      errorEl.textContent = 'No se pudieron guardar tus datos. Es posible que tu acuerdo ya esté en proceso de firma; si es así, escríbele a tu coach.';
+      errorEl.classList.remove('hidden');
+      btnGuardar.disabled = false;
+      btnGuardar.textContent = textoOriginal;
+    }
+  });
+}
+
 /* --- Mi Ficha Alumno (página propia) --- */
 export async function cargarFichaAlumnoPropia() {
   const fichaEl = document.getElementById('alumno-mi-ficha');
@@ -625,13 +755,18 @@ export async function cargarFichaAlumnoPropia() {
     <div class="ficha-alumno-datos" style="display:grid; grid-template-columns: repeat(2, 1fr); gap:10px 20px; font-size:13px;">
       <div><strong>Correo:</strong> ${escaparHtml(alumno.email || '—')}</div>
       <div><strong>Teléfono:</strong> ${escaparHtml(alumno.telefono || '—')}</div>
-      <div><strong>Ocupación:</strong> ${alumno.ocupacion || '—'}${alumno.ocupacionEspecialidad ? `, ${alumno.ocupacionEspecialidad}` : ''}</div>
-      <div><strong>Dirección:</strong> ${direccionTexto}</div>
+      <div><strong>RUT / Documento:</strong> ${escaparHtml(alumno.rut || '—')}</div>
+      <div><strong>Fecha de nacimiento:</strong> ${alumno.fechaNacimiento ? escaparHtml(formatFecha(alumno.fechaNacimiento)) : '—'}</div>
+      <div><strong>Género:</strong> ${escaparHtml(alumno.genero || '—')}</div>
+      <div><strong>Ocupación:</strong> ${escaparHtml(alumno.ocupacion || '—')}${alumno.ocupacionEspecialidad ? `, ${escaparHtml(alumno.ocupacionEspecialidad)}` : ''}</div>
+      <div><strong>Dirección:</strong> ${escaparHtml(direccionTexto)}</div>
       <div><strong>Fecha de Ingreso:</strong> ${formatFecha(ciclo ? ciclo.fechaIngreso : null)}</div>
       <div><strong>Fecha de Egreso:</strong> ${formatFecha(ciclo ? ciclo.fechaEgreso : null)}</div>
     </div>`;
 
   inicializarNombrePublico(alumnoId, alumno);
+  fichaEl.insertAdjacentHTML('beforeend', '<div id="alumno-mis-datos-editor" style="margin-top:16px;"></div>');
+  inicializarEdicionFicha(alumnoId, alumno, ciclo);
 
   const btnCambiarFotoAlumno = document.getElementById('btn-cambiar-foto-alumno');
   const inputFotoAlumno = document.getElementById('alumno-foto-input');

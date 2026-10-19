@@ -914,6 +914,15 @@ async function abrirFicha(alumnoId) {
   document.getElementById('datos-apellido').value = alumno.apellido || '';
   document.getElementById('datos-rut').value = alumno.rut || '';
   document.getElementById('datos-fecha-nacimiento').value = alumno.fechaNacimiento || '';
+  const avisoAlumnoEl = document.getElementById('datos-actualizado-alumno');
+  if (avisoAlumnoEl) {
+    if (alumno.actualizadoPorAlumnoEn) {
+      avisoAlumnoEl.textContent = `✏️ El alumno actualizó sus datos el ${formatFecha(new Date(alumno.actualizadoPorAlumnoEn).toISOString().slice(0, 10))}. Revísalos antes de generar el acuerdo.`;
+      avisoAlumnoEl.classList.remove('hidden');
+    } else {
+      avisoAlumnoEl.classList.add('hidden');
+    }
+  }
   actualizarEdad();
   document.getElementById('datos-genero').value = alumno.genero || 'Femenino';
   setTelefono(alumno.telefono || '');
