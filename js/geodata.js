@@ -62,58 +62,61 @@ function poblarSelectRegiones(selectEl, codigoPais, nombreSeleccionado) {
 // contenedor, pero SIEMPRE deja el campo con id="datos-direccion-comuna",
 // para que el resto del código (guardar/cargar) no tenga que saber
 // si por debajo es un select o un input.
-function renderCampoComuna(contenedorEl, codigoPais, codigoRegion, valorGuardado) {
+function renderCampoComuna(contenedorEl, codigoPais, codigoRegion, valorGuardado, idComuna = 'datos-direccion-comuna') {
   if (PAISES_CON_COMUNAS.includes(codigoPais) && codigoRegion) {
     const ciudades = (comunasCache[codigoPais] || []).filter(c => c[1] === codigoRegion);
     if (ciudades.length) {
-      contenedorEl.innerHTML = `<select id="datos-direccion-comuna"><option value="">Selecciona...</option>${ciudades.map(c => `<option value="${c[0]}">${c[0]}</option>`).join('')}</select>`;
-      if (valorGuardado) document.getElementById('datos-direccion-comuna').value = valorGuardado;
+      contenedorEl.innerHTML = `<select id="${idComuna}"><option value="">Selecciona...</option>${ciudades.map(c => `<option value="${c[0]}">${c[0]}</option>`).join('')}</select>`;
+      if (valorGuardado) document.getElementById(idComuna).value = valorGuardado;
       return;
     }
   }
-  contenedorEl.innerHTML = `<input id="datos-direccion-comuna" placeholder="Escribe tu comuna o ciudad" value="${(valorGuardado || '').replace(/"/g, '&quot;')}">`;
+  contenedorEl.innerHTML = `<input id="${idComuna}" placeholder="Escribe tu comuna o ciudad" value="${(valorGuardado || '').replace(/"/g, '&quot;')}">`;
 }
 
 // Conecta los selects de País/Región/Comuna de "Datos Generales" con
 // la cascada — se llama una sola vez, al cargar la app.
-export function conectarCascadaDireccion() {
-  const selectPais = document.getElementById('datos-direccion-pais');
-  const selectRegion = document.getElementById('datos-direccion-region');
-  const contenedorComuna = document.getElementById('campo-datos-direccion-comuna');
+export function conectarCascadaDireccion(prefijo = 'datos') {
+  const selectPais = document.getElementById(`${prefijo}-direccion-pais`);
+  const selectRegion = document.getElementById(`${prefijo}-direccion-region`);
+  const contenedorComuna = document.getElementById(`campo-${prefijo}-direccion-comuna`);
+  const idComuna = `${prefijo}-direccion-comuna`;
   if (!selectPais || !selectRegion || !contenedorComuna) return;
 
   selectPais.addEventListener('change', () => {
     poblarSelectRegiones(selectRegion, selectPais.value, null);
-    renderCampoComuna(contenedorComuna, selectPais.value, null, null);
+    renderCampoComuna(contenedorComuna, selectPais.value, null, null, idComuna);
   });
   selectRegion.addEventListener('change', () => {
-    renderCampoComuna(contenedorComuna, selectPais.value, selectRegion.value, null);
+    renderCampoComuna(contenedorComuna, selectPais.value, selectRegion.value, null, idComuna);
   });
 }
 
 // Deja los 3 campos listos para que el coach/director empiece a
 // escribir desde cero (alumno nuevo, sin dirección guardada) — Chile
 // por defecto, como ya era antes.
-export async function prepararCamposDireccionVacios() {
+export async function prepararCamposDireccionVacios(prefijo = 'datos') {
   await asegurarDatosGeograficosCargados();
-  const selectPais = document.getElementById('datos-direccion-pais');
-  const selectRegion = document.getElementById('datos-direccion-region');
-  const contenedorComuna = document.getElementById('campo-datos-direccion-comuna');
+  const selectPais = document.getElementById(`${prefijo}-direccion-pais`);
+  const selectRegion = document.getElementById(`${prefijo}-direccion-region`);
+  const contenedorComuna = document.getElementById(`campo-${prefijo}-direccion-comuna`);
+  const idComuna = `${prefijo}-direccion-comuna`;
   if (!selectPais || !selectRegion || !contenedorComuna) return;
 
   poblarSelectPaises(selectPais, 'CL');
   poblarSelectRegiones(selectRegion, 'CL', null);
-  renderCampoComuna(contenedorComuna, 'CL', null, null);
+  renderCampoComuna(contenedorComuna, 'CL', null, null, idComuna);
 }
 
 // Carga la dirección YA GUARDADA de un alumno, dejando los 3 selects
 // en cascada correctamente pre-seleccionados (país -> región ->
 // comuna), en ese orden.
-export async function precargarDireccionGuardada({ pais, region, comuna }) {
+export async function precargarDireccionGuardada({ pais, region, comuna }, prefijo = 'datos') {
   await asegurarDatosGeograficosCargados();
-  const selectPais = document.getElementById('datos-direccion-pais');
-  const selectRegion = document.getElementById('datos-direccion-region');
-  const contenedorComuna = document.getElementById('campo-datos-direccion-comuna');
+  const selectPais = document.getElementById(`${prefijo}-direccion-pais`);
+  const selectRegion = document.getElementById(`${prefijo}-direccion-region`);
+  const contenedorComuna = document.getElementById(`campo-${prefijo}-direccion-comuna`);
+  const idComuna = `${prefijo}-direccion-comuna`;
   if (!selectPais || !selectRegion || !contenedorComuna) return;
 
   const paisMatch = pais ? paisesCache.find(p => p.nombre === pais) : null;
@@ -121,7 +124,7 @@ export async function precargarDireccionGuardada({ pais, region, comuna }) {
 
   poblarSelectPaises(selectPais, codigoPais);
   poblarSelectRegiones(selectRegion, codigoPais, region);
-  renderCampoComuna(contenedorComuna, codigoPais, selectRegion.value, comuna);
+  renderCampoComuna(contenedorComuna, codigoPais, selectRegion.value, comuna, idComuna);
 }
 
 // El resto del código guarda/lee estos 3 campos por su .value — para
