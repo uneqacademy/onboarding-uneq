@@ -58,6 +58,31 @@
     <section class="adm-seccion" id="sec-leads">
       <h1>Mis Leads</h1>
       <p class="ag-sub">Seguimiento de cada lead desde que se presenta a la llamada.</p>
+      <div style="margin:14px 0 4px;">
+        <button type="button" class="ag-btn ag-btn--primario" style="width:auto;" id="btn-nuevo-lead">+ Agregar lead</button>
+      </div>
+      <div class="ag-panel hidden" id="panel-nuevo-lead" style="margin:12px 0 18px;">
+        <h2 style="font-size:15px;">Agregar lead manualmente</h2>
+        <p class="ag-sub" style="margin-bottom:14px;">Para leads que agendaste fuera de la app. Escribe el nombre y al menos un dato de contacto.</p>
+        <div class="adm-fila">
+          <div class="ag-field"><label>Nombre <span class="ag-req">*</span></label><input type="text" id="nuevo-lead-nombre" maxlength="120"></div>
+          <div class="ag-field"><label>Estado inicial</label>
+            <select id="nuevo-lead-estado">
+              <option value="se_presento">Se presenta a llamada</option>
+              <option value="en_seguimiento">En Seguimiento</option>
+            </select>
+          </div>
+        </div>
+        <div class="adm-fila">
+          <div class="ag-field"><label>Correo</label><input type="email" id="nuevo-lead-correo" maxlength="160"></div>
+          <div class="ag-field"><label>Teléfono / WhatsApp</label><input type="tel" id="nuevo-lead-telefono" placeholder="+56912345678" maxlength="40"></div>
+        </div>
+        <div class="ag-field"><label>Nota (opcional)</label><input type="text" id="nuevo-lead-nota" maxlength="500" placeholder="Ej.: llegó por recomendación, quedamos de hablar el jueves…"></div>
+        <div style="display:flex; gap:10px;">
+          <button type="button" class="ag-btn ag-btn--primario" style="width:auto;" id="btn-guardar-nuevo-lead">Guardar lead</button>
+          <button type="button" class="ag-btn ag-btn--ghost" style="width:auto;" id="btn-cancelar-nuevo-lead">Cancelar</button>
+        </div>
+      </div>
       <div class="adm-subtabs">
         <button type="button" class="adm-subtab is-activa" data-subtab="activos">Activos</button>
         <button type="button" class="adm-subtab" data-subtab="archivados">Archivados</button>
@@ -149,6 +174,6 @@
 
 <div class="adm-toast" id="toast"></div>
 
-<script type="module" src="js/closer.js?v=3"></script>
+<script type="module" src="js/closer.js?v=4"></script>
 </body>
 </html>
