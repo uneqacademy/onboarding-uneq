@@ -11,6 +11,7 @@
    ============================================================ */
 
 import { db, auth, firebaseConfig } from './firebase-config.js';
+import { escaparHtml } from './util-html.js';
 import { ref, get, set, update } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-database.js";
 import { initializeApp, deleteApp } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-app.js";
 import { getAuth, createUserWithEmailAndPassword, signOut as signOutSecundaria, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-auth.js";
@@ -121,7 +122,7 @@ function renderDetalleNps(stats) {
     ? stats.comentarios.map(c => `
         <div style="padding:8px 0; border-bottom:0.5px solid var(--border);">
           <span class="text-soft" style="font-size:11px;">${c.momento === 'final' ? 'Final' : 'Medio'}</span>
-          <p style="margin:2px 0 0;">${c.comentario}</p>
+          <p style="margin:2px 0 0;">${escaparHtml(c.comentario)}</p>
         </div>`).join('')
     : '<p class="text-soft">Sin comentarios.</p>';
 
@@ -183,8 +184,8 @@ async function cargarCoachesView() {
 
       const tr = document.createElement('tr');
       tr.innerHTML = `
-        <td>${nombreCoach}${esCabeceraBegin ? ' <span title="Coach de Cabecera — ve a todos los alumnos BEGIN">🚩</span>' : ''}</td>
-        <td>${coach.email || ''}</td>
+        <td>${escaparHtml(nombreCoach)}${esCabeceraBegin ? ' <span title="Coach de Cabecera — ve a todos los alumnos BEGIN">🚩</span>' : ''}</td>
+        <td>${escaparHtml(coach.email || '')}</td>
         <td>${alumnosDeCoach.length}</td>
         <td><span class="badge ${coach.activo === false ? 'badge--impaga' : 'badge--activo'}">${coach.activo === false ? 'Inactivo' : 'Activo'}</span></td>
         <td>${npsTexto}</td>
@@ -222,9 +223,9 @@ async function cargarCoachesView() {
         filaEditarDatos.innerHTML = `
           <td colspan="6" style="background:#F7F8FA; padding:14px 16px;">
             <div class="field-grid mb-16">
-              <div class="field"><label>Nombre</label><input class="edit-nombre-coach" value="${coach.nombre || ''}"></div>
-              <div class="field"><label>Correo</label><input class="edit-email-coach" type="email" value="${coach.email || ''}"></div>
-              <div class="field"><label>Teléfono</label><input class="edit-telefono-coach" value="${coach.telefono || ''}"></div>
+              <div class="field"><label>Nombre</label><input class="edit-nombre-coach" value="${escaparHtml(coach.nombre || '')}"></div>
+              <div class="field"><label>Correo</label><input class="edit-email-coach" type="email" value="${escaparHtml(coach.email || '')}"></div>
+              <div class="field"><label>Teléfono</label><input class="edit-telefono-coach" value="${escaparHtml(coach.telefono || '')}"></div>
             </div>
             <button class="btn btn--primary btn-guardar-datos-coach" style="font-size:11px; padding:4px 10px;">Guardar</button>
           </td>`;

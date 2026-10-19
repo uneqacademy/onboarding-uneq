@@ -10,6 +10,7 @@
    ============================================================ */
 
 import { db, auth, storage, firebaseConfig } from './firebase-config.js';
+import { escaparHtml, sanearHtml } from './util-html.js';
 import { ref, get, set, update, push } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-database.js";
 import { ref as storageRef, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-storage.js";
 import { initializeApp, deleteApp } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-app.js";
@@ -44,10 +45,10 @@ function renderArchivosAdjuntosMentor(archivos, imagenesLegado) {
   if (!items.length) return '';
   return `<div style="display:flex; gap:6px; flex-wrap:wrap; margin-bottom:10px;">${items.map(a => {
     if (a.tipo === 'imagen') {
-      return `<img src="${a.url}" alt="" style="max-width:120px; max-height:120px; border-radius:6px; object-fit:cover;">`;
+      return `<img src="${escaparHtml(a.url)}" alt="" style="max-width:120px; max-height:120px; border-radius:6px; object-fit:cover;">`;
     }
     const icono = a.tipo === 'pdf' ? '📄' : a.tipo === 'word' ? '📝' : '📎';
-    return `<a href="${a.url}" target="_blank" rel="noopener" style="display:inline-flex; align-items:center; gap:6px; background:var(--color-surface-alt); padding:6px 12px; border-radius:8px; font-size:12px; text-decoration:none; color:var(--color-ink);">${icono} ${a.nombre || 'Archivo'}</a>`;
+    return `<a href="${escaparHtml(a.url)}" target="_blank" rel="noopener" style="display:inline-flex; align-items:center; gap:6px; background:var(--color-surface-alt); padding:6px 12px; border-radius:8px; font-size:12px; text-decoration:none; color:var(--color-ink);">${icono} ${escaparHtml(a.nombre || 'Archivo')}</a>`;
   }).join('')}</div>`;
 }
 const URL_REDES = {
@@ -125,8 +126,8 @@ async function cargarMentoresView() {
           <button type="button" class="btn btn--ghost btn-orden-mentor-arriba" style="font-size:11px; padding:2px 7px;" ${idx === 0 ? 'disabled' : ''}>↑</button>
           <button type="button" class="btn btn--ghost btn-orden-mentor-abajo" style="font-size:11px; padding:2px 7px;" ${idx === listaOrdenada.length - 1 ? 'disabled' : ''}>↓</button>
         </td>
-        <td>${mentor.nombre || ''}</td>
-        <td>${mentor.email || ''}</td>
+        <td>${escaparHtml(mentor.nombre || '')}</td>
+        <td>${escaparHtml(mentor.email || '')}</td>
         <td><span class="badge ${mentor.activo === false ? 'badge--impaga' : 'badge--activo'}">${mentor.activo === false ? 'Inactivo' : 'Activo'}</span></td>
         <td title="Promedio de las evaluaciones de los últimos 60 días">${npsTexto}</td>
         <td style="display:flex; gap:6px; flex-wrap:wrap;">
@@ -152,9 +153,9 @@ async function cargarMentoresView() {
         filaEditarDatosMentor.innerHTML = `
           <td colspan="5" style="background:#F7F8FA; padding:14px 16px;">
             <div class="field-grid mb-16">
-              <div class="field"><label>Nombre</label><input class="edit-nombre-mentor" value="${mentor.nombre || ''}"></div>
-              <div class="field"><label>Correo</label><input class="edit-email-mentor" type="email" value="${mentor.email || ''}"></div>
-              <div class="field"><label>Teléfono</label><input class="edit-telefono-mentor" value="${mentor.telefono || ''}"></div>
+              <div class="field"><label>Nombre</label><input class="edit-nombre-mentor" value="${escaparHtml(mentor.nombre || '')}"></div>
+              <div class="field"><label>Correo</label><input class="edit-email-mentor" type="email" value="${escaparHtml(mentor.email || '')}"></div>
+              <div class="field"><label>Teléfono</label><input class="edit-telefono-mentor" value="${escaparHtml(mentor.telefono || '')}"></div>
             </div>
             <button class="btn btn--primary btn-guardar-datos-mentor" style="font-size:11px; padding:4px 10px;">Guardar</button>
           </td>`;
@@ -315,10 +316,10 @@ async function cargarTemasMentoresDirector(usuarios) {
     const pendientes = sugerenciasMentor.filter(([, s]) => s.estado === 'pendiente');
     return `
       <div data-mentor-temas-id="${uid}" style="padding:12px 0; border-bottom:0.5px solid var(--border);">
-        <strong>${mentor.nombre || mentor.email}</strong>
+        <strong>${escaparHtml(mentor.nombre || mentor.email)}</strong>
         <p class="text-soft" style="font-size:12.5px; margin:4px 0 8px;">
-          ${temas.length ? temas.join(', ') : 'Aún no ha agregado ninguna.'}
-          ${pendientes.length ? `<br><span style="color:#B8860B;">Sugerencias pendientes: ${pendientes.map(([, s]) => s.texto).join(', ')}</span>` : ''}
+          ${temas.length ? temas.map(t => escaparHtml(t)).join(', ') : 'Aún no ha agregado ninguna.'}
+          ${pendientes.length ? `<br><span style="color:#B8860B;">Sugerencias pendientes: ${pendientes.map(([, s]) => escaparHtml(s.texto)).join(', ')}</span>` : ''}
         </p>
         <div style="display:flex; gap:8px;">
           <input type="text" class="input-sugerir-tema" placeholder="Sugerir una temática (máx. 2 palabras)..." style="flex:1; font-size:12.5px; padding:6px 10px;">
@@ -474,10 +475,10 @@ function renderDetalleAlumnoMentor(alumno, ciclo) {
   return `
     <td colspan="7" style="background:#F7F8FA; padding:16px;">
       <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:10px 20px; font-size:13px;">
-        <div><strong>Correo:</strong> ${alumno.email || '—'}</div>
+        <div><strong>Correo:</strong> ${escaparHtml(alumno.email || '—')}</div>
         <div><strong>Cumpleaños:</strong> ${formatFechaCorta(alumno.fechaNacimiento)}</div>
         <div><strong>País:</strong> ${dir.pais || '—'}</div>
-        <div><strong>Teléfono:</strong> ${alumno.telefono || '—'}</div>
+        <div><strong>Teléfono:</strong> ${escaparHtml(alumno.telefono || '—')}</div>
         <div><strong>Ocupación:</strong> ${alumno.ocupacion || '—'}${alumno.ocupacionEspecialidad ? ` (${alumno.ocupacionEspecialidad})` : ''}</div>
         <div><strong>Ingreso / Egreso:</strong> ${formatFechaCorta(ciclo.fechaIngreso)} — ${formatFechaCorta(ciclo.fechaEgreso)}</div>
         <div><strong>Facturación actual:</strong> ${ciclo.facturacionActual || '—'}</div>
@@ -637,11 +638,11 @@ function renderMatrizMentor() {
       const fase = FASE_LABELS[ciclo.faseMetodologia] || 'Sin definir';
       const tr = document.createElement('tr');
       tr.innerHTML = `
-        <td><img src="${alumno.fotoUrl || PLACEHOLDER_FOTO_PERFIL}" alt="" style="width:28px; height:28px; border-radius:50%; object-fit:cover;"></td>
-        <td>${nombreCompleto}</td>
+        <td><img src="${escaparHtml(alumno.fotoUrl || PLACEHOLDER_FOTO_PERFIL)}" alt="" style="width:28px; height:28px; border-radius:50%; object-fit:cover;"></td>
+        <td>${escaparHtml(nombreCompleto)}</td>
         <td>${programaLabel(ciclo.programa)}</td>
         <td>${fase}</td>
-        <td>${coachNombre}</td>
+        <td>${escaparHtml(coachNombre)}</td>
         <td><span class="badge badge--activo">Activo</span></td>
         <td><button class="btn btn--ghost btn-ver-mas-alumno" style="font-size:11px; padding:4px 8px;">Ver más</button></td>`;
       tbody.appendChild(tr);
@@ -825,7 +826,7 @@ export async function cargarPerfilMentor() {
       sugerenciasCont.classList.toggle('hidden', sugerencias.length === 0);
       sugerenciasListaEl.innerHTML = sugerencias.map(([id, s]) => `
         <div class="flex-between" data-sugerencia-id="${id}" style="padding:8px 0; border-bottom:0.5px solid var(--border);">
-          <span style="font-size:13px;">${s.texto}</span>
+          <span style="font-size:13px;">${escaparHtml(s.texto)}</span>
           <div style="display:flex; gap:6px;">
             <button type="button" class="btn btn--primary btn-aceptar-sugerencia" style="font-size:11px; padding:4px 10px;">Aceptar</button>
             <button type="button" class="btn btn--ghost btn-rechazar-sugerencia" style="font-size:11px; padding:4px 10px;">Rechazar</button>
@@ -1129,8 +1130,8 @@ async function cargarMentoriasView() {
           <td colspan="8" style="background:#F7F8FA; padding:14px 16px;">
             ${preguntas.length ? preguntas.map(([preguntaId, p]) => `
               <div class="pregunta-vivo-item" data-pregunta-id="${preguntaId}" style="padding:8px 0; border-bottom:0.5px solid var(--border); font-size:13px;">
-                <strong>${p.alumnoNombre || 'Alumno'}</strong>
-                <p style="margin:4px 0;">${p.texto || ''}</p>
+                <strong>${escaparHtml(p.alumnoNombre || 'Alumno')}</strong>
+                <p style="margin:4px 0;">${escaparHtml(p.texto || '')}</p>
                 ${(p.imagenes || []).map(url => `<img src="${url}" alt="" style="max-width:120px; border-radius:6px; margin:4px 4px 0 0;">`).join('')}
                 ${p.revisada
                   ? '<span class="badge badge--activo" style="font-size:10px;">✓ Revisada</span>'
@@ -1354,7 +1355,7 @@ function renderRespuestaMentorIA(preguntaId, p, mentorId) {
         <strong style="font-size:12px;">Respuesta del Mentor IA</strong>
         <span class="badge ${ESTADO_CLASES[estado]}" style="font-size:10px;">${ESTADO_LABELS[estado]}</span>
       </div>
-      <p class="respuesta-texto-actual" style="margin:4px 0; white-space:pre-wrap;">${r.texto || ''}</p>
+      <p class="respuesta-texto-actual" style="margin:4px 0; white-space:pre-wrap;">${escaparHtml(r.texto || '')}</p>
       <div class="acciones-revision" style="display:flex; gap:8px; margin-top:8px; flex-wrap:wrap;">
         <button type="button" class="btn btn--ghost btn-confirmar-respuesta" style="font-size:11px; padding:4px 8px;">✓ Confirmar sin cambios</button>
         <button type="button" class="btn btn--ghost btn-complementar-respuesta" style="font-size:11px; padding:4px 8px;">✏️ Complementar / Editar</button>
@@ -1383,7 +1384,7 @@ export async function cargarBoxMentor() {
 
   if (filtroAlumnoEl && !filtroAlumnoEl.dataset.cargado) {
     const alumnos = [...new Map(preguntas.map(([, p]) => [p.alumnoId, p.alumnoNombre || 'Alumno'])).entries()];
-    filtroAlumnoEl.innerHTML = '<option value="">Todos</option>' + alumnos.map(([id, nombre]) => `<option value="${id}">${nombre}</option>`).join('');
+    filtroAlumnoEl.innerHTML = '<option value="">Todos</option>' + alumnos.map(([id, nombre]) => `<option value="${escaparHtml(id)}">${escaparHtml(nombre)}</option>`).join('');
     filtroAlumnoEl.dataset.cargado = '1';
   }
 
@@ -1417,12 +1418,12 @@ export async function cargarBoxMentor() {
       bloque.innerHTML = `
         <div class="flex-between" style="align-items:flex-start; gap:10px;">
           <div style="flex:1; min-width:0;">
-            <strong>${p.alumnoNombre || 'Alumno'}</strong> <span class="text-soft" style="font-size:12px;">— ${fecha}</span>
-            <p class="texto-clamp" data-clamp style="margin:6px 0 0;">${p.preguntaFormateada || p.pregunta || ''}</p>
+            <strong>${escaparHtml(p.alumnoNombre || 'Alumno')}</strong> <span class="text-soft" style="font-size:12px;">— ${fecha}</span>
+            <p class="texto-clamp" data-clamp style="margin:6px 0 0;">${p.preguntaFormateada ? sanearHtml(p.preguntaFormateada) : escaparHtml(p.pregunta || '')}</p>
             <button type="button" class="btn-ver-mas-texto hidden" data-clamp-btn></button>
           </div>
           <div style="display:flex; align-items:center; gap:8px; flex-shrink:0;">
-            <span class="badge badge--activo" style="font-size:10px; white-space:nowrap;">${p.tematica || 'Sin tema'}</span>
+            <span class="badge badge--activo" style="font-size:10px; white-space:nowrap;">${escaparHtml(p.tematica || 'Sin tema')}</span>
             <span class="badge ${ESTADO_CLASES_BOX[estado]}" style="font-size:10px; white-space:nowrap;">${ESTADO_LABELS_BOX[estado]}</span>
             <span class="text-soft" style="font-size:16px;" data-flecha-box-mentor>▾</span>
           </div>
@@ -1431,7 +1432,7 @@ export async function cargarBoxMentor() {
           <div style="display:flex; align-items:center; gap:8px; margin-bottom:10px;">
             <label style="font-size:11px; margin:0;">Temática:</label>
             <select class="select-tematica-pregunta" style="font-size:12px; padding:4px 8px; width:auto;">
-              ${misTemasBox.map(t => `<option value="${t}" ${t === p.tematica ? 'selected' : ''}>${t}</option>`).join('')}
+              ${misTemasBox.map(t => `<option value="${escaparHtml(t)}" ${t === p.tematica ? 'selected' : ''}>${escaparHtml(t)}</option>`).join('')}
               ${p.tematica && !misTemasBox.includes(p.tematica) ? `<option value="${p.tematica}" selected>${p.tematica}</option>` : ''}
             </select>
             <button type="button" class="btn btn--ghost btn-guardar-tematica-pregunta" style="font-size:11px; padding:4px 10px;">Guardar</button>
@@ -1558,13 +1559,13 @@ async function cargarBoxBeginMentor() {
   if (filtroTematicaEl) {
     const tematicas = [...new Set(todas.map(([, p]) => p.tematica).filter(Boolean))].sort();
     const valorPrevio = filtroTematicaEl.value;
-    filtroTematicaEl.innerHTML = '<option value="">Todas</option>' + tematicas.map(t => `<option value="${t}">${t}</option>`).join('');
+    filtroTematicaEl.innerHTML = '<option value="">Todas</option>' + tematicas.map(t => `<option value="${escaparHtml(t)}">${escaparHtml(t)}</option>`).join('');
     if (tematicas.includes(valorPrevio)) filtroTematicaEl.value = valorPrevio;
   }
   if (filtroAlumnoEl) {
     const alumnos = [...new Map(todas.map(([, p]) => [p.alumnoId, p.alumnoNombre])).entries()];
     const valorPrevio = filtroAlumnoEl.value;
-    filtroAlumnoEl.innerHTML = '<option value="">Todos</option>' + alumnos.map(([id, nombre]) => `<option value="${id}">${nombre}</option>`).join('');
+    filtroAlumnoEl.innerHTML = '<option value="">Todos</option>' + alumnos.map(([id, nombre]) => `<option value="${escaparHtml(id)}">${escaparHtml(nombre)}</option>`).join('');
     filtroAlumnoEl.value = valorPrevio;
   }
   if (filtroRespondioEl) {
@@ -1572,7 +1573,7 @@ async function cargarBoxBeginMentor() {
       todas.filter(([, p]) => p.respuesta).map(([, p]) => [p.respuesta.mentorId, p.respuesta.mentorNombre])
     ).entries()];
     const valorPrevio = filtroRespondioEl.value;
-    filtroRespondioEl.innerHTML = '<option value="">Todos</option>' + mentoresQueRespondieron.map(([id, nombre]) => `<option value="${id}">${nombre}</option>`).join('');
+    filtroRespondioEl.innerHTML = '<option value="">Todos</option>' + mentoresQueRespondieron.map(([id, nombre]) => `<option value="${escaparHtml(id)}">${escaparHtml(nombre)}</option>`).join('');
     filtroRespondioEl.value = valorPrevio;
   }
 
@@ -1610,10 +1611,10 @@ async function cargarBoxBeginMentor() {
       bloque.innerHTML = `
         <div class="flex-between" style="align-items:flex-start; gap:10px;">
           <div style="flex:1; min-width:0;">
-            <strong>${p.alumnoNombre || 'Alumno'}</strong> <span class="text-soft" style="font-size:12px;">— ${fecha}</span>
+            <strong>${escaparHtml(p.alumnoNombre || 'Alumno')}</strong> <span class="text-soft" style="font-size:12px;">— ${fecha}</span>
             <span class="badge badge--activo" style="font-size:10px; margin-left:6px;">${p.tematica || 'Sin temática'}</span>
-            <p style="margin:6px 0 0;">${p.pregunta || ''}</p>
-            ${p.respuesta ? `<p class="text-soft" style="margin:4px 0 0; font-size:11px;">Respondida por ${p.respuesta.mentorNombre || 'un mentor'}</p>` : ''}
+            <p style="margin:6px 0 0;">${escaparHtml(p.pregunta || '')}</p>
+            ${p.respuesta ? `<p class="text-soft" style="margin:4px 0 0; font-size:11px;">Respondida por ${escaparHtml(p.respuesta.mentorNombre || 'un mentor')}</p>` : ''}
           </div>
           <span class="badge ${p.respuesta ? 'badge--activo' : 'badge--impaga'}" style="font-size:10px; white-space:nowrap;">${p.respuesta ? '✓ Respondida — solo lectura' : 'No respondida — puedes responder'}</span>
         </div>
@@ -1629,7 +1630,7 @@ async function cargarBoxBeginMentor() {
         detalle.innerHTML = `
           ${(p.imagenes || []).map(url => `<img src="${url}" alt="" style="max-width:120px; border-radius:6px; margin:0 4px 6px 0;">`).join('')}
           ${p.respuesta
-            ? `<div style="padding:10px; background:#F7F8FA; border-radius:8px;"><strong style="font-size:12px;">Respuesta de ${p.respuesta.mentorNombre || 'un mentor'}</strong><p style="margin:4px 0 0; white-space:pre-wrap;">${p.respuesta.texto || ''}</p></div>`
+            ? `<div style="padding:10px; background:#F7F8FA; border-radius:8px;"><strong style="font-size:12px;">Respuesta de ${escaparHtml(p.respuesta.mentorNombre || 'un mentor')}</strong><p style="margin:4px 0 0; white-space:pre-wrap;">${escaparHtml(p.respuesta.texto || '')}</p></div>`
             : `<textarea class="box-begin-textarea-respuesta" placeholder="Escribe la respuesta..." style="min-height:120px; width:100%;"></textarea>
                <button type="button" class="btn btn--primary btn-responder-box-begin" style="font-size:12px; margin-top:8px;">Enviar Respuesta</button>`}
         `;
@@ -1758,11 +1759,11 @@ async function cargarConocimientoMentor() {
     ? entradas.map(([entradaId, e]) => `
         <div class="panel mb-16" style="padding:12px;">
           <div class="flex-between">
-            <strong style="font-size:13px;">${e.titulo || '(sin título)'}</strong>
+            <strong style="font-size:13px;">${escaparHtml(e.titulo || '(sin título)')}</strong>
             <button type="button" class="btn btn--ghost btn-eliminar-conocimiento" data-id="${entradaId}" style="font-size:11px; padding:2px 8px;">Eliminar</button>
           </div>
-          ${e.texto ? `<p style="margin:6px 0 0; font-size:13px;">${e.texto}</p>` : ''}
-          ${e.archivoUrl ? `<a href="${e.archivoUrl}" target="_blank" rel="noopener" style="font-size:12px;">📄 ${e.archivoNombre || 'Ver archivo'}</a>` : ''}
+          ${e.texto ? `<p style="margin:6px 0 0; font-size:13px;">${escaparHtml(e.texto)}</p>` : ''}
+          ${e.archivoUrl ? `<a href="${escaparHtml(e.archivoUrl)}" target="_blank" rel="noopener" style="font-size:12px;">📄 ${escaparHtml(e.archivoNombre || 'Ver archivo')}</a>` : ''}
         </div>`).join('')
     : '<p class="text-soft">Aún no has agregado conocimiento adicional.</p>';
 

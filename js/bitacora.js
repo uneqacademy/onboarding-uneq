@@ -14,6 +14,7 @@
    ============================================================ */
 
 import { db, auth } from './firebase-config.js';
+import { escaparHtml, notaAHtml, sanearHtml } from './util-html.js';
 import { ref, get, push, set, update } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-database.js";
 import { getCurrentUserNombre, getCurrentRole } from './main.js';
 
@@ -99,11 +100,11 @@ export async function cargarBitacoraParaCiclo(cicloId, habilitada) {
       div.style.cssText = 'padding:12px 0; border-bottom:0.5px solid var(--border);';
       div.innerHTML = `
         <div style="display:flex; justify-content:space-between; margin-bottom:4px;">
-          <strong>${entrada.titulo || '(sin título)'}</strong>
-          <span class="text-soft" style="font-size:12px;">${entrada.autorNombre || ''}</span>
+          <strong>${escaparHtml(entrada.titulo || '(sin título)')}</strong>
+          <span class="text-soft" style="font-size:12px;">${escaparHtml(entrada.autorNombre || '')}</span>
         </div>
-        <div class="text-soft" style="font-size:12px; margin-bottom:6px;">${formatFecha(entrada.fecha)} · ${entrada.canal || ''}${entrada.editadoEn ? ' · <em>editada</em>' : ''}</div>
-        <div class="bitacora-nota-preview">${pareceTextoPlano(entrada.notas) ? textoPlanoAHtml(entrada.notas) : (entrada.notas || '')}</div>
+        <div class="text-soft" style="font-size:12px; margin-bottom:6px;">${formatFecha(entrada.fecha)} · ${escaparHtml(entrada.canal || '')}${entrada.editadoEn ? ' · <em>editada</em>' : ''}</div>
+        <div class="bitacora-nota-preview">${notaAHtml(entrada.notas)}</div>
         <button type="button" class="bitacora-btn-vermas hidden">Ver más</button>
         ${puedeEditar ? `<button type="button" class="bitacora-btn-editar" data-id="${entrada.entradaId}" style="display:block; margin-top:6px; background:none; border:0; padding:0; font-size:12px; color:var(--color-ink-soft); cursor:pointer; text-decoration:underline;">✏️ Editar</button>` : ''}`;
       listadoEl.appendChild(div);
@@ -156,9 +157,7 @@ function entrarEnModoEdicion(entrada) {
   document.getElementById('bitacora-titulo').value = entrada.titulo || '';
   document.getElementById('bitacora-fecha').value = entrada.fecha || '';
   document.getElementById('bitacora-canal').value = entrada.canal || 'WhatsApp';
-  document.getElementById('bitacora-notas').innerHTML = pareceTextoPlano(entrada.notas)
-    ? textoPlanoAHtml(entrada.notas)
-    : (entrada.notas || '');
+  document.getElementById('bitacora-notas').innerHTML = notaAHtml(entrada.notas);
   document.getElementById('btn-guardar-bitacora').textContent = '💾 Guardar cambios';
   document.getElementById('btn-cancelar-edicion-bitacora').classList.remove('hidden');
   document.getElementById('bitacora-contenido').scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -184,7 +183,7 @@ if (btnGuardarBitacora) {
     const fecha = document.getElementById('bitacora-fecha').value;
     const canal = document.getElementById('bitacora-canal').value;
     const editorNotas = document.getElementById('bitacora-notas');
-    const notas = editorNotas.innerHTML.trim();
+    const notas = sanearHtml(editorNotas.innerHTML.trim());
     const notasTextoPlano = editorNotas.textContent.trim();
 
     if (!titulo || !notasTextoPlano) {
@@ -241,10 +240,10 @@ if (btnDescargarWord) {
       // incluidos) desde el editor — Word lo interpreta directo, sin
       // necesidad de convertir saltos de línea a mano.
       const bloques = entradas.map(e => `
-        <p style="font-family:Arial; font-weight:bold; font-size:18px; margin:0 0 2px 0;">${e.titulo || ''}</p>
+        <p style="font-family:Arial; font-weight:bold; font-size:18px; margin:0 0 2px 0;">${escaparHtml(e.titulo || '')}</p>
         <p style="font-family:Arial; font-size:12px; margin:0;">Fecha: ${formatFecha(e.fecha)}</p>
-        <p style="font-family:Arial; font-size:12px; margin:0 0 12px 0;">Canal: ${e.canal || ''}</p>
-        <div style="font-family:Arial; font-size:12px; margin:0 0 20px 0;">${e.notas || ''}</div>
+        <p style="font-family:Arial; font-size:12px; margin:0 0 12px 0;">Canal: ${escaparHtml(e.canal || '')}</p>
+        <div style="font-family:Arial; font-size:12px; margin:0 0 20px 0;">${notaAHtml(e.notas)}</div>
         <hr style="border:none; border-top:1px solid #999; margin:0 0 20px 0;">`
       ).join('');
 

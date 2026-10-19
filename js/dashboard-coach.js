@@ -9,6 +9,7 @@
    ============================================================ */
 
 import { db, auth, storage } from './firebase-config.js';
+import { escaparHtml } from './util-html.js';
 import { ref, get, set, update, push } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-database.js";
 import { ref as storageRef, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-storage.js";
 import { getCurrentRole } from './main.js';
@@ -189,8 +190,8 @@ async function cargarSesionesBeginTabla(uid) {
           <td colspan="8" style="background:#F7F8FA; padding:14px 16px;">
             ${preguntas.length ? preguntas.map(([preguntaId, p]) => `
               <div class="pregunta-vivo-item" data-pregunta-id="${preguntaId}" style="padding:8px 0; border-bottom:0.5px solid var(--border); font-size:13px;">
-                <strong>${p.alumnoNombre || 'Alumno'}</strong>
-                <p style="margin:4px 0;">${p.texto || ''}</p>
+                <strong>${escaparHtml(p.alumnoNombre || 'Alumno')}</strong>
+                <p style="margin:4px 0;">${escaparHtml(p.texto || '')}</p>
                 ${(p.imagenes || []).map(url => `<img src="${url}" alt="" style="max-width:120px; border-radius:6px; margin:4px 4px 0 0;">`).join('')}
                 ${p.revisada
                   ? '<span class="badge badge--activo" style="font-size:10px;">✓ Revisada</span>'

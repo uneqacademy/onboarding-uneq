@@ -6,7 +6,7 @@
    ============================================================ */
 
 import { db, auth, storage } from './firebase-config.js';
-import { escaparHtml } from './util-html.js';
+import { escaparHtml, notaAHtml } from './util-html.js';
 import {
   ref, get, set, update, push
 } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-database.js";
@@ -668,7 +668,7 @@ async function renderHistorialCiclos(ciclosAnterioresIds) {
       const bitacoraHtml = entradasBitacora.length
         ? entradasBitacora.sort((a, b) => b.createdAt - a.createdAt).map(e => `
             <div style="font-size:13px; padding:6px 0; border-top:0.5px solid var(--border);">
-              <strong>${escaparHtml(e.titulo || '')}</strong> — ${formatFecha(e.fecha)} · ${escaparHtml(e.canal || '')}<br>${escaparHtml(e.notas || '')}
+              <strong>${escaparHtml(e.titulo || '')}</strong> — ${formatFecha(e.fecha)} · ${escaparHtml(e.canal || '')}<br>${notaAHtml(e.notas)}
             </div>`).join('')
         : '<p class="text-soft" style="font-size:13px;">Sin entradas de bitácora en este ciclo.</p>';
 

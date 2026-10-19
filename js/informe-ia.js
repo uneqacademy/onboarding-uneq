@@ -7,6 +7,7 @@
    ============================================================ */
 
 import { db } from './firebase-config.js';
+import { escaparHtml } from './util-html.js';
 import { ref, get } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-database.js";
 import { getCurrentRole } from './main.js';
 
@@ -26,7 +27,7 @@ function renderTablaRendimiento() {
   tbody.innerHTML = filas.length
     ? filas.map(f => `
         <tr>
-          <td>${f.nombre}</td>
+          <td>${escaparHtml(f.nombre)}</td>
           <td><strong>${f.puntaje}</strong></td>
           <td>${f.confirmadas}</td>
           <td>${f.intervenidas}</td>

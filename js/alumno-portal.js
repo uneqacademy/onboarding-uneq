@@ -10,7 +10,7 @@
    ============================================================ */
 
 import { db, auth, storage, firebaseConfig, app } from './firebase-config.js';
-import { escaparHtml, linkificarSeguro } from './util-html.js';
+import { escaparHtml, linkificarSeguro, notaAHtml, sanearHtml } from './util-html.js';
 import { aplicarClampTexto } from './texto-clamp.js';
 import { ref as storageRef, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-storage.js";
 import { ref, get, set, update, push } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-database.js";
@@ -757,7 +757,7 @@ export async function cargarBitacoraAlumnoCompleta() {
     ? entradas.sort((a, b) => b.createdAt - a.createdAt).map(e => `
         <div class="panel mb-16" style="padding:14px; font-size:13px;">
           <strong>${escaparHtml(e.titulo || '')}</strong> <span class="text-soft">— ${formatFecha(e.fecha)} · ${escaparHtml(e.canal || '')}</span>
-          <p style="margin:6px 0 0;">${linkify(e.notas || '')}</p>
+          <div style="margin:6px 0 0;">${notaAHtml(e.notas)}</div>
         </div>`).join('')
     : '<p class="text-soft">Aún no hay entradas en tu bitácora.</p>';
 }
@@ -1306,7 +1306,7 @@ async function cargarBoxBeginAlumno() {
     ? propias.map(([, p]) => `
         <div class="panel mb-16" style="padding:14px;" data-fila-box-begin>
           <span class="badge badge--activo" style="font-size:10px;">${p.tematica || 'Sin temática'}</span>
-          <p class="texto-clamp" data-clamp style="margin:8px 0 0;">${p.preguntaFormateada || linkify(p.pregunta || '')}</p>
+          <p class="texto-clamp" data-clamp style="margin:8px 0 0;">${p.preguntaFormateada ? sanearHtml(p.preguntaFormateada) : linkify(p.pregunta || '')}</p>
           <button type="button" class="btn-ver-mas-texto hidden" data-clamp-btn></button>
           ${renderImagenesPregunta(p.imagenes, p.archivos)}
           ${p.respuesta
@@ -1554,7 +1554,7 @@ export async function cargarPreguntasComunidad() {
                 ${esDirector ? `<button type="button" class="btn btn--ghost btn-moderar-pregunta-comunidad" data-oculta="${p.estado === 'oculta' ? '1' : '0'}" style="font-size:10px; padding:2px 8px; ${p.estado === 'oculta' ? 'color:#C0392B;' : ''}">${p.estado === 'oculta' ? '⚠️ Oculta — Mostrar' : 'Ocultar'}</button>` : ''}
               </div>
               <p class="text-soft" style="font-size:12px; margin:6px 0 2px;">${p.alumnoNombre ? `${escaparHtml(p.alumnoNombre)} — ` : ''}Pregunta para ${escaparHtml(mentorNombre)} — ${formatFecha(new Date(p.createdAt).toISOString().slice(0, 10))}</p>
-              <p class="texto-clamp" data-clamp style="margin:4px 0;">${p.preguntaFormateada || linkify(p.pregunta)}</p>
+              <p class="texto-clamp" data-clamp style="margin:4px 0;">${p.preguntaFormateada ? sanearHtml(p.preguntaFormateada) : linkify(p.pregunta)}</p>
               <button type="button" class="btn-ver-mas-texto hidden" data-clamp-btn></button>
               ${renderImagenesPregunta(p.imagenes, p.archivos)}
               <button type="button" class="btn-toggle-respuesta-box" data-toggle-respuesta>👁️ Ver Respuesta</button>
