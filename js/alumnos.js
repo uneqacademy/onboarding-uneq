@@ -406,6 +406,21 @@ function indicadorDiasEnEstado(ciclo) {
   return ` <span class="text-soft" style="font-size:11px;" title="Días en este estado">${dias} d</span>`;
 }
 
+// "✉️ Enviado 19 oct" cuando la función enviarAccesoAlumno ya mandó el correo (guarda
+// accesoEnviadoEn). Los accesos creados antes de esa función no tienen la fecha: se
+// muestran como "no enviado por correo" (en gris, no es una alerta: pudieron recibirlo a mano).
+function indicadorEnvioAcceso(alumno) {
+  if (!alumno.authUid) return '';
+  const ts = Number(alumno.accesoEnviadoEn || 0);
+  if (!ts) {
+    return '<span class="text-soft" style="font-size:11px;" title="No consta un envío automático del acceso por correo">✉️ Sin envío</span>';
+  }
+  const fecha = new Date(ts);
+  const corta = fecha.toLocaleDateString('es-CL', { day: 'numeric', month: 'short' });
+  const completa = fecha.toLocaleString('es-CL', { dateStyle: 'long', timeStyle: 'short' });
+  return `<span class="badge badge--activo" title="Correo con el acceso enviado el ${escaparHtml(completa)}">✉️ Enviado ${escaparHtml(corta)}</span>`;
+}
+
 function celdaOnboardingAlumno(alumno) {
   const conAcceso = !!alumno.authUid;
   const faltantes = validarDatosGenerales(alumno);
@@ -415,7 +430,8 @@ function celdaOnboardingAlumno(alumno) {
   const fichaHtml = faltantes.length === 0
     ? '<span class="badge badge--activo" title="Todos los datos generales están completos">📋 Ficha completa</span>'
     : `<span class="badge badge--pendiente" title="Falta: ${escaparHtml(faltantes.map(id => ETIQUETAS_CAMPO_FICHA[id] || id).join(', '))}">📋 Faltan ${faltantes.length} dato${faltantes.length === 1 ? '' : 's'}</span>`;
-  return `<td style="white-space:nowrap;">${accesoHtml} ${fichaHtml}</td>`;
+  const envioHtml = indicadorEnvioAcceso(alumno);
+  return `<td style="white-space:nowrap;">${accesoHtml} ${envioHtml} ${fichaHtml}</td>`;
 }
 
 /* --- Construye una fila <tr> de alumno, con columnas según el contexto --- */
