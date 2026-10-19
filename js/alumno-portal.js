@@ -10,6 +10,7 @@
    ============================================================ */
 
 import { db, auth, storage, firebaseConfig, app } from './firebase-config.js';
+import { escaparHtml, linkificarSeguro } from './util-html.js';
 import { aplicarClampTexto } from './texto-clamp.js';
 import { ref as storageRef, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-storage.js";
 import { ref, get, set, update, push } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-database.js";
@@ -33,9 +34,7 @@ function formatFecha(fechaStr) {
 
 /* Detecta URLs sueltas en texto plano y las vuelve links clickeables */
 export function linkify(texto) {
-  if (!texto) return '';
-  const regexUrl = /(https?:\/\/[^\s<]+)/g;
-  return texto.replace(regexUrl, url => `<a href="${url}" target="_blank" rel="noopener" style="color:#2563EB;">${url}</a>`);
+  return linkificarSeguro(texto);
 }
 
 const FASE_LABELS = { fase1: 'Fase 1', fase2: 'Fase 2', fase3: 'Fase 3', fase4: 'Fase 4' };
@@ -323,9 +322,9 @@ export async function cargarDashboardAlumno(alumnoId) {
     const lineaCoach = `
         <p class="acceso-coach">
           <span>
-            ${coach ? `<strong>${esCoachCabeceraMsg && esBeginDashboard ? 'Tu Coach de cabecera:' : 'Tu Coach es:'}</strong> <em>${coach.nombre || '—'}</em>${esCoachCabeceraMsg && !esBeginDashboard ? ' <span style="font-size:11px;">🚩 Coach de Cabecera</span>' : ''}` : 'Aún no tienes coach asignado'}
+            ${coach ? `<strong>${esCoachCabeceraMsg && esBeginDashboard ? 'Tu Coach de cabecera:' : 'Tu Coach es:'}</strong> <em>${escaparHtml(coach.nombre || '—')}</em>${esCoachCabeceraMsg && !esBeginDashboard ? ' <span style="font-size:11px;">🚩 Coach de Cabecera</span>' : ''}` : 'Aún no tienes coach asignado'}
           </span>
-          <img src="${coach && coach.fotoUrl ? coach.fotoUrl : PLACEHOLDER_FOTO_ALUMNO}" alt="" class="acceso-coach__foto" style="${coach ? '' : 'display:none;'}">
+          <img src="${escaparHtml(coach && coach.fotoUrl ? coach.fotoUrl : PLACEHOLDER_FOTO_ALUMNO)}" alt="" class="acceso-coach__foto" style="${coach ? '' : 'display:none;'}">
           ${whatsappCoachUrl ? `<a href="${whatsappCoachUrl}" target="_blank" rel="noopener" aria-label="WhatsApp" class="acceso-coach__wa">${iconoWhatsapp}</a>` : ''}
         </p>`;
     const bloqueDias = fraseDiasRestantes ? `
@@ -462,9 +461,9 @@ async function renderProximaMentoriaDashboard(programa) {
         <div class="panel__body">
           <p class="proxima-mentoria__titulo">Próxima Mentoría Grupal Semanal</p>
           <div class="proxima-mentoria__fila">
-            <img src="${datos.fotoUrl || PLACEHOLDER_FOTO_ALUMNO}" alt="" class="proxima-mentoria__foto">
+            <img src="${escaparHtml(datos.fotoUrl || PLACEHOLDER_FOTO_ALUMNO)}" alt="" class="proxima-mentoria__foto">
             <div class="proxima-mentoria__quien">
-              <strong>${primerNombre}</strong>
+              <strong>${escaparHtml(primerNombre)}</strong>
               <span class="text-soft">${temas}</span>
             </div>
             <div class="proxima-mentoria__cuando">
@@ -571,9 +570,9 @@ export async function cargarFichaAlumnoPropia() {
 
   fichaEl.innerHTML = `
     <div style="display:flex; align-items:center; gap:14px; margin-bottom:16px;">
-      <img id="alumno-foto-preview" src="${alumno.fotoUrl || PLACEHOLDER_FOTO_ALUMNO}" alt="" style="width:56px; height:56px; border-radius:50%; object-fit:cover; background:#E4E7EC;">
+      <img id="alumno-foto-preview" src="${escaparHtml(alumno.fotoUrl || PLACEHOLDER_FOTO_ALUMNO)}" alt="" style="width:56px; height:56px; border-radius:50%; object-fit:cover; background:#E4E7EC;">
       <div>
-        <strong style="font-size:16px;">${alumno.nombre || ''} ${alumno.apellido || ''}</strong>
+        <strong style="font-size:16px;">${escaparHtml(`${alumno.nombre || ''} ${alumno.apellido || ''}`)}</strong>
         <p class="text-soft" style="margin:2px 0 0;">${ciclo ? programaLabel(ciclo.programa) : '—'}</p>
         <button type="button" class="btn btn--ghost" id="btn-cambiar-foto-alumno" style="font-size:11px; padding:4px 10px; margin-top:6px;">Cambiar Foto</button>
         <input type="file" id="alumno-foto-input" accept="image/*" class="hidden">
@@ -592,8 +591,8 @@ export async function cargarFichaAlumnoPropia() {
       </div>
     </div>
     <div class="ficha-alumno-datos" style="display:grid; grid-template-columns: repeat(2, 1fr); gap:10px 20px; font-size:13px;">
-      <div><strong>Correo:</strong> ${alumno.email || '—'}</div>
-      <div><strong>Teléfono:</strong> ${alumno.telefono || '—'}</div>
+      <div><strong>Correo:</strong> ${escaparHtml(alumno.email || '—')}</div>
+      <div><strong>Teléfono:</strong> ${escaparHtml(alumno.telefono || '—')}</div>
       <div><strong>Ocupación:</strong> ${alumno.ocupacion || '—'}${alumno.ocupacionEspecialidad ? `, ${alumno.ocupacionEspecialidad}` : ''}</div>
       <div><strong>Dirección:</strong> ${direccionTexto}</div>
       <div><strong>Fecha de Ingreso:</strong> ${formatFecha(ciclo ? ciclo.fechaIngreso : null)}</div>
@@ -757,7 +756,7 @@ export async function cargarBitacoraAlumnoCompleta() {
   el.innerHTML = entradas.length
     ? entradas.sort((a, b) => b.createdAt - a.createdAt).map(e => `
         <div class="panel mb-16" style="padding:14px; font-size:13px;">
-          <strong>${e.titulo || ''}</strong> <span class="text-soft">— ${formatFecha(e.fecha)} · ${e.canal || ''}</span>
+          <strong>${escaparHtml(e.titulo || '')}</strong> <span class="text-soft">— ${formatFecha(e.fecha)} · ${escaparHtml(e.canal || '')}</span>
           <p style="margin:6px 0 0;">${linkify(e.notas || '')}</p>
         </div>`).join('')
     : '<p class="text-soft">Aún no hay entradas en tu bitácora.</p>';
@@ -928,10 +927,10 @@ function renderArchivosAdjuntos(archivos, imagenesLegado) {
   if (!items.length) return '';
   return items.map(a => {
     if (a.tipo === 'imagen') {
-      return `<img src="${a.url}" alt="" style="max-width:140px; max-height:140px; border-radius:6px; margin:0 6px 6px 0; object-fit:cover;">`;
+      return `<img src="${escaparHtml(a.url)}" alt="" style="max-width:140px; max-height:140px; border-radius:6px; margin:0 6px 6px 0; object-fit:cover;">`;
     }
     const icono = a.tipo === 'pdf' ? '📄' : a.tipo === 'word' ? '📝' : '📎';
-    return `<a href="${a.url}" target="_blank" rel="noopener" style="display:inline-flex; align-items:center; gap:6px; background:var(--color-surface-alt); padding:6px 12px; border-radius:8px; margin:0 6px 6px 0; font-size:12px; text-decoration:none; color:var(--color-ink);">${icono} ${a.nombre || 'Archivo'}</a>`;
+    return `<a href="${escaparHtml(a.url)}" target="_blank" rel="noopener" style="display:inline-flex; align-items:center; gap:6px; background:var(--color-surface-alt); padding:6px 12px; border-radius:8px; margin:0 6px 6px 0; font-size:12px; text-decoration:none; color:var(--color-ink);">${icono} ${escaparHtml(a.nombre || 'Archivo')}</a>`;
   }).join('');
 }
 
@@ -1028,9 +1027,9 @@ export async function cargarBoxAlumno() {
     tarjeta.className = 'mentor-card-ia';
     tarjeta.style.cssText = 'display:flex; align-items:center; gap:14px; padding:14px 16px; background:var(--color-surface-alt); border-radius:var(--radius-md);';
     tarjeta.innerHTML = `
-      <img src="${m.fotoIA || m.fotoUrl || PLACEHOLDER_FOTO_ALUMNO}" alt="" style="width:64px; height:64px; border-radius:50%; object-fit:cover; flex-shrink:0;">
+      <img src="${escaparHtml(m.fotoIA || m.fotoUrl || PLACEHOLDER_FOTO_ALUMNO)}" alt="" style="width:64px; height:64px; border-radius:50%; object-fit:cover; flex-shrink:0;">
       <div style="flex:1; min-width:0;">
-        <p style="font-weight:700; margin:0 0 1px; font-size:16px;">${m.nombre || m.email}</p>
+        <p style="font-weight:700; margin:0 0 1px; font-size:16px;">${escaparHtml(m.nombre || m.email)}</p>
         <p class="text-soft" style="font-size:12.5px; font-style:italic; margin:0;">Mentor IA</p>
       </div>
       <div style="display:flex; flex-direction:column; gap:6px; flex-shrink:0;">
@@ -1055,8 +1054,8 @@ export async function cargarBoxAlumno() {
     tarjeta.querySelector('.btn-detalles-mentor').addEventListener('click', () => {
       document.getElementById('box-alumno-detalle-contenido').innerHTML = `
         <div style="display:flex; align-items:center; gap:14px; margin-bottom:12px;">
-          <img src="${m.fotoIA || m.fotoUrl || PLACEHOLDER_FOTO_ALUMNO}" alt="" style="width:56px; height:56px; border-radius:50%; object-fit:cover;">
-          <strong>${m.nombre || m.email}</strong>
+          <img src="${escaparHtml(m.fotoIA || m.fotoUrl || PLACEHOLDER_FOTO_ALUMNO)}" alt="" style="width:56px; height:56px; border-radius:50%; object-fit:cover;">
+          <strong>${escaparHtml(m.nombre || m.email)}</strong>
         </div>
         <p style="white-space:pre-wrap;">${m.bio ? linkify(m.bio) : 'Este mentor aún no ha escrito su presentación.'}</p>`;
       document.getElementById('modal-detalle-mentor').classList.add('is-visible');
@@ -1071,7 +1070,7 @@ export async function cargarBoxAlumno() {
   const filtroHastaBoxEl = document.getElementById('box-alumno-filtro-hasta');
   if (filtroMentorBoxEl && !filtroMentorBoxEl.dataset.cargado) {
     const mentoresConConsultas = [...new Map(validas.map(e => [e.mentorId, usuarios[e.mentorId] ? (usuarios[e.mentorId].nombre || usuarios[e.mentorId].email) : 'Mentor'])).entries()];
-    filtroMentorBoxEl.innerHTML = '<option value="">Todos</option>' + mentoresConConsultas.map(([uid, nombre]) => `<option value="${uid}">${nombre}</option>`).join('');
+    filtroMentorBoxEl.innerHTML = '<option value="">Todos</option>' + mentoresConConsultas.map(([uid, nombre]) => `<option value="${escaparHtml(uid)}">${escaparHtml(nombre)}</option>`).join('');
     filtroMentorBoxEl.dataset.cargado = '1';
   }
 
@@ -1096,7 +1095,7 @@ export async function cargarBoxAlumno() {
           return `
             <div class="panel mb-16" style="padding:14px;" data-fila-consulta>
               <div class="flex-between">
-                <strong>Para ${mentorNombre}</strong>
+                <strong>Para ${escaparHtml(mentorNombre)}</strong>
                 ${!e.respuesta ? `<button type="button" class="btn btn--ghost btn-eliminar-pregunta" data-pregunta-id="${e.preguntaId}" data-mentor-id="${e.mentorId}" style="font-size:11px; padding:2px 8px;">Eliminar</button>` : ''}
               </div>
               <span class="text-soft" style="font-size:12px;">${formatFecha(new Date(e.createdAt).toISOString().slice(0, 10))}</span>
@@ -1177,7 +1176,7 @@ if (btnAdjuntarImagenesPregunta && inputImagenesPregunta) {
     imagenesSeleccionadasPregunta = seleccionados;
     const previewEl = document.getElementById('box-alumno-imagenes-preview');
     previewEl.innerHTML = imagenesSeleccionadasPregunta
-      .map(f => `<span class="text-soft" style="font-size:11px; background:#F0F1F3; padding:3px 8px; border-radius:6px;">${tipoDeArchivo(f) === 'imagen' ? '🖼️' : tipoDeArchivo(f) === 'pdf' ? '📄' : '📝'} ${f.name}</span>`)
+      .map(f => `<span class="text-soft" style="font-size:11px; background:#F0F1F3; padding:3px 8px; border-radius:6px;">${tipoDeArchivo(f) === 'imagen' ? '🖼️' : tipoDeArchivo(f) === 'pdf' ? '📄' : '📝'} ${escaparHtml(f.name)}</span>`)
       .join('');
   });
 }
@@ -1314,7 +1313,7 @@ async function cargarBoxBeginAlumno() {
             ? `<button type="button" class="btn-toggle-respuesta-box" data-toggle-respuesta>👁️ Ver Respuesta</button>
                <div class="hidden" data-detalle-respuesta>
                  <div style="margin-top:10px; padding:10px; background:#F7F8FA; border-radius:8px;">
-                   <strong style="font-size:12px;">Respuesta${p.respuesta.mentorNombre ? ` de ${p.respuesta.mentorNombre}` : ''}</strong>
+                   <strong style="font-size:12px;">Respuesta${p.respuesta.mentorNombre ? ` de ${escaparHtml(p.respuesta.mentorNombre)}` : ''}</strong>
                    <p style="margin:4px 0 0; white-space:pre-wrap;">${linkify(p.respuesta.texto || '')}</p>
                  </div>
                </div>`
@@ -1342,7 +1341,7 @@ if (btnAdjuntarBoxBegin && inputImagenesBoxBegin) {
     }
     imagenesSelBoxBegin = seleccionados;
     document.getElementById('box-begin-imagenes-preview').innerHTML = imagenesSelBoxBegin
-      .map(f => `<span class="text-soft" style="font-size:11px; background:#F0F1F3; padding:3px 8px; border-radius:6px;">${tipoDeArchivo(f) === 'imagen' ? '🖼️' : tipoDeArchivo(f) === 'pdf' ? '📄' : '📝'} ${f.name}</span>`).join('');
+      .map(f => `<span class="text-soft" style="font-size:11px; background:#F0F1F3; padding:3px 8px; border-radius:6px;">${tipoDeArchivo(f) === 'imagen' ? '🖼️' : tipoDeArchivo(f) === 'pdf' ? '📄' : '📝'} ${escaparHtml(f.name)}</span>`).join('');
   });
 }
 
@@ -1457,11 +1456,11 @@ export async function cargarPreguntasComunidad() {
   }));
 
   if (filtroMentorEl && !filtroMentorEl.dataset.cargado) {
-    filtroMentorEl.innerHTML = '<option value="">Todos</option>' + mentores.map(([uid2, m]) => `<option value="${uid2}">${m.nombre || m.email}</option>`).join('');
+    filtroMentorEl.innerHTML = '<option value="">Todos</option>' + mentores.map(([uid2, m]) => `<option value="${escaparHtml(uid2)}">${escaparHtml(m.nombre || m.email)}</option>`).join('');
     filtroMentorEl.dataset.cargado = '1';
   }
   if (sMentorEl && !sMentorEl.dataset.cargado) {
-    sMentorEl.innerHTML = '<option value="">Todos</option>' + mentores.map(([uid2, m]) => `<option value="${uid2}">${m.nombre || m.email}</option>`).join('');
+    sMentorEl.innerHTML = '<option value="">Todos</option>' + mentores.map(([uid2, m]) => `<option value="${escaparHtml(uid2)}">${escaparHtml(m.nombre || m.email)}</option>`).join('');
     sMentorEl.dataset.cargado = '1';
   }
   if (sCoachEl && !sCoachEl.dataset.cargado) {
@@ -1469,7 +1468,7 @@ export async function cargarPreguntasComunidad() {
       const roles = (u.roles && typeof u.roles === 'object') ? u.roles : (u.rol ? { [u.rol]: true } : {});
       return !!roles.coach;
     }).sort((a, b) => (a[1].nombre || '').localeCompare(b[1].nombre || '', 'es'));
-    sCoachEl.innerHTML = '<option value="">Todos</option>' + coaches.map(([id, c]) => `<option value="${id}">${c.nombre || c.email}</option>`).join('');
+    sCoachEl.innerHTML = '<option value="">Todos</option>' + coaches.map(([id, c]) => `<option value="${escaparHtml(id)}">${escaparHtml(c.nombre || c.email)}</option>`).join('');
     sCoachEl.dataset.cargado = '1';
   }
 
@@ -1554,7 +1553,7 @@ export async function cargarPreguntasComunidad() {
                 <span class="badge badge--activo" style="font-size:10px;">${p.tematica || 'Sin tema'}</span>
                 ${esDirector ? `<button type="button" class="btn btn--ghost btn-moderar-pregunta-comunidad" data-oculta="${p.estado === 'oculta' ? '1' : '0'}" style="font-size:10px; padding:2px 8px; ${p.estado === 'oculta' ? 'color:#C0392B;' : ''}">${p.estado === 'oculta' ? '⚠️ Oculta — Mostrar' : 'Ocultar'}</button>` : ''}
               </div>
-              <p class="text-soft" style="font-size:12px; margin:6px 0 2px;">${p.alumnoNombre ? `${p.alumnoNombre} — ` : ''}Pregunta para ${mentorNombre} — ${formatFecha(new Date(p.createdAt).toISOString().slice(0, 10))}</p>
+              <p class="text-soft" style="font-size:12px; margin:6px 0 2px;">${p.alumnoNombre ? `${escaparHtml(p.alumnoNombre)} — ` : ''}Pregunta para ${escaparHtml(mentorNombre)} — ${formatFecha(new Date(p.createdAt).toISOString().slice(0, 10))}</p>
               <p class="texto-clamp" data-clamp style="margin:4px 0;">${p.preguntaFormateada || linkify(p.pregunta)}</p>
               <button type="button" class="btn-ver-mas-texto hidden" data-clamp-btn></button>
               ${renderImagenesPregunta(p.imagenes, p.archivos)}
@@ -1748,7 +1747,7 @@ async function cargarMisPreguntasVivo(card, s) {
         });
 
         const contNuevas = bloque.querySelector('.pv-editar-imagenes-nuevas');
-        contNuevas.innerHTML = imagenesNuevas.map(f => `<span class="text-soft" style="font-size:11px; background:#F0F1F3; padding:3px 8px; border-radius:6px;">${tipoDeArchivo(f) === 'imagen' ? '🖼️' : tipoDeArchivo(f) === 'pdf' ? '📄' : '📝'} ${f.name}</span>`).join('');
+        contNuevas.innerHTML = imagenesNuevas.map(f => `<span class="text-soft" style="font-size:11px; background:#F0F1F3; padding:3px 8px; border-radius:6px;">${tipoDeArchivo(f) === 'imagen' ? '🖼️' : tipoDeArchivo(f) === 'pdf' ? '📄' : '📝'} ${escaparHtml(f.name)}</span>`).join('');
 
         const btnAdjuntar = bloque.querySelector('.btn-adjuntar-editar-vivo');
         const inputAdjuntar = bloque.querySelector('.pv-input-editar-imagenes');
@@ -1813,7 +1812,7 @@ function bindSesionVivo(card, s) {
     }
     imagenesSel = seleccionados;
     card.querySelector('.pv-imagenes-preview').innerHTML = imagenesSel
-      .map(f => `<span class="text-soft" style="font-size:11px; background:#F0F1F3; padding:3px 8px; border-radius:6px;">${tipoDeArchivo(f) === 'imagen' ? '🖼️' : tipoDeArchivo(f) === 'pdf' ? '📄' : '📝'} ${f.name}</span>`).join('');
+      .map(f => `<span class="text-soft" style="font-size:11px; background:#F0F1F3; padding:3px 8px; border-radius:6px;">${tipoDeArchivo(f) === 'imagen' ? '🖼️' : tipoDeArchivo(f) === 'pdf' ? '📄' : '📝'} ${escaparHtml(f.name)}</span>`).join('');
   });
 
   card.querySelector('.pv-btn-enviar').addEventListener('click', async (ev) => {
@@ -1944,8 +1943,8 @@ function renderHorariosRecurrentes(usuarios) {
     const horaChile = new Intl.DateTimeFormat('es-CL', { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'America/Santiago' }).format(fechaObj);
     return `
       <div class="pv-hr-item" style="text-align:center; min-width:0; flex:1;">
-        <p class="pv-hr-nombre" style="font-weight:700; font-size:9.5px; letter-spacing:0.3px; margin:0 0 4px; text-transform:uppercase; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${m.nombre || m.email}</p>
-        <img class="pv-hr-foto" src="${m.fotoUrl || PLACEHOLDER_FOTO_ALUMNO}" alt="" style="width:44px; height:44px; border-radius:50%; object-fit:cover; margin-bottom:4px;">
+        <p class="pv-hr-nombre" style="font-weight:700; font-size:9.5px; letter-spacing:0.3px; margin:0 0 4px; text-transform:uppercase; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${escaparHtml(m.nombre || m.email)}</p>
+        <img class="pv-hr-foto" src="${escaparHtml(m.fotoUrl || PLACEHOLDER_FOTO_ALUMNO)}" alt="" style="width:44px; height:44px; border-radius:50%; object-fit:cover; margin-bottom:4px;">
         <p class="pv-hr-dia" style="font-size:10.5px; margin:0;">📅 ${diaViewerAbrev}</p>
         <p class="pv-hr-hora" style="font-size:10.5px; margin:0;">${horaViewer} ${banderaDeZona(zonaViewer)}</p>
         ${!mismaZonaQueChile ? `<p class="pv-hr-chile" style="font-size:9px; margin:2px 0 0; color:#9CA0A8;">${diaChileAbrev} ${horaChile} 🇨🇱</p>` : ''}
@@ -2075,9 +2074,9 @@ export async function cargarPreguntasVivo() {
     return `
     <div class="panel mb-16" data-sesion-idx="${idx}">
       <div class="panel__body" style="display:flex; gap:16px; align-items:flex-start; flex-wrap:wrap;">
-        <img src="${s.mentorDatos.fotoUrl || PLACEHOLDER_FOTO_ALUMNO}" alt="" style="width:56px; height:56px; border-radius:50%; object-fit:cover; flex-shrink:0;">
+        <img src="${escaparHtml(s.mentorDatos.fotoUrl || PLACEHOLDER_FOTO_ALUMNO)}" alt="" style="width:56px; height:56px; border-radius:50%; object-fit:cover; flex-shrink:0;">
         <div style="flex:1; min-width:220px;">
-          <strong>${s.mentorDatos.nombre || s.mentorDatos.email}</strong>
+          <strong>${escaparHtml(s.mentorDatos.nombre || s.mentorDatos.email)}</strong>
           <span class="pv-badge-en-vivo hidden" style="background:#C0392B; color:#fff; font-size:10px; font-weight:700; letter-spacing:0.5px; padding:2px 8px; border-radius:4px; margin-left:6px; vertical-align:middle;">● EN VIVO</span>
           <p class="text-soft" style="margin:2px 0; font-size:12px;">${temasMentor}</p>
           <p class="text-soft" style="margin:6px 0 2px; font-size:12px;">${fechaLarga} · ${horaTexto}</p>
@@ -2185,7 +2184,7 @@ export async function cargarPreguntasVivo() {
     const filtroHastaEl = document.getElementById('historial-vivo-filtro-hasta');
     if (filtroMentorEl) {
       const mentoresConPreguntas = [...new Map(historial.map(p => [p.mentorUid, p.mentorNombre])).entries()];
-      filtroMentorEl.innerHTML = '<option value="">Todos</option>' + mentoresConPreguntas.map(([uid, nombre]) => `<option value="${uid}">${nombre}</option>`).join('');
+      filtroMentorEl.innerHTML = '<option value="">Todos</option>' + mentoresConPreguntas.map(([uid, nombre]) => `<option value="${escaparHtml(uid)}">${escaparHtml(nombre)}</option>`).join('');
     }
 
     function renderHistorial() {
@@ -2202,7 +2201,7 @@ export async function cargarPreguntasVivo() {
       historialEl.innerHTML = filtradas.length
         ? filtradas.map(p => `
             <div class="panel mb-16" style="padding:12px; font-size:13px;">
-              <strong>Para ${p.mentorNombre}</strong> <span class="text-soft" style="font-size:11px;">— ${formatFecha(new Date(p.createdAt).toISOString().slice(0, 10))}</span>
+              <strong>Para ${escaparHtml(p.mentorNombre)}</strong> <span class="text-soft" style="font-size:11px;">— ${formatFecha(new Date(p.createdAt).toISOString().slice(0, 10))}</span>
               <p style="margin:6px 0 0;">${linkify(p.texto || '')}</p>
               ${renderImagenesPregunta(p.imagenes, p.archivos)}
             </div>`).join('')

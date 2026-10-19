@@ -6,6 +6,7 @@
    ============================================================ */
 
 import { db, auth, storage } from './firebase-config.js';
+import { escaparHtml } from './util-html.js';
 import {
   ref, get, set, update, push
 } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-database.js";
@@ -201,7 +202,7 @@ function agregarFilaRedSocial(entrada) {
   ).join('');
   tr.innerHTML = `
     <td><select class="red-social-plataforma">${opciones}</select></td>
-    <td><input class="red-social-usuario" placeholder="usuario o URL" value="${entrada ? (entrada.usuario || '') : ''}"></td>
+    <td><input class="red-social-usuario" placeholder="usuario o URL" value="${escaparHtml(entrada ? (entrada.usuario || '') : '')}"></td>
     <td><a href="#" class="btn btn--ghost red-social-visitar" target="_blank" rel="noopener" style="font-size:11px; padding:4px 8px;">Visitar Perfil</a></td>
     <td><button class="btn btn--danger red-social-quitar" style="font-size:11px; padding:4px 8px;">Quitar</button></td>`;
   tbody.appendChild(tr);
@@ -362,14 +363,14 @@ async function cargarCoaches() {
   if (selectFiltroDirector) {
     const valorPrevio = selectFiltroDirector.value;
     selectFiltroDirector.innerHTML = '<option value="">Coach: Todos</option>'
-      + Object.entries(coachesMap).map(([uid, nombre]) => `<option value="${uid}">${nombre}</option>`).join('');
+      + Object.entries(coachesMap).map(([uid, nombre]) => `<option value="${escaparHtml(uid)}">${escaparHtml(nombre)}</option>`).join('');
     selectFiltroDirector.value = valorPrevio;
   }
   const selectFiltroDashDirector = document.getElementById('filtro-dash-director-coach');
   if (selectFiltroDashDirector) {
     const valorPrevio = selectFiltroDashDirector.value;
     selectFiltroDashDirector.innerHTML = '<option value="">Coach: Todos</option>'
-      + Object.entries(coachesMap).map(([uid, nombre]) => `<option value="${uid}">${nombre}</option>`).join('');
+      + Object.entries(coachesMap).map(([uid, nombre]) => `<option value="${escaparHtml(uid)}">${escaparHtml(nombre)}</option>`).join('');
     selectFiltroDashDirector.value = valorPrevio;
   }
 }
@@ -396,8 +397,8 @@ function crearFilaAlumno(alumnoId, alumno, ciclo, columnas, acuerdo, nombreOverr
   const estadoProceso = ciclo ? estadoProcesoLabel(ciclo.estadoProceso) : '—';
   const estadoAlumno = ciclo ? ciclo.estadoAlumno : 'activo';
 
-  let html = `<td><img src="${alumno.fotoUrl || PLACEHOLDER_FOTO}" alt="" style="width:28px; height:28px; border-radius:50%; object-fit:cover; vertical-align:middle; margin-right:8px;">${nombreCompleto}</td>`;
-  if (columnas.coach) html += `<td>${coachNombre}</td>`;
+  let html = `<td><img src="${escaparHtml(alumno.fotoUrl || PLACEHOLDER_FOTO)}" alt="" style="width:28px; height:28px; border-radius:50%; object-fit:cover; vertical-align:middle; margin-right:8px;">${escaparHtml(nombreCompleto)}</td>`;
+  if (columnas.coach) html += `<td>${escaparHtml(coachNombre)}</td>`;
   html += `<td>${programa}</td><td>${estadoProceso}</td>`;
   html += `<td><span class="badge ${claseBadgeEstadoAlumno(estadoAlumno)}">${labelEstadoAlumno(estadoAlumno)}</span></td>`;
   if (columnas.fase) {
@@ -667,7 +668,7 @@ async function renderHistorialCiclos(ciclosAnterioresIds) {
       const bitacoraHtml = entradasBitacora.length
         ? entradasBitacora.sort((a, b) => b.createdAt - a.createdAt).map(e => `
             <div style="font-size:13px; padding:6px 0; border-top:0.5px solid var(--border);">
-              <strong>${e.titulo || ''}</strong> — ${formatFecha(e.fecha)} · ${e.canal || ''}<br>${e.notas || ''}
+              <strong>${escaparHtml(e.titulo || '')}</strong> — ${formatFecha(e.fecha)} · ${escaparHtml(e.canal || '')}<br>${escaparHtml(e.notas || '')}
             </div>`).join('')
         : '<p class="text-soft" style="font-size:13px;">Sin entradas de bitácora en este ciclo.</p>';
 
@@ -832,7 +833,7 @@ async function abrirFicha(alumnoId) {
     panelSelector.classList.toggle('hidden', socios.length < 2);
     if (socios.length >= 2) {
       selectorBotones.innerHTML = socios.map(([id, a]) => `
-        <button type="button" class="btn ${id === alumnoId ? 'btn--primary' : 'btn--ghost'} btn-seleccionar-socio" data-socio-id="${id}" style="font-size:12px; padding:6px 14px;">${nombreCompletoDe(a) || '(sin nombre)'}</button>`).join('');
+        <button type="button" class="btn ${id === alumnoId ? 'btn--primary' : 'btn--ghost'} btn-seleccionar-socio" data-socio-id="${id}" style="font-size:12px; padding:6px 14px;">${escaparHtml(nombreCompletoDe(a) || '(sin nombre)')}</button>`).join('');
       selectorBotones.querySelectorAll('.btn-seleccionar-socio').forEach(btn => {
         btn.addEventListener('click', () => abrirFicha(btn.dataset.socioId));
       });
@@ -898,7 +899,7 @@ async function abrirFicha(alumnoId) {
     poblarSelectCoaches(selectCoach, ciclo ? ciclo.coachId : null);
     selectCoach.disabled = false;
   } else {
-    selectCoach.innerHTML = `<option>${getCurrentUserNombre()}</option>`;
+    selectCoach.innerHTML = `<option>${escaparHtml(getCurrentUserNombre())}</option>`;
     selectCoach.disabled = true;
   }
 
