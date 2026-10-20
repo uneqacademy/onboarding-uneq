@@ -51,3 +51,10 @@ quedaba bloqueado en esos estados por la interfaz, y el director siempre puede e
   validación general, para no bloquear al equipo cuando crea fichas.
 - Pruebas en el simulador de reglas (como alumno con ciclo en `asignado`): escribir `alumnos/<su id>/rut` = permitido;
   `alumnos/<su id>/nombre` = denegado; `alumnos/<id de otro>/rut` = denegado; con el ciclo en `enviado_firma` = denegado.
+
+## Reacciones a comentarios
+Se agregó `reacciones/$uid` bajo cada comentario de Hitos, Presentaciones e Historias
+(`hitos/$hitoId/comentarios/$comentarioId/reacciones/$uid`, y lo mismo bajo `comunidad/presentaciones/$alumnoId/...` y
+`comunidad/historiasReales/$historiaId/...`). Cada persona (alumno o staff) solo escribe o quita **su propia** reacción
+(`auth.uid === $uid`), con `nombre` como texto de hasta 120 caracteres. Igual que las reacciones a la publicación.
+Prueba en el simulador: escribir `hitos/<id>/comentarios/<id>/reacciones/<tu uid>` = permitido; con el uid de otra persona = denegado.

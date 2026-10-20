@@ -357,6 +357,11 @@
           "comentarios": {
             "$comentarioId": {
               ".write": "auth != null && ((!data.exists() && newData.child('autorId').val() === auth.uid) || (data.exists() && !newData.exists() && ((data.child('autorId').val() === auth.uid && (now - data.child('createdAt').val()) < 86400000) || (root.child('usuarios').child(auth.uid).child('roles').child('director').val() === true || root.child('usuarios').child(auth.uid).child('rol').val() === 'director'))) || (data.exists() && newData.exists() && data.child('autorId').val() === auth.uid && (now - data.child('createdAt').val()) < 86400000 && newData.child('createdAt').val() === data.child('createdAt').val() && newData.child('autorId').val() === data.child('autorId').val()))",
+              "reacciones": {
+                "$uid": {
+                  ".write": "auth != null && auth.uid === $uid && (!newData.exists() || (newData.child('nombre').isString() && newData.child('nombre').val().length <= 120))"
+                }
+              },
               "respuestas": {
                 "$respuestaId": {
                   ".write": "auth != null && ((!data.exists() && newData.child('autorId').val() === auth.uid && root.child('alumnoPorAuthUid').child(auth.uid).val() === $alumnoId) || (data.exists() && !newData.exists() && (data.child('autorId').val() === auth.uid || root.child('usuarios').child(auth.uid).child('roles').child('director').val() === true || root.child('usuarios').child(auth.uid).child('rol').val() === 'director')))"
@@ -381,6 +386,11 @@
           "comentarios": {
             "$comentarioId": {
               ".write": "auth != null && ((!data.exists() && newData.child('autorId').val() === auth.uid) || (data.exists() && !newData.exists() && ((data.child('autorId').val() === auth.uid && (now - data.child('createdAt').val()) < 86400000) || (root.child('usuarios').child(auth.uid).child('roles').child('director').val() === true || root.child('usuarios').child(auth.uid).child('rol').val() === 'director'))) || (data.exists() && newData.exists() && data.child('autorId').val() === auth.uid && (now - data.child('createdAt').val()) < 86400000 && newData.child('createdAt').val() === data.child('createdAt').val() && newData.child('autorId').val() === data.child('autorId').val()))",
+              "reacciones": {
+                "$uid": {
+                  ".write": "auth != null && auth.uid === $uid && (!newData.exists() || (newData.child('nombre').isString() && newData.child('nombre').val().length <= 120))"
+                }
+              },
               "respuestas": {
                 "$respuestaId": {
                   ".write": "auth != null && ((!data.exists() && newData.child('autorId').val() === auth.uid && root.child('comunidad').child('historiasReales').child($historiaId).child('autorId').val() === auth.uid) || (data.exists() && !newData.exists() && (data.child('autorId').val() === auth.uid || root.child('usuarios').child(auth.uid).child('roles').child('director').val() === true || root.child('usuarios').child(auth.uid).child('rol').val() === 'director')))"
@@ -416,6 +426,11 @@
             },
             "denuncia": {
               ".write": "auth != null && root.child('alumnoPorAuthUid').child(auth.uid).exists()"
+            },
+            "reacciones": {
+              "$uid": {
+                ".write": "auth != null && auth.uid === $uid && (!newData.exists() || (newData.child('nombre').isString() && newData.child('nombre').val().length <= 120))"
+              }
             },
             "respuestas": {
               "$respuestaId": {

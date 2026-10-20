@@ -1238,6 +1238,9 @@ body.tema-alumno-oscuro .comunidad-subtab.is-activa { background: #fff; color: v
 .hito-comentario-respuesta { padding: 5px 0; font-size: 12.5px; }
 .hito-comentario-respuesta strong { color: var(--color-accent); }
 .btn-responder-comentario { font-size: 10px; background: none; border: none; color: #9CA0A8; cursor: pointer; padding: 0; }
+.btn-reaccion-comentario, .btn-reaccion-comentario-social { font-size: 11px; background: none; border: none; color: #9CA0A8; cursor: pointer; padding: 0; filter: grayscale(1); opacity: 0.8; }
+.btn-reaccion-comentario.is-activa, .btn-reaccion-comentario-social.is-activa { color: #C0392B; font-weight: 600; filter: none; opacity: 1; }
+.btn-reaccion-comentario:hover, .btn-reaccion-comentario-social:hover { filter: none; opacity: 1; }
 .form-responder-comentario { display: flex; gap: 6px; margin: 6px 0 0 30px; }
 .form-responder-comentario input { flex: 1; padding: 6px 10px; border: 1px solid var(--color-border); border-radius: 6px; font-size: 12px; }
 
