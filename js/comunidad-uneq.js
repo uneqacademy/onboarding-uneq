@@ -250,6 +250,14 @@ function renderRespuestasSociales(basePath, comentarioId, respuestas, nombreDue�
     </div>`).join('')}</div>`;
 }
 
+// Reacción (❤️) a un comentario específico: un toggle por persona, con el total.
+function botonReaccionComentarioSocial(comentario, uid, basePath, comentarioId) {
+  const reacciones = comentario.reacciones || {};
+  const total = Object.keys(reacciones).length;
+  const yaReacciono = !!(uid && reacciones[uid]);
+  return `<button type="button" class="btn-reaccion-comentario-social ${yaReacciono ? 'is-activa' : ''}" data-base-path="${escaparHtml(basePath)}" data-comentario-id="${escaparHtml(comentarioId)}" title="${yaReacciono ? 'Quitar mi reacción' : 'Reaccionar a este comentario'}">❤️${total ? ' ' + total : ''}</button>`;
+}
+
 function renderComentariosSociales(basePath, comentarios, esDirector, uid, nombreDueño, esDueño, expandido) {
   const todos = Object.entries(comentarios || {}).sort((a, b) => a[1].createdAt - b[1].createdAt);
   if (!todos.length) return '<p class="text-soft" style="font-size:12px;">Sin comentarios todavía.</p>';
@@ -264,6 +272,7 @@ function renderComentariosSociales(basePath, comentarios, esDirector, uid, nombr
       <button type="button" class="btn-ver-mas-texto hidden" data-clamp-btn></button>
       <div style="display:flex; gap:10px; margin-top:2px; flex-wrap:wrap;">
         <span class="text-soft" style="font-size:10px;">${formatFecha(c.createdAt)}</span>
+        ${botonReaccionComentarioSocial(c, uid, basePath, comentarioId)}
         ${(c.autorId === uid && dentroDeVentana(c.createdAt)) || esDirector ? `<button type="button" class="btn-eliminar-comentario-social" data-base-path="${basePath}" data-comentario-id="${comentarioId}" style="font-size:10px; background:none; border:none; color:#9CA0A8; cursor:pointer; padding:0;">Eliminar</button>` : ''}
         ${esDueño ? `<button type="button" class="btn-responder-comentario" data-base-path="${basePath}" data-comentario-id="${comentarioId}">Responder</button>` : ''}
       </div>
@@ -365,6 +374,24 @@ function activarInteraccionSocial() {
         }
         recargarTarjeta(basePath);
       } catch (err) { console.error('No se pudo reaccionar:', err); }
+      return;
+    }
+
+    const btnReaccionComentario = ev.target.closest('.btn-reaccion-comentario-social');
+    if (btnReaccionComentario) {
+      const { basePath, comentarioId } = btnReaccionComentario.dataset;
+      const refReaccion = ref(db, `${basePath}/comentarios/${comentarioId}/reacciones/${uid}`);
+      try {
+        if ((await get(refReaccion)).exists()) { await remove(refReaccion); }
+        else {
+          const perfil = await datosPerfilActual();
+          await set(refReaccion, { nombre: perfil.nombre, fotoUrl: perfil.fotoUrl });
+        }
+        recargarTarjeta(basePath);
+      } catch (err) {
+        console.error('No se pudo reaccionar al comentario:', err);
+        alert('No se pudo registrar tu reacción. Intenta de nuevo.');
+      }
       return;
     }
 

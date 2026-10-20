@@ -308,10 +308,28 @@ export async function cargarHitosComunidad() {
 
   if (esAlumno) poblarFiltrosComunidadAlumno(hitosVisibles, hitosDefinidos);
 
+  // El alumno debe poder reconocer SUS publicaciones también en este feed: sin esto no veía
+  // "Responder" en los comentarios que recibe (ni editar/eliminar/compartir) fuera de "Mis Hitos".
+  let alumnoIdPropio = null, idsProyectoPropio = [];
+  if (esAlumno) {
+    const mapaSnap = await get(ref(db, `alumnoPorAuthUid/${uid}`));
+    alumnoIdPropio = mapaSnap.exists() ? mapaSnap.val() : null;
+    if (alumnoIdPropio) {
+      idsProyectoPropio = [alumnoIdPropio];
+      const alumnoSnap = await get(ref(db, `alumnos/${alumnoIdPropio}`));
+      const cicloId = alumnoSnap.exists() ? alumnoSnap.val().cicloActualId : null;
+      if (cicloId) {
+        const idsSnap = await get(ref(db, `ciclos/${cicloId}/alumnoIds`));
+        if (idsSnap.exists() && Array.isArray(idsSnap.val())) idsProyectoPropio = idsSnap.val();
+      }
+    }
+    if (!cargaVigente()) return;
+  }
+
   const fotosFeed = await prepararFotosFeed(hitosVisibles, usuarios);
   if (!cargaVigente()) return;
   renderFeedHitos(hitosVisibles, usuarios, {
-    esAlumno, esStaff, esDirector, uid, alumnoIdPropio: null, idsProyectoPropio: [], enMisHitos: false,
+    esAlumno, esStaff, esDirector, uid, alumnoIdPropio, idsProyectoPropio, enMisHitos: false,
     ids: {
       feed: 'chc-feed', contador: 'chc-contador',
       staffAlumno: 'hitos-filtro-alumno', staffPrograma: 'hitos-filtro-programa', staffCoach: 'chc-f-coach',
@@ -451,6 +469,14 @@ function renderRespuestasComentario(hitoId, comentarioId, respuestas, fotoAutorH
     </div>`).join('')}</div>`;
 }
 
+// Reacción (❤️) a un comentario específico: un toggle por persona, con el total.
+function botonReaccionComentario(comentario, uidActual, atributos) {
+  const reacciones = comentario.reacciones || {};
+  const total = Object.keys(reacciones).length;
+  const yaReacciono = !!(uidActual && reacciones[uidActual]);
+  return `<button type="button" class="btn-reaccion-comentario ${yaReacciono ? 'is-activa' : ''}" ${atributos} title="${yaReacciono ? 'Quitar mi reacción' : 'Reaccionar a este comentario'}">❤️${total ? ' ' + total : ''}</button>`;
+}
+
 function renderComentarios(hitoId, comentarios, esDirector, fotoPorAutor, expandido, esAutorHito, uidActual) {
   const todos = comentariosVisibles(comentarios, esDirector);
   if (!todos.length) return '<p class="text-soft" style="font-size:12px;">Sin comentarios todavía — ¡sé el primero en animar!</p>';
@@ -467,6 +493,7 @@ function renderComentarios(hitoId, comentarios, esDirector, fotoPorAutor, expand
       <button type="button" class="btn-ver-mas-texto hidden" data-clamp-btn></button>
       <div style="display:flex; gap:10px; margin-top:2px; flex-wrap:wrap;">
         <span class="text-soft" style="font-size:10px;">${formatFechaHito(c.createdAt)}</span>
+        ${botonReaccionComentario(c, uidActual, `data-hito-id="${hitoId}" data-comentario-id="${comentarioId}"`)}
         ${(c.autorId === uidActual && dentroDeVentana(c.createdAt)) || esDirector ? `<button type="button" class="btn-eliminar-comentario" data-hito-id="${hitoId}" data-comentario-id="${comentarioId}" data-autor-id="${c.autorId}" style="font-size:10px; background:none; border:none; color:#9CA0A8; cursor:pointer; padding:0;">Eliminar</button>` : ''}
         <button type="button" class="btn-denunciar-comentario" data-hito-id="${hitoId}" data-comentario-id="${comentarioId}" style="font-size:10px; background:none; border:none; color:#9CA0A8; cursor:pointer; padding:0;">Denunciar</button>
         ${esAutorHito ? `<button type="button" class="btn-responder-comentario" data-hito-id="${hitoId}" data-comentario-id="${comentarioId}">Responder</button>` : ''}
@@ -902,6 +929,37 @@ function activarInteraccionFeed(feedEl, recargarFn) {
       if (!confirm('¿Eliminar este comentario?')) return;
       await remove(ref(db, `hitos/${btnEliminarComentario.dataset.hitoId}/comentarios/${btnEliminarComentario.dataset.comentarioId}`));
       await recargarFn();
+      return;
+    }
+
+    const btnReaccionComentario = ev.target.closest('.btn-reaccion-comentario');
+    if (btnReaccionComentario) {
+      const { hitoId, comentarioId } = btnReaccionComentario.dataset;
+      const refReaccion = ref(db, `hitos/${hitoId}/comentarios/${comentarioId}/reacciones/${uid}`);
+      try {
+        if ((await get(refReaccion)).exists()) {
+          await remove(refReaccion);
+        } else {
+          let nombre = '', fotoUrl = '';
+          if (getCurrentRole() === 'alumno') {
+            const mapaSnap = await get(ref(db, `alumnoPorAuthUid/${uid}`));
+            const alumnoSnap = mapaSnap.exists() ? await get(ref(db, `alumnos/${mapaSnap.val()}`)) : null;
+            const a = alumnoSnap && alumnoSnap.exists() ? alumnoSnap.val() : {};
+            nombre = nombrePublicoDeAlumno(a);
+            fotoUrl = a.fotoUrl || '';
+          } else {
+            const usuarioSnap = await get(ref(db, `usuarios/${uid}`));
+            const u = usuarioSnap.exists() ? usuarioSnap.val() : {};
+            nombre = u.nombre || '';
+            fotoUrl = u.fotoUrl || '';
+          }
+          await set(refReaccion, { nombre, fotoUrl });
+        }
+        await recargarFn();
+      } catch (err) {
+        console.error('No se pudo reaccionar al comentario:', err);
+        alert('No se pudo registrar tu reacción. Intenta de nuevo.');
+      }
       return;
     }
 
