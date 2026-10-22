@@ -18,7 +18,16 @@ document.querySelectorAll('[data-brand-mark]').forEach(el => {
   el.appendChild(tpl.content.cloneNode(true));
 });
 
-const NOMBRES_ROL = { director: 'Director/a Académico', coach: 'Coach', mentor: 'Mentor/a', alumno: 'Alumno/a' };
+const NOMBRES_ROL = {
+  director: 'Director/a Académico', coach: 'Coach', mentor: 'Mentor/a', alumno: 'Alumno/a',
+  directorComercial: 'Director/a Comercial', closer: 'Closer'
+};
+
+// Vistas que viven en el módulo de agendamiento (otra página, misma sesión).
+export const RUTAS_AGENDAMIENTO = {
+  directorComercial: 'agendamiento/director-comercial.html',
+  closer: 'agendamiento/closer.html'
+};
 
 export function applyRole(role, nombre, rolesDisponibles) {
   currentRole = role;
@@ -116,6 +125,10 @@ function renderSelectorRol() {
     </select>`;
 
   document.getElementById('selector-rol-activo').addEventListener('change', (ev) => {
+    if (RUTAS_AGENDAMIENTO[ev.target.value]) {
+      window.location.href = RUTAS_AGENDAMIENTO[ev.target.value];
+      return;
+    }
     applyRole(ev.target.value, currentNombre, currentRolesDisponibles);
     document.dispatchEvent(new CustomEvent('rolCambiado'));
   });
