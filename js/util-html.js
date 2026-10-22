@@ -72,9 +72,25 @@ export function notaAHtml(notas) {
 // de buscar URLs, así una comilla dentro de la URL no puede romper el href.
 export function linkificarSeguro(texto, conSaltos = false) {
   if (!texto) return '';
-  const html = escaparHtml(texto).replace(
+  const html = aplicarNegritas(escaparHtml(texto)).replace(
     /(https?:\/\/[^\s<]+)/g,
     '<a href="$1" target="_blank" rel="noopener" style="color:#2563EB;">$1</a>'
   );
   return conSaltos ? html.replace(/\n/g, '<br>') : html;
+}
+
+// Negritas escritas con asteriscos, como al pegar desde ChatGPT/Word (**así**) o desde
+// WhatsApp (*así*). Se aplica sobre texto YA escapado, nunca cruza saltos de línea y exige
+// que el contenido no empiece ni termine en espacio, así "5 * 3" o "* viñeta" quedan igual.
+function aplicarNegritas(htmlEscapado) {
+  return htmlEscapado
+    .replace(/\*\*([^\s*](?:[^*\n]*[^\s*])?)\*\*/g, '<strong>$1</strong>')
+    .replace(/(^|[\s(¡¿])\*([^\s*](?:[^*\n]*[^\s*])?)\*(?=$|[\s).,;:!?])/gm, '$1<strong>$2</strong>');
+}
+
+// Texto escrito por un alumno (preguntas, comentarios, presentaciones…) listo para pintar.
+// Úsalo dentro de un elemento con la clase .texto-alumno o .texto-clamp (white-space: pre-wrap)
+// para que se conserven los saltos de línea, los párrafos y las viñetas tal como se escribieron.
+export function textoAlumnoAHtml(texto) {
+  return linkificarSeguro(texto);
 }

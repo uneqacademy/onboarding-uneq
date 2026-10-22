@@ -10,7 +10,7 @@
    ============================================================ */
 
 import { db, auth, storage, firebaseConfig } from './firebase-config.js';
-import { escaparHtml, sanearHtml } from './util-html.js';
+import { escaparHtml, sanearHtml, textoAlumnoAHtml } from './util-html.js';
 import { ref, get, set, update, push } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-database.js";
 import { ref as storageRef, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-storage.js";
 import { initializeApp, deleteApp } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-app.js";
@@ -1131,7 +1131,7 @@ async function cargarMentoriasView() {
             ${preguntas.length ? preguntas.map(([preguntaId, p]) => `
               <div class="pregunta-vivo-item" data-pregunta-id="${preguntaId}" style="padding:8px 0; border-bottom:0.5px solid var(--border); font-size:13px;">
                 <strong>${escaparHtml(p.alumnoNombre || 'Alumno')}</strong>
-                <p style="margin:4px 0;">${escaparHtml(p.texto || '')}</p>
+                <p class="texto-alumno" style="margin:4px 0;">${textoAlumnoAHtml(p.texto || '')}</p>
                 ${(p.imagenes || []).map(url => `<img src="${url}" alt="" style="max-width:120px; border-radius:6px; margin:4px 4px 0 0;">`).join('')}
                 ${p.revisada
                   ? '<span class="badge badge--activo" style="font-size:10px;">✓ Revisada</span>'
@@ -1419,7 +1419,7 @@ export async function cargarBoxMentor() {
         <div class="flex-between" style="align-items:flex-start; gap:10px;">
           <div style="flex:1; min-width:0;">
             <strong>${escaparHtml(p.alumnoNombre || 'Alumno')}</strong> <span class="text-soft" style="font-size:12px;">— ${fecha}</span>
-            <p class="texto-clamp" data-clamp style="margin:6px 0 0;">${p.preguntaFormateada ? sanearHtml(p.preguntaFormateada) : escaparHtml(p.pregunta || '')}</p>
+            <p class="texto-clamp" data-clamp style="margin:6px 0 0;">${textoAlumnoAHtml(p.pregunta || '')}</p>
             <button type="button" class="btn-ver-mas-texto hidden" data-clamp-btn></button>
           </div>
           <div style="display:flex; align-items:center; gap:8px; flex-shrink:0;">
@@ -1613,7 +1613,7 @@ async function cargarBoxBeginMentor() {
           <div style="flex:1; min-width:0;">
             <strong>${escaparHtml(p.alumnoNombre || 'Alumno')}</strong> <span class="text-soft" style="font-size:12px;">— ${fecha}</span>
             <span class="badge badge--activo" style="font-size:10px; margin-left:6px;">${p.tematica || 'Sin temática'}</span>
-            <p style="margin:6px 0 0;">${escaparHtml(p.pregunta || '')}</p>
+            <p class="texto-alumno" style="margin:6px 0 0;">${textoAlumnoAHtml(p.pregunta || '')}</p>
             ${p.respuesta ? `<p class="text-soft" style="margin:4px 0 0; font-size:11px;">Respondida por ${escaparHtml(p.respuesta.mentorNombre || 'un mentor')}</p>` : ''}
           </div>
           <span class="badge ${p.respuesta ? 'badge--activo' : 'badge--impaga'}" style="font-size:10px; white-space:nowrap;">${p.respuesta ? '✓ Respondida — solo lectura' : 'No respondida — puedes responder'}</span>

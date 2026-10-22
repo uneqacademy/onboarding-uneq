@@ -1475,7 +1475,7 @@ async function cargarBoxBeginAlumno() {
     ? propias.map(([, p]) => `
         <div class="panel mb-16" style="padding:14px;" data-fila-box-begin>
           <span class="badge badge--activo" style="font-size:10px;">${p.tematica || 'Sin temática'}</span>
-          <p class="texto-clamp" data-clamp style="margin:8px 0 0;">${p.preguntaFormateada ? sanearHtml(p.preguntaFormateada) : linkify(p.pregunta || '')}</p>
+          <p class="texto-clamp" data-clamp style="margin:8px 0 0;">${linkify(p.pregunta || '')}</p>
           <button type="button" class="btn-ver-mas-texto hidden" data-clamp-btn></button>
           ${renderImagenesPregunta(p.imagenes, p.archivos)}
           ${p.respuesta
@@ -1723,7 +1723,7 @@ export async function cargarPreguntasComunidad() {
                 ${esDirector ? `<button type="button" class="btn btn--ghost btn-moderar-pregunta-comunidad" data-oculta="${p.estado === 'oculta' ? '1' : '0'}" style="font-size:10px; padding:2px 8px; ${p.estado === 'oculta' ? 'color:#C0392B;' : ''}">${p.estado === 'oculta' ? '⚠️ Oculta — Mostrar' : 'Ocultar'}</button>` : ''}
               </div>
               <p class="text-soft" style="font-size:12px; margin:6px 0 2px;">${p.alumnoNombre ? `${escaparHtml(p.alumnoNombre)} — ` : ''}Pregunta para ${escaparHtml(mentorNombre)} — ${formatFecha(new Date(p.createdAt).toISOString().slice(0, 10))}</p>
-              <p class="texto-clamp" data-clamp style="margin:4px 0;">${p.preguntaFormateada ? sanearHtml(p.preguntaFormateada) : linkify(p.pregunta)}</p>
+              <p class="texto-clamp" data-clamp style="margin:4px 0;">${linkify(p.pregunta)}</p>
               <button type="button" class="btn-ver-mas-texto hidden" data-clamp-btn></button>
               ${renderImagenesPregunta(p.imagenes, p.archivos)}
               <button type="button" class="btn-toggle-respuesta-box" data-toggle-respuesta>👁️ Ver Respuesta</button>
@@ -1873,7 +1873,7 @@ async function cargarMisPreguntasVivo(card, s) {
   cont.innerHTML = '<strong style="font-size:12px; display:block; margin-bottom:6px;">Tus preguntas para esta sesión:</strong>' +
     propias.map(([preguntaId, p]) => `
       <div class="pv-pregunta-propia" data-pregunta-id="${preguntaId}" style="margin-top:8px; font-size:13px; padding:8px; background:#fff; border-radius:8px;">
-        <p class="pv-pregunta-propia-texto" style="margin:0;">${linkify(p.texto || '')}</p>
+        <p class="pv-pregunta-propia-texto texto-alumno" style="margin:0;">${linkify(p.texto || '')}</p>
         ${renderImagenesPregunta(p.imagenes, p.archivos)}
         ${p.revisada
           ? '<p class="text-soft" style="margin:6px 0 0; font-size:11px;">✓ El Mentor ya ha revisado tu pregunta.</p>'
@@ -2371,7 +2371,7 @@ export async function cargarPreguntasVivo() {
         ? filtradas.map(p => `
             <div class="panel mb-16" style="padding:12px; font-size:13px;">
               <strong>Para ${escaparHtml(p.mentorNombre)}</strong> <span class="text-soft" style="font-size:11px;">— ${formatFecha(new Date(p.createdAt).toISOString().slice(0, 10))}</span>
-              <p style="margin:6px 0 0;">${linkify(p.texto || '')}</p>
+              <p class="texto-alumno" style="margin:6px 0 0;">${linkify(p.texto || '')}</p>
               ${renderImagenesPregunta(p.imagenes, p.archivos)}
             </div>`).join('')
         : '<p class="text-soft">No hay preguntas con ese filtro.</p>';
