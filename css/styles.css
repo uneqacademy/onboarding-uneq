@@ -1181,7 +1181,9 @@ body.tema-alumno-oscuro .panel .hitos-fase-bloque--fase4 .hitos-fase-titulo { co
    CLAMP DE TEXTO — 10 líneas + "Ver más / Ver menos", reutilizado
    en preguntas de BOX, texto de hitos, comentarios y respuestas.
    ============================================================ */
-.texto-clamp { display: -webkit-box; -webkit-line-clamp: 10; -webkit-box-orient: vertical; overflow: hidden; }
+.texto-clamp { display: -webkit-box; -webkit-line-clamp: 10; -webkit-box-orient: vertical; overflow: hidden; white-space: pre-wrap; overflow-wrap: anywhere; }
+/* Texto escrito por un alumno: respeta saltos de línea, párrafos y viñetas tal como los escribió. */
+.texto-alumno { white-space: pre-wrap; overflow-wrap: anywhere; }
 .btn-ver-mas-texto { background: none; border: 0; color: var(--color-accent); font-size: 12.5px; font-weight: 600; cursor: pointer; padding: 4px 0 0; }
 
 /* --- BOX: fila del mentor, responsive --- */
