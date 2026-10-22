@@ -667,6 +667,19 @@ textarea { width: 100%; max-width: 100%; box-sizing: border-box; resize: vertica
 
   .data-table { display: block; overflow-x: auto; white-space: nowrap; -webkit-overflow-scrolling: touch; }
   .data-table th, .data-table td { padding: 10px; }
+  /* Filas que se despliegan bajo una fila de la tabla (preguntas en vivo, comentarios NPS, sesiones…).
+     Ocupan todas las columnas (colspan), así que en el celular medían el ancho de TODA la tabla con
+     white-space: nowrap: el texto quedaba en una sola línea larguísima y solo se podía mover de lado.
+     Se fijan al borde visible de la tabla, con el ancho de la pantalla, y el texto salta de línea. */
+  .data-table td[colspan] {
+    display: block;
+    position: sticky;
+    left: 0;
+    box-sizing: border-box;
+    width: calc(100vw - 64px);
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
 
   /* Filas de filtros (contienen .field) pasan a columna, ordenadas y sin apretarse.
      Cubre tanto cuando .panel__body mismo tiene el flex inline, como cuando hay
