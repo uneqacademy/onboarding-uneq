@@ -17,7 +17,7 @@ import {
   updatePassword
 } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-auth.js";
 import { ref, get, set } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-database.js";
-import { applyRole, showLogin } from './main.js';
+import { applyRole, showLogin, RUTAS_AGENDAMIENTO } from './main.js';
 import { initAlumnosModule } from './alumnos.js';
 import { cargarDashboardAlumno, cargarBoxAlumno } from './alumno-portal.js';
 import './comunidad-uneq.js';
@@ -176,6 +176,24 @@ function configurarCambiarPassword(sufijo) {
 configurarCambiarPassword('');
 configurarCambiarPassword('-alumno');
 
+const ROLES_APP = ['director', 'coach', 'mentor'];
+const ROLES_AGENDAMIENTO = Object.keys(RUTAS_AGENDAMIENTO);
+// Orden en que se elige la vista inicial cuando la cuenta tiene varios roles.
+const PRIORIDAD_ROLES = ['director', 'coach', 'mentor', 'directorComercial', 'closer'];
+
+// Closer y Director Comercial viven en agendamiento/staff/{uid}; si no hay
+// registro, está inactivo o falla la lectura, la cuenta simplemente no los tiene.
+async function leerRolAgendamiento(uid) {
+  try {
+    const snap = await get(ref(db, `agendamiento/staff/${uid}`));
+    const datos = snap.exists() ? snap.val() : null;
+    return (datos && datos.activo !== false && ROLES_AGENDAMIENTO.includes(datos.rol)) ? datos : null;
+  } catch (err) {
+    console.error('No se pudo leer el rol de agendamiento:', err);
+    return null;
+  }
+}
+
 onAuthStateChanged(auth, async (user) => {
   if (!user) {
     showLogin();
@@ -183,9 +201,12 @@ onAuthStateChanged(auth, async (user) => {
   }
 
   try {
-    const snap = await get(ref(db, `usuarios/${user.uid}`));
+    const [snap, staff] = await Promise.all([
+      get(ref(db, `usuarios/${user.uid}`)),
+      leerRolAgendamiento(user.uid)
+    ]);
 
-    if (!snap.exists()) {
+    if (!snap.exists() && !staff) {
       const mapaSnap = await get(ref(db, `alumnoPorAuthUid/${user.uid}`));
       if (mapaSnap.exists()) {
         const alumnoId = mapaSnap.val();
@@ -211,21 +232,35 @@ onAuthStateChanged(auth, async (user) => {
       return;
     }
 
-    const perfil = snap.val();
+    const perfil = snap.exists() ? snap.val() : null;
 
-    if (perfil.activo === false) {
+    if (perfil && perfil.activo === false) {
       mostrarError('Esta cuenta está desactivada. Contacta al director/a.');
       await signOut(auth);
       return;
     }
 
-    const roles = (perfil.roles && typeof perfil.roles === 'object')
+    const rolesApp = !perfil ? [] : (perfil.roles && typeof perfil.roles === 'object')
       ? Object.keys(perfil.roles).filter(r => perfil.roles[r])
       : (perfil.rol ? [perfil.rol] : []);
 
-    if (!roles.length || !roles.every(r => ['director', 'coach', 'mentor'].includes(r))) {
+    if (!rolesApp.every(r => ROLES_APP.includes(r)) || (perfil && !rolesApp.length && !staff)) {
       mostrarError('Esta cuenta no tiene un rol válido asignado.');
       await signOut(auth);
+      return;
+    }
+
+    const roles = [...rolesApp, ...(staff ? [staff.rol] : [])];
+    const rolActivo = PRIORIDAD_ROLES.find(r => roles.includes(r));
+    const nombre = (perfil && perfil.nombre) || (staff && staff.nombre) || user.email;
+
+    // Cuenta cuya vista inicial es de agendamiento: esa vista vive en agendamiento/
+    // (la sesión de Firebase es la misma, no vuelve a pedir contraseña).
+    if (RUTAS_AGENDAMIENTO[rolActivo]) {
+      limpiarError();
+      inputEmail.value = '';
+      inputPass.value = '';
+      window.location.href = RUTAS_AGENDAMIENTO[rolActivo];
       return;
     }
 
@@ -245,8 +280,7 @@ onAuthStateChanged(auth, async (user) => {
     limpiarError();
     inputEmail.value = '';
     inputPass.value = '';
-    const rolActivo = roles.includes('director') ? 'director' : roles.includes('coach') ? 'coach' : 'mentor';
-    applyRole(rolActivo, perfil.nombre || user.email, roles);
+    applyRole(rolActivo, nombre, roles);
     await initAlumnosModule();
   } catch (err) {
     mostrarError('Error al cargar tu perfil. Intenta de nuevo.');

@@ -47,6 +47,36 @@ export function iniciarSesionStaff(rolEsperado, onListo) {
     shell.classList.remove('hidden');
     const nombreEl = document.querySelector('.adm-sidebar-footer strong');
     if (nombreEl) nombreEl.textContent = datos.nombre;
+    agregarAccionesSesion(usuario.uid);
     onListo(usuario.uid, datos);
   });
+}
+
+// Pie del menú: cerrar sesión y, si la cuenta también tiene un perfil en la app
+// principal (coach, mentor, director), volver a ella sin pedir contraseña de nuevo.
+async function agregarAccionesSesion(uid) {
+  const pie = document.querySelector('.adm-sidebar-footer');
+  if (!pie || pie.querySelector('.adm-acciones-sesion')) return;
+  const acciones = document.createElement('div');
+  acciones.className = 'adm-acciones-sesion';
+  acciones.style.cssText = 'margin-top:10px; display:flex; flex-direction:column; gap:6px;';
+  try {
+    const perfil = await get(ref(db, `usuarios/${uid}`));
+    if (perfil.exists()) {
+      const volver = document.createElement('a');
+      volver.href = '../index.html';
+      volver.textContent = '← Cambiar de vista';
+      volver.style.cssText = 'color:#fff; text-decoration:underline;';
+      acciones.appendChild(volver);
+    }
+  } catch (err) {
+    console.error('No se pudo comprobar si hay otras vistas:', err);
+  }
+  const salir = document.createElement('a');
+  salir.href = '#';
+  salir.textContent = 'Cerrar sesión';
+  salir.style.cssText = 'color:rgba(255,255,255,0.7); text-decoration:underline;';
+  salir.addEventListener('click', (ev) => { ev.preventDefault(); signOut(auth); });
+  acciones.appendChild(salir);
+  pie.appendChild(acciones);
 }
