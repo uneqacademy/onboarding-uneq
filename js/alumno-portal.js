@@ -1283,7 +1283,9 @@ export async function cargarBoxAlumno() {
     });
 
     if (!mostrarTodas && filtradas.length > LIMITE_INICIAL) {
-      listadoEl.innerHTML += `<button type="button" class="btn btn--ghost" id="btn-ver-todas-consultas">Ver todas (${filtradas.length})</button>`;
+      // insertAdjacentHTML (no innerHTML +=): re-escribir el contenedor borraba los clics de "Ver Respuesta"
+      // y "Ver más" ya conectados arriba, y con más de 3 consultas ningún botón funcionaba.
+      listadoEl.insertAdjacentHTML('beforeend', `<button type="button" class="btn btn--ghost" id="btn-ver-todas-consultas">Ver todas (${filtradas.length})</button>`);
       document.getElementById('btn-ver-todas-consultas').addEventListener('click', () => { mostrarTodas = true; renderMisConsultas(); });
     }
 
@@ -1744,7 +1746,7 @@ export async function cargarPreguntasComunidad() {
     });
 
     if (filtradas.length > cantidadVisible) {
-      listadoEl.innerHTML += `<button type="button" class="btn btn--ghost" id="btn-ver-mas-comunidad">Ver 10 más (${filtradas.length - cantidadVisible} restantes)</button>`;
+      listadoEl.insertAdjacentHTML('beforeend', `<button type="button" class="btn btn--ghost" id="btn-ver-mas-comunidad">Ver 10 más (${filtradas.length - cantidadVisible} restantes)</button>`);
       document.getElementById('btn-ver-mas-comunidad').addEventListener('click', () => { cantidadVisible += PAGE_SIZE; render(); });
     }
   }
