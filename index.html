@@ -1591,10 +1591,16 @@
            corresponde dentro de cada pestaña).
            ====================================================== -->
       <section id="view-comunidad-uneq" class="view hidden">
-        <div class="flex-between mb-16"><h2>Comunidad UNEQ</h2></div>
+        <div class="flex-between mb-16">
+          <h2>Comunidad UNEQ</h2>
+          <button type="button" class="comunidad-btn-filtros hidden" id="comunidad-btn-filtros" aria-label="Filtros" aria-expanded="false" title="Filtros">
+            <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 3H2l8 9.46V19l4 2v-8.54L22 3z"/></svg>
+            <span class="comunidad-btn-filtros__punto hidden" id="comunidad-btn-filtros-punto"></span>
+          </button>
+        </div>
         <div class="comunidad-subtabs" id="comunidad-subtabs" role="tablist">
           <button type="button" class="comunidad-subtab is-activa" data-comunidad-tab="hitos" role="tab">Hitos de la Comunidad</button>
-          <button type="button" class="comunidad-subtab" data-comunidad-tab="preguntas" role="tab">Preguntas de la Comunidad</button>
+          <button type="button" class="comunidad-subtab" data-comunidad-tab="preguntas" role="tab">Preguntas BOX</button>
           <button type="button" class="comunidad-subtab" data-comunidad-tab="presentacion" role="tab">Presentación</button>
           <button type="button" class="comunidad-subtab" data-comunidad-tab="historias" role="tab">Historias Reales</button>
         </div>
@@ -1652,7 +1658,7 @@
           <div id="chc-feed"></div>
         </div>
 
-        <!-- ===== Preguntas de la Comunidad ===== -->
+        <!-- ===== Preguntas BOX ===== -->
         <div class="comunidad-vista" id="comunidad-vista-preguntas">
           <div class="panel mb-16 hidden" id="cpc-filtros-staff-panel">
             <div class="panel__body" style="display:flex; gap:10px; flex-wrap:wrap; align-items:flex-end;">

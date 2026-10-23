@@ -1244,12 +1244,27 @@ body.tema-alumno-oscuro .panel .hitos-fase-bloque--fase4 .hitos-fase-titulo { co
 .notif-vacio { padding: 20px 12px; text-align: center; color: var(--color-ink-soft); font-size: 13px; }
 
 /* --- Comunidad UNEQ: subtabs --- */
-.comunidad-subtabs { display: flex; gap: 8px; margin-bottom: 20px; flex-wrap: wrap; }
-.comunidad-subtab { padding: 9px 16px; border-radius: 20px; border: 1.5px solid var(--color-border); background: #fff; font-size: 13.5px; font-weight: 600; cursor: pointer; color: var(--color-ink-soft); }
+.comunidad-subtabs {
+  display: flex; gap: 8px; margin-bottom: 20px; flex-wrap: nowrap; overflow-x: auto;
+  -webkit-overflow-scrolling: touch; scrollbar-width: none; padding-bottom: 2px;
+}
+.comunidad-subtabs::-webkit-scrollbar { display: none; }
+.comunidad-subtab { flex: 0 0 auto; white-space: nowrap; padding: 9px 16px; border-radius: 20px; border: 1.5px solid var(--color-border); background: #fff; font-size: 13.5px; font-weight: 600; cursor: pointer; color: var(--color-ink-soft); }
 .comunidad-subtab.is-activa { background: var(--color-primary); border-color: var(--color-primary); color: #fff; }
 body.tema-alumno-oscuro .comunidad-subtab { background: transparent; color: rgba(255,255,255,0.7); border-color: rgba(255,255,255,0.25); }
 body.tema-alumno-oscuro .comunidad-subtab.is-activa { background: #fff; color: var(--color-primary); border-color: #fff; }
 
+/* Filtros plegados por defecto; el ícono de arriba los despliega */
+.comunidad-vista .panel[id*="-filtros-"]:not(.filtros-abiertos) { display: none; }
+.comunidad-btn-filtros {
+  position: relative; width: 42px; height: 42px; border-radius: 50%; border: 1.5px solid var(--color-border);
+  background: #fff; color: var(--color-ink); display: flex; align-items: center; justify-content: center; padding: 0; cursor: pointer;
+}
+.comunidad-btn-filtros[aria-expanded="true"] { background: var(--color-primary); border-color: var(--color-primary); color: #fff; }
+.comunidad-btn-filtros__punto { position: absolute; top: 4px; right: 4px; width: 10px; height: 10px; border-radius: 50%; background: var(--color-danger); border: 2px solid #fff; box-sizing: content-box; }
+body.tema-alumno-oscuro .comunidad-btn-filtros { background: transparent; color: #fff; border-color: rgba(255,255,255,0.4); }
+body.tema-alumno-oscuro .comunidad-btn-filtros[aria-expanded="true"] { background: #fff; color: var(--color-primary); border-color: #fff; }
+body.tema-alumno-oscuro .comunidad-btn-filtros__punto { border-color: #000; }
 .comunidad-vista { display: none; }
 .comunidad-vista.is-activa { display: block; }
 .comunidad-filtros-contador { font-size: 12.5px; color: var(--color-ink-soft); margin: 4px 0 14px; }
