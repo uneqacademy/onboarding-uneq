@@ -141,6 +141,7 @@ let presentacionAprobada = false; // controla el candado de las otras 3 pestaña
 
 const CARGADORES = {
   hitos: cargarHitosComunidad,
+  preguntaslibres: cargarPreguntasLibres,
   preguntas: cargarPreguntasComunidad,
   presentacion: cargarPresentacion,
   historias: cargarHistoriasReales
@@ -260,12 +261,32 @@ export async function irAHitoDesdeNotificacion(hitoId, omitirCandado = true) {
 // en las funciones). Se llama al terminar de entrar a la app —con la sesión ya iniciada, pida
 // o no contraseña— y lleva directo a esa publicación. Devuelve true si había un enlace.
 export async function abrirHitoDeEnlace() {
-  const coincide = /^#hito-([A-Za-z0-9_-]+)$/.exec(window.location.hash);
+  const coincide = /^#(hito|pregunta)-([A-Za-z0-9_-]+)$/.exec(window.location.hash);
   if (!coincide) return false;
   // Se limpia el enlace para que recargar la app o volver a entrar más tarde no repita el salto.
   history.replaceState(null, '', window.location.pathname + window.location.search);
-  await irAHitoDesdeNotificacion(coincide[1], false);
+  if (coincide[1] === 'pregunta') await irAPreguntaLibre(coincide[2], false);
+  else await irAHitoDesdeNotificacion(coincide[2], false);
   return true;
+}
+
+// Lleva a "Preguntas de la Comunidad" y baja hasta esa pregunta (enlace de WhatsApp o notificación).
+export async function irAPreguntaLibre(preguntaId, omitirCandado = true) {
+  showView('view-comunidad-uneq');
+  marcarNavActivo('comunidad-uneq');
+  const topbar = document.getElementById('topbar-title');
+  if (topbar) topbar.textContent = 'Comunidad UNEQ';
+  await irAComunidadUneq('preguntaslibres', omitirCandado);
+  let elDestino = null;
+  for (let intento = 0; intento < 10 && !elDestino; intento++) {
+    elDestino = document.getElementById(`social-${preguntaId}`);
+    if (!elDestino) await new Promise(resolver => setTimeout(resolver, 300));
+  }
+  if (elDestino) {
+    elDestino.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    elDestino.style.outline = '3px solid var(--color-accent)';
+    setTimeout(() => { elDestino.style.outline = ''; }, 3000);
+  }
 }
 
 // App ya abierta (por ejemplo instalada) y se toca otro enlace de hito.
@@ -347,13 +368,13 @@ function renderComentariosSociales(basePath, comentarios, esDirector, uid, nombr
 }
 
 function renderTarjetaSocial(basePath, id, item, ctx) {
-  const { esDirector, uid, autorFotoUrl, esDueño, puedeEditar, puedeEliminar, onEditar, extraFooterHtml } = ctx;
+  const { esDirector, uid, autorFotoUrl, esDueño, puedeEditar, puedeEliminar, onEditar, extraFooterHtml, ocultarCompartirGenerico, extraBotonesHtml } = ctx;
   const yaReacciono = item.reacciones && item.reacciones[uid];
   const totalReacciones = item.reacciones ? Object.keys(item.reacciones).length : 0;
   const totalComentarios = Object.keys(item.comentarios || {}).length;
   const comentariosExpandidos = tarjetasComentariosExpandidos.has(basePath);
   return `
-  <div class="panel mb-16" id="social-${id}" data-base-path="${basePath}" data-es-dueño="${esDueño ? '1' : '0'}" data-nombre-dueño="${(item.alumnoNombre || '').replace(/"/g, '&quot;')}" data-on-editar="${onEditar || ''}">
+  <div class="panel mb-16" id="social-${id}" data-base-path="${basePath}" data-es-dueño="${esDueño ? '1' : '0'}" data-nombre-dueño="${(item.alumnoNombre || '').replace(/"/g, '&quot;')}" data-on-editar="${onEditar || ''}" ${item.titulo !== undefined ? `data-titulo-original="${escaparHtml(item.titulo)}"` : ''}>
     <div class="panel__body">
       <div class="flex-between">
         <div class="hito-autor">
@@ -361,8 +382,10 @@ function renderTarjetaSocial(basePath, id, item, ctx) {
           <strong>${escaparHtml(item.alumnoNombre || 'Alumno')}</strong>
           ${etiquetaProgramaSocial(item.programa)}
           ${item.estado === 'pendiente' ? '<span class="badge badge--impaga" style="font-size:9px; margin-left:6px;">En Revisión</span>' : ''}
+          ${item.fijada ? '<span class="badge badge--activo" style="font-size:9px; margin-left:6px;">📌 Fijada</span>' : ''}
         </div>
       </div>
+      ${item.titulo ? `<p class="social-titulo">${escaparHtml(item.titulo)}</p>` : ''}
       <p class="texto-clamp" data-clamp data-texto-original="${(item.texto || '').replace(/"/g, '&quot;')}" style="margin:8px 0 0; white-space:pre-wrap;">${linkifyTexto(item.texto)}</p>
       <button type="button" class="btn-ver-mas-texto hidden" data-clamp-btn></button>
       ${(item.fotos || []).map(f => `<img src="${f.url}" alt="" class="btn-ampliar-foto-hito" data-src="${f.url}" style="max-width:220px; max-height:220px; border-radius:8px; margin:8px 8px 0 0; object-fit:cover; cursor:zoom-in;">`).join('')}
@@ -371,7 +394,8 @@ function renderTarjetaSocial(basePath, id, item, ctx) {
       <div style="display:flex; gap:8px; margin-top:12px; flex-wrap:wrap; align-items:center;">
         <button type="button" class="btn ${yaReacciono ? 'btn--primary' : 'btn--ghost'} btn-reaccion-social" data-base-path="${basePath}" style="font-size:12px; padding:4px 10px;">❤️ ${totalReacciones}</button>
         <button type="button" class="btn ${comentariosExpandidos ? 'btn--primary' : 'btn--ghost'} btn-comentarios-social" data-base-path="${basePath}" style="font-size:12px; padding:4px 10px;">💬 ${totalComentarios}</button>
-        ${esDueño ? `<button type="button" class="btn btn--ghost btn-compartir-social" data-titulo="${(item.alumnoNombre || '').replace(/"/g, '&quot;')}" style="font-size:12px; padding:4px 10px;">📤 Compartir</button>` : ''}
+        ${extraBotonesHtml || ''}
+        ${esDueño && !ocultarCompartirGenerico ? `<button type="button" class="btn btn--ghost btn-compartir-social" data-titulo="${(item.alumnoNombre || '').replace(/"/g, '&quot;')}" style="font-size:12px; padding:4px 10px;">📤 Compartir</button>` : ''}
         ${puedeEditar ? `<button type="button" class="btn btn--ghost btn-editar-social" data-base-path="${basePath}" style="font-size:12px; padding:4px 10px;">✏️ Editar</button>` : ''}
         ${puedeEliminar ? `<button type="button" class="btn btn--ghost btn-eliminar-social" data-base-path="${basePath}" style="font-size:12px; padding:4px 10px; color:#C0392B;">Eliminar</button>` : ''}
       </div>
@@ -483,6 +507,16 @@ function activarInteraccionSocial() {
       const tarjeta = document.querySelector(`[data-base-path="${cssEscape(basePath)}"].panel`);
       const parrafo = tarjeta?.querySelector('[data-clamp]');
       if (!parrafo) return;
+      if (tarjeta.dataset.tituloOriginal !== undefined) {
+        // Pregunta de la comunidad: se editan título y detalle.
+        const nuevoTitulo = prompt('Edita el título:', tarjeta.dataset.tituloOriginal);
+        if (nuevoTitulo === null || nuevoTitulo.trim().length < 5) return;
+        const nuevoDetalle = prompt('Edita el detalle (puede quedar vacío):', parrafo.dataset.textoOriginal);
+        if (nuevoDetalle === null) return;
+        try { await update(ref(db, basePath), { titulo: nuevoTitulo.trim(), texto: nuevoDetalle.trim() }); recargarTarjeta(basePath); }
+        catch (err) { console.error('No se pudo editar:', err); alert('No se pudo guardar el cambio. Intenta de nuevo.'); }
+        return;
+      }
       const nuevo = prompt('Edita tu texto:', parrafo.dataset.textoOriginal);
       if (nuevo === null || !nuevo.trim()) return;
       try { await update(ref(db, basePath), { texto: nuevo.trim() }); recargarTarjeta(basePath); }
@@ -587,6 +621,7 @@ function cssEscape(s) { return (s || '').replace(/[.:#/]/g, '\\$&'); }
 function recargarTarjeta(basePathOEliminado, forzarRecarga) {
   if (subtabActual === 'presentacion') cargarPresentacion();
   else if (subtabActual === 'historias') cargarHistoriasReales();
+  else if (subtabActual === 'preguntaslibres') cargarPreguntasLibres();
 }
 
 /* --- Adjuntar y subir fotos (reutilizable para ambos formularios) --- */
@@ -611,6 +646,153 @@ async function subirFotos(storagePrefix, id, archivos) {
     fotos.push({ url: await getDownloadURL(archivoRef), nombre: archivos[i].name });
   }
   return fotos;
+}
+
+/* ============================================================
+   PREGUNTAS DE LA COMUNIDAD (libres) — comunidad/preguntasLibres/{id}
+   Cualquier persona publica una pregunta (título + detalle) y la comunidad
+   responde con los mismos comentarios, ❤️ y "Responder" que el resto. El
+   director puede fijar hasta 3 arriba y moderar. Se comparte por WhatsApp.
+   ============================================================ */
+const MAX_PREGUNTAS_FIJADAS = 3;
+const URL_APP_ENLACES = 'https://app.uneqacademy.com/';
+// Con true, el enlace pasa por hitos.uneqacademy.com/?pregunta=ID para mostrar la tarjeta con el título en WhatsApp.
+// Dejar en false hasta que la función previewHito (repo de funciones) esté desplegada con soporte para "?pregunta=".
+const USAR_TARJETA_PREVIEW_PREGUNTAS = false;
+const DOMINIO_PREVIEW_PREGUNTAS = 'https://hitos.uneqacademy.com';
+
+let preguntasLibresActuales = [];
+let interaccionPreguntasActiva = false;
+
+function enlacePreguntaLibre(preguntaId) {
+  return USAR_TARJETA_PREVIEW_PREGUNTAS
+    ? `${DOMINIO_PREVIEW_PREGUNTAS}/?pregunta=${preguntaId}`
+    : `${URL_APP_ENLACES}#pregunta-${preguntaId}`;
+}
+
+function activarInteraccionPreguntasLibres() {
+  if (interaccionPreguntasActiva) return;
+  interaccionPreguntasActiva = true;
+  document.addEventListener('click', async (ev) => {
+    const btnCompartir = ev.target.closest('.btn-compartir-pregunta');
+    if (btnCompartir) {
+      const { preguntaId, titulo } = btnCompartir.dataset;
+      const mensaje = encodeURIComponent(`Tengo una pregunta para la comunidad de UNEQ Mentoring: "${titulo}"\n\nEntra y respóndeme acá:\n${enlacePreguntaLibre(preguntaId)}`);
+      window.open(`https://wa.me/?text=${mensaje}`, '_blank');
+      return;
+    }
+    const btnFijar = ev.target.closest('.btn-fijar-pregunta');
+    if (btnFijar) {
+      const { preguntaId, fijada } = btnFijar.dataset;
+      const fijar = fijada !== '1';
+      if (fijar && preguntasLibresActuales.filter(p => p.fijadaEn).length >= MAX_PREGUNTAS_FIJADAS) {
+        alert(`Ya hay ${MAX_PREGUNTAS_FIJADAS} preguntas fijadas. Quita una para fijar otra.`);
+        return;
+      }
+      try {
+        await update(ref(db, `comunidad/preguntasLibres/${preguntaId}`), { fijadaEn: fijar ? Date.now() : null });
+        cargarPreguntasLibres();
+      } catch (err) {
+        console.error('No se pudo fijar la pregunta:', err);
+        alert('No se pudo cambiar el fijado. Intenta de nuevo.');
+      }
+    }
+  });
+}
+
+async function cargarPreguntasLibres() {
+  activarInteraccionSocial();
+  activarInteraccionPreguntasLibres();
+  const role = getCurrentRole();
+  const esAlumno = role === 'alumno';
+  const esDirector = role === 'director';
+  const uid = auth.currentUser ? auth.currentUser.uid : null;
+  if (!uid) return;
+
+  const perfil = await datosPerfilActual();
+  const ctxAlumno = esAlumno ? await obtenerContextoAlumno(uid) : { alumnoId: null, programa: '' };
+
+  const feedEl = document.getElementById('plc-feed');
+  let snap;
+  try {
+    snap = await get(ref(db, 'comunidad/preguntasLibres'));
+  } catch (err) {
+    console.error('No se pudieron cargar las preguntas:', err);
+    if (feedEl) feedEl.innerHTML = '<p class="text-soft">No se pudo cargar la lista. Recarga la página e intenta de nuevo.</p>';
+    return;
+  }
+  preguntasLibresActuales = Object.entries(snap.exists() ? snap.val() : {})
+    .map(([id, p]) => ({ id, ...p }))
+    .filter(p => esDirector || p.estado !== 'oculta');
+
+  function render() {
+    const fDesde = document.getElementById('plc-f-desde')?.value ? new Date(document.getElementById('plc-f-desde').value + 'T00:00:00').getTime() : null;
+    const fHasta = document.getElementById('plc-f-hasta')?.value ? new Date(document.getElementById('plc-f-hasta').value + 'T23:59:59').getTime() : null;
+    const soloMias = !!document.getElementById('plc-f-mias')?.checked;
+    // Fijadas arriba (la fijada más reciente primero), después las más nuevas.
+    const lista = preguntasLibresActuales
+      .filter(p => (!fDesde || p.createdAt >= fDesde) && (!fHasta || p.createdAt <= fHasta) && (!soloMias || p.autorId === uid))
+      .sort((a, b) => (b.fijadaEn || 0) - (a.fijadaEn || 0) || b.createdAt - a.createdAt);
+    feedEl.innerHTML = lista.length ? lista.map(p => {
+      const esDueño = p.autorId === uid;
+      const dentro24h = dentroDeVentana(p.createdAt);
+      const tituloAttr = escaparHtml(p.titulo || '');
+      const botones = `
+        <button type="button" class="btn btn--ghost btn-compartir-pregunta" data-pregunta-id="${escaparHtml(p.id)}" data-titulo="${tituloAttr}" style="font-size:12px; padding:4px 10px;">📤 Compartir</button>
+        ${esDirector ? `<button type="button" class="btn btn--ghost btn-fijar-pregunta" data-pregunta-id="${escaparHtml(p.id)}" data-fijada="${p.fijadaEn ? '1' : '0'}" style="font-size:12px; padding:4px 10px;">📌 ${p.fijadaEn ? 'Quitar fijado' : 'Fijar'}</button>` : ''}`;
+      return renderTarjetaSocial(`comunidad/preguntasLibres/${p.id}`, p.id, { ...p, titulo: p.titulo || '', fijada: !!p.fijadaEn, fotos: [] }, {
+        esDirector, uid, autorFotoUrl: p.autorFotoUrl, esDueño,
+        puedeEditar: (esDueño && dentro24h) || esDirector, puedeEliminar: (esDueño && dentro24h) || esDirector,
+        ocultarCompartirGenerico: true, extraBotonesHtml: botones
+      });
+    }).join('') : '<p class="text-soft">Todavía no hay preguntas. ¡Haz la primera!</p>';
+    aplicarClampTexto(feedEl);
+  }
+  render();
+  ['plc-f-desde', 'plc-f-hasta', 'plc-f-mias'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el && !el.dataset.conectado) { el.addEventListener('change', render); el.dataset.conectado = '1'; }
+  });
+  const btnLimpiar = document.getElementById('plc-btn-limpiar');
+  if (btnLimpiar && !btnLimpiar.dataset.conectado) {
+    btnLimpiar.dataset.conectado = '1';
+    btnLimpiar.addEventListener('click', () => {
+      ['plc-f-desde', 'plc-f-hasta'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+      const chk = document.getElementById('plc-f-mias'); if (chk) chk.checked = false;
+      render();
+    });
+  }
+
+  const btnPublicar = document.getElementById('plc-btn-publicar');
+  if (btnPublicar && !btnPublicar.dataset.conectado) {
+    btnPublicar.dataset.conectado = '1';
+    btnPublicar.addEventListener('click', async (ev) => {
+      const titulo = document.getElementById('plc-titulo-form').value.trim();
+      const texto = document.getElementById('plc-texto-form').value.trim();
+      const errorEl = document.getElementById('plc-form-error');
+      errorEl.classList.add('hidden');
+      if (titulo.length < 5) { errorEl.textContent = 'Escribe un título para tu pregunta (al menos unas palabras).'; errorEl.classList.remove('hidden'); return; }
+      const btn = ev.currentTarget;
+      btn.disabled = true; btn.textContent = 'Publicando...';
+      try {
+        await set(push(ref(db, 'comunidad/preguntasLibres')), {
+          autorId: uid, alumnoId: ctxAlumno.alumnoId || null,
+          alumnoNombre: perfil.nombre || ctxAlumno.nombre || 'Alguien',
+          autorFotoUrl: perfil.fotoUrl || '', programa: ctxAlumno.programa || null,
+          titulo, texto, createdAt: Date.now()
+        });
+        document.getElementById('plc-titulo-form').value = '';
+        document.getElementById('plc-texto-form').value = '';
+        btn.disabled = false; btn.textContent = 'Publicar pregunta';
+        cargarPreguntasLibres();
+      } catch (err) {
+        console.error('No se pudo publicar la pregunta:', err);
+        errorEl.textContent = 'No se pudo publicar. Intenta de nuevo en un momento.';
+        errorEl.classList.remove('hidden');
+        btn.disabled = false; btn.textContent = 'Publicar pregunta';
+      }
+    });
+  }
 }
 
 /* ============================================================

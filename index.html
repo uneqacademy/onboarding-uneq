@@ -1600,6 +1600,7 @@
         </div>
         <div class="comunidad-subtabs" id="comunidad-subtabs" role="tablist">
           <button type="button" class="comunidad-subtab is-activa" data-comunidad-tab="hitos" role="tab">Hitos de la Comunidad</button>
+          <button type="button" class="comunidad-subtab" data-comunidad-tab="preguntaslibres" role="tab">Preguntas de la Comunidad</button>
           <button type="button" class="comunidad-subtab" data-comunidad-tab="preguntas" role="tab">Preguntas BOX</button>
           <button type="button" class="comunidad-subtab" data-comunidad-tab="presentacion" role="tab">Presentación</button>
           <button type="button" class="comunidad-subtab" data-comunidad-tab="historias" role="tab">Historias Reales</button>
@@ -1656,6 +1657,35 @@
           </div>
           <p class="comunidad-filtros-contador hidden" id="chc-contador"></p>
           <div id="chc-feed"></div>
+        </div>
+
+        <!-- ===== Preguntas de la Comunidad (libres: cualquiera pregunta, la comunidad responde) ===== -->
+        <div class="comunidad-vista" id="comunidad-vista-preguntaslibres">
+          <div class="panel mb-16" id="plc-publicar-panel">
+            <div class="panel__header"><h3>Haz una pregunta a la comunidad</h3></div>
+            <div class="panel__body">
+              <div class="field mb-16">
+                <label>Título</label>
+                <input id="plc-titulo-form" maxlength="120" placeholder="Tu pregunta en una frase">
+              </div>
+              <div class="field mb-16">
+                <label>Detalle (opcional)</label>
+                <textarea id="plc-texto-form" maxlength="3000" placeholder="Cuéntanos más para que puedan ayudarte mejor..."></textarea>
+                <button type="button" class="btn btn--ghost btn-emoji-picker" data-target="plc-texto-form" style="font-size:12px; padding:4px 10px; margin-top:6px;">😊 Emoji</button>
+              </div>
+              <p id="plc-form-error" class="hidden" style="color:#C0392B; margin-bottom:12px;"></p>
+              <button type="button" class="btn btn--primary" id="plc-btn-publicar">Publicar pregunta</button>
+            </div>
+          </div>
+          <div class="panel mb-16" id="plc-filtros-panel">
+            <div class="panel__body" style="display:flex; gap:10px; flex-wrap:wrap; align-items:flex-end;">
+              <div class="field"><label>Desde</label><input type="date" id="plc-f-desde"></div>
+              <div class="field"><label>Hasta</label><input type="date" id="plc-f-hasta"></div>
+              <label style="display:flex; align-items:center; gap:6px; font-size:12.5px;"><input type="checkbox" id="plc-f-mias"> Solo mis preguntas</label>
+              <button type="button" class="btn btn--ghost" id="plc-btn-limpiar">Limpiar filtros</button>
+            </div>
+          </div>
+          <div id="plc-feed"></div>
         </div>
 
         <!-- ===== Preguntas BOX ===== -->

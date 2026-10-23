@@ -58,3 +58,13 @@ Se agregó `reacciones/$uid` bajo cada comentario de Hitos, Presentaciones e His
 `comunidad/historiasReales/$historiaId/...`). Cada persona (alumno o staff) solo escribe o quita **su propia** reacción
 (`auth.uid === $uid`), con `nombre` como texto de hasta 120 caracteres. Igual que las reacciones a la publicación.
 Prueba en el simulador: escribir `hitos/<id>/comentarios/<id>/reacciones/<tu uid>` = permitido; con el uid de otra persona = denegado.
+
+## Preguntas de la Comunidad (`comunidad/preguntasLibres`)
+Nodo nuevo, con la misma forma que `historiasReales`: lectura para cualquier sesión; crear = cualquiera (con su propio
+`autorId`); editar o borrar = el autor durante 24 h, y el director siempre. Comentarios, reacciones y respuestas igual
+que en Historias (solo el autor de la pregunta responde a un comentario).
+- `fijadaEn` y `estado` solo los puede **cambiar el director** (`.validate`): un autor no puede fijar su pregunta.
+- `titulo` entre 3 y 120 caracteres; `texto` hasta 3000.
+- El tope de **3 preguntas fijadas** lo controla la interfaz (las reglas no pueden contar registros).
+Pruebas en el simulador: como alumno, crear `comunidad/preguntasLibres/<id>` con `autorId` = su uid = permitido; con
+`fijadaEn` = denegado; `fijadaEn` como director sobre una pregunta existente = permitido.

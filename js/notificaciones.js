@@ -11,12 +11,13 @@ import { db, auth } from './firebase-config.js';
 import { escaparHtml } from './util-html.js';
 import { ref, get, onValue, update } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-database.js";
 import { getCurrentRole, setNav } from './main.js';
-import { irAHitoDesdeNotificacion } from './comunidad-uneq.js';
+import { irAHitoDesdeNotificacion, irAPreguntaLibre } from './comunidad-uneq.js';
 
 const TEXTOS_TIPO = {
   comentario: (n) => `${n} comentó tu hito`,
   reaccion: (n) => `${n} reaccionó a tu hito`,
-  respuesta: (n) => `${n} respondió tu comentario`
+  respuesta: (n) => `${n} respondió tu comentario`,
+  pregunta: (n) => `${n} respondió tu pregunta`
 };
 
 // Solo se avisan las respuestas del BOX de la última semana, y se revisan las
@@ -107,7 +108,8 @@ function textoNotificacion(n) {
   else if (n.tipo === 'box') texto = 'Tienes una respuesta nueva en el <strong>BOX Inteligente</strong>';
   else {
     texto = (TEXTOS_TIPO[n.tipo] ? TEXTOS_TIPO[n.tipo](escaparHtml(n.autorNombre || 'Alguien')) : 'Novedad en tu hito')
-      + (n.tituloHito ? `: "${escaparHtml(n.tituloHito)}"` : '');
+      + (n.tituloHito ? `: "${escaparHtml(n.tituloHito)}"` : '')
+      + (n.tituloPregunta ? `: "${escaparHtml(n.tituloPregunta)}"` : '');
   }
   return n.ejemplo ? `${texto} <em>(ejemplo)</em>` : texto;
 }
@@ -121,7 +123,7 @@ function renderLista() {
   listaEl.innerHTML = todas.map(([id, n]) => {
     const calculada = id.startsWith('calculada-');
     return `
-    <button type="button" class="notif-item ${n.leida ? '' : 'no-leida'}" data-notif-id="${escaparHtml(id)}" data-tipo="${escaparHtml(n.tipo || '')}" data-hito-id="${escaparHtml(n.hitoId || '')}">
+    <button type="button" class="notif-item ${n.leida ? '' : 'no-leida'}" data-notif-id="${escaparHtml(id)}" data-tipo="${escaparHtml(n.tipo || '')}" data-hito-id="${escaparHtml(n.hitoId || '')}" data-pregunta-id="${escaparHtml(n.preguntaId || '')}">
       ${textoNotificacion(n)}
       ${calculada && n.tipo === 'pago' ? '' : `<time>${new Date(n.createdAt).toLocaleDateString('es-CL', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}</time>`}
     </button>`;
@@ -129,7 +131,7 @@ function renderLista() {
 
   listaEl.querySelectorAll('.notif-item').forEach(item => {
     item.addEventListener('click', async () => {
-      const { notifId, hitoId, tipo } = item.dataset;
+      const { notifId, hitoId, preguntaId, tipo } = item.dataset;
       if (notifId.startsWith('calculada-')) {
         // Estos avisos se van solos: el de pago al regularizarse, el del BOX al abrir "Ver Respuesta".
         cerrarPanel();
@@ -148,7 +150,8 @@ function renderLista() {
         console.error('No se pudo marcar la notificación como leída:', err);
       }
       cerrarPanel();
-      if (hitoId) await irAHitoDesdeNotificacion(hitoId);
+      if (preguntaId) await irAPreguntaLibre(preguntaId);
+      else if (hitoId) await irAHitoDesdeNotificacion(hitoId);
     });
   });
 }
