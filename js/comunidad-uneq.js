@@ -156,13 +156,55 @@ async function revisarPresentacionAprobada() {
   presentacionAprobada = !!(presSnap && presSnap.exists() && presSnap.val().estado === 'aprobada');
 }
 
+/* --- Filtros plegables: un solo ícono arriba; al tocarlo se despliegan los filtros de la
+       pestaña activa (cada pestaña tiene sus paneles "...-filtros-staff/alumno-panel"). --- */
+const btnFiltrosComunidad = document.getElementById('comunidad-btn-filtros');
+const puntoFiltrosComunidad = document.getElementById('comunidad-btn-filtros-punto');
+const SELECTOR_PANEL_FILTROS = '.panel[id*="-filtros-"]';
+
+function panelesFiltros(nombre) {
+  return [...document.querySelectorAll(`#comunidad-vista-${nombre} ${SELECTOR_PANEL_FILTROS}`)];
+}
+
+function hayFiltrosActivos(paneles) {
+  return paneles.some(panel => !panel.classList.contains('hidden') &&
+    [...panel.querySelectorAll('input, select')].some(el => (el.type === 'checkbox' ? el.checked : !!el.value)));
+}
+
+function actualizarBotonFiltros() {
+  if (!btnFiltrosComunidad) return;
+  const paneles = panelesFiltros(subtabActual);
+  btnFiltrosComunidad.classList.toggle('hidden', !paneles.length);
+  btnFiltrosComunidad.setAttribute('aria-expanded', String(paneles.some(p => p.classList.contains('filtros-abiertos'))));
+  // Puntito: hay algún filtro puesto aunque el panel esté cerrado.
+  puntoFiltrosComunidad?.classList.toggle('hidden', !hayFiltrosActivos(paneles));
+}
+
+btnFiltrosComunidad?.addEventListener('click', () => {
+  const paneles = panelesFiltros(subtabActual);
+  const abrir = !paneles.some(p => p.classList.contains('filtros-abiertos'));
+  paneles.forEach(p => p.classList.toggle('filtros-abiertos', abrir));
+  actualizarBotonFiltros();
+});
+
+['change', 'input', 'click'].forEach(tipo => {
+  document.addEventListener(tipo, (ev) => {
+    if (ev.target.closest && ev.target.closest(SELECTOR_PANEL_FILTROS)) setTimeout(actualizarBotonFiltros, 0);
+  });
+});
+
 function mostrarSubtab(nombre, omitirCandado) {
   const role = getCurrentRole();
   if (role === 'alumno' && !presentacionAprobada && !omitirCandado) nombre = 'presentacion';
   subtabActual = nombre;
   document.querySelectorAll('[data-comunidad-tab]').forEach(btn => btn.classList.toggle('is-activa', btn.dataset.comunidadTab === nombre));
   document.querySelectorAll('.comunidad-vista').forEach(vista => vista.classList.toggle('is-activa', vista.id === `comunidad-vista-${nombre}`));
-  return CARGADORES[nombre]?.();
+  // Al cambiar de pestaña los filtros vuelven a quedar plegados, y la pestaña elegida se centra en la fila deslizable.
+  document.querySelectorAll(SELECTOR_PANEL_FILTROS).forEach(p => p.classList.remove('filtros-abiertos'));
+  document.querySelector(`[data-comunidad-tab="${nombre}"]`)?.scrollIntoView({ inline: 'center', block: 'nearest', behavior: 'smooth' });
+  actualizarBotonFiltros();
+  // Los paneles de staff/alumno se muestran u ocultan al terminar de cargar: se revisa de nuevo.
+  return Promise.resolve(CARGADORES[nombre]?.()).finally(actualizarBotonFiltros);
 }
 
 // Punto de entrada único: siempre revisa el estado real de la

@@ -1605,7 +1605,7 @@ if (btnActualizarBoxBegin) {
 }
 
 /* ============================================================
-   Preguntas de la Comunidad: todo lo respondido, de todos los
+   Preguntas BOX (pestaña de Comunidad UNEQ): todo lo respondido, de todos los
    mentores, filtrable por mentor y por temática.
    ============================================================ */
 export async function cargarPreguntasComunidad() {
