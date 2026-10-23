@@ -200,6 +200,10 @@
           ".write": "auth != null && (auth.uid === $mentorId || (!data.exists() && newData.child('alumnoId').val() === root.child('alumnoPorAuthUid').child(auth.uid).val()) || (data.exists() && !newData.exists() && data.child('alumnoId').val() === root.child('alumnoPorAuthUid').child(auth.uid).val() && data.child('respuesta').val() === null))",
           "estado": {
             ".write": "auth != null && (root.child('usuarios').child(auth.uid).child('roles').child('director').val() === true || root.child('usuarios').child(auth.uid).child('rol').val() === 'director')"
+          },
+          "fijadaEn": {
+            ".write": "auth != null && (root.child('usuarios').child(auth.uid).child('roles').child('director').val() === true || root.child('usuarios').child(auth.uid).child('rol').val() === 'director')",
+            ".validate": "!newData.exists() || newData.val() === data.val() || (root.child('usuarios').child(auth.uid).child('roles').child('director').val() === true || root.child('usuarios').child(auth.uid).child('rol').val() === 'director')"
           }
         }
       }
@@ -351,6 +355,9 @@
         "$alumnoId": {
           ".read": "auth != null",
           ".write": "auth != null && ((root.child('alumnoPorAuthUid').child(auth.uid).val() === $alumnoId && ((!data.exists() && newData.hasChildren(['texto', 'createdAt']) && newData.child('estado').val() === 'pendiente') || (data.exists() && newData.exists() && (now - data.child('createdAt').val()) < 86400000 && newData.child('createdAt').val() === data.child('createdAt').val()) || (data.exists() && !newData.exists() && (now - data.child('createdAt').val()) < 86400000))) || (data.exists() && (root.child('usuarios').child(auth.uid).child('roles').child('director').val() === true || root.child('usuarios').child(auth.uid).child('rol').val() === 'director')))",
+          "fijadaEn": {
+            ".validate": "!newData.exists() || newData.val() === data.val() || (root.child('usuarios').child(auth.uid).child('roles').child('director').val() === true || root.child('usuarios').child(auth.uid).child('rol').val() === 'director')"
+          },
           "estado": {
             ".write": "auth != null && ((root.child('usuarios').child(auth.uid).child('roles').child('director').val() === true || root.child('usuarios').child(auth.uid).child('rol').val() === 'director') || root.child('ciclos').child(root.child('alumnos').child($alumnoId).child('cicloActualId').val()).child('coachId').val() === auth.uid || (root.child('ciclos').child(root.child('alumnos').child($alumnoId).child('cicloActualId').val()).child('programa').val() === 'begin' && root.child('usuarios').child(auth.uid).child('coachCabeceraBegin').val() === true))"
           },
@@ -418,6 +425,9 @@
         ".read": "auth != null",
         "$historiaId": {
           ".write": "auth != null && ((!data.exists() && newData.child('autorId').val() === auth.uid) || (data.exists() && !newData.exists() && (data.child('autorId').val() === auth.uid && (now - data.child('createdAt').val()) < 86400000)) || (data.exists() && newData.exists() && data.child('autorId').val() === auth.uid && (now - data.child('createdAt').val()) < 86400000 && newData.child('createdAt').val() === data.child('createdAt').val() && newData.child('autorId').val() === data.child('autorId').val()) || (data.exists() && (root.child('usuarios').child(auth.uid).child('roles').child('director').val() === true || root.child('usuarios').child(auth.uid).child('rol').val() === 'director')))",
+          "fijadaEn": {
+            ".validate": "!newData.exists() || newData.val() === data.val() || (root.child('usuarios').child(auth.uid).child('roles').child('director').val() === true || root.child('usuarios').child(auth.uid).child('rol').val() === 'director')"
+          },
           "estado": {
             ".write": "auth != null && (root.child('usuarios').child(auth.uid).child('roles').child('director').val() === true || root.child('usuarios').child(auth.uid).child('rol').val() === 'director')"
           },
@@ -450,6 +460,9 @@
       ".read": "auth != null",
       "$hitoId": {
         ".write": "auth != null && ((!data.exists() && newData.child('alumnoIdPublicador').val() === root.child('alumnoPorAuthUid').child(auth.uid).val()) || (data.exists() && !newData.exists() && (data.child('alumnoIdPublicador').val() === root.child('alumnoPorAuthUid').child(auth.uid).val() && (now - data.child('createdAt').val()) < 86400000)) || (data.exists() && newData.exists() && data.child('alumnoIdPublicador').val() === root.child('alumnoPorAuthUid').child(auth.uid).val() && (now - data.child('createdAt').val()) < 86400000 && newData.child('createdAt').val() === data.child('createdAt').val() && newData.child('alumnoIdPublicador').val() === data.child('alumnoIdPublicador').val()) || (data.exists() && (root.child('usuarios').child(auth.uid).child('roles').child('director').val() === true || root.child('usuarios').child(auth.uid).child('rol').val() === 'director')))",
+        "fijadaEn": {
+          ".validate": "!newData.exists() || newData.val() === data.val() || (root.child('usuarios').child(auth.uid).child('roles').child('director').val() === true || root.child('usuarios').child(auth.uid).child('rol').val() === 'director')"
+        },
         "estado": {
           ".write": "auth != null && (root.child('alumnoPorAuthUid').child(auth.uid).exists() || root.child('usuarios').child(auth.uid).child('roles').child('director').val() === true || root.child('usuarios').child(auth.uid).child('rol').val() === 'director')"
         },

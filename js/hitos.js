@@ -15,6 +15,7 @@ import { escaparHtml, linkificarSeguro } from './util-html.js';
 import { ref, get, set, push, update, remove } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-database.js";
 import { ref as storageRef, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-storage.js";
 import { getCurrentRole } from './main.js';
+import { ordenarFijadasPrimero, registrarFijadas, botonFijar, etiquetaFijada } from './fijados.js';
 
 const FASES_HITOS = { fase1: 'Fase 1: Claridad y Fundamentos', fase2: 'Fase 2: Cliente Soñado', fase3: 'Fase 3: Oferta y Método', fase4: 'Fase 4: Acción y Sistemas' };
 const TAMANO_MAXIMO_FOTO_HITO = 10 * 1024 * 1024;
@@ -552,6 +553,12 @@ function renderFeedHitos(hitosVisibles, usuarios, ctx) {
     );
   }
 
+  // Solo en "Hitos de la Comunidad" (no en Mis Hitos): las fijadas por el director van arriba.
+  if (!ctx.enMisHitos) {
+    registrarFijadas('hitos', hitosVisibles, ([, h]) => h.fijadaEn);
+    lista = ordenarFijadasPrimero(lista, ([, h]) => h.fijadaEn);
+  }
+
   if (ids.contador) {
     const contadorEl = document.getElementById(ids.contador);
     if (contadorEl) {
@@ -595,6 +602,7 @@ function renderFeedHitos(hitosVisibles, usuarios, ctx) {
               <span class="hito-autor__fotos">${(ctx.fotosPublicacion && ctx.fotosPublicacion.get(hitoId) || [PLACEHOLDER_FOTO_HITO]).map(url => `<img src="${escaparHtml(url)}" alt="">`).join('')}</span>
               <strong>${escaparHtml(h.nombreAutor)}</strong>
               ${etiquetaProgramaHito(h.programa)}
+              ${ctx.enMisHitos ? '' : etiquetaFijada(h.fijadaEn)}
             </div>
             <p class="text-soft" style="font-size:11px; margin:2px 0 0;">${escaparHtml(FASES_HITOS[h.fase] || h.fase)} · <strong>${escaparHtml(h.tituloHito)}</strong></p>
           </div>
@@ -608,6 +616,7 @@ function renderFeedHitos(hitosVisibles, usuarios, ctx) {
         <div style="display:flex; gap:8px; margin-top:12px; flex-wrap:wrap; align-items:center;">
           <button type="button" class="btn ${yaReacciono ? 'btn--primary' : 'btn--ghost'} btn-reaccion-hito" data-hito-id="${hitoId}" style="font-size:12px; padding:4px 10px;">❤️ ${totalReacciones}</button>
           <button type="button" class="btn ${comentariosExpandidos ? 'btn--primary' : 'btn--ghost'} btn-comentarios-hito" data-hito-id="${hitoId}" aria-expanded="${comentariosExpandidos}" title="Ver todos los comentarios" style="font-size:12px; padding:4px 10px;">💬 <span class="contador-comentarios-hito">${totalComentarios}</span></button>
+          ${ctx.esDirector && !ctx.enMisHitos ? botonFijar('hitos', `hitos/${hitoId}`, h.fijadaEn) : ''}
           ${esAutor ? `<button type="button" class="btn btn--ghost btn-compartir-hito" data-hito-id="${hitoId}" data-titulo="${escaparHtml(h.tituloHito)}" style="font-size:12px; padding:4px 10px;">📤 Compartir</button>` : ''}
           ${puedeEditar ? `<button type="button" class="btn btn--ghost btn-editar-hito-texto" data-hito-id="${hitoId}" style="font-size:12px; padding:4px 10px;">✏️ Editar</button>` : ''}
           ${puedeEliminar ? `<button type="button" class="btn btn--ghost btn-eliminar-hito" data-hito-id="${hitoId}" style="font-size:12px; padding:4px 10px; color:#C0392B;">Eliminar</button>` : ''}

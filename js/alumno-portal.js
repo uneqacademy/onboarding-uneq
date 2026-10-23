@@ -21,6 +21,7 @@ import { initializeApp, deleteApp } from "https://www.gstatic.com/firebasejs/12.
 import { setNav, getCurrentRole } from './main.js';
 import { getAuth, createUserWithEmailAndPassword, signOut as signOutSecundaria, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-auth.js";
 import { programaLabel } from './ciclos.js';
+import { ordenarFijadasPrimero, registrarFijadas, botonFijar, etiquetaFijada } from './fijados.js';
 
 function generarPassword() {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789';
@@ -1679,6 +1680,9 @@ export async function cargarPreguntasComunidad() {
     });
   });
   todas.sort((a, b) => b.createdAt - a.createdAt);
+  // Las que el director fijó van arriba (hasta 3).
+  registrarFijadas('box', todas, p => p.fijadaEn);
+  todas = ordenarFijadasPrimero(todas, p => p.fijadaEn);
 
   // Las temáticas se arman con las que realmente aparecen (cascada:
   // si se elige un mentor, solo se ofrecen sus propias temáticas).
@@ -1740,9 +1744,10 @@ export async function cargarPreguntasComunidad() {
           return `
             <div class="panel mb-16" style="padding:14px;" data-fila-comunidad data-mentor-id="${p.mentorId}" data-pregunta-id="${p.preguntaId}">
               <div class="flex-between">
-                <span class="badge badge--activo" style="font-size:10px;">${p.tematica || 'Sin tema'}</span>
+                <span><span class="badge badge--activo" style="font-size:10px;">${p.tematica || 'Sin tema'}</span>${etiquetaFijada(p.fijadaEn)}</span>
                 ${esDirector ? `<button type="button" class="btn btn--ghost btn-moderar-pregunta-comunidad" data-oculta="${p.estado === 'oculta' ? '1' : '0'}" style="font-size:10px; padding:2px 8px; ${p.estado === 'oculta' ? 'color:#C0392B;' : ''}">${p.estado === 'oculta' ? '⚠️ Oculta — Mostrar' : 'Ocultar'}</button>` : ''}
               </div>
+              ${esDirector ? `<div style="margin:6px 0 0;">${botonFijar('box', `box/${p.mentorId}/${p.preguntaId}`, p.fijadaEn)}</div>` : ''}
               <p class="text-soft" style="font-size:12px; margin:6px 0 2px;">${p.alumnoNombre ? `${escaparHtml(p.alumnoNombre)} — ` : ''}Pregunta para ${escaparHtml(mentorNombre)} — ${formatFecha(new Date(p.createdAt).toISOString().slice(0, 10))}</p>
               <p class="texto-clamp" data-clamp style="margin:4px 0;">${linkify(p.pregunta)}</p>
               <button type="button" class="btn-ver-mas-texto hidden" data-clamp-btn></button>

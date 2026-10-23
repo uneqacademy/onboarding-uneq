@@ -16,6 +16,7 @@ import { getCurrentRole, showView, marcarNavActivo } from './main.js';
 import { aplicarClampTexto } from './texto-clamp.js';
 import { cargarHitosComunidad } from './hitos.js';
 import { cargarPreguntasComunidad } from './alumno-portal.js';
+import { ordenarFijadasPrimero, registrarFijadas, botonFijar } from './fijados.js';
 
 const VENTANA_EDICION_MS = 24 * 60 * 60 * 1000;
 const TAMANO_MAXIMO_FOTO = 10 * 1024 * 1024;
@@ -618,6 +619,9 @@ function activarInteraccionSocial() {
   });
 }
 function cssEscape(s) { return (s || '').replace(/[.:#/]/g, '\\$&'); }
+// Al fijar o quitar el fijado (fijados.js) se vuelve a pintar la pestaña abierta.
+document.addEventListener('fijado-cambiado', () => { CARGADORES[subtabActual]?.(); });
+
 function recargarTarjeta(basePathOEliminado, forzarRecarga) {
   if (subtabActual === 'presentacion') cargarPresentacion();
   else if (subtabActual === 'historias') cargarHistoriasReales();
@@ -654,7 +658,6 @@ async function subirFotos(storagePrefix, id, archivos) {
    responde con los mismos comentarios, ❤️ y "Responder" que el resto. El
    director puede fijar hasta 3 arriba y moderar. Se comparte por WhatsApp.
    ============================================================ */
-const MAX_PREGUNTAS_FIJADAS = 3;
 const URL_APP_ENLACES = 'https://app.uneqacademy.com/';
 // Con true, el enlace pasa por hitos.uneqacademy.com/?pregunta=ID para mostrar la tarjeta con el título en WhatsApp.
 // Dejar en false hasta que la función previewHito (repo de funciones) esté desplegada con soporte para "?pregunta=".
@@ -680,22 +683,6 @@ function activarInteraccionPreguntasLibres() {
       const mensaje = encodeURIComponent(`Tengo una pregunta para la comunidad de UNEQ Mentoring: "${titulo}"\n\nEntra y respóndeme acá:\n${enlacePreguntaLibre(preguntaId)}`);
       window.open(`https://wa.me/?text=${mensaje}`, '_blank');
       return;
-    }
-    const btnFijar = ev.target.closest('.btn-fijar-pregunta');
-    if (btnFijar) {
-      const { preguntaId, fijada } = btnFijar.dataset;
-      const fijar = fijada !== '1';
-      if (fijar && preguntasLibresActuales.filter(p => p.fijadaEn).length >= MAX_PREGUNTAS_FIJADAS) {
-        alert(`Ya hay ${MAX_PREGUNTAS_FIJADAS} preguntas fijadas. Quita una para fijar otra.`);
-        return;
-      }
-      try {
-        await update(ref(db, `comunidad/preguntasLibres/${preguntaId}`), { fijadaEn: fijar ? Date.now() : null });
-        cargarPreguntasLibres();
-      } catch (err) {
-        console.error('No se pudo fijar la pregunta:', err);
-        alert('No se pudo cambiar el fijado. Intenta de nuevo.');
-      }
     }
   });
 }
@@ -724,6 +711,7 @@ async function cargarPreguntasLibres() {
   preguntasLibresActuales = Object.entries(snap.exists() ? snap.val() : {})
     .map(([id, p]) => ({ id, ...p }))
     .filter(p => esDirector || p.estado !== 'oculta');
+  registrarFijadas('preguntaslibres', preguntasLibresActuales, p => p.fijadaEn);
 
   function render() {
     const fDesde = document.getElementById('plc-f-desde')?.value ? new Date(document.getElementById('plc-f-desde').value + 'T00:00:00').getTime() : null;
@@ -739,7 +727,7 @@ async function cargarPreguntasLibres() {
       const tituloAttr = escaparHtml(p.titulo || '');
       const botones = `
         <button type="button" class="btn btn--ghost btn-compartir-pregunta" data-pregunta-id="${escaparHtml(p.id)}" data-titulo="${tituloAttr}" style="font-size:12px; padding:4px 10px;">📤 Compartir</button>
-        ${esDirector ? `<button type="button" class="btn btn--ghost btn-fijar-pregunta" data-pregunta-id="${escaparHtml(p.id)}" data-fijada="${p.fijadaEn ? '1' : '0'}" style="font-size:12px; padding:4px 10px;">📌 ${p.fijadaEn ? 'Quitar fijado' : 'Fijar'}</button>` : ''}`;
+        ${esDirector ? botonFijar('preguntaslibres', `comunidad/preguntasLibres/${p.id}`, p.fijadaEn) : ''}`;
       return renderTarjetaSocial(`comunidad/preguntasLibres/${p.id}`, p.id, { ...p, titulo: p.titulo || '', fijada: !!p.fijadaEn, fotos: [] }, {
         esDirector, uid, autorFotoUrl: p.autorFotoUrl, esDueño,
         puedeEditar: (esDueño && dentro24h) || esDirector, puedeEliminar: (esDueño && dentro24h) || esDirector,
@@ -906,6 +894,8 @@ async function cargarPresentacion() {
       lista = lista.filter(p => (!fDesde || p.createdAt >= fDesde) && (!fHasta || p.createdAt <= fHasta));
     }
 
+    registrarFijadas('presentacion', conDatos, p => p.fijadaEn);
+    lista = ordenarFijadasPrimero(lista, p => p.fijadaEn);
     const feedEl = document.getElementById('pres-feed');
     feedEl.innerHTML = lista.length ? lista.map(p => {
       const basePath = `comunidad/presentaciones/${p.alumnoId}`;
@@ -915,9 +905,10 @@ async function cargarPresentacion() {
       const extraFooterHtml = puedeAprobar && p.estado !== 'aprobada'
         ? `<div style="display:flex; gap:8px; padding:0 14px 14px;"><button type="button" class="btn btn--primary btn-aprobar-presentacion" data-alumno-id="${p.alumnoId}" style="font-size:12px; padding:5px 12px;">✓ Aprobar</button></div>`
         : '';
-      return renderTarjetaSocial(basePath, p.alumnoId, p, {
+      return renderTarjetaSocial(basePath, p.alumnoId, { ...p, fijada: !!p.fijadaEn }, {
         esDirector, uid, autorFotoUrl: p.fotoUrl, esDueño,
-        puedeEditar: (esDueño && dentro24h) || esDirector, puedeEliminar: (esDueño && dentro24h) || esDirector, extraFooterHtml
+        puedeEditar: (esDueño && dentro24h) || esDirector, puedeEliminar: (esDueño && dentro24h) || esDirector, extraFooterHtml,
+        extraBotonesHtml: esDirector ? botonFijar('presentacion', basePath, p.fijadaEn) : ''
       });
     }).join('') : '<p class="text-soft">No hay presentaciones con ese filtro todavía.</p>';
     aplicarClampTexto(feedEl);
@@ -1037,6 +1028,8 @@ async function cargarHistoriasReales() {
     })
     .sort((a, b) => b.createdAt - a.createdAt);
 
+  registrarFijadas('historias', todas, h => h.fijadaEn);
+  todas = ordenarFijadasPrimero(todas, h => h.fijadaEn);
   await completarFotosFaltantes(todas);
 
   if (esStaff) {
@@ -1084,9 +1077,10 @@ async function cargarHistoriasReales() {
       const basePath = `comunidad/historiasReales/${h.id}`;
       const esDueño = h.autorId === uid;
       const dentro24h = dentroDeVentana(h.createdAt);
-      return renderTarjetaSocial(basePath, h.id, { ...h, alumnoNombre: h.alumnoNombre }, {
+      return renderTarjetaSocial(basePath, h.id, { ...h, alumnoNombre: h.alumnoNombre, fijada: !!h.fijadaEn }, {
         esDirector, uid, autorFotoUrl: h.fotoUrl, esDueño,
-        puedeEditar: (esDueño && dentro24h) || esDirector, puedeEliminar: (esDueño && dentro24h) || esDirector
+        puedeEditar: (esDueño && dentro24h) || esDirector, puedeEliminar: (esDueño && dentro24h) || esDirector,
+        extraBotonesHtml: esDirector ? botonFijar('historias', basePath, h.fijadaEn) : ''
       });
     }).join('') : '<p class="text-soft">Todavía no hay historias que mostrar.</p>';
     aplicarClampTexto(feedEl);
