@@ -147,6 +147,7 @@ function renderSelectorRol() {
 }
 
 export function showLogin() {
+  try { sessionStorage.removeItem(CLAVE_SECCION); } catch (err) { /* no pasa nada */ }
   document.body.classList.remove('tema-alumno-oscuro', 'tema-begin', 'tema-exit');
   document.getElementById('view-splash').classList.add('hidden');
   document.getElementById('app-shell').classList.add('hidden');
@@ -197,8 +198,33 @@ export function marcarNavActivo(section) {
     i.classList.toggle('is-active', i.dataset.nav === section));
 }
 
+/* --- Recordar la sección al actualizar la página ---
+   Se guarda en sessionStorage (sobrevive a recargar la página o la app, y se borra al cerrar
+   sesión). Se lee una sola vez al cargar el módulo, antes de que el login lleve al Dashboard. */
+const CLAVE_SECCION = 'uneq.seccionActiva';
+let seccionGuardadaAlCargar = null;
+try { seccionGuardadaAlCargar = JSON.parse(sessionStorage.getItem(CLAVE_SECCION) || 'null'); } catch (err) { /* sin almacenamiento: siempre al Dashboard */ }
+
+function guardarSeccionActiva(section) {
+  if (!currentRole || ![...document.querySelectorAll('.nav-item[data-nav]')].some(i => i.dataset.nav === section)) return;
+  try { sessionStorage.setItem(CLAVE_SECCION, JSON.stringify({ role: currentRole, section })); } catch (err) { /* no pasa nada */ }
+}
+
+// Se llama una vez que terminó de entrar a la app. Se "toca" el ítem del menú, así se ejecuta
+// también la carga de datos de esa sección (igual que si la persona hubiera hecho clic).
+export function restaurarSeccionGuardada() {
+  const guardada = seccionGuardadaAlCargar;
+  seccionGuardadaAlCargar = null;
+  if (!guardada || guardada.role !== currentRole || guardada.section === 'dashboard') return false;
+  const item = [...document.querySelectorAll('.nav-item[data-nav]')].find(i => i.dataset.nav === guardada.section);
+  if (!item || item.classList.contains('hidden')) return false;
+  item.click();
+  return true;
+}
+
 export function setNav(section) {
   marcarNavActivo(section);
+  guardarSeccionActiva(section);
 
   if (section === 'dashboard') {
     const vista = currentRole === 'director' ? 'view-dashboard-director'
