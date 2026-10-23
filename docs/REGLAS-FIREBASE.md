@@ -68,3 +68,11 @@ que en Historias (solo el autor de la pregunta responde a un comentario).
 - El tope de **3 preguntas fijadas** lo controla la interfaz (las reglas no pueden contar registros).
 Pruebas en el simulador: como alumno, crear `comunidad/preguntasLibres/<id>` con `autorId` = su uid = permitido; con
 `fijadaEn` = denegado; `fijadaEn` como director sobre una pregunta existente = permitido.
+
+## Publicaciones fijadas (`fijadaEn`)
+El director puede fijar hasta 3 publicaciones por sección de Comunidad UNEQ. Se guarda `fijadaEn` (fecha) en cada
+publicación: `hitos/$hitoId`, `comunidad/presentaciones/$alumnoId`, `comunidad/historiasReales/$historiaId`,
+`comunidad/preguntasLibres/$preguntaId` y `box/$mentorId/$preguntaId`. En todos los casos solo el **director** puede
+ponerlo, quitarlo o cambiarlo (`.validate`); un autor que edite su publicación debe dejarlo igual. En `box` además hay
+`.write` de director sobre `fijadaEn` (ahí el director no tenía escritura general). El tope de 3 lo controla la interfaz.
+Pruebas en el simulador: como director, escribir `hitos/<id>/fijadaEn` = permitido; como alumno autor de ese hito = denegado.
