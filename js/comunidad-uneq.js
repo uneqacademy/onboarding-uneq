@@ -192,20 +192,44 @@ document.querySelectorAll('.nav-item[data-nav="comunidad-uneq"]').forEach(item =
 // es sobre tu propio hito — y solo hace scroll una vez que la
 // publicación ya está realmente en pantalla — sin simular clics ni
 // adivinar cuánto tarda la carga.
-export async function irAHitoDesdeNotificacion(hitoId) {
+// omitirCandado: false cuando el hito es de otra persona (enlace compartido por WhatsApp).
+export async function irAHitoDesdeNotificacion(hitoId, omitirCandado = true) {
   showView('view-comunidad-uneq');
   marcarNavActivo('comunidad-uneq');
   const topbar = document.getElementById('topbar-title');
   if (topbar) topbar.textContent = 'Comunidad UNEQ';
-  await irAComunidadUneq('hitos', true);
-  const elDestino = document.getElementById(`hito-${hitoId}`);
+  await irAComunidadUneq('hitos', omitirCandado);
+  // Si la publicación aún no se pintó (carga en curso), se espera un poco antes de rendirse.
+  let elDestino = null;
+  for (let intento = 0; intento < 10 && !elDestino; intento++) {
+    elDestino = document.getElementById(`hito-${hitoId}`);
+    if (!elDestino) await new Promise(resolver => setTimeout(resolver, 300));
+  }
   if (elDestino) {
-    window.location.hash = `#hito-${hitoId}`;
     elDestino.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    elDestino.style.outline = '2px solid var(--color-accent)';
-    setTimeout(() => { elDestino.style.outline = ''; }, 2000);
+    // Las fotos terminan de cargar después y mueven la página: se vuelve a centrar.
+    setTimeout(() => elDestino.scrollIntoView({ block: 'center' }), 900);
+    elDestino.style.outline = '3px solid var(--color-accent)';
+    setTimeout(() => { elDestino.style.outline = ''; }, 3000);
   }
 }
+
+// Enlace compartido por WhatsApp: llega como ...app.uneqacademy.com/#hito-ID (ver previewHito
+// en las funciones). Se llama al terminar de entrar a la app —con la sesión ya iniciada, pida
+// o no contraseña— y lleva directo a esa publicación. Devuelve true si había un enlace.
+export async function abrirHitoDeEnlace() {
+  const coincide = /^#hito-([A-Za-z0-9_-]+)$/.exec(window.location.hash);
+  if (!coincide) return false;
+  // Se limpia el enlace para que recargar la app o volver a entrar más tarde no repita el salto.
+  history.replaceState(null, '', window.location.pathname + window.location.search);
+  await irAHitoDesdeNotificacion(coincide[1], false);
+  return true;
+}
+
+// App ya abierta (por ejemplo instalada) y se toca otro enlace de hito.
+window.addEventListener('hashchange', () => {
+  if (getCurrentRole()) abrirHitoDeEnlace();
+});
 
 /* --- Nombre público: el que el alumno eligió mostrar en la Comunidad --- */
 function nombrePublicoDeAlumno(a) {

@@ -134,7 +134,12 @@ function renderLista() {
         setNav(tipo === 'pago' ? 'soporte-alumnos' : 'box-consultas');
         return;
       }
-      if (modoDemo) { cerrarPanel(); return; }
+      if (modoDemo) {
+        // Ejemplo: no hay un hito real, pero se abre la Comunidad para ver el recorrido.
+        cerrarPanel();
+        await irAHitoDesdeNotificacion('demo');
+        return;
+      }
       try {
         await update(ref(db, `notificaciones/${alumnoIdActual}/${notifId}`), { leida: true });
       } catch (err) {

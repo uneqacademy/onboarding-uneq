@@ -20,7 +20,7 @@ import { ref, get, set } from "https://www.gstatic.com/firebasejs/12.17.1/fireba
 import { applyRole, showLogin, RUTAS_AGENDAMIENTO } from './main.js';
 import { initAlumnosModule } from './alumnos.js';
 import { cargarDashboardAlumno, cargarBoxAlumno } from './alumno-portal.js';
-import './comunidad-uneq.js';
+import { abrirHitoDeEnlace } from './comunidad-uneq.js';
 import './pre-onboarding.js';
 import { iniciarNotificaciones } from './notificaciones.js';
 
@@ -224,6 +224,7 @@ onAuthStateChanged(auth, async (user) => {
         await cargarDashboardAlumno(alumnoId);
         await cargarBoxAlumno();
         iniciarNotificaciones();
+        abrirHitoDeEnlace();
         return;
       }
 
@@ -282,6 +283,7 @@ onAuthStateChanged(auth, async (user) => {
     inputPass.value = '';
     applyRole(rolActivo, nombre, roles);
     await initAlumnosModule();
+    abrirHitoDeEnlace();
   } catch (err) {
     mostrarError('Error al cargar tu perfil. Intenta de nuevo.');
     await signOut(auth);
