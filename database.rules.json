@@ -455,6 +455,30 @@
       }
     },
 
+    "ranking": {
+      "podio": { ".read": "auth != null" },
+      "posiciones": {
+        "$alumnoId": {
+          ".read": "auth != null && (root.child('alumnoPorAuthUid').child(auth.uid).val() === $alumnoId || (root.child('usuarios').child(auth.uid).child('roles').child('director').val() === true || root.child('usuarios').child(auth.uid).child('rol').val() === 'director'))"
+        }
+      }
+    },
+
+    "puntosMarcas": {
+      "$alumnoId": {
+        "entradas": {
+          "$dia": {
+            ".write": "auth != null && root.child('alumnoPorAuthUid').child(auth.uid).val() === $alumnoId && !data.exists() && newData.isNumber() && $dia.matches(/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/)"
+          }
+        },
+        "compartidos": {
+          "$publicacionId": {
+            ".write": "auth != null && root.child('alumnoPorAuthUid').child(auth.uid).val() === $alumnoId && !data.exists() && newData.isNumber() && $publicacionId.length <= 150"
+          }
+        }
+      }
+    },
+
     "hitos": {
       ".indexOn": ["proyectoId"],
       ".read": "auth != null",

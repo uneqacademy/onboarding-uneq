@@ -28,6 +28,8 @@ import { cargarDashboardAlumno, cargarBoxAlumno } from './alumno-portal.js';
 import { abrirHitoDeEnlace } from './comunidad-uneq.js';
 import './pre-onboarding.js';
 import { iniciarNotificaciones } from './notificaciones.js';
+import './ranking.js';
+import { marcarEntradaDelDia } from './puntos-marcas.js';
 
 const inputEmail = document.getElementById('login-email');
 const inputPass = document.getElementById('login-pass');
@@ -229,6 +231,7 @@ onAuthStateChanged(auth, async (user) => {
         await cargarDashboardAlumno(alumnoId);
         await cargarBoxAlumno();
         iniciarNotificaciones();
+        marcarEntradaDelDia();
         await abrirDestinoInicial();
         return;
       }

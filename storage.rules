@@ -29,6 +29,12 @@ service firebase.storage {
       allow create, update: if (esDe(mentorId) || mentorId == 'director-ia') && fotoOk();
       allow delete: if esDe(mentorId) || mentorId == 'director-ia';
     }
+    // Foto del premio del mes del ranking (la sube el director desde Configuración).
+    match /premio-ranking/{archivo} {
+      allow read: if autenticado();
+      allow create, update: if autenticado() && fotoOk();
+      allow delete: if autenticado();
+    }
     match /resumenes-mentorias/{mentorId}/{mentoriaId} {
       allow read: if autenticado();
       allow create, update: if esDe(mentorId) && tamanoOk();

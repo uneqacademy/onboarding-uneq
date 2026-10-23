@@ -12,7 +12,9 @@
    vista "Mentores".
    ============================================================ */
 
-import { db, storage } from './firebase-config.js';
+import { db, storage, app } from './firebase-config.js';
+import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-functions.js";
+import { tablaPuntos } from './gamificacion-puntos.js';
 import { escaparHtml } from './util-html.js';
 import { ref, get, set, push, update, remove } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-database.js";
 import { ref as storageRef, uploadBytes, getDownloadURL, deleteObject } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-storage.js";
@@ -198,6 +200,7 @@ export async function cargarConfiguracion() {
 
   await cargarArchivosMetodologia();
   await cargarHitosDefinidos();
+  await cargarGamificacion();
 }
 
 document.querySelectorAll('.nav-item[data-nav="configuracion"]').forEach(item => {
@@ -356,3 +359,151 @@ if (btnQuitarFotoDirectorIa) {
     }
   });
 }
+
+
+/* --- Ranking: tabla de puntos y premio del mes --- */
+const RUTA_FOTO_PREMIO = 'premio-ranking/premio';
+const TAMANO_MAXIMO_FOTO_PREMIO = 5 * 1024 * 1024;
+const PLACEHOLDER_FOTO_PREMIO = 'data:image/svg+xml;utf8,' + encodeURIComponent(
+  '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 80"><rect width="80" height="80" rx="12" fill="#E4E7EC"/><text x="40" y="52" font-size="34" text-anchor="middle">🎁</text></svg>'
+);
+
+async function cargarGamificacion() {
+  const tablaEl = document.getElementById('gami-tabla');
+  if (!tablaEl) return;
+  const snap = await get(ref(db, 'configuracion/gamificacion'));
+  const c = snap.exists() ? snap.val() : {};
+
+  tablaEl.innerHTML = `
+    <div style="display:grid; grid-template-columns: 1fr 84px 84px; gap:8px 10px; align-items:center; font-size:13px;">
+      <span class="text-soft" style="font-size:11.5px;">Acción</span>
+      <span class="text-soft" style="font-size:11.5px;">Puntos</span>
+      <span class="text-soft" style="font-size:11.5px;">Tope por día</span>
+      ${tablaPuntos(c.puntos).map(a => `
+        <span>${escaparHtml(a.etiqueta)}</span>
+        <input type="number" min="0" max="1000" step="1" inputmode="numeric" id="gami-puntos-${a.clave}" value="${a.puntos}">
+        ${a.topeEditable
+          ? `<input type="number" min="0" max="100" step="1" inputmode="numeric" id="gami-tope-${a.clave}" value="${a.tope || ''}" placeholder="sin tope">`
+          : '<span class="text-soft">—</span>'}`).join('')}
+    </div>`;
+
+  const premio = c.premio || {};
+  document.getElementById('gami-premio-texto').value = premio.texto || '';
+  document.getElementById('gami-premio-foto-preview').src = premio.fotoUrl || PLACEHOLDER_FOTO_PREMIO;
+  document.getElementById('btn-gami-premio-quitar-foto').classList.toggle('hidden', !premio.fotoUrl);
+}
+
+document.getElementById('btn-gami-guardar-puntos')?.addEventListener('click', async (ev) => {
+  const btn = ev.currentTarget;
+  const errorEl = document.getElementById('gami-error-puntos');
+  errorEl.classList.add('hidden');
+  const puntos = {};
+  for (const a of tablaPuntos({})) {
+    const valor = Number(document.getElementById(`gami-puntos-${a.clave}`).value);
+    if (!Number.isInteger(valor) || valor < 0 || valor > 1000) {
+      errorEl.textContent = `Revisa «${a.etiqueta}»: los puntos deben ser un número entero entre 0 y 1000.`;
+      errorEl.classList.remove('hidden');
+      return;
+    }
+    let tope = a.tope; // las acciones sin tope editable conservan el suyo
+    if (a.topeEditable) {
+      const texto = document.getElementById(`gami-tope-${a.clave}`).value.trim();
+      tope = texto === '' ? 0 : Number(texto);
+      if (!Number.isInteger(tope) || tope < 0 || tope > 100) {
+        errorEl.textContent = `Revisa «${a.etiqueta}»: el tope por día debe ser un número entero (o dejarse vacío).`;
+        errorEl.classList.remove('hidden');
+        return;
+      }
+    }
+    puntos[a.clave] = { puntos: valor, tope };
+  }
+  btn.disabled = true;
+  try {
+    await set(ref(db, 'configuracion/gamificacion/puntos'), puntos);
+    btn.textContent = 'Guardado ✓';
+    setTimeout(() => { btn.textContent = 'Guardar puntos'; }, 2000);
+  } catch (err) {
+    console.error('No se pudo guardar la tabla de puntos:', err);
+    errorEl.textContent = 'No se pudo guardar. Intenta de nuevo.';
+    errorEl.classList.remove('hidden');
+  } finally {
+    btn.disabled = false;
+  }
+});
+
+document.getElementById('btn-gami-guardar-premio')?.addEventListener('click', async (ev) => {
+  const btn = ev.currentTarget;
+  const errorEl = document.getElementById('gami-error-premio');
+  errorEl.classList.add('hidden');
+  btn.disabled = true;
+  try {
+    await update(ref(db, 'configuracion/gamificacion/premio'), { texto: document.getElementById('gami-premio-texto').value.trim() });
+    btn.textContent = 'Guardado ✓';
+    setTimeout(() => { btn.textContent = 'Guardar premio'; }, 2000);
+  } catch (err) {
+    console.error('No se pudo guardar el premio:', err);
+    errorEl.textContent = 'No se pudo guardar. Intenta de nuevo.';
+    errorEl.classList.remove('hidden');
+  } finally {
+    btn.disabled = false;
+  }
+});
+
+const btnPremioFoto = document.getElementById('btn-gami-premio-foto');
+const inputPremioFoto = document.getElementById('gami-premio-foto-input');
+if (btnPremioFoto && inputPremioFoto) {
+  btnPremioFoto.addEventListener('click', () => inputPremioFoto.click());
+  inputPremioFoto.addEventListener('change', async () => {
+    const archivo = inputPremioFoto.files[0];
+    inputPremioFoto.value = '';
+    if (!archivo) return;
+    if (archivo.size > TAMANO_MAXIMO_FOTO_PREMIO) { alert('La imagen pesa más de 5MB. Elige una más liviana.'); return; }
+    btnPremioFoto.disabled = true;
+    try {
+      const fotoRef = storageRef(storage, RUTA_FOTO_PREMIO);
+      await uploadBytes(fotoRef, archivo);
+      const url = await getDownloadURL(fotoRef);
+      await update(ref(db, 'configuracion/gamificacion/premio'), { fotoUrl: url });
+      document.getElementById('gami-premio-foto-preview').src = url;
+      document.getElementById('btn-gami-premio-quitar-foto').classList.remove('hidden');
+    } catch (err) {
+      console.error('Error subiendo la foto del premio:', err);
+      alert('No se pudo subir la foto. Intenta de nuevo.');
+    } finally {
+      btnPremioFoto.disabled = false;
+    }
+  });
+}
+
+document.getElementById('btn-gami-premio-quitar-foto')?.addEventListener('click', async (ev) => {
+  const btn = ev.currentTarget;
+  if (!confirm('¿Quitar la foto del premio?')) return;
+  btn.disabled = true;
+  try {
+    await update(ref(db, 'configuracion/gamificacion/premio'), { fotoUrl: null });
+    try { await deleteObject(storageRef(storage, RUTA_FOTO_PREMIO)); } catch (e) { /* si ya no existe, da igual */ }
+    document.getElementById('gami-premio-foto-preview').src = PLACEHOLDER_FOTO_PREMIO;
+    btn.classList.add('hidden');
+  } catch (err) {
+    console.error('Error quitando la foto del premio:', err);
+    alert('No se pudo quitar la foto. Intenta de nuevo.');
+  } finally {
+    btn.disabled = false;
+  }
+});
+
+document.getElementById('btn-gami-actualizar')?.addEventListener('click', async (ev) => {
+  const btn = ev.currentTarget;
+  const msg = document.getElementById('gami-actualizar-msg');
+  btn.disabled = true;
+  msg.textContent = 'Actualizando…';
+  try {
+    await httpsCallable(getFunctions(app), 'recalcularRankingAhora', { timeout: 120000 })();
+    msg.textContent = 'Ranking actualizado ✓';
+  } catch (err) {
+    console.error('No se pudo actualizar el ranking:', err);
+    msg.textContent = 'No se pudo actualizar. Intenta de nuevo en un momento.';
+  } finally {
+    btn.disabled = false;
+  }
+});
