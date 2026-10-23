@@ -54,6 +54,18 @@ export function applyRole(role, nombre, rolesDisponibles) {
 
   // "Alumnos" (el nav-item, la lista/ficha completa) es solo para
   // director/coach/mentor — un alumno tiene su propio Dashboard aparte.
+  // En la vista alumno, "Buscar actualización" y "Cerrar sesión" pasan al menú
+  // lateral (la barra de arriba queda solo con marca, campanita y foto).
+  const accionesAlumno = document.getElementById('sidebar-acciones-alumno');
+  const barraDerecha = document.querySelector('.topbar__right');
+  if (accionesAlumno && barraDerecha) {
+    ['btn-buscar-actualizacion', 'btn-logout'].forEach(id => {
+      const boton = document.getElementById(id);
+      if (boton) (role === 'alumno' ? accionesAlumno : barraDerecha).appendChild(boton);
+    });
+    accionesAlumno.classList.toggle('hidden', role !== 'alumno');
+  }
+
   const navAlumnos = document.querySelector('.nav-item[data-nav="alumnos"]');
   if (navAlumnos) navAlumnos.classList.toggle('hidden', role === 'alumno');
 

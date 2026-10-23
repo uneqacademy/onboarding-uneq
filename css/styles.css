@@ -1261,3 +1261,45 @@ body.tema-alumno-oscuro .comunidad-subtab.is-activa { background: #fff; color: v
 
 /* --- Botón editar / eliminar dentro de 24h --- */
 .btn-editar-hito { font-size: 10px; background: none; border: none; color: #9CA0A8; cursor: pointer; padding: 0; }
+
+/* ============================================
+   Barra superior de la vista alumno: menú, marca, campanita y foto
+   ============================================ */
+.topbar__marca-alumno, .topbar__avatar-alumno { display: none; }
+body.tema-alumno-oscuro .topbar,
+body.tema-alumno-oscuro.tema-begin .topbar,
+body.tema-alumno-oscuro.tema-exit .topbar {
+  background: #fff !important;
+  border-bottom: 1px solid #E5E7EB !important;
+}
+body.tema-alumno-oscuro .topbar__title { display: none; }
+body.tema-alumno-oscuro .btn-hamburger { color: #111; }
+body.tema-alumno-oscuro .topbar__marca-alumno {
+  display: flex; flex-direction: column; line-height: 0.95;
+  font-family: var(--font-display); font-weight: 800; color: #14161A; margin-left: 6px;
+}
+body.tema-alumno-oscuro .topbar__marca-alumno span { font-size: 19px; }
+body.tema-alumno-oscuro .topbar__marca-alumno strong { font-size: 25px; font-weight: 800; }
+body.tema-alumno-oscuro .topbar__right { gap: 12px; }
+body.tema-alumno-oscuro .notif-campana,
+body.tema-alumno-oscuro .topbar__avatar-alumno:not(.hidden) {
+  width: 48px; height: 48px; border-radius: 50%; padding: 0; border: 0;
+  background: #000; color: #fff; display: flex; align-items: center; justify-content: center;
+  overflow: visible; cursor: pointer;
+}
+body.tema-alumno-oscuro .topbar__avatar-alumno img { width: 100%; height: 100%; border-radius: 50%; object-fit: cover; display: block; }
+body.tema-alumno-oscuro .topbar__avatar-alumno span { font-family: var(--font-display); font-weight: 700; font-size: 17px; letter-spacing: 0.5px; }
+body.tema-alumno-oscuro .notif-badge { top: -3px; right: -3px; border: 2px solid #fff; box-sizing: content-box; }
+
+.sidebar-acciones-alumno { display: flex; flex-direction: column; gap: 8px; padding: 12px 0; }
+.sidebar-acciones-alumno .btn--ghost { color: #fff; border-color: rgba(255, 255, 255, 0.4); width: 100%; justify-content: center; }
+
+@media (max-width: 600px) {
+  body.tema-alumno-oscuro .topbar { padding-left: 10px; padding-right: 12px; }
+  body.tema-alumno-oscuro .topbar__marca-alumno span { font-size: 15px; }
+  body.tema-alumno-oscuro .topbar__marca-alumno strong { font-size: 20px; }
+  body.tema-alumno-oscuro .notif-campana,
+  body.tema-alumno-oscuro .topbar__avatar-alumno:not(.hidden) { width: 42px; height: 42px; }
+  body.tema-alumno-oscuro .topbar__right { gap: 8px; }
+  body.tema-alumno-oscuro .notif-panel { position: fixed; top: 70px; left: 12px; right: 12px; width: auto; }
+}
