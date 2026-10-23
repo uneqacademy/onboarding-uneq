@@ -18,7 +18,7 @@ import { ref as storageRef, uploadBytes, getDownloadURL } from "https://www.gsta
 import { ref, get, set, update, push } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-database.js";
 import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-functions.js";
 import { initializeApp, deleteApp } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-app.js";
-import { setNav, getCurrentRole } from './main.js';
+import { getCurrentRole } from './main.js';
 import { getAuth, createUserWithEmailAndPassword, signOut as signOutSecundaria, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-auth.js";
 import { programaLabel } from './ciclos.js';
 import { ordenarFijadasPrimero, registrarFijadas, botonFijar, etiquetaFijada } from './fijados.js';
@@ -1041,7 +1041,8 @@ function pintarAvatarTopbarAlumno(alumno) {
 }
 
 const avatarTopbarAlumnoEl = document.getElementById('topbar-avatar-alumno');
-if (avatarTopbarAlumnoEl) avatarTopbarAlumnoEl.addEventListener('click', () => setNav('ficha-alumno-propia'));
+// Se "toca" el ítem del menú (no solo setNav) para que corran los cargadores de la ficha y del acuerdo.
+if (avatarTopbarAlumnoEl) avatarTopbarAlumnoEl.addEventListener('click', () => document.querySelector('.nav-item[data-nav="ficha-alumno-propia"]')?.click());
 
 function renderRespuestaBox(respuesta, estadoIA) {
   if (!respuesta) {
