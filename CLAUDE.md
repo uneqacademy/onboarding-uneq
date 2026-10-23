@@ -7,7 +7,8 @@ Web estática publicada en GitHub Pages (`app.uneqacademy.com`, ver `CNAME`). PW
 - `index.html`: app principal (login, app-shell y todas las vistas).
 - `js/`: un módulo por área. `auth.js` (login y roles), `main.js` (shell/navegación),
   `alumnos.js`, `alumno-portal.js`, `mentores.js`, `coaches.js`, `hitos.js`, `pagos.js`,
-  `comunidad-uneq.js`, `configuracion.js`, `firebase-config.js`.
+  `comunidad-uneq.js`, `configuracion.js`, `firebase-config.js`, `ranking.js` (ranking mensual), `gamificacion-puntos.js`
+  (tabla de puntos) y `puntos-marcas.js` (entrada diaria y compartir; los puntos los calcula la función `actualizarRankingProgramado`).
 - `agendamiento/`: módulo aparte para closers y director comercial (ver `DISENO-AGENDAMIENTO.md`).
 - `nps*.html`, `arreglar-correo.html`: páginas sueltas.
 - `version.json` + `js/version-check.js`: aviso de nueva versión.

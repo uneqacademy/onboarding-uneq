@@ -12,6 +12,7 @@ import { escaparHtml } from './util-html.js';
 import { ref, get, onValue, update } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-database.js";
 import { getCurrentRole, setNav } from './main.js';
 import { irAHitoDesdeNotificacion, irAPreguntaLibre } from './comunidad-uneq.js';
+import { irARanking, nombreDeMes } from './ranking.js';
 
 const TEXTOS_TIPO = {
   comentario: (n) => `${n} comentó tu hito`,
@@ -106,6 +107,7 @@ function textoNotificacion(n) {
   let texto;
   if (n.tipo === 'pago') texto = 'Tienes un pago pendiente. Contacta a <strong>Soporte Alumnos</strong> para resolverlo.';
   else if (n.tipo === 'box') texto = 'Tienes una respuesta nueva en el <strong>BOX Inteligente</strong>';
+  else if (n.tipo === 'ranking') texto = `🏆 Quedaste en el <strong>${Number(n.lugar) || ''}° lugar</strong> del ranking de ${escaparHtml(nombreDeMes(String(n.mes || '')))}${n.premio ? `. Premio: ${escaparHtml(n.premio)}` : ''}`;
   else {
     texto = (TEXTOS_TIPO[n.tipo] ? TEXTOS_TIPO[n.tipo](escaparHtml(n.autorNombre || 'Alguien')) : 'Novedad en tu hito')
       + (n.tituloHito ? `: "${escaparHtml(n.tituloHito)}"` : '')
@@ -150,6 +152,7 @@ function renderLista() {
         console.error('No se pudo marcar la notificación como leída:', err);
       }
       cerrarPanel();
+      if (tipo === 'ranking') { irARanking(); return; }
       if (preguntaId) await irAPreguntaLibre(preguntaId);
       else if (hitoId) await irAHitoDesdeNotificacion(hitoId);
     });

@@ -16,6 +16,7 @@ import { getCurrentRole, showView, marcarNavActivo } from './main.js';
 import { aplicarClampTexto } from './texto-clamp.js';
 import { cargarHitosComunidad } from './hitos.js';
 import { cargarPreguntasComunidad } from './alumno-portal.js';
+import { marcarCompartido } from './puntos-marcas.js';
 import { ordenarFijadasPrimero, registrarFijadas, botonFijar } from './fijados.js';
 
 const VENTANA_EDICION_MS = 24 * 60 * 60 * 1000;
@@ -396,7 +397,7 @@ function renderTarjetaSocial(basePath, id, item, ctx) {
         <button type="button" class="btn ${yaReacciono ? 'btn--primary' : 'btn--ghost'} btn-reaccion-social" data-base-path="${basePath}" style="font-size:12px; padding:4px 10px;">❤️ ${totalReacciones}</button>
         <button type="button" class="btn ${comentariosExpandidos ? 'btn--primary' : 'btn--ghost'} btn-comentarios-social" data-base-path="${basePath}" style="font-size:12px; padding:4px 10px;">💬 ${totalComentarios}</button>
         ${extraBotonesHtml || ''}
-        ${esDueño && !ocultarCompartirGenerico ? `<button type="button" class="btn btn--ghost btn-compartir-social" data-titulo="${(item.alumnoNombre || '').replace(/"/g, '&quot;')}" style="font-size:12px; padding:4px 10px;">📤 Compartir</button>` : ''}
+        ${esDueño && !ocultarCompartirGenerico ? `<button type="button" class="btn btn--ghost btn-compartir-social" data-base-path="${basePath}" data-titulo="${(item.alumnoNombre || '').replace(/"/g, '&quot;')}" style="font-size:12px; padding:4px 10px;">📤 Compartir</button>` : ''}
         ${puedeEditar ? `<button type="button" class="btn btn--ghost btn-editar-social" data-base-path="${basePath}" style="font-size:12px; padding:4px 10px;">✏️ Editar</button>` : ''}
         ${puedeEliminar ? `<button type="button" class="btn btn--ghost btn-eliminar-social" data-base-path="${basePath}" style="font-size:12px; padding:4px 10px; color:#C0392B;">Eliminar</button>` : ''}
       </div>
@@ -461,7 +462,7 @@ function activarInteraccionSocial() {
         if ((await get(refReaccion)).exists()) { await remove(refReaccion); }
         else {
           const perfil = await datosPerfilActual();
-          await set(refReaccion, { nombre: perfil.nombre, fotoUrl: perfil.fotoUrl });
+          await set(refReaccion, { nombre: perfil.nombre, fotoUrl: perfil.fotoUrl, createdAt: Date.now() });
         }
         recargarTarjeta(basePath);
       } catch (err) { console.error('No se pudo reaccionar:', err); }
@@ -499,6 +500,7 @@ function activarInteraccionSocial() {
     if (btnCompartir) {
       const mensaje = encodeURIComponent(`¡Quiero compartir con ustedes! ${btnCompartir.dataset.titulo ? `"${btnCompartir.dataset.titulo}" en UNEQ Mentoring.` : ''}\n\nEntra a la Comunidad UNEQ en la app para verlo.`);
       window.open(`https://wa.me/?text=${mensaje}`, '_blank');
+      marcarCompartido(btnCompartir.dataset.basePath);
       return;
     }
 
@@ -682,6 +684,7 @@ function activarInteraccionPreguntasLibres() {
       const { preguntaId, titulo } = btnCompartir.dataset;
       const mensaje = encodeURIComponent(`Tengo una pregunta para la comunidad de UNEQ Mentoring: "${titulo}"\n\nEntra y respóndeme acá:\n${enlacePreguntaLibre(preguntaId)}`);
       window.open(`https://wa.me/?text=${mensaje}`, '_blank');
+      marcarCompartido(`pregunta_${preguntaId}`);
       return;
     }
   });

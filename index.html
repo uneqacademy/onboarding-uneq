@@ -125,6 +125,7 @@
         <li class="nav-item hidden" data-nav="box-consultas">BOX Inteligente</li>
         <li class="nav-item" data-role="alumno" data-nav="preguntas-vivo">Preguntas en Vivo</li>
         <li class="nav-item hidden" data-nav="comunidad-uneq">Comunidad UNEQ</li>
+        <li class="nav-item hidden" data-nav="ranking">Ranking</li>
         <li class="nav-item" data-role="alumno" data-nav="soporte-alumnos">Soporte Alumnos</li>
       </div>
     </nav>
@@ -1526,6 +1527,11 @@
       <!-- ======================================================
            SOPORTE ALUMNOS — página propia
            ====================================================== -->
+      <section id="view-ranking" class="view hidden">
+        <h2 id="ranking-titulo" class="mb-16">Ranking</h2>
+        <div id="ranking-contenido"></div>
+      </section>
+
       <section id="view-soporte-alumnos" class="view hidden">
         <div class="panel mb-24">
           <div class="panel__body" id="soporte-alumnos-contacto"></div>
@@ -2158,6 +2164,40 @@
             </div>
           </div>
         </div>
+        <div class="panel mb-24" id="config-gamificacion">
+          <div class="panel__header"><h3>Ranking: puntos y premio del mes</h3></div>
+          <div class="panel__body">
+            <p class="text-soft mb-16" style="font-size:13px;">Cuántos puntos da cada acción en la app. El «tope por día» es cuántas veces al día suma esa acción (vacío = sin tope). Los cambios valen desde el próximo cálculo y se aplican a todo el mes en curso.</p>
+            <div id="gami-tabla" class="mb-16"></div>
+            <p id="gami-error-puntos" class="hidden" style="color:#C0392B; margin-bottom:12px; font-size:13px;"></p>
+            <button type="button" class="btn btn--primary" id="btn-gami-guardar-puntos">Guardar puntos</button>
+
+            <hr style="border:0; border-top:0.5px solid var(--border); margin:24px 0;">
+
+            <h4 style="margin-bottom:6px;">Premio del mes</h4>
+            <p class="text-soft mb-16" style="font-size:13px;">Se muestra a los alumnos en la sección Ranking. Se premian los 3 primeros lugares (los empates reciben el mismo premio).</p>
+            <div style="display:flex; gap:16px; align-items:flex-start; flex-wrap:wrap;">
+              <div style="text-align:center;">
+                <img id="gami-premio-foto-preview" src="" alt="" style="width:120px; height:120px; border-radius:12px; object-fit:cover; background:#E4E7EC; display:block;">
+                <input type="file" id="gami-premio-foto-input" accept="image/*" class="hidden">
+                <button type="button" class="btn btn--ghost" id="btn-gami-premio-foto" style="font-size:12px; padding:5px 12px; margin-top:8px;">Cambiar foto</button>
+                <button type="button" class="btn btn--ghost hidden" id="btn-gami-premio-quitar-foto" style="font-size:12px; padding:5px 12px; margin-top:6px;">Quitar foto</button>
+              </div>
+              <div class="field" style="flex:1; min-width:220px;">
+                <label>Descripción del premio</label>
+                <textarea id="gami-premio-texto" placeholder="Ej: Una sesión 1:1 con el director + un libro" style="min-height:100px;"></textarea>
+              </div>
+            </div>
+            <p id="gami-error-premio" class="hidden" style="color:#C0392B; margin:12px 0; font-size:13px;"></p>
+            <button type="button" class="btn btn--primary" id="btn-gami-guardar-premio" style="margin-top:12px;">Guardar premio</button>
+
+            <hr style="border:0; border-top:0.5px solid var(--border); margin:24px 0;">
+            <p class="text-soft" style="font-size:13px;">El ranking se recalcula solo cada 10 minutos. Si quieres ver un cambio ya:</p>
+            <button type="button" class="btn btn--ghost" id="btn-gami-actualizar">Actualizar ranking ahora</button>
+            <span id="gami-actualizar-msg" class="text-soft" style="font-size:13px; margin-left:10px;"></span>
+          </div>
+        </div>
+
         <div class="panel mb-24">
           <div class="panel__header"><h3>Temáticas del BOX Inteligente</h3></div>
           <div class="panel__body">

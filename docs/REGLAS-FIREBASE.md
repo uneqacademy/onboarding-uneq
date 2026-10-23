@@ -76,3 +76,20 @@ publicación: `hitos/$hitoId`, `comunidad/presentaciones/$alumnoId`, `comunidad/
 ponerlo, quitarlo o cambiarlo (`.validate`); un autor que edite su publicación debe dejarlo igual. En `box` además hay
 `.write` de director sobre `fijadaEn` (ahí el director no tenía escritura general). El tope de 3 lo controla la interfaz.
 Pruebas en el simulador: como director, escribir `hitos/<id>/fijadaEn` = permitido; como alumno autor de ese hito = denegado.
+
+## Ranking mensual y puntos (`ranking`, `puntosMarcas`, `configuracion/gamificacion`)
+Realtime Database
+- `ranking/podio/{AAAA-MM}`: lectura para cualquier sesión (podio de 3 lugares con empates y el premio). **Nadie escribe**: solo la
+  función `actualizarRankingProgramado` (cada 10 minutos) con permisos de servidor.
+- `ranking/posiciones/{alumnoId}`: lugar y puntos de cada alumno activo. Lo lee **solo ese alumno** (o el director); así ningún alumno puede
+  ver la posición de otro. Tampoco se escribe desde la app.
+- `puntosMarcas/{alumnoId}/entradas/{AAAA-MM-DD}` y `.../compartidos/{publicacionId}`: la app anota que el alumno entró ese día o compartió
+  una publicación. Escribe **solo ese alumno**, solo si la marca no existía (`!data.exists()`), con un número (fecha) y, en `entradas`, una
+  clave con formato de fecha. No tiene lectura: solo la función las lee. (Las marcas de fase las escribe la función `marcarPasoDeFase`.)
+- La tabla de puntos y el premio del mes están en `configuracion/gamificacion`, que ya era legible por cualquier sesión y escribible solo por el
+  director (no cambia).
+Storage
+- `premio-ranking/{archivo}`: foto del premio. Lectura con sesión; solo imágenes de hasta 10 MB. Storage no distingue roles: quien sube es
+  el director desde Configuración, pero la regla no lo impide a otra cuenta con sesión (misma limitación que el resto de carpetas).
+Pruebas en el simulador: como alumno, escribir `puntosMarcas/<su id>/entradas/2026-10-23` = permitido, repetirlo = denegado, con el id de
+otro alumno = denegado; escribir `ranking/podio/2026-10` = denegado; leer `ranking/posiciones/<otro id>` = denegado.

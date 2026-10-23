@@ -87,6 +87,10 @@ export function applyRole(role, nombre, rolesDisponibles) {
   const navComunidadUneq = document.querySelector('.nav-item[data-nav="comunidad-uneq"]');
   if (navComunidadUneq) navComunidadUneq.classList.remove('hidden');
 
+  // Ranking: lo ven los alumnos (con su lugar) y el director.
+  const navRanking = document.querySelector('.nav-item[data-nav="ranking"]');
+  if (navRanking) navRanking.classList.toggle('hidden', !(role === 'alumno' || role === 'director'));
+
   const navMentoriasMentor = document.querySelector('.nav-item[data-nav="mentorias-mentor"]');
   if (navMentoriasMentor) navMentoriasMentor.classList.toggle('hidden', role !== 'mentor');
 
@@ -278,6 +282,9 @@ export function setNav(section) {
   } else if (section === 'comunidad-uneq') {
     showView('view-comunidad-uneq');
     document.getElementById('topbar-title').textContent = 'Comunidad UNEQ';
+  } else if (section === 'ranking') {
+    showView('view-ranking');
+    document.getElementById('topbar-title').textContent = 'Ranking';
   } else if (section === 'mis-hitos') {
     showView('view-mis-hitos');
     document.getElementById('topbar-title').textContent = 'Mis Hitos';

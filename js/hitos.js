@@ -15,6 +15,7 @@ import { escaparHtml, linkificarSeguro } from './util-html.js';
 import { ref, get, set, push, update, remove } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-database.js";
 import { ref as storageRef, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-storage.js";
 import { getCurrentRole } from './main.js';
+import { marcarCompartido } from './puntos-marcas.js';
 import { ordenarFijadasPrimero, registrarFijadas, botonFijar, etiquetaFijada } from './fijados.js';
 
 const FASES_HITOS = { fase1: 'Fase 1: Claridad y Fundamentos', fase2: 'Fase 2: Cliente Soñado', fase3: 'Fase 3: Oferta y Método', fase4: 'Fase 4: Acción y Sistemas' };
@@ -764,6 +765,7 @@ function compartirHitoWhatsapp(hitoId, titulo) {
   const url = `${DOMINIO_PREVIEW_HITOS}/?id=${hitoId}`;
   const mensaje = encodeURIComponent(`¡Quiero compartir con ustedes que logré "${titulo}" en mi programa con UNEQ Mentoring! 🎉\n\nMíralo y déjame un comentario acá:\n${url}`);
   window.open(`https://wa.me/?text=${mensaje}`, '_blank');
+  marcarCompartido(`hito_${hitoId}`);
 }
 
 // Reutilizable: engancha toda la interacción de un feed de hitos
@@ -819,7 +821,7 @@ function activarInteraccionFeed(feedEl, recargarFn) {
           nombre = u.nombre || '';
           fotoUrl = u.fotoUrl || '';
         }
-        await set(refReaccion, { nombre, fotoUrl });
+        await set(refReaccion, { nombre, fotoUrl, createdAt: Date.now() });
       }
       await recargarFn();
       return;
