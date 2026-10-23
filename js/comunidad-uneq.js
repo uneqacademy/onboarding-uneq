@@ -660,8 +660,8 @@ async function subirFotos(storagePrefix, id, archivos) {
    ============================================================ */
 const URL_APP_ENLACES = 'https://app.uneqacademy.com/';
 // Con true, el enlace pasa por hitos.uneqacademy.com/?pregunta=ID para mostrar la tarjeta con el título en WhatsApp.
-// Dejar en false hasta que la función previewHito (repo de funciones) esté desplegada con soporte para "?pregunta=".
-const USAR_TARJETA_PREVIEW_PREGUNTAS = false;
+// previewHito (repo de funciones) ya entiende "?pregunta=" desde el 23-oct-2026; con false se comparte el enlace directo a la app.
+const USAR_TARJETA_PREVIEW_PREGUNTAS = true;
 const DOMINIO_PREVIEW_PREGUNTAS = 'https://hitos.uneqacademy.com';
 
 let preguntasLibresActuales = [];
