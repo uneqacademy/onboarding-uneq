@@ -33,6 +33,7 @@ let notificacionesActuales = [];
 let avisosCalculados = [];
 let alumnoIdActual = null;
 let ultimaRevision = 0;
+let modoDemo = false;
 
 /* --- Respuestas del BOX ya abiertas: se recuerdan en este dispositivo.
        (Las reglas no dejan al alumno escribir en las preguntas del BOX.) --- */
@@ -99,10 +100,14 @@ function todasLasNotificaciones() {
 }
 
 function textoNotificacion(n) {
-  if (n.tipo === 'pago') return 'Tienes un pago pendiente. Contacta a <strong>Soporte Alumnos</strong> para resolverlo.';
-  if (n.tipo === 'box') return 'Tienes una respuesta nueva en el <strong>BOX Inteligente</strong>';
-  return (TEXTOS_TIPO[n.tipo] ? TEXTOS_TIPO[n.tipo](escaparHtml(n.autorNombre || 'Alguien')) : 'Novedad en tu hito')
-    + (n.tituloHito ? `: "${escaparHtml(n.tituloHito)}"` : '');
+  let texto;
+  if (n.tipo === 'pago') texto = 'Tienes un pago pendiente. Contacta a <strong>Soporte Alumnos</strong> para resolverlo.';
+  else if (n.tipo === 'box') texto = 'Tienes una respuesta nueva en el <strong>BOX Inteligente</strong>';
+  else {
+    texto = (TEXTOS_TIPO[n.tipo] ? TEXTOS_TIPO[n.tipo](escaparHtml(n.autorNombre || 'Alguien')) : 'Novedad en tu hito')
+      + (n.tituloHito ? `: "${escaparHtml(n.tituloHito)}"` : '');
+  }
+  return n.ejemplo ? `${texto} <em>(ejemplo)</em>` : texto;
 }
 
 function renderLista() {
@@ -129,6 +134,7 @@ function renderLista() {
         setNav(tipo === 'pago' ? 'soporte-alumnos' : 'box-consultas');
         return;
       }
+      if (modoDemo) { cerrarPanel(); return; }
       try {
         await update(ref(db, `notificaciones/${alumnoIdActual}/${notifId}`), { leida: true });
       } catch (err) {
@@ -172,7 +178,7 @@ async function iniciarNotificaciones() {
 // panel (de cualquier forma), no al abrirlo, para no hacerlas
 // desaparecer de golpe mientras el alumno todavía las está leyendo.
 async function marcarTodasComoLeidas() {
-  if (!alumnoIdActual || !notificacionesActuales.length) return;
+  if (modoDemo || !alumnoIdActual || !notificacionesActuales.length) return;
   const cambios = {};
   notificacionesActuales.forEach(([id]) => { cambios[`${id}/leida`] = true; });
   try {
@@ -206,6 +212,31 @@ document.addEventListener('box-respuesta-vista', (ev) => {
   if (!preguntaId || !alumnoIdActual) return;
   guardarBoxVista(preguntaId);
   avisosCalculados = avisosCalculados.filter(([id]) => id !== `calculada-box-${preguntaId}`);
+  renderLista();
+  actualizarBadge();
+});
+
+// "Ver como Alumno (Demo)" del director (alumnos.js): se muestra la campanita con
+// avisos de ejemplo para ver cómo la ve un alumno. No lee ni escribe notificaciones.
+document.addEventListener('modo-demo-alumno', (ev) => {
+  const activo = !!(ev.detail && ev.detail.activo);
+  modoDemo = activo;
+  avisosCalculados = [];
+  notificacionesActuales = [];
+  if (activo) {
+    const ahora = Date.now();
+    alumnoIdActual = ev.detail.alumnoId;
+    avisosCalculados = [
+      ['calculada-pago', { tipo: 'pago', createdAt: ahora, ejemplo: true }],
+      ['calculada-box-demo', { tipo: 'box', createdAt: ahora - 3600000, ejemplo: true }]
+    ];
+    notificacionesActuales = [['demo-comentario', { tipo: 'respuesta', autorNombre: 'Carolina', tituloHito: 'Mi primer cliente', createdAt: ahora - 7200000, leida: false, ejemplo: true }]];
+    btnCampana?.classList.remove('hidden');
+  } else {
+    alumnoIdActual = null;
+    btnCampana?.classList.add('hidden');
+    panelEl.classList.add('hidden');
+  }
   renderLista();
   actualizarBadge();
 });

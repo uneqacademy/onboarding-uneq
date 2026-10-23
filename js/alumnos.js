@@ -1591,6 +1591,7 @@ function mostrarBannerModoDemo(programa) {
 function salirModoDemo() {
   const banner = document.getElementById('banner-modo-demo');
   if (banner) banner.remove();
+  document.dispatchEvent(new CustomEvent('modo-demo-alumno', { detail: { activo: false } }));
   const uidActual = auth.currentUser ? auth.currentUser.uid : null;
   const restaurar = async () => {
     // CRÍTICO: hay que borrar este mapeo, no solo dejar de usarlo — las
@@ -1623,6 +1624,7 @@ async function verComoAlumnoDemo(programa) {
   await update(ref(db, 'alumnoPorAuthUid'), { [uid]: demoId });
   applyRole('alumno', `Alumno Demo (${ETIQUETAS_DEMO[programa]})`, ['alumno']);
   mostrarBannerModoDemo(programa);
+  document.dispatchEvent(new CustomEvent('modo-demo-alumno', { detail: { activo: true, alumnoId: demoId } }));
   await cargarDashboardAlumno(demoId);
   setNav('dashboard');
 }
