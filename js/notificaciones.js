@@ -29,6 +29,8 @@ const btnCampana = document.getElementById('notif-btn-campana');
 const badgeEl = document.getElementById('notif-badge');
 const panelEl = document.getElementById('notif-panel');
 const listaEl = document.getElementById('notif-lista');
+const backdropEl = document.getElementById('notif-backdrop');
+const btnCerrarPanel = document.getElementById('notif-btn-cerrar');
 let notificacionesActuales = [];
 let avisosCalculados = [];
 let alumnoIdActual = null;
@@ -168,10 +170,8 @@ async function iniciarNotificaciones() {
   btnCampana?.classList.remove('hidden');
   onValue(ref(db, `notificaciones/${alumnoIdActual}`), (snap) => {
     const todas = snap.exists() ? Object.entries(snap.val()) : [];
-    // Las leídas ya no se muestran — el clic las "borra" de la lista
-    // que ve el alumno (quedan igual en la base, por si hace falta
-    // revisar historial más adelante).
-    notificacionesActuales = todas.filter(([, n]) => !n.leida).sort((a, b) => b[1].createdAt - a[1].createdAt).slice(0, 30);
+    // Se muestran las últimas 30, leídas y no leídas (las leídas se ven atenuadas).
+    notificacionesActuales = todas.sort((a, b) => b[1].createdAt - a[1].createdAt).slice(0, 30);
     renderLista();
     actualizarBadge();
   });
@@ -183,9 +183,10 @@ async function iniciarNotificaciones() {
 // panel (de cualquier forma), no al abrirlo, para no hacerlas
 // desaparecer de golpe mientras el alumno todavía las está leyendo.
 async function marcarTodasComoLeidas() {
-  if (modoDemo || !alumnoIdActual || !notificacionesActuales.length) return;
+  const sinLeer = notificacionesActuales.filter(([, n]) => !n.leida);
+  if (modoDemo || !alumnoIdActual || !sinLeer.length) return;
   const cambios = {};
-  notificacionesActuales.forEach(([id]) => { cambios[`${id}/leida`] = true; });
+  sinLeer.forEach(([id]) => { cambios[`${id}/leida`] = true; });
   try {
     await update(ref(db, `notificaciones/${alumnoIdActual}`), cambios);
   } catch (err) {
@@ -196,19 +197,30 @@ async function marcarTodasComoLeidas() {
 function cerrarPanel() {
   if (panelEl.classList.contains('hidden')) return; // ya estaba cerrado, nada que marcar
   panelEl.classList.add('hidden');
+  backdropEl?.classList.add('hidden');
   marcarTodasComoLeidas();
 }
 
+function abrirPanel() {
+  panelEl.classList.remove('hidden');
+  backdropEl?.classList.remove('hidden');
+  listaEl.scrollTop = 0;
+  if (Date.now() - ultimaRevision > SEGUNDOS_ENTRE_REVISIONES * 1000) refrescarAvisos();
+}
+
 btnCampana?.addEventListener('click', () => {
-  if (panelEl.classList.contains('hidden')) {
-    panelEl.classList.remove('hidden');
-    if (Date.now() - ultimaRevision > SEGUNDOS_ENTRE_REVISIONES * 1000) refrescarAvisos();
-  } else {
-    cerrarPanel();
-  }
+  if (panelEl.classList.contains('hidden')) abrirPanel();
+  else cerrarPanel();
 });
+// Formas de salir sin tocar ningún aviso: la ✕, tocar fuera (el fondo transparente
+// también funciona en el celular, donde tocar "el vacío" no siempre genera un clic) y Escape.
+btnCerrarPanel?.addEventListener('click', cerrarPanel);
+backdropEl?.addEventListener('click', cerrarPanel);
 document.addEventListener('click', (ev) => {
   if (!ev.target.closest('#notif-contenedor')) cerrarPanel();
+});
+document.addEventListener('keydown', (ev) => {
+  if (ev.key === 'Escape') cerrarPanel();
 });
 
 // alumno-portal.js avisa cuando el alumno abre "Ver Respuesta" de una consulta del BOX.
@@ -241,6 +253,7 @@ document.addEventListener('modo-demo-alumno', (ev) => {
     alumnoIdActual = null;
     btnCampana?.classList.add('hidden');
     panelEl.classList.add('hidden');
+    backdropEl?.classList.add('hidden');
   }
   renderLista();
   actualizarBadge();
