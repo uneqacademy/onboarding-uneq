@@ -1,13 +1,16 @@
 /* ============================================================
-   notificaciones.js — campanita del alumno (comentarios, reacciones
-   y respuestas a sus comentarios en Hitos). Solo para alumnos; el
-   staff no tiene campanita en esta primera versión.
+   notificaciones.js — campanita del alumno. Junta dos tipos de aviso:
+   - Los que se guardan en la base (comentarios, reacciones y respuestas
+     a sus comentarios en Hitos): notificaciones/{alumnoId}.
+   - Los que se calculan al abrir la app, sin guardar nada: un pago
+     marcado como impago y respuestas del BOX que aún no ha abierto.
+   Solo para alumnos; el staff no tiene campanita.
    ============================================================ */
 
 import { db, auth } from './firebase-config.js';
 import { escaparHtml } from './util-html.js';
 import { ref, get, onValue, update } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-database.js";
-import { getCurrentRole } from './main.js';
+import { getCurrentRole, setNav } from './main.js';
 import { irAHitoDesdeNotificacion } from './comunidad-uneq.js';
 
 const TEXTOS_TIPO = {
@@ -16,26 +19,116 @@ const TEXTOS_TIPO = {
   respuesta: (n) => `${n} respondió tu comentario`
 };
 
+// Solo se avisan las respuestas del BOX de la última semana, y se revisan las
+// últimas 30 preguntas, para no inundar la campanita con respuestas antiguas.
+const DIAS_AVISO_BOX = 7;
+const MAX_PREGUNTAS_REVISADAS = 30;
+const SEGUNDOS_ENTRE_REVISIONES = 60;
+
 const btnCampana = document.getElementById('notif-btn-campana');
 const badgeEl = document.getElementById('notif-badge');
 const panelEl = document.getElementById('notif-panel');
 const listaEl = document.getElementById('notif-lista');
 let notificacionesActuales = [];
+let avisosCalculados = [];
+let alumnoIdActual = null;
+let ultimaRevision = 0;
+
+/* --- Respuestas del BOX ya abiertas: se recuerdan en este dispositivo.
+       (Las reglas no dejan al alumno escribir en las preguntas del BOX.) --- */
+function claveBoxVistas() { return `uneq.boxRespuestasVistas.${alumnoIdActual}`; }
+
+function leerBoxVistas() {
+  try { return new Set(JSON.parse(localStorage.getItem(claveBoxVistas()) || '[]')); } catch (err) { return new Set(); }
+}
+
+function guardarBoxVista(preguntaId) {
+  try {
+    const vistas = leerBoxVistas();
+    vistas.add(preguntaId);
+    localStorage.setItem(claveBoxVistas(), JSON.stringify([...vistas].slice(-300)));
+  } catch (err) { /* sin almacenamiento local: el aviso reaparece al recargar */ }
+}
+
+/* --- Avisos calculados --- */
+// "Pago pendiente" = alguna cuota del acuerdo marcada como impaga.
+async function avisoPagoImpago() {
+  const cicloSnap = await get(ref(db, `alumnos/${alumnoIdActual}/cicloActualId`));
+  const cicloId = cicloSnap.exists() ? cicloSnap.val() : null;
+  if (!cicloId) return [];
+  const cuotasSnap = await get(ref(db, `acuerdosPago/${cicloId}/cuotas`));
+  const hayImpaga = cuotasSnap.exists() && Object.values(cuotasSnap.val()).some(c => c && c.estado === 'impaga');
+  return hayImpaga ? [['calculada-pago', { tipo: 'pago', createdAt: Date.now() }]] : [];
+}
+
+async function avisosRespuestasBox() {
+  const indiceSnap = await get(ref(db, `boxIndice/${alumnoIdActual}`));
+  if (!indiceSnap.exists()) return [];
+  const vistas = leerBoxVistas();
+  const desde = Date.now() - DIAS_AVISO_BOX * 24 * 60 * 60 * 1000;
+  // Los ids de Firebase crecen con el tiempo: ordenados de mayor a menor quedan las más nuevas primero.
+  const recientes = Object.entries(indiceSnap.val())
+    .sort((a, b) => (a[0] < b[0] ? 1 : -1))
+    .slice(0, MAX_PREGUNTAS_REVISADAS);
+  const preguntas = await Promise.all(recientes.map(async ([preguntaId, mentorId]) => {
+    const snap = await get(ref(db, `box/${mentorId}/${preguntaId}`)).catch(() => null);
+    return snap && snap.exists() ? [preguntaId, snap.val()] : null;
+  }));
+  return preguntas
+    .filter(Boolean)
+    .map(([preguntaId, p]) => [preguntaId, p, (p.respuesta && (p.respuesta.createdAt || p.respuesta.revisadoEn)) || p.createdAt || 0])
+    .filter(([preguntaId, p, fecha]) => p.respuesta && !vistas.has(preguntaId) && fecha >= desde)
+    .map(([preguntaId, , fecha]) => [`calculada-box-${preguntaId}`, { tipo: 'box', preguntaId, createdAt: fecha }]);
+}
+
+async function refrescarAvisos() {
+  if (!alumnoIdActual) return;
+  ultimaRevision = Date.now();
+  const resultados = await Promise.all([avisoPagoImpago(), avisosRespuestasBox()].map(p => p.catch(err => {
+    console.error('No se pudo calcular un aviso de la campanita:', err);
+    return [];
+  })));
+  avisosCalculados = resultados.flat();
+  renderLista();
+  actualizarBadge();
+}
+
+/* --- Lista y contador --- */
+function todasLasNotificaciones() {
+  return [...avisosCalculados, ...notificacionesActuales].sort((a, b) => b[1].createdAt - a[1].createdAt);
+}
+
+function textoNotificacion(n) {
+  if (n.tipo === 'pago') return 'Tienes un pago pendiente. Contacta a <strong>Soporte Alumnos</strong> para resolverlo.';
+  if (n.tipo === 'box') return 'Tienes una respuesta nueva en el <strong>BOX Inteligente</strong>';
+  return (TEXTOS_TIPO[n.tipo] ? TEXTOS_TIPO[n.tipo](escaparHtml(n.autorNombre || 'Alguien')) : 'Novedad en tu hito')
+    + (n.tituloHito ? `: "${escaparHtml(n.tituloHito)}"` : '');
+}
 
 function renderLista() {
-  if (!notificacionesActuales.length) {
+  const todas = todasLasNotificaciones();
+  if (!todas.length) {
     listaEl.innerHTML = '<p class="notif-vacio">Sin notificaciones por ahora.</p>';
     return;
   }
-  listaEl.innerHTML = notificacionesActuales.map(([id, n]) => `
-    <button type="button" class="notif-item ${n.leida ? '' : 'no-leida'}" data-notif-id="${id}" data-hito-id="${n.hitoId || ''}">
-      ${TEXTOS_TIPO[n.tipo] ? TEXTOS_TIPO[n.tipo](escaparHtml(n.autorNombre || 'Alguien')) : 'Novedad en tu hito'}${n.tituloHito ? `: "${escaparHtml(n.tituloHito)}"` : ''}
-      <time>${new Date(n.createdAt).toLocaleDateString('es-CL', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}</time>
-    </button>`).join('');
+  listaEl.innerHTML = todas.map(([id, n]) => {
+    const calculada = id.startsWith('calculada-');
+    return `
+    <button type="button" class="notif-item ${n.leida ? '' : 'no-leida'}" data-notif-id="${escaparHtml(id)}" data-tipo="${escaparHtml(n.tipo || '')}" data-hito-id="${escaparHtml(n.hitoId || '')}">
+      ${textoNotificacion(n)}
+      ${calculada && n.tipo === 'pago' ? '' : `<time>${new Date(n.createdAt).toLocaleDateString('es-CL', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}</time>`}
+    </button>`;
+  }).join('');
 
   listaEl.querySelectorAll('.notif-item').forEach(item => {
     item.addEventListener('click', async () => {
-      const { notifId, hitoId } = item.dataset;
+      const { notifId, hitoId, tipo } = item.dataset;
+      if (notifId.startsWith('calculada-')) {
+        // Estos avisos se van solos: el de pago al regularizarse, el del BOX al abrir "Ver Respuesta".
+        cerrarPanel();
+        setNav(tipo === 'pago' ? 'soporte-alumnos' : 'box-consultas');
+        return;
+      }
       try {
         await update(ref(db, `notificaciones/${alumnoIdActual}/${notifId}`), { leida: true });
       } catch (err) {
@@ -48,12 +141,10 @@ function renderLista() {
 }
 
 function actualizarBadge() {
-  const noLeidas = notificacionesActuales.filter(([, n]) => !n.leida).length;
-  badgeEl.textContent = noLeidas > 9 ? '9+' : String(noLeidas);
-  badgeEl.classList.toggle('hidden', noLeidas === 0);
+  const total = avisosCalculados.length + notificacionesActuales.filter(([, n]) => !n.leida).length;
+  badgeEl.textContent = total > 9 ? '9+' : String(total);
+  badgeEl.classList.toggle('hidden', total === 0);
 }
-
-let alumnoIdActual = null;
 
 async function iniciarNotificaciones() {
   if (getCurrentRole() !== 'alumno') return;
@@ -73,6 +164,7 @@ async function iniciarNotificaciones() {
     renderLista();
     actualizarBadge();
   });
+  await refrescarAvisos();
 }
 
 // Marca como leídas TODAS las que se alcanzaron a ver en el panel —
@@ -99,12 +191,23 @@ function cerrarPanel() {
 btnCampana?.addEventListener('click', () => {
   if (panelEl.classList.contains('hidden')) {
     panelEl.classList.remove('hidden');
+    if (Date.now() - ultimaRevision > SEGUNDOS_ENTRE_REVISIONES * 1000) refrescarAvisos();
   } else {
     cerrarPanel();
   }
 });
 document.addEventListener('click', (ev) => {
   if (!ev.target.closest('#notif-contenedor')) cerrarPanel();
+});
+
+// alumno-portal.js avisa cuando el alumno abre "Ver Respuesta" de una consulta del BOX.
+document.addEventListener('box-respuesta-vista', (ev) => {
+  const preguntaId = ev.detail && ev.detail.preguntaId;
+  if (!preguntaId || !alumnoIdActual) return;
+  guardarBoxVista(preguntaId);
+  avisosCalculados = avisosCalculados.filter(([id]) => id !== `calculada-box-${preguntaId}`);
+  renderLista();
+  actualizarBadge();
 });
 
 export { iniciarNotificaciones };

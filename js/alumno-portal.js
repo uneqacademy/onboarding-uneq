@@ -222,6 +222,7 @@ export async function cargarDashboardAlumno(alumnoId) {
   // --- Foto grande sobre el menú lateral ---
   const fotoSidebar = document.getElementById('sidebar-foto-alumno');
   if (fotoSidebar) fotoSidebar.src = alumno.fotoUrl || PLACEHOLDER_FOTO_ALUMNO;
+  pintarAvatarTopbarAlumno(alumno);
 
   // --- Bienvenida (Bienvenido/a según género; por defecto Bienvenido) ---
   const bienvenidaEl = document.getElementById('alumno-bienvenida');
@@ -786,6 +787,7 @@ export async function cargarFichaAlumnoPropia() {
         document.getElementById('alumno-foto-preview').src = url;
         const fotoSidebar = document.getElementById('sidebar-foto-alumno');
         if (fotoSidebar) fotoSidebar.src = url;
+        pintarAvatarTopbarAlumno({ ...alumno, fotoUrl: url });
       } catch (err) {
         alert('No se pudo subir la foto. Intenta de nuevo.');
       } finally {
@@ -1018,8 +1020,27 @@ function wireToggleRespuestaBox(fila) {
     ev.stopPropagation();
     const ahoraOculto = detalle.classList.toggle('hidden');
     btn.innerHTML = ahoraOculto ? '👁️ Ver Respuesta' : '🙈 Ocultar Respuesta';
+    // La campanita deja de avisar de esta respuesta (ver notificaciones.js).
+    if (!ahoraOculto && fila.dataset.boxPreguntaId) {
+      document.dispatchEvent(new CustomEvent('box-respuesta-vista', { detail: { preguntaId: fila.dataset.boxPreguntaId } }));
+    }
   });
 }
+
+// Círculo de la barra superior (vista alumno): su foto, o sus iniciales si no tiene.
+// Al tocarlo se abre "Mi Ficha Personal".
+function pintarAvatarTopbarAlumno(alumno) {
+  const avatarEl = document.getElementById('topbar-avatar-alumno');
+  if (!avatarEl) return;
+  const iniciales = ((alumno.nombre || '').trim()[0] || '') + ((alumno.apellido || '').trim()[0] || '');
+  avatarEl.innerHTML = alumno.fotoUrl
+    ? `<img src="${escaparHtml(alumno.fotoUrl)}" alt="">`
+    : `<span>${escaparHtml((iniciales || '?').toUpperCase())}</span>`;
+  avatarEl.classList.remove('hidden');
+}
+
+const avatarTopbarAlumnoEl = document.getElementById('topbar-avatar-alumno');
+if (avatarTopbarAlumnoEl) avatarTopbarAlumnoEl.addEventListener('click', () => setNav('ficha-alumno-propia'));
 
 function renderRespuestaBox(respuesta, estadoIA) {
   if (!respuesta) {
@@ -1260,7 +1281,7 @@ export async function cargarBoxAlumno() {
       ? visibles.map(e => {
           const mentorNombre = usuarios[e.mentorId] ? (usuarios[e.mentorId].nombre || usuarios[e.mentorId].email) : 'Mentor';
           return `
-            <div class="panel mb-16" style="padding:14px;" data-fila-consulta>
+            <div class="panel mb-16" style="padding:14px;" data-fila-consulta ${e.respuesta ? `data-box-pregunta-id="${escaparHtml(e.preguntaId)}"` : ''}>
               <div class="flex-between">
                 <strong>Para ${escaparHtml(mentorNombre)}</strong>
                 ${!e.respuesta ? `<button type="button" class="btn btn--ghost btn-eliminar-pregunta" data-pregunta-id="${e.preguntaId}" data-mentor-id="${e.mentorId}" style="font-size:11px; padding:2px 8px;">Eliminar</button>` : ''}
