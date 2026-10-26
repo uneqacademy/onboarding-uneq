@@ -20,7 +20,7 @@ import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/
 import { initializeApp, deleteApp } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-app.js";
 import { getCurrentRole } from './main.js';
 import { getAuth, createUserWithEmailAndPassword, signOut as signOutSecundaria, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-auth.js";
-import { programaLabel } from './ciclos.js';
+import { programaLabel, testEsDe } from './ciclos.js';
 import { ordenarFijadasPrimero, registrarFijadas, botonFijar, etiquetaFijada } from './fijados.js';
 
 function generarPassword() {
@@ -428,8 +428,13 @@ export async function cargarDashboardAlumno(alumnoId) {
   const ultimoTestEl = document.getElementById('alumno-ultimo-test');
   if (ultimoTestEl) {
     if (alumno.cicloActualId) {
-      const testsSnap = await get(ref(db, `ciclos/${alumno.cicloActualId}/tests`));
-      const tests = testsSnap.exists() ? Object.values(testsSnap.val()) : [];
+      const [testsSnap, idsSnap] = await Promise.all([
+        get(ref(db, `ciclos/${alumno.cicloActualId}/tests`)),
+        get(ref(db, `ciclos/${alumno.cicloActualId}/alumnoIds`))
+      ]);
+      const idsSocios = idsSnap.exists() ? idsSnap.val() : [];
+      // Con dos socios en el ciclo, cada uno ve solo sus propios tests.
+      const tests = testsSnap.exists() ? Object.values(testsSnap.val()).filter(t => testEsDe(t, alumnoId, idsSocios)) : [];
       if (tests.length) {
         const ultimo = tests.sort((a, b) => b.completadoAt - a.completadoAt)[0];
         // En el Dashboard solo el análisis por fase; saboteadores y
@@ -944,9 +949,14 @@ export async function cargarTestAlumnoCompleto() {
     el.innerHTML = '<p class="text-soft">Aún no hay un ciclo asociado.</p>';
     return;
   }
-  const testsSnap = await get(ref(db, `ciclos/${alumno.cicloActualId}/tests`));
+  const [testsSnap, idsSnap] = await Promise.all([
+    get(ref(db, `ciclos/${alumno.cicloActualId}/tests`)),
+    get(ref(db, `ciclos/${alumno.cicloActualId}/alumnoIds`))
+  ]);
   const testsObj = testsSnap.exists() ? testsSnap.val() : {};
-  const tests = Object.values(testsObj).sort((a, b) => b.completadoAt - a.completadoAt);
+  const idsSocios = idsSnap.exists() ? idsSnap.val() : [];
+  // Con dos socios en el ciclo, cada uno ve solo sus propios tests.
+  const tests = Object.values(testsObj).filter(t => testEsDe(t, alumnoIdActual, idsSocios)).sort((a, b) => b.completadoAt - a.completadoAt);
 
   if (!tests.length) {
     el.innerHTML = '<p class="text-soft">Aún no has completado el Test Brújula — tu coach te va a guiar en eso.</p>';
