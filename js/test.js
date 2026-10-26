@@ -14,6 +14,8 @@
 import { db } from './firebase-config.js';
 import { ref, get, set, push } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-database.js";
 import html2canvas from "https://esm.sh/html2canvas@1.4.1";
+import { testEsDe } from './ciclos.js';
+import { escaparHtml } from './util-html.js';
 
 const root = document.getElementById('test-wizard-root');
 
@@ -114,10 +116,16 @@ let historial = [];              // todos los tests guardados de este ciclo, má
 let testSeleccionadoId = null;   // cuál se muestra en el detalle, dentro del historial
 let state = { stepIndex: 0, respuestas: respuestasPorDefecto(), modo: 'wizard' };
 let cicloIdActual = null;
+let alumnoIdActual = null;       // de quién es la ficha abierta: cada socio tiene sus propios tests
+let alumnoIdsActuales = [];
+let nombreAlumnoActual = '';
 
 /* --- Llamada desde alumnos.js cada vez que se abre una ficha --- */
-export async function cargarTestParaCiclo(cicloId) {
+export async function cargarTestParaCiclo(cicloId, alumnoId, alumnoIds, nombreAlumno) {
   cicloIdActual = cicloId;
+  alumnoIdActual = alumnoId || null;
+  alumnoIdsActuales = Array.isArray(alumnoIds) ? alumnoIds : Object.values(alumnoIds || {});
+  nombreAlumnoActual = nombreAlumno || '';
   if (!root) return;
 
   if (!cicloId) {
@@ -128,7 +136,9 @@ export async function cargarTestParaCiclo(cicloId) {
   const snap = await get(ref(db, `ciclos/${cicloId}/tests`));
   historial = [];
   if (snap.exists()) {
-    Object.entries(snap.val()).forEach(([id, datos]) => historial.push({ id, ...datos }));
+    Object.entries(snap.val()).forEach(([id, datos]) => {
+      if (!alumnoIdActual || testEsDe(datos, alumnoIdActual, alumnoIdsActuales)) historial.push({ id, ...datos });
+    });
     historial.sort((a, b) => b.completadoAt - a.completadoAt);
   }
 
@@ -253,7 +263,7 @@ function renderHistorial() {
   return `
     <div class="panel mb-16">
       <div class="panel__header flex-between">
-        <h3>Historial de Tests (${historial.length})</h3>
+        <h3>Historial de Tests (${historial.length})${alumnoIdsActuales.length > 1 && nombreAlumnoActual ? ` · ${escaparHtml(nombreAlumnoActual)}` : ''}</h3>
         <button class="btn btn--accent" id="btn-test-nuevo">+ Nuevo Test</button>
       </div>
       <div class="panel__body" style="padding:0;">
@@ -314,7 +324,7 @@ function bindEventos() {
       try {
         const nodo = document.getElementById('test-captura-imagen');
         const canvas = await html2canvas(nodo, { backgroundColor: '#ffffff', scale: 2 });
-        const nombreAlumno = (document.getElementById('ficha-nombre-alumno')?.textContent || 'alumno').trim();
+        const nombreAlumno = (nombreAlumnoActual || document.getElementById('ficha-nombre-alumno')?.textContent || 'alumno').trim();
         const a = document.createElement('a');
         a.href = canvas.toDataURL('image/jpeg', 0.95);
         a.download = `test-brujula-${nombreAlumno}.jpg`;
@@ -374,9 +384,9 @@ function bindEventos() {
     };
 
     const nuevoRef = push(ref(db, `ciclos/${cicloIdActual}/tests`));
-    await set(nuevoRef, { respuestas: state.respuestas, promedios, completadoAt: Date.now() });
+    await set(nuevoRef, { respuestas: state.respuestas, promedios, alumnoId: alumnoIdActual, completadoAt: Date.now() });
 
-    await cargarTestParaCiclo(cicloIdActual); // recarga el historial completo y selecciona el nuevo
+    await cargarTestParaCiclo(cicloIdActual, alumnoIdActual, alumnoIdsActuales, nombreAlumnoActual); // recarga el historial y selecciona el nuevo
   });
 
   root.querySelectorAll('.fila-test-historial').forEach(row => {

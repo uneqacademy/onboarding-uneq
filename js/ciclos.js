@@ -55,6 +55,15 @@ export function estaEstancado(ciclo) {
   return dias !== null && dias > DIAS_ALERTA_POR_ESTADO[ciclo.estadoProceso];
 }
 
+// De quién es un test del Test Brújula cuando el ciclo tiene dos socios. Los tests nuevos guardan alumnoId;
+// los anteriores (sin él) se asignan al socio principal (el primero de ciclo.alumnoIds) o, si el ciclo no
+// tiene lista de alumnos, a quien lo mire.
+export function testEsDe(test, alumnoId, alumnoIds) {
+  if (test.alumnoId) return test.alumnoId === alumnoId;
+  const ids = Array.isArray(alumnoIds) ? alumnoIds : Object.values(alumnoIds || {});
+  return ids.length === 0 || ids[0] === alumnoId;
+}
+
 export function programaLabel(key) {
   return PROGRAMAS[key] ? PROGRAMAS[key].label : key;
 }

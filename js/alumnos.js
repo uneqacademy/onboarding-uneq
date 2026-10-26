@@ -1000,7 +1000,7 @@ async function abrirFicha(alumnoId) {
 
   await renderHistorialCiclos(alumno.ciclosAnteriores);
 
-  await cargarTestParaCiclo(currentCicloId);
+  await cargarTestParaCiclo(currentCicloId, alumnoId, ciclo && ciclo.alumnoIds, nombreCompletoDe(alumno) || nombreCombinado);
   await cargarAcuerdoParaCiclo(currentCicloId);
   await cargarBitacoraParaCiclo(currentCicloId, estadoProceso === 'matricula_finalizada');
 
