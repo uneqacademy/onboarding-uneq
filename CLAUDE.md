@@ -9,6 +9,8 @@ Web estática publicada en GitHub Pages (`app.uneqacademy.com`, ver `CNAME`). PW
   `alumnos.js`, `alumno-portal.js`, `mentores.js`, `coaches.js`, `hitos.js`, `pagos.js`,
   `comunidad-uneq.js`, `configuracion.js`, `firebase-config.js`, `ranking.js` (ranking mensual), `gamificacion-puntos.js`
   (tabla de puntos) y `puntos-marcas.js` (entrada diaria y compartir; los puntos los calcula la función `actualizarRankingProgramado`).
+  Pagos: `pagos.js` (acuerdo en la ficha del alumno), `pagos-consolidado.js` (sección Pagos del director: matriz de abonos y cuotas)
+  y `util-pagos.js` (cálculos comunes). Ambas vistas leen y escriben `acuerdosPago/{cicloId}`, con cuotas de id estable y `fechaPago`.
 - `agendamiento/`: módulo aparte para closers y director comercial (ver `DISENO-AGENDAMIENTO.md`).
 - `nps*.html`, `arreglar-correo.html`: páginas sueltas.
 - `version.json` + `js/version-check.js`: aviso de nueva versión.
