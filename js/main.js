@@ -19,7 +19,7 @@ document.querySelectorAll('[data-brand-mark]').forEach(el => {
 });
 
 const NOMBRES_ROL = {
-  director: 'Director/a Académico', coach: 'Coach', mentor: 'Mentor/a', alumno: 'Alumno/a',
+  director: 'Director/a Académico', coach: 'Copiloto', mentor: 'Mentor/a', alumno: 'Alumno/a',
   directorComercial: 'Director/a Comercial', closer: 'Closer'
 };
 
@@ -246,7 +246,7 @@ export function setNav(section) {
     document.getElementById('topbar-title').textContent = 'Alumnos';
   } else if (section === 'coaches') {
     showView('view-coaches');
-    document.getElementById('topbar-title').textContent = 'Coaches';
+    document.getElementById('topbar-title').textContent = 'Copilotos';
   } else if (section === 'pre-onboarding') {
     showView('view-pre-onboarding');
     document.getElementById('topbar-title').textContent = 'Pre-Onboarding';
@@ -351,7 +351,7 @@ const btnNuevoCoach = document.getElementById('btn-nuevo-coach');
 if (btnNuevoCoach) btnNuevoCoach.addEventListener('click', () => {
   showView('view-crear-coach');
   marcarNavActivo('coaches');
-  document.getElementById('topbar-title').textContent = 'Nuevo Coach';
+  document.getElementById('topbar-title').textContent = 'Nuevo Copiloto';
 });
 
 const btnCancelarCoach = document.getElementById('btn-cancelar-nuevo-coach');
@@ -400,7 +400,7 @@ export function setCandado(bloqueado) {
   const toggleBtn = document.getElementById('btn-toggle-candado');
   if (titulo) titulo.textContent = bloqueado ? '🔒 Datos bloqueados' : '🔓 Datos editables';
   if (descripcion) descripcion.textContent = bloqueado
-    ? 'Bloqueados para evitar ediciones accidentales del coach. El director puede desbloquearlos cuando lo necesite.'
+    ? 'Bloqueados para evitar ediciones accidentales del copiloto. El director puede desbloquearlos cuando lo necesite.'
     : 'Campos editables. Vuelve a bloquear cuando termines la corrección.';
   if (toggleBtn) toggleBtn.textContent = bloqueado ? 'Desbloquear' : 'Bloquear';
 

@@ -12,17 +12,17 @@ import { db } from './firebase-config.js';
 import { ref, push, set } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-database.js";
 
 const AREAS = [
-  { key: 'dominio', pregunta: '¿Qué tan bien dominaba tu coach la metodología 2E y te ayudó a resolver tus dudas (técnicas, de plataforma o del funcionamiento del programa)?' },
-  { key: 'acceso', pregunta: '¿Qué tan bien resolvió tu coach los problemas de acceso y fue liberando las lecciones a tiempo?' },
-  { key: 'seguimiento', pregunta: '¿Qué tan constante fue tu coach en hacer seguimiento a tu avance?' },
-  { key: 'cercania', pregunta: '¿Qué tan cercano/a, cálido/a y empático/a sentiste a tu coach durante el proceso?' },
-  { key: 'motivacion', pregunta: '¿Qué tanto sentiste que tu coach te motivó y te dio herramientas para no detenerte?' },
-  { key: 'mentorias', pregunta: '¿Qué tan bien te orientó tu coach sobre qué mentorías en vivo te convenía tomar según tu momento?' }
+  { key: 'dominio', pregunta: '¿Qué tan bien dominaba tu copiloto la metodología 2E y te ayudó a resolver tus dudas (técnicas, de plataforma o del funcionamiento del programa)?' },
+  { key: 'acceso', pregunta: '¿Qué tan bien resolvió tu copiloto los problemas de acceso y fue liberando las lecciones a tiempo?' },
+  { key: 'seguimiento', pregunta: '¿Qué tan constante fue tu copiloto en hacer seguimiento a tu avance?' },
+  { key: 'cercania', pregunta: '¿Qué tan cercano/a, cálido/a y empático/a sentiste a tu copiloto durante el proceso?' },
+  { key: 'motivacion', pregunta: '¿Qué tanto sentiste que tu copiloto te motivó y te dio herramientas para no detenerte?' },
+  { key: 'mentorias', pregunta: '¿Qué tan bien te orientó tu copiloto sobre qué mentorías en vivo te convenía tomar según tu momento?' }
 ];
 
 const params = new URLSearchParams(window.location.search);
 const coachId = params.get('coach');
-const nombreCoach = params.get('nombre') || 'tu coach';
+const nombreCoach = params.get('nombre') || 'tu copiloto';
 const momento = params.get('momento') === 'final' ? 'final' : 'medio';
 
 const root = document.getElementById('nps-root');
@@ -33,7 +33,7 @@ if (!coachId) {
   root.innerHTML = `
     <div class="panel">
       <div class="panel__body">
-        <p>Este link no es válido — falta identificar al coach. Pide a tu coach o al director/a que te reenvíe el link correcto.</p>
+        <p>Este link no es válido — falta identificar al copiloto. Pide a tu copiloto o al director/a que te reenvíe el link correcto.</p>
       </div>
     </div>`;
 } else {

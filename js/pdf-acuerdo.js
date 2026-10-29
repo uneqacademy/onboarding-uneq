@@ -64,7 +64,7 @@ const BENEFICIOS = {
       'Contenido pregrabado de ejecución práctica — Nivel Inicial, para las 4 fases de la metodología 2E (acceso: 1 año)',
       'BOX Inteligente de consultas específicas por temática disponible 24/7, con Mentor IA, el cual es un CLON entrenado personalmente por el Mentor Humano especialista en esa temática. Las respuestas son revisadas y validadas por el mentor Humano y las complementa en caso de ser necesario (tiempo de respuesta: 10 segundos). Los alumnos podrán enviar hasta 5 preguntas por semana en total, con un máximo de 1 pregunta por Mentor — vigente durante el programa: 3 meses',
       'Comunidad Exclusiva en APP propia de UNEQ (acceso: 6 meses)',
-      'Sesiones semanales grupales con coach de cabecera capacitado para revisar avances y resolver dudas de contenidos, además de responder preguntas previamente recibidas y algunas en vivo si el tiempo lo permite (vigente durante el programa: 3 meses)',
+      'Sesiones semanales grupales con copiloto de cabecera capacitado para revisar avances y resolver dudas de contenidos, además de responder preguntas previamente recibidas y algunas en vivo si el tiempo lo permite (vigente durante el programa: 3 meses)',
       '1 sesión mensual grupal con Maca y Felipe (vigente durante el programa: 3 meses)',
       'Acceso a Membresía ONE, con clases todos los miércoles a las 9:00 hrs (acceso: 3 meses)',
       'Acceso al Programa de Acompañamiento Sinergia (acceso: de por vida)',
@@ -81,7 +81,7 @@ const BENEFICIOS = {
       'Contenido pregrabado de ejecución práctica — Nivel Inicial + Nivel Intermedio, para las 4 fases de la metodología 2E (acceso: de por vida)',
       'BOX Inteligente de consultas específicas por temática disponible 24/7, con Mentor IA, el cual es un CLON entrenado personalmente por el Mentor Humano especialista en esa temática. Las respuestas son revisadas y validadas por el mentor Humano y las complementa en caso de ser necesario (tiempo de respuesta: 10 segundos). Los alumnos podrán enviar hasta 8 preguntas por semana en total, con un máximo de 3 preguntas por Mentor — vigente durante el programa: 6 meses',
       'Comunidad Exclusiva en APP propia de UNEQ (vigente durante el programa: 6 meses)',
-      'Coach personalizado disponible de Lunes a viernes de 9:00 a 18:00 hrs. por whatsapp, para accountability, motivación, guía para el consumo de contenidos y resolución de dudas sobre el funcionamiento del programa. (vigente durante el programa: 6 meses)',
+      'Copiloto personalizado disponible de Lunes a viernes de 9:00 a 18:00 hrs. por whatsapp, para accountability, motivación, guía para el consumo de contenidos y resolución de dudas sobre el funcionamiento del programa. (vigente durante el programa: 6 meses)',
       'Mentorías en vivo de lunes a viernes, con temáticas: Lunes Copywriting, Martes Mentalidad-Estrategia-Tráfico, Miércoles Identidad Visual y Redes Sociales, Jueves Ventas Energéticas, Viernes Gestión de Proyectos y Estructuración de Calendarios. Puedes enviar preguntas hasta 12 horas antes para cada sesión y serán respondidas de forma personalizada. (vigente durante el programa: 6 meses)',
       'Acceso a Membresía ONE, con clases todos los miércoles a las 9:00 hrs (acceso: 6 meses)',
       'Acceso al Programa de Acompañamiento Sinergia (acceso: de por vida)',
@@ -119,7 +119,7 @@ const BENEFICIOS = {
       'Agencia UNEQ creará la página de aterrizaje (Landing Page) y bienvenida para la SDV (Sesión de Validación), además del montaje de las campañas base en META ADS. No incluye por parte de UNEQ las modificaciones, optimizaciones, ni seguimiento de estos montajes. El alumno por su cuenta podrá editar esos archivos cuando lo desee.'
     ],
     duracion: 'Duración del programa (sesiones en vivo y BOX Inteligente de consultas): 6 meses.',
-    nota: '(En eXIT no se incluye Coach Personalizado; este es reemplazado por el acompañamiento directo de Maca y Felipe a través de WhatsApp privado y las sesiones personalizadas en Zoom.)'
+    nota: '(En eXIT no se incluye Copiloto Personalizado; este es reemplazado por el acompañamiento directo de Maca y Felipe a través de WhatsApp privado y las sesiones personalizadas en Zoom.)'
   }
 };
 
@@ -164,8 +164,8 @@ export async function generarPdfAcuerdo(alumnoId, cicloId) {
     if (coachSnap.exists()) nombreCoach = coachSnap.val();
   }
   const clausulaCoach = ciclo.programa === 'begin'
-    ? 'El Alumno/a será acompañado/a durante este proceso por el Coach de Cabecera del programa BEGIN.'
-    : `El Alumno/a será acompañado/a durante este proceso por su coach asignado/a, ${nombreCoach}.`;
+    ? 'El Alumno/a será acompañado/a durante este proceso por el Copiloto de Cabecera del programa BEGIN.'
+    : `El Alumno/a será acompañado/a durante este proceso por su copiloto asignado/a, ${nombreCoach}.`;
 
   const doc = new jsPDF();
   let y = 22;
@@ -300,7 +300,7 @@ export async function generarPdfAcuerdo(alumnoId, cicloId) {
 
   // --- SÉPTIMO ---
   tituloSeccion('SÉPTIMO: Comportamiento y Convivencia en la Comunidad');
-  parrafo('El respeto hacia el equipo de UNEQ, coaches y demás miembros de la comunidad es un valor fundamental e innegociable. Cualquier conducta que atente contra este principio, o contra los valores de UNEQ, será causal de expulsión inmediata del programa, sin derecho a devolución de los montos pagados.');
+  parrafo('El respeto hacia el equipo de UNEQ, copilotos y demás miembros de la comunidad es un valor fundamental e innegociable. Cualquier conducta que atente contra este principio, o contra los valores de UNEQ, será causal de expulsión inmediata del programa, sin derecho a devolución de los montos pagados.');
 
   // --- OCTAVO ---
   tituloSeccion('OCTAVO: Confidencialidad y Propiedad Intelectual');

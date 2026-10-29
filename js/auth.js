@@ -220,7 +220,7 @@ onAuthStateChanged(auth, async (user) => {
         const alumnoId = mapaSnap.val();
         const alumnoSnap = await get(ref(db, `alumnos/${alumnoId}`));
         if (!alumnoSnap.exists()) {
-          mostrarError('No se encontró tu ficha. Contacta a tu coach.');
+          mostrarError('No se encontró tu ficha. Contacta a tu copiloto.');
           await signOut(auth);
           return;
         }

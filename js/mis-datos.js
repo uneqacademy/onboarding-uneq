@@ -16,7 +16,7 @@ import { cargarPerfilMentor } from './mentores.js';
 const PLACEHOLDER_FOTO_MIS_DATOS = 'data:image/svg+xml;utf8,' + encodeURIComponent(
   '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 80"><rect width="80" height="80" rx="40" fill="#E4E7EC"/><circle cx="40" cy="32" r="14" fill="#9AA4B2"/><ellipse cx="40" cy="70" rx="24" ry="18" fill="#9AA4B2"/></svg>'
 );
-const NOMBRES_ROL_MIS_DATOS = { director: 'Director/a Académico', coach: 'Coach', mentor: 'Mentor/a' };
+const NOMBRES_ROL_MIS_DATOS = { director: 'Director/a Académico', coach: 'Copiloto', mentor: 'Mentor/a' };
 
 export async function cargarMisDatos() {
   const uid = auth.currentUser ? auth.currentUser.uid : null;
@@ -28,7 +28,7 @@ export async function cargarMisDatos() {
   document.getElementById('mis-datos-nombre').innerHTML = `<strong>${escaparHtml(datos.nombre || '—')}</strong>`;
   const rolActivo = getCurrentRole();
   document.getElementById('mis-datos-rol').textContent =
-    (NOMBRES_ROL_MIS_DATOS[rolActivo] || rolActivo || '') + (datos.coachCabeceraBegin === true ? ' 🚩 Coach de Cabecera (BEGIN)' : '');
+    (NOMBRES_ROL_MIS_DATOS[rolActivo] || rolActivo || '') + (datos.coachCabeceraBegin === true ? ' 🚩 Copiloto de Cabecera (BEGIN)' : '');
   document.getElementById('mis-datos-email').value = datos.email || '';
   document.getElementById('mis-datos-telefono').value = datos.telefono || '';
 

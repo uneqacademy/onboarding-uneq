@@ -184,7 +184,7 @@ async function cargarCoachesView() {
 
       const tr = document.createElement('tr');
       tr.innerHTML = `
-        <td>${escaparHtml(nombreCoach)}${esCabeceraBegin ? ' <span title="Coach de Cabecera — ve a todos los alumnos BEGIN">🚩</span>' : ''}</td>
+        <td>${escaparHtml(nombreCoach)}${esCabeceraBegin ? ' <span title="Copiloto de Cabecera — ve a todos los alumnos BEGIN">🚩</span>' : ''}</td>
         <td>${escaparHtml(coach.email || '')}</td>
         <td>${alumnosDeCoach.length}</td>
         <td><span class="badge ${coach.activo === false ? 'badge--impaga' : 'badge--activo'}">${coach.activo === false ? 'Inactivo' : 'Activo'}</span></td>
@@ -249,10 +249,10 @@ async function cargarCoachesView() {
         filaRoles.innerHTML = `
           <td colspan="6" style="background:#F7F8FA; padding:14px 16px;">
             <div style="display:flex; align-items:center; gap:16px; flex-wrap:wrap;">
-              <label style="font-weight:400;"><input type="checkbox" class="chk-rol-coach" ${rolesActuales.coach ? 'checked' : ''}> Coach</label>
+              <label style="font-weight:400;"><input type="checkbox" class="chk-rol-coach" ${rolesActuales.coach ? 'checked' : ''}> Copiloto</label>
               <label style="font-weight:400;"><input type="checkbox" class="chk-rol-mentor" ${rolesActuales.mentor ? 'checked' : ''}> Mentor</label>
               <label style="font-weight:400;" title="Puede crear sesiones grupales semanales exclusivas para alumnos BEGIN">
-                <input type="checkbox" class="chk-coach-cabecera-begin" ${coach.coachCabeceraBegin ? 'checked' : ''}> Coach de Cabecera (BEGIN)
+                <input type="checkbox" class="chk-coach-cabecera-begin" ${coach.coachCabeceraBegin ? 'checked' : ''}> Copiloto de Cabecera (BEGIN)
               </label>
               <span class="text-soft" style="font-size:12px;">El rol Director se asigna aparte, en Firebase Console.</span>
               <button class="btn btn--primary btn-guardar-roles" style="font-size:11px; padding:4px 10px;">Guardar</button>
@@ -272,7 +272,7 @@ async function cargarCoachesView() {
           }
           const coachCabeceraBegin = filaRoles.querySelector('.chk-coach-cabecera-begin').checked;
           if (coachCabeceraBegin && !nuevosRoles.coach) {
-            alert('Para ser Coach de Cabecera (BEGIN) primero debe tener el rol Coach activo.');
+            alert('Para ser Copiloto de Cabecera (BEGIN) primero debe tener el rol Copiloto activo.');
             return;
           }
 
@@ -326,15 +326,15 @@ async function eliminarCoach(uid, nombreCoach, vigentes) {
     const nombresAlumnos = vigentes.map(([, al]) => `${al.nombre} ${al.apellido}`).join(', ');
     alert(
       `No puedes eliminar a ${nombreCoach} todavía — tiene ${vigentes.length} alumno(s) vigente(s): ${nombresAlumnos}.\n\n` +
-      `Ve a la ficha de cada uno (pestaña "Ciclo Actual" → Coach Asignado) y reasígnalo a otro coach antes de eliminar. ` +
-      `El historial completo (datos, tests, bitácora) se mantiene intacto y el nuevo coach lo ve todo.`
+      `Ve a la ficha de cada uno (pestaña "Ciclo Actual" → Copiloto Asignado) y reasígnalo a otro copiloto antes de eliminar. ` +
+      `El historial completo (datos, tests, bitácora) se mantiene intacto y el nuevo copiloto lo ve todo.`
     );
     return;
   }
 
   const confirmado = confirm(
     `¿Eliminar a ${nombreCoach}? Ya no va a poder entrar a la app. Los alumnos que tuvo (con ciclo ya finalizado) mantienen su historial intacto, ` +
-    `solo que el nombre del coach en esos registros antiguos quedará sin cuenta activa.`
+    `solo que el nombre del copiloto en esos registros antiguos quedará sin cuenta activa.`
   );
   if (!confirmado) return;
 
@@ -429,7 +429,7 @@ if (btnCrearCoach) {
         document.getElementById('nuevo-coach-email').value = '';
         document.getElementById('nuevo-coach-telefono').value = '';
         document.getElementById('nuevo-coach-tambien-mentor').checked = false;
-        alert(`${datosExistente.nombre || email} ya tenía una cuenta — se le agregó el rol de Coach${tambienMentor ? ' y Mentor' : ''} a la misma cuenta, sin generar contraseña nueva.`);
+        alert(`${datosExistente.nombre || email} ya tenía una cuenta — se le agregó el rol de Copiloto${tambienMentor ? ' y Mentor' : ''} a la misma cuenta, sin generar contraseña nueva.`);
         await cargarCoachesView();
         return;
       }
@@ -470,7 +470,7 @@ if (btnCrearCoach) {
       errorEl.classList.remove('hidden');
     } finally {
       btnCrearCoach.disabled = false;
-      btnCrearCoach.textContent = 'Crear Cuenta de Coach';
+      btnCrearCoach.textContent = 'Crear Cuenta de Copiloto';
     }
   });
 }

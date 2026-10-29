@@ -135,7 +135,7 @@ if (btnCrearAccesoAlumno) {
       if (bloqueExistente) bloqueExistente.classList.remove('hidden');
     } catch (err) {
       alert(err.code === 'auth/email-already-in-use'
-        ? 'Ese correo ya tiene una cuenta creada en el sistema (puede que ya sea coach o mentor).'
+        ? 'Ese correo ya tiene una cuenta creada en el sistema (puede que ya sea copiloto o mentor).'
         : 'No se pudo crear el acceso. Intenta de nuevo.');
     } finally {
       if (secundaria) await deleteApp(secundaria);
@@ -326,7 +326,7 @@ export async function cargarDashboardAlumno(alumnoId) {
     const numeroFase = (ciclo && ciclo.faseMetodologia && /\d/.test(ciclo.faseMetodologia)) ? ciclo.faseMetodologia.match(/\d/)[0] : null;
     const fraseFase = numeroFase
       ? `Actualmente te encuentras en: <span style="background:#E2E4E8; color:#1B2333; padding:2px 10px; border-radius:6px; font-weight:700; white-space:nowrap;">Fase ${numeroFase}</span> de la Metodología 2E`
-      : 'Tu fase actual aún no está definida — pronto tu coach la va a actualizar.';
+      : 'Tu fase actual aún no está definida — pronto tu copiloto la va a actualizar.';
     const mensajeCoach = coach ? encodeURIComponent(`Hola ${coach.nombre || ''}, necesito tu ayuda por favor`) : '';
     const whatsappCoachUrl = coach && coach.telefono ? `https://wa.me/${coach.telefono.replace(/[^0-9]/g, '')}?text=${mensajeCoach}` : '';
 
@@ -358,7 +358,7 @@ export async function cargarDashboardAlumno(alumnoId) {
     const lineaCoach = `
         <p class="acceso-coach">
           <span>
-            ${coach ? `<strong>${esCoachCabeceraMsg && esBeginDashboard ? 'Tu Coach de cabecera:' : 'Tu Coach es:'}</strong> <em>${escaparHtml(coach.nombre || '—')}</em>${esCoachCabeceraMsg && !esBeginDashboard ? ' <span style="font-size:11px;">🚩 Coach de Cabecera</span>' : ''}` : 'Aún no tienes coach asignado'}
+            ${coach ? `<strong>${esCoachCabeceraMsg && esBeginDashboard ? 'Tu Copiloto de cabecera:' : 'Tu Copiloto es:'}</strong> <em>${escaparHtml(coach.nombre || '—')}</em>${esCoachCabeceraMsg && !esBeginDashboard ? ' <span style="font-size:11px;">🚩 Copiloto de Cabecera</span>' : ''}` : 'Aún no tienes copiloto asignado'}
           </span>
           <img src="${escaparHtml(coach && coach.fotoUrl ? coach.fotoUrl : PLACEHOLDER_FOTO_ALUMNO)}" alt="" class="acceso-coach__foto" style="${coach ? '' : 'display:none;'}">
           ${whatsappCoachUrl ? `<a href="${whatsappCoachUrl}" target="_blank" rel="noopener" aria-label="WhatsApp" class="acceso-coach__wa">${iconoWhatsapp}</a>` : ''}
@@ -441,7 +441,7 @@ export async function cargarDashboardAlumno(alumnoId) {
         // bloqueos de venta se ven en la página Test Brújula.
         ultimoTestEl.innerHTML = renderKpiTest(ultimo);
       } else {
-        ultimoTestEl.innerHTML = '<p class="text-soft">Aún no has completado el Test Brújula — tu coach te va a guiar en eso.</p>';
+        ultimoTestEl.innerHTML = '<p class="text-soft">Aún no has completado el Test Brújula — tu copiloto te va a guiar en eso.</p>';
       }
     } else {
       ultimoTestEl.innerHTML = '<p class="text-soft">Aún no hay un ciclo asociado.</p>';
@@ -609,7 +609,7 @@ function inicializarEdicionFicha(alumnoId, alumno, ciclo) {
 
   const editable = !!ciclo && ESTADOS_FICHA_EDITABLE.includes(ciclo.estadoProceso);
   if (!editable) {
-    cont.innerHTML = '<p class="text-soft" style="font-size:12px; margin:0;">🔒 Tus datos ya no se pueden editar porque tu acuerdo está en proceso de firma. Si necesitas cambiar algo, escríbele a tu coach.</p>';
+    cont.innerHTML = '<p class="text-soft" style="font-size:12px; margin:0;">🔒 Tus datos ya no se pueden editar porque tu acuerdo está en proceso de firma. Si necesitas cambiar algo, escríbele a tu copiloto.</p>';
     return;
   }
 
@@ -622,7 +622,7 @@ function inicializarEdicionFicha(alumnoId, alumno, ciclo) {
   cont.innerHTML = `
     <div class="panel" style="background:var(--color-surface-alt); padding:14px;">
       <strong style="font-size:14px;">${falta ? '📝 Completa tus datos' : '✏️ Editar mis datos'}</strong>
-      <p class="text-soft" style="margin:4px 0 10px; font-size:12px;">Se usan para tu acuerdo. Revísalos bien: cuando tu coach genere el acuerdo ya no podrás modificarlos.</p>
+      <p class="text-soft" style="margin:4px 0 10px; font-size:12px;">Se usan para tu acuerdo. Revísalos bien: cuando tu copiloto genere el acuerdo ya no podrás modificarlos.</p>
       <button type="button" class="btn btn--primary" id="mf-btn-abrir" style="font-size:12px; padding:6px 14px;">${falta ? 'Completar mis datos' : 'Editar mis datos'}</button>
       ${actualizado}
       <form id="mf-form" class="hidden" novalidate style="margin-top:14px;">
@@ -642,7 +642,7 @@ function inicializarEdicionFicha(alumnoId, alumno, ciclo) {
           <div class="field"><label>Región / Estado <span style="color:#C0392B;">*</span></label><select id="mf-direccion-region"><option value="">Elige un país primero</option></select></div>
           <div class="field"><label>Comuna / Ciudad <span style="color:#C0392B;">*</span></label><div id="campo-mf-direccion-comuna"></div></div>
         </div>
-        <p class="text-soft" style="font-size:12px; margin:0 0 10px;">Tu nombre, apellido y correo los gestiona el equipo UNEQ; si hay que corregirlos, escríbele a tu coach.</p>
+        <p class="text-soft" style="font-size:12px; margin:0 0 10px;">Tu nombre, apellido y correo los gestiona el equipo UNEQ; si hay que corregirlos, escríbele a tu copiloto.</p>
         <p id="mf-error" class="hidden" style="color:#C0392B; font-size:13px; margin:0 0 10px;"></p>
         <div style="display:flex; gap:8px;">
           <button type="button" class="btn btn--primary" id="mf-btn-guardar" style="font-size:12px; padding:6px 14px;">Guardar mis datos</button>
@@ -709,7 +709,7 @@ function inicializarEdicionFicha(alumnoId, alumno, ciclo) {
       alert('Listo: tus datos quedaron guardados.');
       await cargarFichaAlumnoPropia();
     } catch (err) {
-      errorEl.textContent = 'No se pudieron guardar tus datos. Es posible que tu acuerdo ya esté en proceso de firma; si es así, escríbele a tu coach.';
+      errorEl.textContent = 'No se pudieron guardar tus datos. Es posible que tu acuerdo ya esté en proceso de firma; si es así, escríbele a tu copiloto.';
       errorEl.classList.remove('hidden');
       btnGuardar.disabled = false;
       btnGuardar.textContent = textoOriginal;
@@ -959,7 +959,7 @@ export async function cargarTestAlumnoCompleto() {
   const tests = Object.values(testsObj).filter(t => testEsDe(t, alumnoIdActual, idsSocios)).sort((a, b) => b.completadoAt - a.completadoAt);
 
   if (!tests.length) {
-    el.innerHTML = '<p class="text-soft">Aún no has completado el Test Brújula — tu coach te va a guiar en eso.</p>';
+    el.innerHTML = '<p class="text-soft">Aún no has completado el Test Brújula — tu copiloto te va a guiar en eso.</p>';
     return;
   }
 
