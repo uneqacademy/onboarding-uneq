@@ -29,21 +29,49 @@ export function nombreDeMes(mes) {
   return `${nombre.charAt(0).toUpperCase()}${nombre.slice(1)} ${a}`;
 }
 
-function tarjetaLugar(p, esYo) {
-  const medalla = MEDALLAS[p.lugar] || '';
-  return `
-    <div class="ranking-item ranking-item--${p.lugar} ${esYo ? 'ranking-item--yo' : ''}">
-      <div class="ranking-item__puesto" title="${NOMBRES_MEDALLA[p.lugar] || ''}">
-        <span class="ranking-item__numero">${p.lugar}°</span>
-        <span class="ranking-item__medalla" aria-label="Medalla de ${NOMBRES_MEDALLA[p.lugar] || ''}">${medalla}</span>
+function etiquetaPrograma(programa) {
+  if (!['begin', 'next', 'exit'].includes(programa)) return '';
+  return `<span class="hito-etiqueta-programa" title="${escaparHtml(programaLabel(programa))}"><img src="assets/logos/wordmark-${programa}.png" alt="${escaparHtml(programaLabel(programa))}"></span>`;
+}
+
+// Lugares 1 a 3: medalla, etiqueta del programa, foto, nombre y puntos. Lugares 4 a 6: fila más delgada.
+function filaLugar(p, esYo) {
+  const clasesYo = esYo ? ' rk-fila--yo' : '';
+  const puntos = `<div class="rk-puntos"><strong>${p.puntos}</strong><span>pts</span></div>`;
+  const foto = `<img class="rk-foto" src="${escaparHtml(p.fotoUrl || FOTO_VACIA)}" alt="">`;
+  if (p.lugar <= 3) {
+    return `
+    <div class="rk-fila rk-fila--top${clasesYo}">
+      <div class="rk-medalla">
+        <img src="assets/ranking/puesto-${p.lugar}.png" alt="${p.lugar}° lugar, medalla de ${NOMBRES_MEDALLA[p.lugar]}">
+        ${etiquetaPrograma(p.programa)}
       </div>
-      <img class="ranking-item__foto" src="${escaparHtml(p.fotoUrl || FOTO_VACIA)}" alt="">
-      <div class="ranking-item__datos">
-        <div class="ranking-item__nombre"><strong>${escaparHtml(p.nombre)}</strong></div>
-        <span class="text-soft ranking-item__programa">${escaparHtml(programaLabel(p.programa) || 'Sin programa')}${esYo ? ' <span class="badge badge--activo" style="font-size:9px; margin-left:4px;">Tú</span>' : ''}</span>
-      </div>
-      <div class="ranking-item__puntos"><strong>${p.puntos}</strong><span class="text-soft">pts</span></div>
+      ${foto}
+      <div class="rk-nombre">${escaparHtml(p.nombre)}</div>
+      ${puntos}
     </div>`;
+  }
+  return `
+    <div class="rk-fila rk-fila--resto${clasesYo}">
+      <span class="rk-numero">${p.lugar}°</span>
+      ${foto}
+      <div class="rk-nombre">${escaparHtml(p.nombre)}</div>
+      ${puntos}
+    </div>`;
+}
+
+function listaLugares(lugares, alumnoId) {
+  const top = lugares.filter(p => p.lugar <= 3);
+  const resto = lugares.filter(p => p.lugar > 3);
+  return `
+    <div class="rk-lista">
+      ${top.map(p => filaLugar(p, p.alumnoId === alumnoId)).join('')}
+      <img class="rk-astro rk-astro--estrella" src="assets/ranking/astronauta-estrella.png" alt="">
+    </div>
+    ${resto.length ? `<div class="rk-lista rk-lista--resto">
+      ${resto.map(p => filaLugar(p, p.alumnoId === alumnoId)).join('')}
+      <img class="rk-astro rk-astro--cohete" src="assets/ranking/astronauta-cohete.png" alt="">
+    </div>` : ''}`;
 }
 
 function tarjetaMiLugar(pos) {
@@ -89,7 +117,9 @@ function htmlComoSumar(tabla) {
 export async function cargarRanking() {
   const titulo = document.getElementById('ranking-titulo');
   const cont = document.getElementById('ranking-contenido');
+  const miLugarEl = document.getElementById('ranking-mi-lugar');
   if (!titulo || !cont) return;
+  if (miLugarEl) miLugarEl.innerHTML = '';
   const mes = mesActual();
   titulo.textContent = `Ranking ${nombreDeMes(mes)}`;
   cont.innerHTML = '<p class="text-soft">Cargando…</p>';
@@ -106,14 +136,13 @@ export async function cargarRanking() {
     const cfg = cfgSnap.exists() ? cfgSnap.val() : {};
     const lugares = podioSnap.exists() ? Object.values(podioSnap.val().lugares || {}) : [];
     const pos = posSnap && posSnap.exists() && posSnap.val().mes === mes ? posSnap.val() : null;
-    const estaEnPodio = !!alumnoId && lugares.some(p => p.alumnoId === alumnoId);
 
+    // "Tu lugar" va junto al título (solo alumnos); después el premio y los lugares 1 a 6.
+    if (miLugarEl) miLugarEl.innerHTML = alumnoId ? tarjetaMiLugar(pos) : '';
     let html = htmlPremio(cfg.premio);
-    if (alumnoId && !estaEnPodio) html += tarjetaMiLugar(pos);
     html += lugares.length
-      ? `<div class="ranking-lista">${lugares.map(p => tarjetaLugar(p, p.alumnoId === alumnoId)).join('')}</div>`
+      ? listaLugares(lugares, alumnoId)
       : '<div class="panel mb-16"><div class="panel__body"><p class="text-soft" style="margin:0;">Aún nadie tiene puntos este mes. ¡Sé el primero en el podio!</p></div></div>';
-    if (alumnoId && estaEnPodio && pos) html += tarjetaMiLugar(pos);
     html += htmlComoSumar(tablaPuntos(cfg.puntos));
     if (podioSnap.exists() && podioSnap.val().actualizadoEn) {
       html += `<p class="text-soft" style="font-size:11.5px;">Se actualiza cada pocos minutos. Última actualización: ${new Date(podioSnap.val().actualizadoEn).toLocaleString('es-CL', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}</p>`;

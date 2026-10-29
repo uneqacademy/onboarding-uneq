@@ -87,9 +87,9 @@ export function applyRole(role, nombre, rolesDisponibles) {
   const navComunidadUneq = document.querySelector('.nav-item[data-nav="comunidad-uneq"]');
   if (navComunidadUneq) navComunidadUneq.classList.remove('hidden');
 
-  // Ranking: lo ven los alumnos (con su lugar) y el director.
+  // Ranking: lo ve todo el mundo (los alumnos además ven su propio lugar).
   const navRanking = document.querySelector('.nav-item[data-nav="ranking"]');
-  if (navRanking) navRanking.classList.toggle('hidden', !(role === 'alumno' || role === 'director'));
+  if (navRanking) navRanking.classList.remove('hidden');
 
   const navMentoriasMentor = document.querySelector('.nav-item[data-nav="mentorias-mentor"]');
   if (navMentoriasMentor) navMentoriasMentor.classList.toggle('hidden', role !== 'mentor');
@@ -228,6 +228,7 @@ export function restaurarSeccionGuardada() {
 
 export function setNav(section) {
   marcarNavActivo(section);
+  document.body.classList.toggle('vista-ranking', section === 'ranking'); // fondo del espacio solo en el Ranking
   guardarSeccionActiva(section);
 
   if (section === 'dashboard') {
