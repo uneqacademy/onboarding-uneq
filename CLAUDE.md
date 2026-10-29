@@ -17,6 +17,9 @@ Web estática publicada en GitHub Pages (`app.uneqacademy.com`, ver `CNAME`). PW
 
 ## Roles (`/usuarios/{uid}`)
 `director`, `coach`, `mentor`; el alumno se resuelve por `/alumnoPorAuthUid/{uid}`.
+**En pantalla el rol `coach` se llama "Copiloto"** (menú, fichas, correos, PDF del acuerdo, IA). Internamente se sigue
+llamando `coach` (base de datos, reglas, `coachId`, ids y clases): no se renombra. La ocupación "Coach" del alumno
+(profesión) tampoco cambia.
 Agendamiento: `agendamiento/staff/{uid}` (closer, director comercial).
 
 ## Reglas de trabajo

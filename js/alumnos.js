@@ -362,14 +362,14 @@ async function cargarCoaches() {
   const selectFiltroDirector = document.getElementById('filtro-director-coach');
   if (selectFiltroDirector) {
     const valorPrevio = selectFiltroDirector.value;
-    selectFiltroDirector.innerHTML = '<option value="">Coach: Todos</option>'
+    selectFiltroDirector.innerHTML = '<option value="">Copiloto: Todos</option>'
       + Object.entries(coachesMap).map(([uid, nombre]) => `<option value="${escaparHtml(uid)}">${escaparHtml(nombre)}</option>`).join('');
     selectFiltroDirector.value = valorPrevio;
   }
   const selectFiltroDashDirector = document.getElementById('filtro-dash-director-coach');
   if (selectFiltroDashDirector) {
     const valorPrevio = selectFiltroDashDirector.value;
-    selectFiltroDashDirector.innerHTML = '<option value="">Coach: Todos</option>'
+    selectFiltroDashDirector.innerHTML = '<option value="">Copiloto: Todos</option>'
       + Object.entries(coachesMap).map(([uid, nombre]) => `<option value="${escaparHtml(uid)}">${escaparHtml(nombre)}</option>`).join('');
     selectFiltroDashDirector.value = valorPrevio;
   }
@@ -441,7 +441,7 @@ function crearFilaAlumno(alumnoId, alumno, ciclo, columnas, acuerdo, nombreOverr
 
   const nombreCompleto = nombreOverride || (`${alumno.nombre || ''} ${alumno.apellido || ''}`.trim() || '(sin nombre)');
   const coachNombre = ciclo
-    ? (ciclo.coachId ? (coachesMap[ciclo.coachId] || '—') : (ciclo.programa === 'begin' ? '🚩 Coach de Cabecera' : '—'))
+    ? (ciclo.coachId ? (coachesMap[ciclo.coachId] || '—') : (ciclo.programa === 'begin' ? '🚩 Copiloto de Cabecera' : '—'))
     : '—';
   const programa = ciclo ? programaLabel(ciclo.programa) : '—';
   const estadoProceso = ciclo ? estadoProcesoLabel(ciclo.estadoProceso) : '—';
@@ -901,7 +901,7 @@ async function abrirFicha(alumnoId) {
   document.getElementById('ficha-rut').textContent = alumno.rut || '—';
   document.getElementById('ficha-programa').textContent = ciclo ? programaLabel(ciclo.programa) : '—';
   document.getElementById('ficha-coach-nombre').textContent = ciclo
-    ? (role === 'coach' ? getCurrentUserNombre() : (ciclo.coachId ? (coachesMap[ciclo.coachId] || '—') : (ciclo.programa === 'begin' ? '🚩 Coach de Cabecera' : '—')))
+    ? (role === 'coach' ? getCurrentUserNombre() : (ciclo.coachId ? (coachesMap[ciclo.coachId] || '—') : (ciclo.programa === 'begin' ? '🚩 Copiloto de Cabecera' : '—')))
     : '—';
 
   const badge = document.getElementById('ficha-badge-estado');
@@ -1074,7 +1074,7 @@ if (btnCrearAlumno) {
     const abono = esMembresia ? '0' : document.getElementById('nuevo-alumno-abono').value.trim();
 
     if (!nombre || !apellido || (programa !== 'begin' && !coachId)) {
-      errorEl.textContent = 'Completa nombre, apellido y coach asignado.';
+      errorEl.textContent = 'Completa nombre, apellido y copiloto asignado.';
       errorEl.classList.remove('hidden');
       return;
     }
@@ -1141,7 +1141,7 @@ if (btnCrearAlumno) {
       errorEl.classList.remove('hidden');
     } finally {
       btnCrearAlumno.disabled = false;
-      btnCrearAlumno.textContent = 'Crear Alumno y Asignar Coach';
+      btnCrearAlumno.textContent = 'Crear Alumno y Asignar Copiloto';
     }
   });
 }
@@ -1474,7 +1474,7 @@ if (btnCrearNuevoCiclo) {
     const monto = document.getElementById('nuevo-ciclo-monto').value.trim();
     const moneda = document.getElementById('nuevo-ciclo-moneda').value;
 
-    if (programa !== 'begin' && !coachId) { alert('Selecciona un coach.'); return; }
+    if (programa !== 'begin' && !coachId) { alert('Selecciona un copiloto.'); return; }
 
     btnCrearNuevoCiclo.disabled = true;
     try {

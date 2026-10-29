@@ -22,7 +22,7 @@ if (temaEl) temaEl.textContent = tema;
 if (!coachId || !sesionId) {
   root.innerHTML = `
     <div class="panel"><div class="panel__body">
-      <p>Este link no es válido — falta identificar la sesión. Pide al coach que te reenvíe el link correcto.</p>
+      <p>Este link no es válido — falta identificar la sesión. Pide al copiloto que te reenvíe el link correcto.</p>
     </div></div>`;
 } else {
   let puntaje = 5;

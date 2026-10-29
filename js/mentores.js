@@ -180,7 +180,7 @@ async function cargarMentoresView() {
           <td colspan="5" style="background:#F7F8FA; padding:14px 16px;">
             <div style="display:flex; align-items:center; gap:16px; flex-wrap:wrap;">
               <label style="font-weight:400;"><input type="checkbox" class="chk-rol-mentor-m" ${rolesActuales.mentor ? 'checked' : ''}> Mentor</label>
-              <label style="font-weight:400;"><input type="checkbox" class="chk-rol-coach-m" ${rolesActuales.coach ? 'checked' : ''}> Coach</label>
+              <label style="font-weight:400;"><input type="checkbox" class="chk-rol-coach-m" ${rolesActuales.coach ? 'checked' : ''}> Copiloto</label>
               <span class="text-soft" style="font-size:12px;">El rol Director se asigna aparte, en Firebase Console.</span>
               <button class="btn btn--primary btn-guardar-roles-mentor" style="font-size:11px; padding:4px 10px;">Guardar</button>
             </div>
@@ -387,7 +387,7 @@ if (btnCrearMentor) {
         document.getElementById('nuevo-mentor-nombre').value = '';
         document.getElementById('nuevo-mentor-email').value = '';
         document.getElementById('nuevo-mentor-tambien-coach').checked = false;
-        alert(`${datosExistente.nombre || email} ya tenía una cuenta — se le agregó el rol de Mentor${tambienCoach ? ' y Coach' : ''} a la misma cuenta, sin generar contraseña nueva.`);
+        alert(`${datosExistente.nombre || email} ya tenía una cuenta — se le agregó el rol de Mentor${tambienCoach ? ' y Copiloto' : ''} a la misma cuenta, sin generar contraseña nueva.`);
         await cargarMentoresView();
         return;
       }

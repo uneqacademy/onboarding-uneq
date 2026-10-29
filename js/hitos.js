@@ -375,7 +375,7 @@ function renderSeguimientoPersonal(hitosDefinidos, misHitosPublicadosDefIds, fas
   const cont = document.getElementById('hitos-seguimiento-contenido');
   if (!cont) return;
   if (!faseMaxima) {
-    cont.innerHTML = '<p class="text-soft" style="margin:0; text-align:center;">Tu checklist de hitos aparecerá cuando tu coach marque tu fase.</p>';
+    cont.innerHTML = '<p class="text-soft" style="margin:0; text-align:center;">Tu checklist de hitos aparecerá cuando tu copiloto marque tu fase.</p>';
     return;
   }
   const fasesVisibles = Object.keys(FASES_HITOS).filter(faseClave => parseInt(faseClave.replace('fase', ''), 10) <= faseMaxima);

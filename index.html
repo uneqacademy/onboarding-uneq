@@ -130,7 +130,7 @@
         <li class="nav-item" data-nav="alumnos">Alumnos</li>
         <li class="nav-item" data-role="director" data-nav="pagos">Pagos</li>
         <li class="nav-item" data-role="director" data-nav="pre-onboarding">Pre-Onboarding</li>
-        <li class="nav-item" data-role="director" data-nav="coaches">Coaches</li>
+        <li class="nav-item" data-role="director" data-nav="coaches">Copilotos</li>
         <li class="nav-item" data-role="director" data-nav="mentores">Mentores</li>
         <li class="nav-item hidden" data-nav="mis-datos">Mis Datos</li>
         <li class="nav-item" data-role="director" data-nav="rendimiento-ia">Rendimiento IA</li>
@@ -248,7 +248,7 @@
               <div style="display:flex; gap:10px; align-items:flex-start;">
                 <div style="width:28px; height:28px; border-radius:50%; background:var(--color-primary); flex-shrink:0; display:flex; align-items:center; justify-content:center; color:#fff; font-size:13px;">✨</div>
                 <div style="background:#fff; padding:12px 16px; border-radius:14px; border-top-left-radius:4px; max-width:82%; box-shadow:0 1px 2px rgba(0,0,0,0.06);">
-                  <p style="margin:0; font-size:13.5px; line-height:1.5;">¡Hola! Pregúntame sobre alumnos, mentores, coaches, dudas repetidas, resultados del Test Brújula y más — siempre alineado con la metodología UNEQ. (No puedo ver datos de pagos ni acuerdos.)</p>
+                  <p style="margin:0; font-size:13.5px; line-height:1.5;">¡Hola! Pregúntame sobre alumnos, mentores, copilotos, dudas repetidas, resultados del Test Brújula y más — siempre alineado con la metodología UNEQ. (No puedo ver datos de pagos ni acuerdos.)</p>
                 </div>
               </div>
               </div>
@@ -264,7 +264,7 @@
           <div class="panel__header">
             <h3>Todos los alumnos</h3>
             <div class="filters">
-              <select id="filtro-dash-director-coach"><option value="">Coach: Todos</option></select>
+              <select id="filtro-dash-director-coach"><option value="">Copiloto: Todos</option></select>
               <select id="filtro-dash-director-programa">
                 <option value="">Programa: Todos</option>
                 <option value="begin">Begin</option>
@@ -283,7 +283,7 @@
             <table class="data-table">
               <thead>
                 <tr>
-                  <th>Alumno</th><th>Coach</th><th>Programa</th><th>Estado Proceso</th>
+                  <th>Alumno</th><th>Copiloto</th><th>Programa</th><th>Estado Proceso</th>
                   <th>Estado Alumno</th><th>Onboarding</th><th>Próx. Cuota</th><th>Monto</th><th>Estado Pago</th>
                 </tr>
               </thead>
@@ -295,7 +295,7 @@
         <div class="panel" style="margin-top:24px;">
           <div class="panel__header"><h3>🎭 Ver como Alumno (Demo)</h3></div>
           <div class="panel__body">
-            <p class="text-soft mb-16" style="font-size:13px;">Prueba la experiencia real de un alumno sin crear datos falsos — no cuenta en ninguna estadística, y aparece marcado "(DEMO)" para que mentores y coaches no se confundan.</p>
+            <p class="text-soft mb-16" style="font-size:13px;">Prueba la experiencia real de un alumno sin crear datos falsos — no cuenta en ninguna estadística, y aparece marcado "(DEMO)" para que mentores y copilotos no se confundan.</p>
             <div style="display:flex; gap:10px; flex-wrap:wrap;">
               <button type="button" class="btn btn--accent" id="btn-ver-demo-begin">Ver como Alumno BEGIN</button>
               <button type="button" class="btn btn--accent" id="btn-ver-demo-next">Ver como Alumno NEXT</button>
@@ -306,7 +306,7 @@
       </section>
 
       <!-- ======================================================
-           DASHBOARD — COACH
+           DASHBOARD — COPILOTO
            ====================================================== -->
       <section id="view-dashboard-coach" class="view hidden">
         <div class="kpi-grid">
@@ -368,7 +368,7 @@
         <div class="panel hidden" id="panel-sesiones-begin" style="margin-top:24px;">
           <div class="panel__header"><h3>Sesiones Grupales BEGIN</h3></div>
           <div class="panel__body">
-            <p class="text-soft mb-16" style="font-size:13px;">Como Coach de Cabecera, tus sesiones grupales las ven todos los alumnos del programa BEGIN, sin importar quién sea su coach.</p>
+            <p class="text-soft mb-16" style="font-size:13px;">Como Copiloto de Cabecera, tus sesiones grupales las ven todos los alumnos del programa BEGIN, sin importar quién sea su copiloto.</p>
             <div class="field-grid mb-16">
               <div class="field"><label>Fecha</label><input type="date" id="sesion-begin-fecha"></div>
               <div class="field"><label>Hora</label><input type="time" id="sesion-begin-hora"></div>
@@ -394,7 +394,7 @@
             <img id="ficha-foto-alumno" src="" alt="" style="width:56px; height:56px; border-radius:50%; object-fit:cover; flex-shrink:0;">
             <div>
               <h2 id="ficha-nombre-alumno">—</h2>
-              <p class="text-soft">RUT <span id="ficha-rut">—</span> · Programa <span id="ficha-programa">—</span> · Coach: <span id="ficha-coach-nombre">—</span></p>
+              <p class="text-soft">RUT <span id="ficha-rut">—</span> · Programa <span id="ficha-programa">—</span> · Copiloto: <span id="ficha-coach-nombre">—</span></p>
             </div>
           </div>
           <div style="display:flex; align-items:center; gap:12px;">
@@ -417,7 +417,7 @@
         <div class="panel mb-16 hidden" id="panel-form-agregar-socio">
           <div class="panel__header"><h3>Agregar Socio/a al mismo proyecto</h3></div>
           <div class="panel__body">
-            <p class="text-soft mb-16" style="font-size:13px;">Comparte el mismo ciclo (programa, coach, fechas, bitácora) — no se crea un acuerdo ni pago nuevo, solo su propia ficha y acceso.</p>
+            <p class="text-soft mb-16" style="font-size:13px;">Comparte el mismo ciclo (programa, copiloto, fechas, bitácora) — no se crea un acuerdo ni pago nuevo, solo su propia ficha y acceso.</p>
             <div class="field-grid mb-16">
               <div class="field"><label>Nombre <span style="color:#C0392B;">*</span></label><input id="socio-nombre"></div>
               <div class="field"><label>Apellido <span style="color:#C0392B;">*</span></label><input id="socio-apellido"></div>
@@ -432,7 +432,7 @@
           </div>
         </div>
 
-        <!-- Bloqueo para el coach mientras la pelota está con el director -->
+        <!-- Bloqueo para el copiloto mientras la pelota está con el director -->
         <div class="locked-banner hidden" id="banner-bloqueo-coach">
           🔒 Ficha bloqueada temporalmente — el acuerdo está en revisión con el director/a académico.
         </div>
@@ -501,9 +501,9 @@
                   <option value="exit">eXIT (6 meses · $5.000.000)</option>
                 </select>
               </div>
-              <div class="field" id="campo-nuevo-ciclo-coach"><label>Coach Asignado</label><select id="nuevo-ciclo-coach"></select></div>
+              <div class="field" id="campo-nuevo-ciclo-coach"><label>Copiloto Asignado</label><select id="nuevo-ciclo-coach"></select></div>
             </div>
-            <p class="text-soft hidden" id="aviso-nuevo-ciclo-begin-sin-coach" style="margin-top:-8px;">🚩 BEGIN no lleva coach individual — lo ve automáticamente el Coach de Cabecera.</p>
+            <p class="text-soft hidden" id="aviso-nuevo-ciclo-begin-sin-coach" style="margin-top:-8px;">🚩 BEGIN no lleva copiloto individual — lo ve automáticamente el Copiloto de Cabecera.</p>
             <div class="field-grid mb-16">
               <div class="field"><label>Monto Total</label><input id="nuevo-ciclo-monto"></div>
               <div class="field"><label>Moneda</label><select id="nuevo-ciclo-moneda"><option>CLP</option><option>USD</option></select></div>
@@ -513,7 +513,7 @@
         </div>
 
         <!-- Candado post-firma: se activa solo al marcar Firma Procesada.
-             Bloquea edición al coach para evitar cambios accidentales.
+             Bloquea edición al copiloto para evitar cambios accidentales.
              El director lo puede desbloquear/bloquear con un clic, sin flujo de aprobación. -->
         <div class="panel mb-24 hidden" id="panel-candado">
           <div class="panel__body flex-between">
@@ -631,7 +631,7 @@
                 <div class="field"><label>Programa</label><select id="ciclo-programa" disabled><option value="begin">Begin</option><option value="next">Next</option><option value="exit">eXIT</option></select></div>
                 <div class="field"><label>Fecha Ingreso</label><input type="date" id="ciclo-fecha-ingreso" placeholder="Se define al quedar Firma Procesada"></div>
                 <div class="field"><label>Fecha Egreso</label><input type="date" id="ciclo-fecha-egreso" placeholder="Se calcula sola, o corrígela a mano"></div>
-                <div class="field" id="campo-ciclo-coach"><label>Coach Asignado</label><select id="ciclo-coach"></select></div>
+                <div class="field" id="campo-ciclo-coach"><label>Copiloto Asignado</label><select id="ciclo-coach"></select></div>
                 <div class="field">
                   <label>Fase de la Metodología</label>
                   <select id="ciclo-fase-metodologia">
@@ -650,7 +650,7 @@
                   </div>
                 </div>
               </div>
-              <p class="text-soft hidden" id="aviso-ciclo-begin-sin-coach">🚩 BEGIN no lleva coach individual — lo ve automáticamente el Coach de Cabecera.</p>
+              <p class="text-soft hidden" id="aviso-ciclo-begin-sin-coach">🚩 BEGIN no lleva copiloto individual — lo ve automáticamente el Copiloto de Cabecera.</p>
               <div class="field-grid mb-16" style="margin-top:14px;">
                 <div class="field"><label>Facturación Actual <span style="color:#C0392B;">*</span></label><input id="ciclo-facturacion-actual" placeholder="$0"></div>
                 <div class="field"><label>Objetivo Facturación Largo Plazo <span style="color:#C0392B;">*</span></label><input id="ciclo-objetivo-facturacion" placeholder="$0"></div>
@@ -711,7 +711,7 @@
             </div>
           </div>
         </div>
-        <!-- Vista que ve el coach en el mismo tab si intentara acceder -->
+        <!-- Vista que ve el copiloto en el mismo tab si intentara acceder -->
         <div class="tab-panel hidden" data-panel="pago-restringido">
           <div class="restricted-banner">🔒 No tienes acceso a la información de pagos de este alumno.</div>
         </div>
@@ -788,7 +788,7 @@
           <div class="panel__header">
             <h3>Todos los alumnos</h3>
             <div class="filters">
-              <select id="filtro-director-coach"><option value="">Coach: Todos</option></select>
+              <select id="filtro-director-coach"><option value="">Copiloto: Todos</option></select>
               <select id="filtro-director-programa">
                 <option value="">Programa: Todos</option>
                 <option value="begin">Begin</option>
@@ -806,7 +806,7 @@
           <div class="panel__body" style="padding:0;">
             <table class="data-table">
               <thead>
-                <tr><th>Alumno</th><th>Coach</th><th>Programa</th><th>Estado Proceso</th><th>Estado Alumno</th><th>Onboarding</th><th>Ingreso</th><th>Egreso</th></tr>
+                <tr><th>Alumno</th><th>Copiloto</th><th>Programa</th><th>Estado Proceso</th><th>Estado Alumno</th><th>Onboarding</th><th>Ingreso</th><th>Egreso</th></tr>
               </thead>
               <tbody id="tabla-alumnos-director"></tbody>
             </table>
@@ -815,7 +815,7 @@
       </section>
 
       <!-- ======================================================
-           ALUMNOS — vista COACH (solo asignados)
+           ALUMNOS — vista COPILOTO (solo asignados)
            ====================================================== -->
       <section id="view-alumnos-coach" class="view hidden">
         <div class="flex-between mb-16"><h2>Mis Alumnos</h2></div>
@@ -833,8 +833,8 @@
 
       <!-- ======================================================
            CREAR ALUMNO (solo Director) — datos base + programa +
-           coach + acuerdo de pago. El resto (test, campos narrativos,
-           ocupación, foto) lo completa el coach durante el onboarding,
+           copiloto + acuerdo de pago. El resto (test, campos narrativos,
+           ocupación, foto) lo completa el copiloto durante el onboarding,
            dentro de la Ficha de Alumno.
            ====================================================== -->
       <section id="view-crear-alumno" class="view hidden">
@@ -846,7 +846,7 @@
         <div class="panel mb-16">
           <div class="panel__header"><h3>Identificación del Alumno</h3></div>
           <div class="panel__body">
-            <p class="text-soft mb-16">El resto de los datos (RUT, contacto, foto, ocupación, test, etc.) los completa el coach durante la sesión de onboarding.</p>
+            <p class="text-soft mb-16">El resto de los datos (RUT, contacto, foto, ocupación, test, etc.) los completa el copiloto durante la sesión de onboarding.</p>
             <div class="field-grid">
               <div class="field"><label>Nombre</label><input id="nuevo-alumno-nombre" placeholder="Nombre"></div>
               <div class="field"><label>Apellido</label><input id="nuevo-alumno-apellido" placeholder="Apellido"></div>
@@ -857,7 +857,7 @@
         </div>
 
         <div class="panel mb-16">
-          <div class="panel__header"><h3>Programa y Coach</h3></div>
+          <div class="panel__header"><h3>Programa y Copiloto</h3></div>
           <div class="panel__body">
             <p class="text-soft mb-16">La Fecha de Ingreso se define automáticamente cuando el acuerdo quede "Firma Procesada" — no antes.</p>
             <div class="field-grid">
@@ -874,11 +874,11 @@
                   Es Membresía (pago mes a mes, mismos accesos de Next)
                 </label>
               </div>
-              <div class="field" id="campo-nuevo-alumno-coach"><label>Coach Asignado</label>
-                <select id="nuevo-alumno-coach"><option value="">Cargando coaches...</option></select>
+              <div class="field" id="campo-nuevo-alumno-coach"><label>Copiloto Asignado</label>
+                <select id="nuevo-alumno-coach"><option value="">Cargando copilotos...</option></select>
               </div>
             </div>
-            <p class="text-soft hidden" id="aviso-nuevo-alumno-begin-sin-coach" style="margin-top:-8px;">🚩 BEGIN no lleva coach individual — lo ve automáticamente el Coach de Cabecera.</p>
+            <p class="text-soft hidden" id="aviso-nuevo-alumno-begin-sin-coach" style="margin-top:-8px;">🚩 BEGIN no lleva copiloto individual — lo ve automáticamente el Copiloto de Cabecera.</p>
           </div>
         </div>
 
@@ -910,16 +910,16 @@
         <p id="nuevo-alumno-error" class="hidden" style="color:#C0392B; margin-bottom:12px;"></p>
         <div class="flex-between">
           <button class="btn btn--ghost" id="btn-cancelar-nuevo-alumno-2">Cancelar</button>
-          <button class="btn btn--primary" id="btn-crear-alumno">Crear Alumno y Asignar Coach</button>
+          <button class="btn btn--primary" id="btn-crear-alumno">Crear Alumno y Asignar Copiloto</button>
         </div>
       </section>
 
       <!-- ======================================================
-           COACHES (solo Director)
+           COPILOTOS (solo Director)
            ====================================================== -->
       <section id="view-coaches" class="view hidden">
         <div class="mb-16" style="text-align:right;">
-          <button class="btn btn--accent" id="btn-nuevo-coach">+ Nuevo Coach</button>
+          <button class="btn btn--accent" id="btn-nuevo-coach">+ Nuevo Copiloto</button>
         </div>
         <div class="panel">
           <div class="panel__body" style="padding:0;">
@@ -932,11 +932,11 @@
       </section>
 
       <!-- ======================================================
-           CREAR COACH (solo Director)
+           CREAR COPILOTO (solo Director)
            ====================================================== -->
       <section id="view-crear-coach" class="view hidden">
         <div class="flex-between mb-16">
-          <h2>Nuevo Coach</h2>
+          <h2>Nuevo Copiloto</h2>
           <button class="btn btn--ghost" id="btn-cancelar-nuevo-coach">← Volver</button>
         </div>
         <div class="panel">
@@ -949,9 +949,9 @@
             <label style="display:flex; align-items:center; gap:8px; margin-bottom:16px; font-weight:400;">
               <input type="checkbox" id="nuevo-coach-tambien-mentor" style="width:auto;"> ¿También es Mentor?
             </label>
-            <p class="text-soft mb-16">Si el correo ya existe como Mentor, se le agrega el rol de Coach a esa misma cuenta (sin crear una nueva ni generar contraseña). Si es una cuenta nueva, se genera una contraseña inicial automática — te la muestro al final para que se la compartas tú mismo.</p>
+            <p class="text-soft mb-16">Si el correo ya existe como Mentor, se le agrega el rol de Copiloto a esa misma cuenta (sin crear una nueva ni generar contraseña). Si es una cuenta nueva, se genera una contraseña inicial automática — te la muestro al final para que se la compartas tú mismo.</p>
             <p id="nuevo-coach-error" class="hidden" style="color:#C0392B; margin-bottom:12px;"></p>
-            <button class="btn btn--primary" id="btn-crear-coach">Crear Cuenta de Coach</button>
+            <button class="btn btn--primary" id="btn-crear-coach">Crear Cuenta de Copiloto</button>
 
             <div class="panel mb-16 hidden" id="panel-coach-creado" style="margin-top:16px;">
               <div class="panel__body">
@@ -1003,9 +1003,9 @@
               <div class="field"><label>Correo</label><input type="email" id="nuevo-mentor-email" placeholder="nombre@agenciauneq.com" autocomplete="off"></div>
             </div>
             <label style="display:flex; align-items:center; gap:8px; margin-bottom:16px; font-weight:400;">
-              <input type="checkbox" id="nuevo-mentor-tambien-coach" style="width:auto;"> ¿También es Coach?
+              <input type="checkbox" id="nuevo-mentor-tambien-coach" style="width:auto;"> ¿También es Copiloto?
             </label>
-            <p class="text-soft mb-16">Si el correo ya existe como Coach, se le agrega el rol de Mentor a esa misma cuenta (sin crear una nueva ni generar contraseña). Si es una cuenta nueva, se genera una contraseña inicial automática — te la muestro al final para que se la compartas tú mismo.</p>
+            <p class="text-soft mb-16">Si el correo ya existe como Copiloto, se le agrega el rol de Mentor a esa misma cuenta (sin crear una nueva ni generar contraseña). Si es una cuenta nueva, se genera una contraseña inicial automática — te la muestro al final para que se la compartas tú mismo.</p>
             <p id="nuevo-mentor-error" class="hidden" style="color:#C0392B; margin-bottom:12px;"></p>
             <button class="btn btn--primary" id="btn-crear-mentor">Crear Cuenta de Mentor</button>
 
@@ -1289,13 +1289,13 @@
                   <option value="sin-definir">Sin definir</option>
                 </select>
               </div>
-              <div class="field"><label>Coach</label><input id="filtro-mentor-coach" placeholder="Buscar..."></div>
+              <div class="field"><label>Copiloto</label><input id="filtro-mentor-coach" placeholder="Buscar..."></div>
             </div>
           </div>
           <div class="panel__body" style="padding:0;">
             <table class="data-table">
               <thead>
-                <tr><th></th><th>Alumno</th><th>Programa</th><th>Fase</th><th>Coach</th><th>Matrícula</th><th></th></tr>
+                <tr><th></th><th>Alumno</th><th>Programa</th><th>Fase</th><th>Copiloto</th><th>Matrícula</th><th></th></tr>
               </thead>
               <tbody id="tabla-matriz-mentor"></tbody>
             </table>
@@ -1655,7 +1655,7 @@
       <!-- ======================================================
            COMUNIDAD UNEQ — Hitos de la Comunidad, Preguntas de la
            Comunidad, Presentación e Historias Reales. Visible para
-           alumno, mentor, coach y director (cada uno ve lo que le
+           alumno, mentor, copiloto y director (cada uno ve lo que le
            corresponde dentro de cada pestaña).
            ====================================================== -->
       <section id="view-comunidad-uneq" class="view hidden">
@@ -1689,7 +1689,7 @@
                   <option value="exit">eXIT</option>
                 </select>
               </div>
-              <div class="field"><label>Coach Asignado</label><select id="chc-f-coach"><option value="">Todos</option></select></div>
+              <div class="field"><label>Copiloto Asignado</label><select id="chc-f-coach"><option value="">Todos</option></select></div>
               <div class="field"><label>Estudiante</label><select id="chc-f-estudiante"><option value="">Todos</option></select></div>
               <div class="field"><label>Fase</label>
                 <select id="chc-f-fase">
@@ -1770,7 +1770,7 @@
                   <option value="exit">eXIT</option>
                 </select>
               </div>
-              <div class="field"><label>Coach Asignado</label><select id="cpc-f-coach"><option value="">Todos</option></select></div>
+              <div class="field"><label>Copiloto Asignado</label><select id="cpc-f-coach"><option value="">Todos</option></select></div>
               <div class="field"><label>Estudiante</label><select id="cpc-f-estudiante"><option value="">Todos</option></select></div>
               <div class="field"><label>Mentor</label><select id="cpc-f-mentor-staff"><option value="">Todos</option></select></div>
               <div class="field"><label>Temática</label><select id="cpc-f-tema-staff"><option value="">Todas</option></select></div>
@@ -1809,7 +1809,7 @@
           <div class="panel mb-24 hidden" id="pres-candado-panel">
             <div class="panel__header"><h3>🔒 Preséntate a la Comunidad</h3></div>
             <div class="panel__body">
-              <p class="text-soft" style="margin:0 0 16px;">Antes de ver el resto de la comunidad, cuéntanos quién eres. Tu Coach revisa cada presentación antes de publicarla.</p>
+              <p class="text-soft" style="margin:0 0 16px;">Antes de ver el resto de la comunidad, cuéntanos quién eres. Tu Copiloto revisa cada presentación antes de publicarla.</p>
               <div class="field mb-16">
                 <label>Cuéntanos quién eres</label>
                 <textarea id="pres-texto-form" placeholder="Cuéntanos quién eres, a qué te dedicas, y qué te trae a UNEQ..."></textarea>
@@ -1826,7 +1826,7 @@
           </div>
           <!-- Alumno: aviso mientras está pendiente de aprobación -->
           <div class="presentacion-pendiente-banner hidden" id="pres-pendiente-banner">
-            ⏳ Tu presentación está en revisión por tu Coach. La ves abajo con la etiqueta "En Revisión" — la puedes editar o eliminar mientras tanto (hasta 24 horas después de enviarla).
+            ⏳ Tu presentación está en revisión por tu Copiloto. La ves abajo con la etiqueta "En Revisión" — la puedes editar o eliminar mientras tanto (hasta 24 horas después de enviarla).
           </div>
 
           <!-- Solo staff: filtros -->
@@ -1837,7 +1837,7 @@
               <div class="field"><label>Programa</label>
                 <select id="pres-f-programa"><option value="">Todos</option><option value="begin">Begin</option><option value="next">Next</option><option value="exit">eXIT</option></select>
               </div>
-              <div class="field"><label>Coach Asignado</label><select id="pres-f-coach"><option value="">Todos</option></select></div>
+              <div class="field"><label>Copiloto Asignado</label><select id="pres-f-coach"><option value="">Todos</option></select></div>
               <div class="field"><label>Estudiante</label><select id="pres-f-estudiante"><option value="">Todos</option></select></div>
               <label style="display:flex; align-items:center; gap:6px; font-size:12.5px;"><input type="checkbox" id="pres-f-pendientes"> Solo pendientes de aprobar</label>
             </div>
@@ -1881,7 +1881,7 @@
               <div class="field"><label>Programa</label>
                 <select id="hist-f-programa"><option value="">Todos</option><option value="begin">Begin</option><option value="next">Next</option><option value="exit">eXIT</option></select>
               </div>
-              <div class="field"><label>Coach Asignado</label><select id="hist-f-coach"><option value="">Todos</option></select></div>
+              <div class="field"><label>Copiloto Asignado</label><select id="hist-f-coach"><option value="">Todos</option></select></div>
               <div class="field"><label>Estudiante</label><select id="hist-f-estudiante"><option value="">Todos</option></select></div>
             </div>
           </div>
@@ -1958,7 +1958,7 @@
            CONFIGURACIÓN (solo Director)
            ====================================================== -->
       <!-- ======================================================
-           MIS DATOS (Director / Coach / Mentor)
+           MIS DATOS (Director / Copiloto / Mentor)
            ====================================================== -->
       <section id="view-mis-datos" class="view hidden">
         <div class="panel mb-24">
@@ -2078,8 +2078,8 @@
         <div class="panel hidden" data-role="director" id="panel-mis-roles-director">
           <div class="panel__header"><h3>Mis Roles Adicionales</h3></div>
           <div class="panel__body">
-            <p class="text-soft mb-16">Actívalos si también vas a trabajar como Coach o Mentor. Después de guardar, cierra sesión y vuelve a entrar para ver el selector "Viendo como" actualizado.</p>
-            <label style="font-weight:400; display:flex; align-items:center; gap:8px; margin-bottom:10px;"><input type="checkbox" id="chk-rol-propio-coach" style="width:auto;"> También soy Coach</label>
+            <p class="text-soft mb-16">Actívalos si también vas a trabajar como Copiloto o Mentor. Después de guardar, cierra sesión y vuelve a entrar para ver el selector "Viendo como" actualizado.</p>
+            <label style="font-weight:400; display:flex; align-items:center; gap:8px; margin-bottom:10px;"><input type="checkbox" id="chk-rol-propio-coach" style="width:auto;"> También soy Copiloto</label>
             <label style="font-weight:400; display:flex; align-items:center; gap:8px; margin-bottom:16px;"><input type="checkbox" id="chk-rol-propio-mentor" style="width:auto;"> También soy Mentor</label>
             <button class="btn btn--primary" id="btn-guardar-roles-propios">Guardar Roles</button>
             <button class="btn btn--ghost hidden" id="btn-editar-roles-propios">✏️ Editar</button>
@@ -2187,7 +2187,7 @@
                 <button type="button" class="btn btn--ghost hidden" id="btn-config-director-ia-quitar-foto" style="font-size:12px; padding:5px 12px; margin-top:6px;">Quitar foto</button>
               </div>
               <div style="flex:1; min-width:240px;">
-                <div class="field"><label>Nombre del asistente (lo ven Director, coaches y mentores)</label><input id="config-director-ia-nombre" placeholder="Director IA"></div>
+                <div class="field"><label>Nombre del asistente (lo ven Director, copilotos y mentores)</label><input id="config-director-ia-nombre" placeholder="Director IA"></div>
                 <p class="text-soft" style="font-size:12px; margin:0;">La foto y el nombre se usan en el chat de los 3 roles.</p>
               </div>
             </div>
