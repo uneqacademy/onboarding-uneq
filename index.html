@@ -92,6 +92,24 @@
     </div>
   </div>
 
+  <!-- Modal "Editar pago" (sección Pagos del director) -->
+  <div class="modal-overlay" id="modal-pago">
+    <div class="modal-card">
+      <div class="modal-card__header">
+        <h3 style="margin:0;" id="modal-pago-titulo">Pago</h3>
+        <button class="btn btn--ghost" id="btn-modal-pago-cerrar" style="padding:8px 14px; line-height:1;">✕</button>
+      </div>
+      <div class="modal-card__body">
+        <div id="modal-pago-campos"></div>
+        <p id="modal-pago-error" class="hidden" style="color:#C0392B; margin:12px 0 0; font-size:13px;"></p>
+        <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:16px;">
+          <button class="btn btn--primary" id="btn-modal-pago-guardar">Guardar</button>
+          <button class="btn btn--accent hidden" id="btn-modal-pago-hoy">Marcar pagada hoy</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- SIDEBAR -->
   <aside class="sidebar" id="sidebar">
     <div class="brand">
@@ -110,6 +128,7 @@
       <div class="nav-list">
         <li class="nav-item is-active" data-nav="dashboard">Dashboard</li>
         <li class="nav-item" data-nav="alumnos">Alumnos</li>
+        <li class="nav-item" data-role="director" data-nav="pagos">Pagos</li>
         <li class="nav-item" data-role="director" data-nav="pre-onboarding">Pre-Onboarding</li>
         <li class="nav-item" data-role="director" data-nav="coaches">Coaches</li>
         <li class="nav-item" data-role="director" data-nav="mentores">Mentores</li>
@@ -667,11 +686,11 @@
                 <div class="field"><label>Monto Total</label><input id="pago-monto-total"></div>
                 <div class="field"><label>Descuento</label><input id="pago-descuento" placeholder="0"></div>
                 <div class="field"><label>Abono</label><input id="pago-abono" placeholder="0"></div>
-                <div class="field"><label>Fecha de Abono (automática, fecha de asignación)</label><input type="date" id="pago-fecha-abono" disabled></div>
+                <div class="field"><label>Fecha de Abono</label><input type="date" id="pago-fecha-abono"></div>
                 <div class="field"><label>Saldo (Monto − Descuento − Abono)</label><input id="pago-saldo" disabled></div>
               </div>
               <table class="data-table mb-16" id="tabla-cuotas-ficha">
-                <thead><tr><th>Fecha</th><th>Monto</th><th>Estado</th><th></th></tr></thead>
+                <thead><tr><th>Vence</th><th>Monto</th><th>Estado</th><th>Fecha de pago</th><th></th></tr></thead>
                 <tbody id="tabla-cuotas-ficha-body"></tbody>
               </table>
               <button class="btn btn--ghost" id="btn-agregar-cuota-ficha">+ Agregar Cuota</button>
@@ -1527,6 +1546,46 @@
       <!-- ======================================================
            SOPORTE ALUMNOS — página propia
            ====================================================== -->
+      <section id="view-pagos" class="view hidden">
+        <div class="flex-between mb-16" style="flex-wrap:wrap; gap:8px;">
+          <h2 style="margin:0;">Pagos de alumnos</h2>
+          <button class="btn btn--ghost" id="btn-pagos-excel">Descargar Excel</button>
+        </div>
+        <div id="pagos-kpis" class="pagos-kpis mb-16"></div>
+        <div class="panel">
+          <div class="panel__header">
+            <h3>Matriz de pagos</h3>
+            <div class="filters">
+              <select id="pagos-f-estado-alumno">
+                <option value="activo">Alumnos: Activos</option>
+                <option value="en_proceso_matricula">En proceso de matrícula</option>
+                <option value="pausado">Pausados</option>
+                <option value="egresado">Egresados</option>
+                <option value="abandono">Abandono</option>
+                <option value="">Todos</option>
+              </select>
+              <select id="pagos-f-programa">
+                <option value="">Programa: Todos</option>
+                <option value="begin">Begin</option>
+                <option value="next">Next</option>
+                <option value="exit">eXIT</option>
+              </select>
+              <select id="pagos-f-pago">
+                <option value="">Pago: Todos</option>
+                <option value="atrasado">Atrasados</option>
+                <option value="aldia">Al día</option>
+                <option value="completo">Pagado completo</option>
+              </select>
+              <input type="text" id="pagos-f-nombre" placeholder="Buscar alumno...">
+            </div>
+          </div>
+          <div class="panel__body" style="padding:0;">
+            <div class="pagos-scroll"><table class="data-table pagos-tabla" id="pagos-tabla"></table></div>
+          </div>
+        </div>
+        <p class="text-soft" style="font-size:12px; margin-top:10px;">Toca una cuota o un abono para registrar el pago o cambiar su estado y fecha. Lo que cambies aquí se actualiza también en la ficha de cada alumno (pestaña Pago), y al revés.</p>
+      </section>
+
       <section id="view-ranking" class="view hidden">
         <div class="rk-cabecera">
           <h2 id="ranking-titulo">Ranking</h2>

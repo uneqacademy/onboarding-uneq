@@ -12,12 +12,15 @@
    ============================================================ */
 
 import { db, storage } from './firebase-config.js';
-import { ref, get, set, update } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-database.js";
+import { ref, get, set, update, push, onValue } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-database.js";
 import { ref as storageRef, uploadBytes, getDownloadURL, deleteObject } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-storage.js";
 import { getCurrentRole } from './main.js';
+import { hoyISO } from './util-pagos.js';
 
 let cicloIdActual = null;
 let monedaActual = 'CLP';
+let cuotaIdsOriginales = new Set(); // ids de cuota guardados al abrir la ficha (para saber cuáles se quitaron)
+let dejarDeEscuchar = null;         // cierra la escucha en vivo del acuerdo abierto
 
 /* Atrasado = alguna cuota con fecha ya pasada y estado distinto de "pagada" */
 function calcularEstadoPago(cuotas) {
@@ -30,7 +33,7 @@ function calcularEstadoPago(cuotas) {
 }
 
 function aplicarBloqueoAcuerdo(bloqueado) {
-  ['pago-monto-total', 'pago-descuento', 'pago-abono', 'btn-agregar-cuota-ficha', 'btn-subir-acuerdo-firmado', 'btn-eliminar-acuerdo-firmado']
+  ['pago-monto-total', 'pago-descuento', 'pago-abono', 'pago-fecha-abono', 'btn-agregar-cuota-ficha', 'btn-subir-acuerdo-firmado', 'btn-eliminar-acuerdo-firmado']
     .forEach(id => { const el = document.getElementById(id); if (el) el.disabled = bloqueado; });
   document.querySelectorAll('#tabla-cuotas-ficha-body input, #tabla-cuotas-ficha-body select, #tabla-cuotas-ficha-body button')
     .forEach(el => { el.disabled = bloqueado; });
@@ -56,9 +59,13 @@ function crearSelectEstado(celda, estadoInicial) {
   if (estadoInicial === 'pagada') agregarBotonDesbloquear(celda, select);
 
   select.addEventListener('change', () => {
+    const fechaPagoInput = celda.closest('tr')?.querySelector('.cuota-fecha-pago');
     if (select.value === 'pagada') {
+      if (fechaPagoInput && !fechaPagoInput.value) fechaPagoInput.value = hoyISO(); // se puede corregir a mano
       select.disabled = true;
       agregarBotonDesbloquear(celda, select);
+    } else if (fechaPagoInput) {
+      fechaPagoInput.value = ''; // solo una cuota pagada tiene fecha de pago
     }
   });
 }
@@ -78,13 +85,17 @@ function agregarBotonDesbloquear(celda, select) {
   celda.appendChild(btn);
 }
 
-function agregarFilaCuota(cuota) {
+// "id" es el id guardado de la cuota; una cuota nueva recibe uno desde ya. Se conserva al guardar para que la
+// sección Pagos y esta ficha hablen de la misma cuota.
+function agregarFilaCuota(cuota, id) {
   const tbody = document.getElementById('tabla-cuotas-ficha-body');
   const tr = document.createElement('tr');
+  tr.dataset.cuotaId = typeof id === 'string' ? id : push(ref(db)).key;
   tr.innerHTML = `
     <td><input type="date" class="cuota-fecha" value="${cuota && cuota.fecha ? cuota.fecha : ''}"></td>
     <td><input class="cuota-monto" placeholder="0" value="${cuota && cuota.monto ? cuota.monto : ''}"></td>
     <td class="cuota-estado-cell"></td>
+    <td><input type="date" class="cuota-fecha-pago" title="Fecha en que se pagó" value="${cuota && cuota.fechaPago ? cuota.fechaPago : ''}"></td>
     <td><button class="btn btn--danger btn-quitar-cuota">Quitar</button></td>`;
   tbody.appendChild(tr);
 
@@ -100,9 +111,27 @@ function recalcularSaldo() {
   document.getElementById('pago-saldo').value = saldo.toLocaleString('es-CL');
 }
 
-/* --- Llamada desde alumnos.js cada vez que se abre una ficha (solo director) --- */
+/* --- Llamada desde alumnos.js cada vez que se abre una ficha (solo director) ---
+   Además queda escuchando el acuerdo: si se cambia un pago desde la sección "Pagos", esta ficha se
+   actualiza sola (salvo que se esté editando, para no pisar lo que se está escribiendo). --- */
 export async function cargarAcuerdoParaCiclo(cicloId) {
+  if (dejarDeEscuchar) { dejarDeEscuchar(); dejarDeEscuchar = null; }
   cicloIdActual = cicloId;
+  if (getCurrentRole() === 'director' && cicloId) {
+    let primera = true;
+    dejarDeEscuchar = onValue(ref(db, `acuerdosPago/${cicloId}`), (snap) => {
+      if (cicloIdActual !== cicloId) return;
+      const editando = document.getElementById('btn-editar-acuerdo')?.classList.contains('hidden');
+      if (!primera && editando) return;
+      primera = false;
+      pintarAcuerdo(cicloId, snap.exists() ? snap.val() : null);
+    });
+    return;
+  }
+  pintarAcuerdo(cicloId, null);
+}
+
+async function pintarAcuerdo(cicloId, acuerdoGuardado) {
   const tbody = document.getElementById('tabla-cuotas-ficha-body');
   if (getCurrentRole() !== 'director' || !cicloId) {
     if (tbody) tbody.innerHTML = '';
@@ -117,16 +146,19 @@ export async function cargarAcuerdoParaCiclo(cicloId) {
     return;
   }
 
-  const snap = await get(ref(db, `acuerdosPago/${cicloId}`));
-  const acuerdo = snap.exists() ? snap.val() : { montoTotal: '', moneda: 'CLP', descuento: '', abono: '', cuotas: {} };
+  const acuerdo = acuerdoGuardado || { montoTotal: '', moneda: 'CLP', descuento: '', abono: '', cuotas: {} };
   monedaActual = acuerdo.moneda || 'CLP';
 
   document.getElementById('pago-moneda').textContent = monedaActual;
   document.getElementById('pago-monto-total').value = acuerdo.montoTotal || '';
   document.getElementById('pago-descuento').value = acuerdo.descuento || '';
   document.getElementById('pago-abono').value = acuerdo.abono || '';
-  const cicloSnap = await get(ref(db, `ciclos/${cicloId}/createdAt`));
-  const fechaAbono = cicloSnap.exists() ? new Date(cicloSnap.val()).toISOString().slice(0, 10) : '';
+  // Fecha del abono: la que se guardó; si aún no hay, la de asignación del ciclo como punto de partida.
+  let fechaAbono = acuerdo.fechaAbono || '';
+  if (!fechaAbono) {
+    const cicloSnap = await get(ref(db, `ciclos/${cicloId}/createdAt`));
+    fechaAbono = cicloSnap.exists() ? new Date(cicloSnap.val()).toISOString().slice(0, 10) : '';
+  }
   document.getElementById('pago-fecha-abono').value = fechaAbono;
   recalcularSaldo();
 
@@ -167,8 +199,9 @@ export async function cargarAcuerdoParaCiclo(cicloId) {
   }
 
   tbody.innerHTML = '';
-  const cuotas = acuerdo.cuotas ? Object.values(acuerdo.cuotas).sort((a, b) => (a.fecha || '').localeCompare(b.fecha || '')) : [];
-  cuotas.forEach(agregarFilaCuota);
+  const cuotas = acuerdo.cuotas ? Object.entries(acuerdo.cuotas).sort((a, b) => (a[1].fecha || '').localeCompare(b[1].fecha || '')) : [];
+  cuotaIdsOriginales = new Set(cuotas.map(([id]) => id));
+  cuotas.forEach(([id, c]) => agregarFilaCuota(c, id));
 }
 
 const inputMonto = document.getElementById('pago-monto-total');
@@ -188,23 +221,29 @@ if (btnGuardarAcuerdo) {
     btnGuardarAcuerdo.disabled = true;
     btnGuardarAcuerdo.textContent = 'Guardando...';
     try {
-      const cuotas = {};
-      document.querySelectorAll('#tabla-cuotas-ficha-body tr').forEach((row, idx) => {
-        const fecha = row.querySelector('.cuota-fecha').value;
-        const monto = row.querySelector('.cuota-monto').value.trim();
-        const estado = row.querySelector('.cuota-estado-select').value;
-        if (fecha || monto) {
-          cuotas[`c${idx}_${Date.now()}`] = { fecha, monto, estado };
-        }
-      });
-
-      await update(ref(db, `acuerdosPago/${cicloIdActual}`), {
+      // Se guarda cuota por cuota (con su id de siempre): así lo que se cambió en la sección "Pagos" en otras
+      // cuotas no se pierde, y solo se borran las que se quitaron aquí.
+      const cambios = {
         montoTotal: inputMonto.value.trim(),
         moneda: monedaActual,
         descuento: inputDescuento.value.trim(),
         abono: inputAbono.value.trim(),
-        cuotas
+        fechaAbono: document.getElementById('pago-fecha-abono').value || null
+      };
+      const idsEnPantalla = new Set();
+      document.querySelectorAll('#tabla-cuotas-ficha-body tr').forEach((row) => {
+        const fecha = row.querySelector('.cuota-fecha').value;
+        const monto = row.querySelector('.cuota-monto').value.trim();
+        const estado = row.querySelector('.cuota-estado-select').value;
+        const fechaPago = row.querySelector('.cuota-fecha-pago').value;
+        if (fecha || monto) {
+          idsEnPantalla.add(row.dataset.cuotaId);
+          cambios[`cuotas/${row.dataset.cuotaId}`] = { fecha, monto, estado, fechaPago: estado === 'pagada' && fechaPago ? fechaPago : null };
+        }
       });
+      cuotaIdsOriginales.forEach((id) => { if (!idsEnPantalla.has(id)) cambios[`cuotas/${id}`] = null; });
+
+      await update(ref(db, `acuerdosPago/${cicloIdActual}`), cambios);
       // Recién en este momento el coach empieza a ver a este alumno
       // en su dashboard — antes de "Guardar Acuerdo", queda solo
       // visible para el Director.

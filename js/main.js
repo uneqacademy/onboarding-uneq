@@ -283,6 +283,9 @@ export function setNav(section) {
   } else if (section === 'comunidad-uneq') {
     showView('view-comunidad-uneq');
     document.getElementById('topbar-title').textContent = 'Comunidad UNEQ';
+  } else if (section === 'pagos') {
+    showView('view-pagos');
+    document.getElementById('topbar-title').textContent = 'Pagos';
   } else if (section === 'ranking') {
     showView('view-ranking');
     document.getElementById('topbar-title').textContent = 'Ranking';

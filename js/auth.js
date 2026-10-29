@@ -29,6 +29,7 @@ import { abrirHitoDeEnlace } from './comunidad-uneq.js';
 import './pre-onboarding.js';
 import { iniciarNotificaciones } from './notificaciones.js';
 import './ranking.js';
+import './pagos-consolidado.js';
 import { marcarEntradaDelDia } from './puntos-marcas.js';
 
 const inputEmail = document.getElementById('login-email');

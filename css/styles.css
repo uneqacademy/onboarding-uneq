@@ -1421,3 +1421,32 @@ body.vista-ranking #ranking-contenido > p.text-soft { color: rgba(255, 255, 255,
   .rk-astro--estrella { left: calc(100% + 10px); right: auto; top: -4px; width: 150px; }
   .rk-astro--cohete { left: calc(100% + 40px); width: 150px; }
 }
+
+
+/* ============================================
+   Sección Pagos del director: matriz de acuerdos, abonos y cuotas
+   ============================================ */
+.pagos-kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 12px; }
+.pagos-kpis .panel { margin: 0; }
+.pagos-kpi__moneda { font-weight: 700; font-size: 14px; margin: 0 0 8px; }
+.pagos-kpi__fila { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+.pagos-kpi__fila div { display: flex; flex-direction: column; min-width: 0; }
+.pagos-kpi__fila span { font-size: 11px; }
+.pagos-kpi__fila strong { font-family: var(--font-display); font-size: 17px; overflow-wrap: anywhere; }
+.pagos-ok { color: #1F7A4D; }
+.pagos-mal { color: var(--color-danger); }
+
+.pagos-scroll { overflow-x: auto; }
+.pagos-tabla { min-width: 100%; white-space: nowrap; }
+.pagos-tabla tr:hover td { cursor: default; background: transparent; }
+.pagos-tabla td small, .pagos-tabla th small { display: block; font-size: 11px; color: var(--color-ink-soft); font-weight: 400; }
+.pagos-tabla td.pagos-clic { cursor: pointer; }
+.pagos-tabla td.pagos-clic:hover { filter: brightness(0.96); }
+.pagos-tabla .pagos-alumno { position: sticky; left: 0; background: var(--color-surface); z-index: 1; min-width: 150px; box-shadow: 1px 0 0 var(--color-border); }
+.pagos-tabla .pagos-num { text-align: right; }
+.pagos-celda { min-width: 112px; }
+.pagos-celda strong { display: block; font-size: 13.5px; }
+.pagos-celda--pagada { background: #E6F4EA; }
+.pagos-celda--pendiente { background: #FBF3E2; }
+.pagos-celda--atrasada { background: #FBE4E4; }
+.pagos-celda--vacia { color: var(--color-ink-soft); text-align: center; }
