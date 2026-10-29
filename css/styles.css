@@ -1345,6 +1345,10 @@ body.vista-ranking .content {
 }
 body.vista-ranking .content h2 { color: #fff; font-size: 22px; margin: 4px 4px 12px; }
 body.vista-ranking #ranking-contenido > p.text-soft { color: rgba(255, 255, 255, 0.75); }
+/* Las tarjetas blancas (Tu lugar, premio, ¿Cómo se suman puntos?) llevan texto oscuro en todos los roles */
+body.vista-ranking .content .panel { color: var(--color-ink); }
+body.vista-ranking .content .panel .text-soft { color: var(--color-ink-soft); }
+body.vista-ranking .content .ranking-como summary, body.vista-ranking .content .ranking-como li { color: var(--color-ink); }
 
 .rk-cabecera { display: block; }
 #ranking-mi-lugar .panel { margin: 0 0 14px; }
