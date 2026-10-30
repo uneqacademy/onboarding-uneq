@@ -13,6 +13,7 @@ import {
 } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-database.js";
 
 export const PROGRAMAS = {
+  open:  { label: 'Open',  meses: 2, precioClp: 497000 },
   begin: { label: 'Begin', meses: 3, precioClp: 1500000 },
   next:  { label: 'Next',  meses: 6, precioClp: 3000000 },
   exit:  { label: 'eXIT',  meses: 6, precioClp: 5000000 }

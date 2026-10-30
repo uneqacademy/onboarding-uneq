@@ -93,3 +93,6 @@ Storage
   el director desde Configuración, pero la regla no lo impide a otra cuenta con sesión (misma limitación que el resto de carpetas).
 Pruebas en el simulador: como alumno, escribir `puntosMarcas/<su id>/entradas/2026-10-23` = permitido, repetirlo = denegado, con el id de
 otro alumno = denegado; escribir `ranking/podio/2026-10` = denegado; leer `ranking/posiciones/<otro id>` = denegado.
+
+## Nivel OPEN
+OPEN es un clon técnico de BEGIN. Cambió una sola regla: el copiloto de cabecera también puede escribir el ciclo/estado de alumnos con programa `open` (antes solo `begin`). Hay que volver a publicar `database.rules.json` en Firebase.

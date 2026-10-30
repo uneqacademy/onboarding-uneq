@@ -14,7 +14,7 @@ import { ref, get } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-da
 import { getCurrentRole } from './main.js';
 import { abrirCrearAlumnoDesdePreOnboarding } from './alumnos.js';
 
-const ETIQUETA_PROGRAMA = { begin: 'Begin', next: 'Next', exit: 'eXIT' };
+const ETIQUETA_PROGRAMA = { open: 'Open', begin: 'Begin', next: 'Next', exit: 'eXIT' };
 
 async function cargarPreOnboarding() {
   if (getCurrentRole() !== 'director') return;

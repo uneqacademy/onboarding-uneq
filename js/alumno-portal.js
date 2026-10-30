@@ -210,8 +210,12 @@ export async function cargarDashboardAlumno(alumnoId) {
 
   // --- Estética por nivel: BEGIN tiene su propio tema (azul) sobre el
   //     tema oscuro base de alumno. NEXT/eXIT mantienen el negro. ---
-  const esBeginDashboard = !!(ciclo && ciclo.programa === 'begin');
+  // OPEN es un clon técnico de BEGIN: usa el mismo tema (tema-begin) y encima
+  // sus propios colores (tema-open).
+  const esOpenDashboard = !!(ciclo && ciclo.programa === 'open');
+  const esBeginDashboard = !!(ciclo && ['begin', 'open'].includes(ciclo.programa));
   document.body.classList.toggle('tema-begin', esBeginDashboard);
+  document.body.classList.toggle('tema-open', esOpenDashboard);
   const esExitDashboard = !!(ciclo && ciclo.programa === 'exit');
   document.body.classList.toggle('tema-exit', esExitDashboard);
   // BEGIN no ve la Bitácora.
@@ -237,6 +241,7 @@ export async function cargarDashboardAlumno(alumnoId) {
   if (stepperEl) {
     const programaActual = ciclo ? ciclo.programa : null;
     const PROGRAMAS_ORDEN = [
+      ['open', 'assets/logos/logo-open.png', 'OPEN'],
       ['begin', 'assets/logos/logo-begin.png', 'BEGIN'],
       ['next', 'assets/logos/logo-next.png', 'NEXT'],
       ['exit', 'assets/logos/logo-exit.png', 'eXIT']
@@ -305,10 +310,12 @@ export async function cargarDashboardAlumno(alumnoId) {
     const configSnap = await get(ref(db, 'configuracion/general'));
     const config = configSnap.exists() ? configSnap.val() : {};
     const programa = ciclo ? ciclo.programa : null;
-    const contenidoUrl = programa === 'begin' ? config.contenidoHotmartBegin
+    const contenidoUrl = programa === 'open' ? config.contenidoHotmartOpen
+      : programa === 'begin' ? config.contenidoHotmartBegin
       : programa === 'next' ? config.contenidoHotmartNext
       : programa === 'exit' ? config.contenidoHotmartExit : '';
-    const whatsappUrl = programa === 'begin' ? config.whatsappBegin
+    const whatsappUrl = programa === 'open' ? config.whatsappOpen
+      : programa === 'begin' ? config.whatsappBegin
       : (programa === 'next' || programa === 'exit') ? config.whatsappNextExit : '';
 
     let coach = null;
@@ -316,7 +323,7 @@ export async function cargarDashboardAlumno(alumnoId) {
     if (ciclo && ciclo.coachId) {
       const coachSnap = await get(ref(db, `usuarios/${ciclo.coachId}`));
       coach = coachSnap.exists() ? coachSnap.val() : null;
-    } else if (ciclo && ciclo.programa === 'begin') {
+    } else if (ciclo && ['begin', 'open'].includes(ciclo.programa)) {
       const usuariosSnapCabecera = await get(ref(db, 'usuarios'));
       if (usuariosSnapCabecera.exists()) {
         coach = Object.values(usuariosSnapCabecera.val()).find(u => u.coachCabeceraBegin === true) || null;
@@ -529,7 +536,8 @@ async function renderProximaMentoriaDashboard(programa) {
   }
 
   if (grabacionesEl) {
-    const urlGrabaciones = programa === 'begin' ? config.grabacionesBegin
+    const urlGrabaciones = programa === 'open' ? config.grabacionesOpen
+      : programa === 'begin' ? config.grabacionesBegin
       : programa === 'next' ? config.grabacionesNext
       : programa === 'exit' ? config.grabacionesExit : '';
     // El botón siempre se muestra; si el Director aún no configura el
@@ -1191,6 +1199,7 @@ export async function cargarBoxAlumno() {
   //     revisan los 2 juntos — cualquiera de los 2 que se cumpla,
   //     bloquea. ---
   const LIMITES_BOX_POR_PROGRAMA = {
+    open: { total: 3, porMentor: 1 },
     begin: { total: 5, porMentor: 1 },
     next: { total: 8, porMentor: 3 },
     exit: { total: 8, porMentor: 3 }
@@ -2163,12 +2172,15 @@ function renderHorariosRecurrentes(usuarios) {
 let sesionVivoPendienteDeAbrir = null;
 
 /* Sesiones en vivo próximas que puede ver un alumno según su programa
-   (BEGIN: mentorías exclusivas BEGIN + sesiones grupales de coaches de
-   cabecera; NEXT/eXIT: el resto de las mentorías). Ordenadas de la más
+   (BEGIN: mentorías generales + exclusivas BEGIN + sesiones grupales de
+   los copilotos de cabecera dirigidas a BEGIN; OPEN: solo lo exclusivo
+   OPEN y las sesiones de cabecera dirigidas a OPEN; NEXT/eXIT: las
+   mentorías generales). Ordenadas de la más
    cercana a la más lejana. Se usa en Preguntas en Vivo y en la tarjeta
    "Próxima Mentoría Grupal Semanal" del Dashboard. */
 async function obtenerSesionesVivoProximas(programa, usuarios) {
   const esBegin = programa === 'begin';
+  const esOpen = programa === 'open';
   const mentores = ordenarMentores(Object.entries(usuarios).filter(([, u]) => {
     const roles = (u.roles && typeof u.roles === 'object') ? u.roles : (u.rol ? { [u.rol]: true } : {});
     return !!roles.mentor;
@@ -2185,15 +2197,19 @@ async function obtenerSesionesVivoProximas(programa, usuarios) {
     const [mentorUid, mentorDatos] = mentores[idx];
     Object.entries(snap.val()).forEach(([mentoriaId, m]) => {
       if (!m.fecha || !m.hora) return;
-      if (!esBegin && m.exclusivaBegin) return; // NEXT/eXIT nunca ven las exclusivas BEGIN
+      // Nivel al que va dirigida: '' = general; las antiguas solo traen exclusivaBegin.
+      const exclusivaDe = m.exclusivaPrograma || (m.exclusivaBegin ? 'begin' : '');
+      if (exclusivaDe && exclusivaDe !== programa) return; // las exclusivas solo las ve su nivel
+      if (!exclusivaDe && esOpen) return; // OPEN no tiene mentorías en vivo generales
       const inicio = m.inicioTimestamp ? new Date(m.inicioTimestamp) : new Date(`${m.fecha}T${m.hora}`);
       if (isNaN(inicio.getTime())) return;
       sesiones.push({ tipo: 'mentor', mentorUid, mentorDatos, mentoriaId, ...m, inicio });
     });
   });
 
-  // --- BEGIN además ve las sesiones grupales de los coaches de cabecera ---
-  if (esBegin) {
+  // --- BEGIN y OPEN además ven las sesiones grupales de los copilotos de cabecera
+  //     (cada sesión dice a quién va: BEGIN por defecto, OPEN o ambos) ---
+  if (esBegin || esOpen) {
     const coachesCabecera = Object.entries(usuarios).filter(([, u]) => {
       const roles = (u.roles && typeof u.roles === 'object') ? u.roles : (u.rol ? { [u.rol]: true } : {});
       return !!roles.coach && u.coachCabeceraBegin === true;
@@ -2204,6 +2220,8 @@ async function obtenerSesionesVivoProximas(programa, usuarios) {
       const [coachUid, coachDatos] = coachesCabecera[idx];
       Object.entries(snap.val()).forEach(([sesionId, s]) => {
         if (!s.fecha || !s.hora) return;
+        const audiencia = s.audiencia || 'begin';
+        if (audiencia !== 'ambos' && audiencia !== programa) return;
         const inicio = s.inicioTimestamp ? new Date(s.inicioTimestamp) : new Date(`${s.fecha}T${s.hora}`);
         if (isNaN(inicio.getTime())) return;
         sesiones.push({ tipo: 'coach', mentorUid: coachUid, mentorDatos: coachDatos, mentoriaId: sesionId, ...s, inicio });
@@ -2273,7 +2291,7 @@ export async function cargarPreguntasVivo() {
 
   listadoEl.innerHTML = sesiones.map((s, idx) => {
     const temasMentor = s.tipo === 'coach'
-      ? 'Sesión grupal semanal — resolución de dudas (BEGIN)'
+      ? `Sesión grupal semanal — resolución de dudas (${programaAlumnoPv === 'open' ? 'OPEN' : 'BEGIN'})`
       : ((Array.isArray(s.mentorDatos.temasBox) && s.mentorDatos.temasBox.length) ? s.mentorDatos.temasBox.slice(0, 3).join(', ') : 'Temáticas no definidas aún');
     const fechaLarga = new Intl.DateTimeFormat('es-CL', { day: '2-digit', month: 'long', year: 'numeric', timeZone: zonaHorariaLocal() }).format(s.inicio);
     const horaTexto = s.inicioTimestamp ? formatearHorarioSesion(s.inicioTimestamp) : s.hora;
@@ -2361,7 +2379,7 @@ export async function cargarPreguntasVivo() {
   const historialEl = document.getElementById('preguntas-vivo-historial');
   if (historialEl) {
     const responsablesHistorial = mentores.map(([uid, datos]) => ({ tipo: 'mentor', uid, datos }));
-    if (esBegin) {
+    if (['begin', 'open'].includes(programaAlumnoPv)) {
       Object.entries(usuarios)
         .filter(([, u]) => {
           const roles = (u.roles && typeof u.roles === 'object') ? u.roles : (u.rol ? { [u.rol]: true } : {});

@@ -28,7 +28,7 @@ export async function cargarMisDatos() {
   document.getElementById('mis-datos-nombre').innerHTML = `<strong>${escaparHtml(datos.nombre || '—')}</strong>`;
   const rolActivo = getCurrentRole();
   document.getElementById('mis-datos-rol').textContent =
-    (NOMBRES_ROL_MIS_DATOS[rolActivo] || rolActivo || '') + (datos.coachCabeceraBegin === true ? ' 🚩 Copiloto de Cabecera (BEGIN)' : '');
+    (NOMBRES_ROL_MIS_DATOS[rolActivo] || rolActivo || '') + (datos.coachCabeceraBegin === true ? ' 🚩 Copiloto de Cabecera (BEGIN y OPEN)' : '');
   document.getElementById('mis-datos-email').value = datos.email || '';
   document.getElementById('mis-datos-telefono').value = datos.telefono || '';
 

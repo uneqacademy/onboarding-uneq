@@ -27,6 +27,9 @@ import './respaldo.js';
 import { cargarMiEvaluacionCoach } from './coaches.js';
 import { cargarDashboardMentor, cargarAlumnosMentor, cargarPerfilMentor, cargarMentoriasView, cargarBoxMentor, actualizarNotificacionesMentor } from './mentores.js';
 import { cargarSesionesBeginCoach } from './dashboard-coach.js';
+
+// BEGIN y OPEN no llevan copiloto individual: los ve el Copiloto de Cabecera.
+const sinCopilotoIndividual = (programa) => programa === 'begin' || programa === 'open';
 import { actualizarBotonAccesoAlumno, cargarDashboardAlumno } from './alumno-portal.js';
 import { conectarCascadaDireccion, prepararCamposDireccionVacios, precargarDireccionGuardada, nombrePaisDesdeCodigo } from './geodata.js';
 import './configuracion.js';
@@ -441,7 +444,7 @@ function crearFilaAlumno(alumnoId, alumno, ciclo, columnas, acuerdo, nombreOverr
 
   const nombreCompleto = nombreOverride || (`${alumno.nombre || ''} ${alumno.apellido || ''}`.trim() || '(sin nombre)');
   const coachNombre = ciclo
-    ? (ciclo.coachId ? (coachesMap[ciclo.coachId] || '—') : (ciclo.programa === 'begin' ? '🚩 Copiloto de Cabecera' : '—'))
+    ? (ciclo.coachId ? (coachesMap[ciclo.coachId] || '—') : (sinCopilotoIndividual(ciclo.programa) ? '🚩 Copiloto de Cabecera' : '—'))
     : '—';
   const programa = ciclo ? programaLabel(ciclo.programa) : '—';
   const estadoProceso = ciclo ? estadoProcesoLabel(ciclo.estadoProceso) : '—';
@@ -565,7 +568,7 @@ export async function cargarListasAlumnos() {
       // regla no traen el campo (undefined) y deben seguir visibles para su coach.
       const acuerdoPendiente = ciclo && ciclo.acuerdoCerrado === false;
       const esMio = ciclo && ciclo.coachId === uid && !acuerdoPendiente;
-      const esBeginDeCabecera = ciclo && ciclo.programa === 'begin' && esCoachCabeceraBegin && !acuerdoPendiente;
+      const esBeginDeCabecera = ciclo && sinCopilotoIndividual(ciclo.programa) && esCoachCabeceraBegin && !acuerdoPendiente;
       if (!ciclo || !(esMio || esBeginDeCabecera)) return;
       if (tbodyDashCoach && !ciclosVistos.dashCoach.has(claveGrupo)) {
         ciclosVistos.dashCoach.add(claveGrupo);
@@ -581,7 +584,7 @@ export async function cargarListasAlumnos() {
   const setTexto = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
 
   if (role === 'director') {
-    let activos = 0, begin = 0, next = 0, exit = 0, pendientesFirma = 0;
+    let activos = 0, open = 0, begin = 0, next = 0, exit = 0, pendientesFirma = 0;
     const porCobrarPorMoneda = {};
     const atrasadoPorMoneda = {};
     const gruposContadosKpi = new Set();
@@ -604,7 +607,8 @@ export async function cargarListasAlumnos() {
 
       if (ciclo.estadoAlumno === 'activo') {
         activos++;
-        if (ciclo.programa === 'begin') begin++;
+        if (ciclo.programa === 'open') open++;
+        else if (ciclo.programa === 'begin') begin++;
         else if (ciclo.programa === 'next') next++;
         else if (ciclo.programa === 'exit') exit++;
       }
@@ -629,6 +633,7 @@ export async function cargarListasAlumnos() {
 
     setTexto('kpi-alumnos-activos', activos);
     setTexto('kpi-alumnos-totales', totalProyectos);
+    setTexto('kpi-activos-open', open);
     setTexto('kpi-activos-begin', begin);
     setTexto('kpi-activos-next', next);
     setTexto('kpi-activos-exit', exit);
@@ -901,7 +906,7 @@ async function abrirFicha(alumnoId) {
   document.getElementById('ficha-rut').textContent = alumno.rut || '—';
   document.getElementById('ficha-programa').textContent = ciclo ? programaLabel(ciclo.programa) : '—';
   document.getElementById('ficha-coach-nombre').textContent = ciclo
-    ? (role === 'coach' ? getCurrentUserNombre() : (ciclo.coachId ? (coachesMap[ciclo.coachId] || '—') : (ciclo.programa === 'begin' ? '🚩 Copiloto de Cabecera' : '—')))
+    ? (role === 'coach' ? getCurrentUserNombre() : (ciclo.coachId ? (coachesMap[ciclo.coachId] || '—') : (sinCopilotoIndividual(ciclo.programa) ? '🚩 Copiloto de Cabecera' : '—')))
     : '—';
 
   const badge = document.getElementById('ficha-badge-estado');
@@ -1067,13 +1072,13 @@ if (btnCrearAlumno) {
     const emailNuevo = document.getElementById('nuevo-alumno-email').value.trim();
     const programa = document.getElementById('nuevo-alumno-programa').value;
     const esMembresia = programa === 'next' && document.getElementById('nuevo-alumno-membresia').checked;
-    const coachId = programa === 'begin' ? null : document.getElementById('nuevo-alumno-coach').value;
+    const coachId = sinCopilotoIndividual(programa) ? null : document.getElementById('nuevo-alumno-coach').value;
     const monto = document.getElementById('nuevo-alumno-monto').value.trim();
     const moneda = document.getElementById('nuevo-alumno-moneda').value;
     const descuento = esMembresia ? '0' : document.getElementById('nuevo-alumno-descuento').value.trim();
     const abono = esMembresia ? '0' : document.getElementById('nuevo-alumno-abono').value.trim();
 
-    if (!nombre || !apellido || (programa !== 'begin' && !coachId)) {
+    if (!nombre || !apellido || (!sinCopilotoIndividual(programa) && !coachId)) {
       errorEl.textContent = 'Completa nombre, apellido y copiloto asignado.';
       errorEl.classList.remove('hidden');
       return;
@@ -1232,7 +1237,7 @@ if (btnGuardarCiclo) {
     try {
       if (getCurrentRole() === 'director') {
         const programaActualCiclo = document.getElementById('ciclo-programa').value;
-        datos.coachId = programaActualCiclo === 'begin' ? null : document.getElementById('ciclo-coach').value;
+        datos.coachId = sinCopilotoIndividual(programaActualCiclo) ? null : document.getElementById('ciclo-coach').value;
         const fechaIngresoManual = document.getElementById('ciclo-fecha-ingreso').value;
         const fechaEgresoManual = document.getElementById('ciclo-fecha-egreso').value;
         if (fechaIngresoManual) datos.fechaIngreso = fechaIngresoManual;
@@ -1334,7 +1339,7 @@ function actualizarCampoCoachSegunPrograma(selectProgramaId, campoCoachId, aviso
   const selectPrograma = document.getElementById(selectProgramaId);
   const campoCoach = document.getElementById(campoCoachId);
   if (!selectPrograma || !campoCoach) return;
-  const esBegin = selectPrograma.value === 'begin';
+  const esBegin = sinCopilotoIndividual(selectPrograma.value);
   campoCoach.classList.toggle('hidden', esBegin);
   const aviso = avisoId ? document.getElementById(avisoId) : null;
   if (aviso) aviso.classList.toggle('hidden', !esBegin);
@@ -1470,11 +1475,11 @@ if (btnCrearNuevoCiclo) {
   btnCrearNuevoCiclo.addEventListener('click', async () => {
     if (!currentAlumnoId || !currentCicloId) return;
     const programa = document.getElementById('nuevo-ciclo-programa').value;
-    const coachId = programa === 'begin' ? null : document.getElementById('nuevo-ciclo-coach').value;
+    const coachId = sinCopilotoIndividual(programa) ? null : document.getElementById('nuevo-ciclo-coach').value;
     const monto = document.getElementById('nuevo-ciclo-monto').value.trim();
     const moneda = document.getElementById('nuevo-ciclo-moneda').value;
 
-    if (programa !== 'begin' && !coachId) { alert('Selecciona un copiloto.'); return; }
+    if (!sinCopilotoIndividual(programa) && !coachId) { alert('Selecciona un copiloto.'); return; }
 
     btnCrearNuevoCiclo.disabled = true;
     try {
@@ -1539,7 +1544,7 @@ document.querySelectorAll('.nav-item[data-nav]').forEach(item => {
    donde se muestre su nombre (BOX, Preguntas en Vivo, etc.) sin tener
    que tocar cada pantalla una por una.
    ============================================================ */
-const ETIQUETAS_DEMO = { begin: 'BEGIN', next: 'NEXT', exit: 'eXIT' };
+const ETIQUETAS_DEMO = { open: 'OPEN', begin: 'BEGIN', next: 'NEXT', exit: 'eXIT' };
 let estadoDirectorAntesDeDemo = null;
 
 async function asegurarAlumnoDemo(programa) {
@@ -1629,6 +1634,8 @@ async function verComoAlumnoDemo(programa) {
   setNav('dashboard');
 }
 
+const btnVerDemoOpen = document.getElementById('btn-ver-demo-open');
+if (btnVerDemoOpen) btnVerDemoOpen.addEventListener('click', () => verComoAlumnoDemo('open'));
 const btnVerDemoBegin = document.getElementById('btn-ver-demo-begin');
 if (btnVerDemoBegin) btnVerDemoBegin.addEventListener('click', () => verComoAlumnoDemo('begin'));
 const btnVerDemoNext = document.getElementById('btn-ver-demo-next');

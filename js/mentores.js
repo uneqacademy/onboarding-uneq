@@ -266,7 +266,7 @@ async function renderPanelMentoriasDirector(mentorUid, contenedor) {
     <strong style="font-size:13px;">Mentorías</strong>
     ${activas.length ? activas.map(([id, m]) => fila(
       id,
-      `${formatFechaCorta(m.fecha)} · ${m.inicioTimestamp ? formatearHorarioParaTabla(m.inicioTimestamp) : (m.hora || '—')}${m.exclusivaBegin ? ' <span class="badge badge--activo" style="font-size:9px;">BEGIN</span>' : ''}`,
+      `${formatFechaCorta(m.fecha)} · ${m.inicioTimestamp ? formatearHorarioParaTabla(m.inicioTimestamp) : (m.hora || '—')}${badgeExclusivaMentoria(m)}`,
       etiquetaEstado(m),
       nps[id] ? Object.values(nps[id]) : [],
       true
@@ -497,20 +497,22 @@ export async function cargarDashboardMentor() {
   const alumnos = alumnosSnap.exists() ? alumnosSnap.val() : {};
   const ciclos = ciclosSnap.exists() ? ciclosSnap.val() : {};
 
-  let begin = 0, next = 0, exit = 0;
+  let open = 0, begin = 0, next = 0, exit = 0;
   Object.values(alumnos).forEach(alumno => {
     const ciclo = alumno.cicloActualId ? ciclos[alumno.cicloActualId] : null;
     if (!ciclo || ciclo.estadoAlumno !== 'activo') return;
-    if (ciclo.programa === 'begin') begin++;
+    if (ciclo.programa === 'open') open++;
+    else if (ciclo.programa === 'begin') begin++;
     else if (ciclo.programa === 'next') next++;
     else if (ciclo.programa === 'exit') exit++;
   });
 
   const setTexto = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
+  setTexto('kpi-mentor-open', open);
   setTexto('kpi-mentor-begin', begin);
   setTexto('kpi-mentor-next', next);
   setTexto('kpi-mentor-exit', exit);
-  setTexto('kpi-mentor-total', begin + next + exit);
+  setTexto('kpi-mentor-total', open + begin + next + exit);
 
   await cargarAccesosRapidosDashboardMentor();
 }
@@ -1075,7 +1077,7 @@ async function cargarMentoriasView() {
       const tr = document.createElement('tr');
       const estadoMentoria = m.estado === 'dictada' ? 'dictada' : (m.estado === 'no_dictada' ? 'no_dictada' : '');
       tr.innerHTML = `
-        <td>${formatFechaCorta(m.fecha)}${m.exclusivaBegin ? ' <span class="badge badge--activo" style="font-size:9px;" title="Solo la ven alumnos BEGIN">BEGIN</span>' : ''}</td>
+        <td>${formatFechaCorta(m.fecha)}${badgeExclusivaMentoria(m)}</td>
         <td>${m.inicioTimestamp ? formatearHorarioParaTabla(m.inicioTimestamp) : (m.hora || '—')}</td>
         <td>${m.link ? `<a href="${m.link}" target="_blank" rel="noopener">Ir al link</a>` : '—'}</td>
         <td>${promedioTexto}${entradas.length ? '<br><button class="btn btn--ghost btn-ver-comentarios-nps" style="font-size:11px; padding:4px 8px; margin-top:4px;">Ver comentarios</button>' : ''}</td>
@@ -1295,7 +1297,8 @@ if (btnAgregarMentoria) {
     const fechaInput = document.getElementById('mentoria-fecha').value;
     const horaInput = document.getElementById('mentoria-hora').value;
     const link = document.getElementById('mentoria-link').value.trim();
-    const exclusivaBegin = document.getElementById('mentoria-exclusiva-begin').checked;
+    // '' = general (BEGIN/NEXT/eXIT); 'begin' u 'open' = exclusiva de ese nivel.
+    const exclusivaPrograma = document.getElementById('mentoria-exclusiva').value;
 
     if (!uid || !fechaInput) {
       alert('Completa al menos la Fecha.');
@@ -1313,12 +1316,12 @@ if (btnAgregarMentoria) {
       const { fecha, hora } = fechaHoraChileDesdeInstante(inicioLocal);
 
       const nuevaRef = push(ref(db, `mentorias/${uid}`));
-      await set(nuevaRef, { fecha, hora, inicioTimestamp, zonaCreador, link, exclusivaBegin, createdAt: Date.now() });
+      await set(nuevaRef, { fecha, hora, inicioTimestamp, zonaCreador, link, exclusivaBegin: exclusivaPrograma === 'begin', exclusivaPrograma: exclusivaPrograma || null, createdAt: Date.now() });
 
       document.getElementById('mentoria-fecha').value = '';
       document.getElementById('mentoria-hora').value = '';
       document.getElementById('mentoria-link').value = '';
-      document.getElementById('mentoria-exclusiva-begin').checked = false;
+      document.getElementById('mentoria-exclusiva').value = '';
       document.getElementById('mentoria-preview-horario').classList.add('hidden');
 
       await cargarMentoriasView();
@@ -1864,3 +1867,11 @@ document.querySelectorAll('.nav-item[data-nav="mentorias-mentor"]').forEach(item
 document.querySelectorAll('.nav-item[data-nav="mi-clon-ia"]').forEach(item => {
   item.addEventListener('click', cargarPerfilMentor);
 });
+
+// Etiqueta de una mentoría exclusiva de un nivel (las antiguas solo traen exclusivaBegin).
+function badgeExclusivaMentoria(m) {
+  const programa = m.exclusivaPrograma || (m.exclusivaBegin ? 'begin' : '');
+  if (programa === 'begin') return ' <span class="badge badge--activo" style="font-size:9px;" title="Solo la ven alumnos BEGIN">BEGIN</span>';
+  if (programa === 'open') return ' <span class="badge badge--activo" style="font-size:9px;" title="Solo la ven alumnos OPEN">OPEN</span>';
+  return '';
+}

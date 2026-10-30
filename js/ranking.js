@@ -30,7 +30,7 @@ export function nombreDeMes(mes) {
 }
 
 function etiquetaPrograma(programa) {
-  if (!['begin', 'next', 'exit'].includes(programa)) return '';
+  if (!['open', 'begin', 'next', 'exit'].includes(programa)) return '';
   return `<span class="hito-etiqueta-programa" title="${escaparHtml(programaLabel(programa))}"><img src="assets/logos/wordmark-${programa}.png" alt="${escaparHtml(programaLabel(programa))}"></span>`;
 }
 

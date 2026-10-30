@@ -210,6 +210,10 @@
             <div class="kpi-card__value" id="kpi-alumnos-totales">—</div>
           </div>
           <div class="kpi-card">
+            <div class="kpi-card__label">Activos · Open</div>
+            <div class="kpi-card__value" id="kpi-activos-open">—</div>
+          </div>
+          <div class="kpi-card">
             <div class="kpi-card__label">Activos · Begin</div>
             <div class="kpi-card__value" id="kpi-activos-begin">—</div>
           </div>
@@ -267,6 +271,7 @@
               <select id="filtro-dash-director-coach"><option value="">Copiloto: Todos</option></select>
               <select id="filtro-dash-director-programa">
                 <option value="">Programa: Todos</option>
+                <option value="open">Open</option>
                 <option value="begin">Begin</option>
                 <option value="next">Next</option>
                 <option value="exit">eXIT</option>
@@ -297,6 +302,7 @@
           <div class="panel__body">
             <p class="text-soft mb-16" style="font-size:13px;">Prueba la experiencia real de un alumno sin crear datos falsos — no cuenta en ninguna estadística, y aparece marcado "(DEMO)" para que mentores y copilotos no se confundan.</p>
             <div style="display:flex; gap:10px; flex-wrap:wrap;">
+              <button type="button" class="btn btn--accent" id="btn-ver-demo-open">Ver como Alumno OPEN</button>
               <button type="button" class="btn btn--accent" id="btn-ver-demo-begin">Ver como Alumno BEGIN</button>
               <button type="button" class="btn btn--accent" id="btn-ver-demo-next">Ver como Alumno NEXT</button>
               <button type="button" class="btn btn--accent" id="btn-ver-demo-exit">Ver como Alumno eXIT</button>
@@ -366,15 +372,23 @@
         </div>
 
         <div class="panel hidden" id="panel-sesiones-begin" style="margin-top:24px;">
-          <div class="panel__header"><h3>Sesiones Grupales BEGIN</h3></div>
+          <div class="panel__header"><h3>Sesiones Grupales BEGIN y OPEN</h3></div>
           <div class="panel__body">
-            <p class="text-soft mb-16" style="font-size:13px;">Como Copiloto de Cabecera, tus sesiones grupales las ven todos los alumnos del programa BEGIN, sin importar quién sea su copiloto.</p>
+            <p class="text-soft mb-16" style="font-size:13px;">Como Copiloto de Cabecera, tus sesiones grupales las ven los alumnos del nivel que elijas (BEGIN, OPEN o ambos), sin importar quién sea su copiloto.</p>
             <div class="field-grid mb-16">
               <div class="field"><label>Fecha</label><input type="date" id="sesion-begin-fecha"></div>
               <div class="field"><label>Hora</label><input type="time" id="sesion-begin-hora"></div>
               <div class="field"><label>Link de Acceso (Zoom, etc.)</label><input id="sesion-begin-link" placeholder="https://..."></div>
             </div>
             <p class="text-soft hidden" id="sesion-begin-preview-horario" style="margin-top:-10px; margin-bottom:14px; font-size:12px;"></p>
+            <div class="field" style="max-width:440px; margin-bottom:14px;">
+              <label for="sesion-begin-audiencia">¿Para quién es esta sesión?</label>
+              <select id="sesion-begin-audiencia">
+                <option value="begin">Alumnos BEGIN</option>
+                <option value="open">Alumnos OPEN</option>
+                <option value="ambos">BEGIN y OPEN</option>
+              </select>
+            </div>
             <button class="btn btn--accent" id="btn-agregar-sesion-begin">+ Agregar Sesión</button>
             <table class="data-table mb-16" style="margin-top:16px;">
               <thead><tr><th>Fecha</th><th>Hora</th><th>Acceso</th><th>NPS de la sesión</th><th>Resumen</th><th>Preguntas</th><th></th><th>Estado</th></tr></thead>
@@ -496,6 +510,7 @@
             <div class="field-grid mb-16">
               <div class="field"><label>Programa</label>
                 <select id="nuevo-ciclo-programa">
+                  <option value="open">Open (2 meses · $497.000)</option>
                   <option value="begin">Begin (3 meses · $1.500.000)</option>
                   <option value="next">Next (6 meses · $3.000.000)</option>
                   <option value="exit">eXIT (6 meses · $5.000.000)</option>
@@ -503,7 +518,7 @@
               </div>
               <div class="field" id="campo-nuevo-ciclo-coach"><label>Copiloto Asignado</label><select id="nuevo-ciclo-coach"></select></div>
             </div>
-            <p class="text-soft hidden" id="aviso-nuevo-ciclo-begin-sin-coach" style="margin-top:-8px;">🚩 BEGIN no lleva copiloto individual — lo ve automáticamente el Copiloto de Cabecera.</p>
+            <p class="text-soft hidden" id="aviso-nuevo-ciclo-begin-sin-coach" style="margin-top:-8px;">🚩 BEGIN y OPEN no llevan copiloto individual — los ve automáticamente el Copiloto de Cabecera.</p>
             <div class="field-grid mb-16">
               <div class="field"><label>Monto Total</label><input id="nuevo-ciclo-monto"></div>
               <div class="field"><label>Moneda</label><select id="nuevo-ciclo-moneda"><option>CLP</option><option>USD</option></select></div>
@@ -628,7 +643,7 @@
           <div class="panel">
             <div class="panel__body">
               <div class="field-grid">
-                <div class="field"><label>Programa</label><select id="ciclo-programa" disabled><option value="begin">Begin</option><option value="next">Next</option><option value="exit">eXIT</option></select></div>
+                <div class="field"><label>Programa</label><select id="ciclo-programa" disabled><option value="open">Open</option><option value="begin">Begin</option><option value="next">Next</option><option value="exit">eXIT</option></select></div>
                 <div class="field"><label>Fecha Ingreso</label><input type="date" id="ciclo-fecha-ingreso" placeholder="Se define al quedar Firma Procesada"></div>
                 <div class="field"><label>Fecha Egreso</label><input type="date" id="ciclo-fecha-egreso" placeholder="Se calcula sola, o corrígela a mano"></div>
                 <div class="field" id="campo-ciclo-coach"><label>Copiloto Asignado</label><select id="ciclo-coach"></select></div>
@@ -650,7 +665,7 @@
                   </div>
                 </div>
               </div>
-              <p class="text-soft hidden" id="aviso-ciclo-begin-sin-coach">🚩 BEGIN no lleva copiloto individual — lo ve automáticamente el Copiloto de Cabecera.</p>
+              <p class="text-soft hidden" id="aviso-ciclo-begin-sin-coach">🚩 BEGIN y OPEN no llevan copiloto individual — los ve automáticamente el Copiloto de Cabecera.</p>
               <div class="field-grid mb-16" style="margin-top:14px;">
                 <div class="field"><label>Facturación Actual <span style="color:#C0392B;">*</span></label><input id="ciclo-facturacion-actual" placeholder="$0"></div>
                 <div class="field"><label>Objetivo Facturación Largo Plazo <span style="color:#C0392B;">*</span></label><input id="ciclo-objetivo-facturacion" placeholder="$0"></div>
@@ -791,6 +806,7 @@
               <select id="filtro-director-coach"><option value="">Copiloto: Todos</option></select>
               <select id="filtro-director-programa">
                 <option value="">Programa: Todos</option>
+                <option value="open">Open</option>
                 <option value="begin">Begin</option>
                 <option value="next">Next</option>
                 <option value="exit">eXIT</option>
@@ -863,6 +879,7 @@
             <div class="field-grid">
               <div class="field"><label>Programa</label>
                 <select id="nuevo-alumno-programa">
+                  <option value="open">Open (2 meses · $497.000)</option>
                   <option value="begin">Begin (3 meses · $1.500.000)</option>
                   <option value="next">Next (6 meses · $3.000.000)</option>
                   <option value="exit">eXIT (6 meses · $5.000.000)</option>
@@ -878,7 +895,7 @@
                 <select id="nuevo-alumno-coach"><option value="">Cargando copilotos...</option></select>
               </div>
             </div>
-            <p class="text-soft hidden" id="aviso-nuevo-alumno-begin-sin-coach" style="margin-top:-8px;">🚩 BEGIN no lleva copiloto individual — lo ve automáticamente el Copiloto de Cabecera.</p>
+            <p class="text-soft hidden" id="aviso-nuevo-alumno-begin-sin-coach" style="margin-top:-8px;">🚩 BEGIN y OPEN no llevan copiloto individual — los ve automáticamente el Copiloto de Cabecera.</p>
           </div>
         </div>
 
@@ -1029,6 +1046,10 @@
       <section id="view-dashboard-mentor" class="view hidden">
         <div class="kpi-grid" id="kpi-grid-mentor">
           <div class="kpi-card">
+            <div class="kpi-card__label">Activos · Open</div>
+            <div class="kpi-card__value" id="kpi-mentor-open">—</div>
+          </div>
+          <div class="kpi-card">
             <div class="kpi-card__label">Activos · Begin</div>
             <div class="kpi-card__value" id="kpi-mentor-begin">—</div>
           </div>
@@ -1119,9 +1140,14 @@
               <div class="field"><label>Link de Acceso (Zoom, etc.)</label><input id="mentoria-link" placeholder="https://..."></div>
             </div>
             <p class="text-soft hidden" id="mentoria-preview-horario" style="margin-top:-10px; margin-bottom:14px; font-size:12px;"></p>
-            <label style="font-weight:400; display:flex; align-items:center; gap:8px; margin-bottom:14px;" title="Sin marcar: la ven alumnos BEGIN, NEXT y eXIT. Marcada: sesión extra solo para BEGIN, queda oculta para NEXT/eXIT">
-              <input type="checkbox" id="mentoria-exclusiva-begin"> Sesión exclusiva para alumnos BEGIN
-            </label>
+            <div class="field" style="max-width:440px; margin-bottom:14px;">
+              <label for="mentoria-exclusiva">¿Para quién es esta sesión?</label>
+              <select id="mentoria-exclusiva" title="General: la ven BEGIN, NEXT y eXIT (OPEN no tiene mentorías en vivo generales). Exclusiva: sesión extra solo para ese nivel, oculta para los demás.">
+                <option value="">General: BEGIN, NEXT y eXIT</option>
+                <option value="begin">Exclusiva para alumnos BEGIN</option>
+                <option value="open">Exclusiva para alumnos OPEN</option>
+              </select>
+            </div>
             <button class="btn btn--accent" id="btn-agregar-mentoria">+ Agregar Mentoría</button>
             <table class="data-table mb-16" style="margin-top:16px;">
               <thead><tr><th>Fecha</th><th>Hora</th><th>Acceso</th><th>NPS de la sesión</th><th>Resumen IA</th><th>Preguntas</th><th></th><th>Estado</th></tr></thead>
@@ -1273,6 +1299,7 @@
                 <label>Programa</label>
                 <select id="filtro-mentor-programa">
                   <option value="">Todos</option>
+                  <option value="open">Open</option>
                   <option value="begin">Begin</option>
                   <option value="next">Next</option>
                   <option value="exit">eXIT</option>
@@ -1566,6 +1593,7 @@
               </select>
               <select id="pagos-f-programa">
                 <option value="">Programa: Todos</option>
+                <option value="open">Open</option>
                 <option value="begin">Begin</option>
                 <option value="next">Next</option>
                 <option value="exit">eXIT</option>
@@ -1684,6 +1712,7 @@
               <div class="field"><label>Programa</label>
                 <select id="chc-f-programa">
                   <option value="">Todos</option>
+                  <option value="open">Open</option>
                   <option value="begin">Begin</option>
                   <option value="next">Next</option>
                   <option value="exit">eXIT</option>
@@ -1765,6 +1794,7 @@
               <div class="field"><label>Programa</label>
                 <select id="cpc-f-programa">
                   <option value="">Todos</option>
+                  <option value="open">Open</option>
                   <option value="begin">Begin</option>
                   <option value="next">Next</option>
                   <option value="exit">eXIT</option>
@@ -1835,7 +1865,7 @@
               <div class="field"><label>Desde</label><input type="date" id="pres-f-desde-staff"></div>
               <div class="field"><label>Hasta</label><input type="date" id="pres-f-hasta-staff"></div>
               <div class="field"><label>Programa</label>
-                <select id="pres-f-programa"><option value="">Todos</option><option value="begin">Begin</option><option value="next">Next</option><option value="exit">eXIT</option></select>
+                <select id="pres-f-programa"><option value="">Todos</option><option value="open">Open</option><option value="begin">Begin</option><option value="next">Next</option><option value="exit">eXIT</option></select>
               </div>
               <div class="field"><label>Copiloto Asignado</label><select id="pres-f-coach"><option value="">Todos</option></select></div>
               <div class="field"><label>Estudiante</label><select id="pres-f-estudiante"><option value="">Todos</option></select></div>
@@ -1879,7 +1909,7 @@
               <div class="field"><label>Desde</label><input type="date" id="hist-f-desde-staff"></div>
               <div class="field"><label>Hasta</label><input type="date" id="hist-f-hasta-staff"></div>
               <div class="field"><label>Programa</label>
-                <select id="hist-f-programa"><option value="">Todos</option><option value="begin">Begin</option><option value="next">Next</option><option value="exit">eXIT</option></select>
+                <select id="hist-f-programa"><option value="">Todos</option><option value="open">Open</option><option value="begin">Begin</option><option value="next">Next</option><option value="exit">eXIT</option></select>
               </div>
               <div class="field"><label>Copiloto Asignado</label><select id="hist-f-coach"><option value="">Todos</option></select></div>
               <div class="field"><label>Estudiante</label><select id="hist-f-estudiante"><option value="">Todos</option></select></div>
@@ -2163,6 +2193,7 @@
           <div class="panel__body">
             <p id="config-error-hotmart" class="hidden" style="color:#C0392B; margin-bottom:12px; font-size:13px;"></p>
             <div class="field-grid">
+              <div class="field"><label>Open</label><input id="config-contenido-open" placeholder="https://..."></div>
               <div class="field"><label>Begin</label><input id="config-contenido-begin" placeholder="https://..."></div>
               <div class="field"><label>Next</label><input id="config-contenido-next" placeholder="https://..."></div>
               <div class="field"><label>eXIT</label><input id="config-contenido-exit" placeholder="https://..."></div>
@@ -2204,6 +2235,7 @@
           <div class="panel__body">
             <p id="config-error-grabaciones" class="hidden" style="color:#C0392B; margin-bottom:12px; font-size:13px;"></p>
             <div class="field-grid">
+              <div class="field"><label>Open</label><input id="config-grabaciones-open" placeholder="https://..."></div>
               <div class="field"><label>Begin</label><input id="config-grabaciones-begin" placeholder="https://..."></div>
               <div class="field"><label>Next</label><input id="config-grabaciones-next" placeholder="https://..."></div>
               <div class="field"><label>eXIT</label><input id="config-grabaciones-exit" placeholder="https://..."></div>
@@ -2221,6 +2253,7 @@
           <div class="panel__body">
             <p id="config-error-whatsapp" class="hidden" style="color:#C0392B; margin-bottom:12px; font-size:13px;"></p>
             <div class="field-grid">
+              <div class="field"><label>Open</label><input id="config-whatsapp-open" placeholder="https://chat.whatsapp.com/..."></div>
               <div class="field"><label>Begin</label><input id="config-whatsapp-begin" placeholder="https://chat.whatsapp.com/..."></div>
               <div class="field"><label>Next + eXIT (grupo combinado)</label><input id="config-whatsapp-nextexit" placeholder="https://chat.whatsapp.com/..."></div>
             </div>

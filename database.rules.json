@@ -359,7 +359,7 @@
             ".validate": "!newData.exists() || newData.val() === data.val() || (root.child('usuarios').child(auth.uid).child('roles').child('director').val() === true || root.child('usuarios').child(auth.uid).child('rol').val() === 'director')"
           },
           "estado": {
-            ".write": "auth != null && ((root.child('usuarios').child(auth.uid).child('roles').child('director').val() === true || root.child('usuarios').child(auth.uid).child('rol').val() === 'director') || root.child('ciclos').child(root.child('alumnos').child($alumnoId).child('cicloActualId').val()).child('coachId').val() === auth.uid || (root.child('ciclos').child(root.child('alumnos').child($alumnoId).child('cicloActualId').val()).child('programa').val() === 'begin' && root.child('usuarios').child(auth.uid).child('coachCabeceraBegin').val() === true))"
+            ".write": "auth != null && ((root.child('usuarios').child(auth.uid).child('roles').child('director').val() === true || root.child('usuarios').child(auth.uid).child('rol').val() === 'director') || root.child('ciclos').child(root.child('alumnos').child($alumnoId).child('cicloActualId').val()).child('coachId').val() === auth.uid || ((root.child('ciclos').child(root.child('alumnos').child($alumnoId).child('cicloActualId').val()).child('programa').val() === 'begin' || root.child('ciclos').child(root.child('alumnos').child($alumnoId).child('cicloActualId').val()).child('programa').val() === 'open') && root.child('usuarios').child(auth.uid).child('coachCabeceraBegin').val() === true))"
           },
           "comentarios": {
             "$comentarioId": {

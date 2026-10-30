@@ -48,7 +48,7 @@ async function completarFotosFaltantes(items) {
 // Misma etiqueta con el logo del programa que ya usa Hitos — mismo
 // nombre de clase CSS (.hito-etiqueta-programa) a propósito.
 function programaLabelCorto(p) {
-  return p === 'begin' ? 'Begin' : p === 'next' ? 'Next' : p === 'exit' ? 'eXIT' : '—';
+  return p === 'open' ? 'Open' : p === 'begin' ? 'Begin' : p === 'next' ? 'Next' : p === 'exit' ? 'eXIT' : '—';
 }
 // --- Herramienta de una sola vez, solo Director: les escribe el
 //     programa directo a las publicaciones antiguas que no lo tengan
@@ -128,7 +128,7 @@ function asegurarBotonBackfillPrograma() {
 }
 
 function etiquetaProgramaSocial(p) {
-  if (!['begin', 'next', 'exit'].includes(p)) return '';
+  if (!['open', 'begin', 'next', 'exit'].includes(p)) return '';
   return `<span class="hito-etiqueta-programa" title="${programaLabelCorto(p)}"><img src="assets/logos/wordmark-${p}.png" alt="${programaLabelCorto(p)}"></span>`;
 }
 function formatFecha(ts) {
@@ -848,7 +848,7 @@ async function cargarPresentacion() {
     const alumno = alumnos[alumnoId] || {};
     const ciclo = alumno.cicloActualId ? ciclos[alumno.cicloActualId] : null;
     return { alumnoId, ...p, nombre: nombrePublicoDeAlumno(alumno) || p.alumnoNombre || 'Alumno', fotoUrl: alumno.fotoUrl || '', programa: p.programa || (ciclo ? ciclo.programa : ''), coachId: ciclo ? ciclo.coachId : '' };
-  }).filter(p => esDirector || p.estado === 'aprobada' || p.alumnoId === ctxAlumno.alumnoId || (esCoach && (p.coachId === uid || (p.programa === 'begin' && esCoachCabeceraBegin))))
+  }).filter(p => esDirector || p.estado === 'aprobada' || p.alumnoId === ctxAlumno.alumnoId || (esCoach && (p.coachId === uid || (['begin', 'open'].includes(p.programa) && esCoachCabeceraBegin))))
     .sort((a, b) => b.createdAt - a.createdAt);
 
   await completarFotosFaltantes(conDatos);
@@ -904,7 +904,7 @@ async function cargarPresentacion() {
       const basePath = `comunidad/presentaciones/${p.alumnoId}`;
       const esDueño = p.alumnoId === ctxAlumno.alumnoId;
       const dentro24h = dentroDeVentana(p.createdAt);
-      const puedeAprobar = esDirector || p.coachId === uid || (p.programa === 'begin' && esCoachCabeceraBegin);
+      const puedeAprobar = esDirector || p.coachId === uid || (['begin', 'open'].includes(p.programa) && esCoachCabeceraBegin);
       const extraFooterHtml = puedeAprobar && p.estado !== 'aprobada'
         ? `<div style="display:flex; gap:8px; padding:0 14px 14px;"><button type="button" class="btn btn--primary btn-aprobar-presentacion" data-alumno-id="${p.alumnoId}" style="font-size:12px; padding:5px 12px;">✓ Aprobar</button></div>`
         : '';

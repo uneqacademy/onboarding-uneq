@@ -37,17 +37,20 @@ const CAMPOS_POR_SECCION_CONFIG = {
     formSoporteEmbed: 'config-form-soporte-embed'
   },
   hotmart: {
+    contenidoHotmartOpen: 'config-contenido-open',
     contenidoHotmartBegin: 'config-contenido-begin',
     contenidoHotmartNext: 'config-contenido-next',
     contenidoHotmartExit: 'config-contenido-exit'
   },
   'director-ia': { directorIaNombre: 'config-director-ia-nombre' },
   grabaciones: {
+    grabacionesOpen: 'config-grabaciones-open',
     grabacionesBegin: 'config-grabaciones-begin',
     grabacionesNext: 'config-grabaciones-next',
     grabacionesExit: 'config-grabaciones-exit'
   },
   whatsapp: {
+    whatsappOpen: 'config-whatsapp-open',
     whatsappBegin: 'config-whatsapp-begin',
     whatsappNextExit: 'config-whatsapp-nextexit'
   }
@@ -175,6 +178,7 @@ export async function cargarConfiguracion() {
   document.getElementById('config-correo-soporte').value = c.correoSoporte || '';
   document.getElementById('config-whatsapp-soporte').value = c.whatsappSoporte || '';
   document.getElementById('config-form-soporte-embed').value = c.formSoporteEmbed || '';
+  document.getElementById('config-contenido-open').value = c.contenidoHotmartOpen || '';
   document.getElementById('config-contenido-begin').value = c.contenidoHotmartBegin || '';
   document.getElementById('config-contenido-next').value = c.contenidoHotmartNext || '';
   document.getElementById('config-contenido-exit').value = c.contenidoHotmartExit || '';
@@ -185,9 +189,11 @@ export async function cargarConfiguracion() {
   }
   const nombreDirectorIaEl = document.getElementById('config-director-ia-nombre');
   if (nombreDirectorIaEl) nombreDirectorIaEl.value = c.directorIaNombre || '';
+  document.getElementById('config-grabaciones-open').value = c.grabacionesOpen || '';
   document.getElementById('config-grabaciones-begin').value = c.grabacionesBegin || '';
   document.getElementById('config-grabaciones-next').value = c.grabacionesNext || '';
   document.getElementById('config-grabaciones-exit').value = c.grabacionesExit || '';
+  document.getElementById('config-whatsapp-open').value = c.whatsappOpen || '';
   document.getElementById('config-whatsapp-begin').value = c.whatsappBegin || '';
   document.getElementById('config-whatsapp-nextexit').value = c.whatsappNextExit || '';
 

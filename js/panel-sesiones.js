@@ -79,10 +79,10 @@ export async function renderPanelSesionesDirector(coachUid, contenedor) {
     </div>`;
 
   contenedor.innerHTML = `
-    <strong style="font-size:13px;">Sesiones Grupales BEGIN</strong>
+    <strong style="font-size:13px;">Sesiones Grupales BEGIN y OPEN</strong>
     ${activas.length ? activas.map(([id, s]) => fila(
       id,
-      `${formatFecha(s.fecha)} · ${formatHora(s)}`,
+      `${formatFecha(s.fecha)} · ${formatHora(s)}${s.audiencia === 'open' ? ' <span class="badge badge--activo" style="font-size:9px;">OPEN</span>' : (s.audiencia === 'ambos' ? ' <span class="badge badge--activo" style="font-size:9px;">BEGIN + OPEN</span>' : '')}`,
       etiquetaEstado(s),
       nps[id] ? Object.values(nps[id]) : [],
       true
