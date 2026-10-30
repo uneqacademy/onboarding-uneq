@@ -2276,7 +2276,8 @@ export async function cargarPreguntasVivo() {
   const usuariosSnap = await get(ref(db, 'usuarios'));
   const usuarios = usuariosSnap.exists() ? usuariosSnap.val() : {};
 
-  renderHorariosRecurrentes(usuarios);
+  // OPEN no tiene mentorías en vivo generales: no se le muestran los horarios recurrentes.
+  renderHorariosRecurrentes(programaAlumnoPv === 'open' ? {} : usuarios);
   const sesiones = await obtenerSesionesVivoProximas(programaAlumnoPv, usuarios);
 
   if (!sesiones.length) {

@@ -805,7 +805,7 @@ export async function cargarPerfilMentor() {
       if (hayTemasGuardados) {
         const primeras3 = temasArray.slice(0, 3);
         const resto = temasArray.slice(3);
-        temasListaEl.innerHTML = `<strong>En Preguntas en Vivo se ve:</strong> ${primeras3.join(', ')}` +
+        temasListaEl.innerHTML = `<strong>En Sesiones en Vivo se ve:</strong> ${primeras3.join(', ')}` +
           (resto.length ? `<br><strong>También disponibles para filtros:</strong> ${resto.join(', ')}` : '');
       }
       temasListaEl.classList.toggle('hidden', !hayTemasGuardados);

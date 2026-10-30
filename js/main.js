@@ -276,7 +276,7 @@ export function setNav(section) {
     document.getElementById('topbar-title').textContent = 'Mi Ficha Personal';
   } else if (section === 'preguntas-vivo') {
     showView('view-preguntas-vivo');
-    document.getElementById('topbar-title').textContent = 'Preguntas en Vivo';
+    document.getElementById('topbar-title').textContent = 'Sesiones en Vivo';
   } else if (section === 'soporte-alumnos') {
     showView('view-soporte-alumnos');
     document.getElementById('topbar-title').textContent = 'Soporte Alumnos';
