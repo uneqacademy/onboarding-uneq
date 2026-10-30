@@ -184,7 +184,7 @@ async function cargarCoachesView() {
 
       const tr = document.createElement('tr');
       tr.innerHTML = `
-        <td>${escaparHtml(nombreCoach)}${esCabeceraBegin ? ' <span title="Copiloto de Cabecera — ve a todos los alumnos BEGIN">🚩</span>' : ''}</td>
+        <td>${escaparHtml(nombreCoach)}${esCabeceraBegin ? ' <span title="Copiloto de Cabecera — ve a todos los alumnos BEGIN y OPEN">🚩</span>' : ''}</td>
         <td>${escaparHtml(coach.email || '')}</td>
         <td>${alumnosDeCoach.length}</td>
         <td><span class="badge ${coach.activo === false ? 'badge--impaga' : 'badge--activo'}">${coach.activo === false ? 'Inactivo' : 'Activo'}</span></td>
@@ -251,8 +251,8 @@ async function cargarCoachesView() {
             <div style="display:flex; align-items:center; gap:16px; flex-wrap:wrap;">
               <label style="font-weight:400;"><input type="checkbox" class="chk-rol-coach" ${rolesActuales.coach ? 'checked' : ''}> Copiloto</label>
               <label style="font-weight:400;"><input type="checkbox" class="chk-rol-mentor" ${rolesActuales.mentor ? 'checked' : ''}> Mentor</label>
-              <label style="font-weight:400;" title="Puede crear sesiones grupales semanales exclusivas para alumnos BEGIN">
-                <input type="checkbox" class="chk-coach-cabecera-begin" ${coach.coachCabeceraBegin ? 'checked' : ''}> Copiloto de Cabecera (BEGIN)
+              <label style="font-weight:400;" title="Puede crear sesiones grupales semanales para alumnos BEGIN y OPEN">
+                <input type="checkbox" class="chk-coach-cabecera-begin" ${coach.coachCabeceraBegin ? 'checked' : ''}> Copiloto de Cabecera (BEGIN y OPEN)
               </label>
               <span class="text-soft" style="font-size:12px;">El rol Director se asigna aparte, en Firebase Console.</span>
               <button class="btn btn--primary btn-guardar-roles" style="font-size:11px; padding:4px 10px;">Guardar</button>

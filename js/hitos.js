@@ -120,7 +120,8 @@ let contadorCargaHitos = 0;
 // Carpeta de imágenes de fase según nivel: BEGIN y eXIT tienen las suyas;
 // NEXT usa las de NEXT.
 function carpetaFasesPrograma(programa) {
-  return programa === 'begin' ? 'begin' : (programa === 'exit' ? 'exit' : 'next');
+  // OPEN usa por ahora las imágenes de BEGIN (hasta que haya las suyas).
+  return ['begin', 'open'].includes(programa) ? 'begin' : (programa === 'exit' ? 'exit' : 'next');
 }
 
 function imagenFaseCiclo(ciclo) {
@@ -189,7 +190,8 @@ export async function cargarMisHitos() {
   }
   const contenidosEl = document.getElementById('hitos-contenidos-hotmart');
   if (contenidosEl) {
-    const urlContenidos = programaPropio === 'begin' ? config.contenidoHotmartBegin
+    const urlContenidos = programaPropio === 'open' ? config.contenidoHotmartOpen
+      : programaPropio === 'begin' ? config.contenidoHotmartBegin
       : programaPropio === 'next' ? config.contenidoHotmartNext
       : programaPropio === 'exit' ? config.contenidoHotmartExit : '';
     contenidosEl.classList.toggle('hidden', !urlContenidos);
@@ -426,13 +428,13 @@ if (btnAdjuntarFotoHito && inputFotoHito) {
 }
 
 function programaLabelCorto(p) {
-  return p === 'begin' ? 'Begin' : p === 'next' ? 'Next' : p === 'exit' ? 'eXIT' : '—';
+  return p === 'open' ? 'Open' : p === 'begin' ? 'Begin' : p === 'next' ? 'Next' : p === 'exit' ? 'eXIT' : '—';
 }
 
 // Etiqueta con el logo del programa (píldora negra, porque los logos
 // tienen letras blancas). Sin programa conocido, no muestra nada.
 function etiquetaProgramaHito(p) {
-  if (!['begin', 'next', 'exit'].includes(p)) return '';
+  if (!['open', 'begin', 'next', 'exit'].includes(p)) return '';
   return `<span class="hito-etiqueta-programa" title="${programaLabelCorto(p)}"><img src="assets/logos/wordmark-${p}.png" alt="${programaLabelCorto(p)}"></span>`;
 }
 

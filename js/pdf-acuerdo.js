@@ -123,6 +123,22 @@ const BENEFICIOS = {
   }
 };
 
+// OPEN: borrador derivado de BEGIN — sin la sesión mensual con el equipo, BOX de 3 preguntas
+// por semana y todo lo temporal en 2 meses. REVISAR el texto legal antes de usarlo con alumnos.
+BENEFICIOS.open = {
+  items: BENEFICIOS.begin.items
+    .filter(t => !t.includes('Maca y Felipe'))
+    .map(t => t
+      .replace('hasta 5 preguntas por semana', 'hasta 3 preguntas por semana')
+      .replace(/\(acceso: (1 año|6 meses|3 meses)\)/g, '(acceso: 2 meses)')
+      .replace(/\(vigente durante el programa: 3 meses\)/g, '(vigente durante el programa: 2 meses)')
+      .replace(/vigente durante el programa: 3 meses$/, 'vigente durante el programa: 2 meses')
+      .replace('exclusivo Begin', 'exclusivo Open')
+      .replace('Ex-Alumnos Begin', 'Ex-Alumnos Open')),
+  duracion: 'Duración del programa (BOX de consultas y sesiones con el copiloto de cabecera): 2 meses.',
+  nota: null
+};
+
 export async function generarPdfAcuerdo(alumnoId, cicloId) {
   const [alumnoSnap, cicloSnap, acuerdoSnap] = await Promise.all([
     get(ref(db, `alumnos/${alumnoId}`)),
@@ -163,8 +179,8 @@ export async function generarPdfAcuerdo(alumnoId, cicloId) {
     const coachSnap = await get(ref(db, `usuarios/${ciclo.coachId}/nombre`));
     if (coachSnap.exists()) nombreCoach = coachSnap.val();
   }
-  const clausulaCoach = ciclo.programa === 'begin'
-    ? 'El Alumno/a será acompañado/a durante este proceso por el Copiloto de Cabecera del programa BEGIN.'
+  const clausulaCoach = ['begin', 'open'].includes(ciclo.programa)
+    ? `El Alumno/a será acompañado/a durante este proceso por el Copiloto de Cabecera del programa ${ciclo.programa === 'open' ? 'OPEN' : 'BEGIN'}.`
     : `El Alumno/a será acompañado/a durante este proceso por su copiloto asignado/a, ${nombreCoach}.`;
 
   const doc = new jsPDF();

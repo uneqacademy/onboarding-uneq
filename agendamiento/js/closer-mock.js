@@ -25,7 +25,7 @@ const ETIQUETAS_ESTADO = {
   no_show: { texto: 'No-Show', clase: 'no-show' },
   baja: { texto: 'Dado de baja', clase: 'baja' }
 };
-const PROGRAMAS = [{ v: 'begin', t: 'Begin' }, { v: 'next', t: 'Next' }, { v: 'exit', t: 'eXIT' }];
+const PROGRAMAS = [{ v: 'open', t: 'Open' }, { v: 'begin', t: 'Begin' }, { v: 'next', t: 'Next' }, { v: 'exit', t: 'eXIT' }];
 
 function datosPorDefecto() {
   const ahora = Date.now();

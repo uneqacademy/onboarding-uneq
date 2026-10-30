@@ -29,3 +29,6 @@ Agendamiento: `agendamiento/staff/{uid}` (closer, director comercial).
 - Las claves de `firebase-config.js` son públicas por diseño; la seguridad real está en las reglas de
   Realtime Database/Storage (no están en el repo, ver `docs/REVISION.md`).
 - Idioma de UI y comentarios: español.
+
+## Niveles (programas)
+`open` (2 meses, $497.000), `begin`, `next` y `exit`. OPEN se comporta como BEGIN (sin copiloto individual, lo ve el Copiloto de Cabecera, tema visual `tema-begin` + `tema-open`) pero: sin mentorías en vivo generales, BOX de 3 preguntas/semana (1 por mentor) y acceso de 2 meses. Las sesiones en vivo llevan su público: mentorías con `exclusivaPrograma` (`begin`/`open`/vacío = general) y sesiones de cabecera con `audiencia` (`begin`/`open`/`ambos`).

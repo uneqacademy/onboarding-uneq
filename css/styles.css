@@ -1454,3 +1454,22 @@ body.vista-ranking .content .ranking-como summary, body.vista-ranking .content .
 .pagos-celda--pendiente { background: #FBF3E2; }
 .pagos-celda--atrasada { background: #FBE4E4; }
 .pagos-celda--vacia { color: var(--color-ink-soft); text-align: center; }
+
+
+/* ============================================
+   TEMA OPEN — alumnos OPEN. Se monta sobre tema-begin (OPEN es un clon
+   técnico de BEGIN) y solo cambia los colores, tomados del logo:
+   negro y cobre. Son colores PROVISORIOS hasta recibir los finales.
+   ============================================ */
+body.tema-open {
+  --begin-azul: #1F1F1E;
+  --begin-celeste: #C9604F;
+  --begin-verde: #1F9A4A;
+  background: var(--begin-azul);
+}
+body.tema-open .content { background: var(--begin-azul); }
+body.tema-open .nav-item.is-active { background: #E58A78; color: #1F1F1E; font-weight: 700; }
+body.tema-open .content .text-soft { color: #E9D3CD; }
+body.tema-open .panel .text-soft,
+body.tema-open .kpi-card .text-soft { color: var(--color-ink-soft); }
+body.tema-open .hitos-tab { color: #E9D3CD; }

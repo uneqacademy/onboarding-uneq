@@ -124,7 +124,7 @@ async function cargarSesionesBeginTabla(uid) {
       const tr = document.createElement('tr');
       const estadoSesion = s.estado === 'dictada' ? 'dictada' : (s.estado === 'no_dictada' ? 'no_dictada' : '');
       tr.innerHTML = `
-        <td>${formatFechaCortaBegin(s.fecha)}</td>
+        <td>${formatFechaCortaBegin(s.fecha)}${s.audiencia === 'open' ? ' <span class="badge badge--activo" style="font-size:9px;">OPEN</span>' : (s.audiencia === 'ambos' ? ' <span class="badge badge--activo" style="font-size:9px;">BEGIN + OPEN</span>' : '')}</td>
         <td>${s.inicioTimestamp ? formatearHorarioParaTabla(s.inicioTimestamp) : (s.hora || '—')}</td>
         <td>${s.link ? `<a href="${s.link}" target="_blank" rel="noopener">Ir al link</a>` : '—'}</td>
         <td>${promedioTexto}${entradas.length ? '<br><button class="btn btn--ghost btn-ver-comentarios-nps-begin" style="font-size:11px; padding:4px 8px; margin-top:4px;">Ver comentarios</button>' : ''}</td>
@@ -285,6 +285,8 @@ if (btnAgregarSesionBegin) {
     const fechaInput = document.getElementById('sesion-begin-fecha').value;
     const horaInput = document.getElementById('sesion-begin-hora').value;
     const link = document.getElementById('sesion-begin-link').value.trim();
+    // A qué alumnos va dirigida: BEGIN (por defecto, como antes), OPEN o ambos.
+    const audiencia = document.getElementById('sesion-begin-audiencia')?.value || 'begin';
 
     if (!uid || !fechaInput) {
       alert('Completa al menos la Fecha.');
@@ -299,11 +301,13 @@ if (btnAgregarSesionBegin) {
       const { fecha, hora } = fechaHoraChileDesdeInstante(inicioLocal);
 
       const nuevaRef = push(ref(db, `sesionesBegin/${uid}`));
-      await set(nuevaRef, { fecha, hora, inicioTimestamp, zonaCreador, link, createdAt: Date.now() });
+      await set(nuevaRef, { fecha, hora, inicioTimestamp, zonaCreador, link, audiencia, createdAt: Date.now() });
 
       document.getElementById('sesion-begin-fecha').value = '';
       document.getElementById('sesion-begin-hora').value = '';
       document.getElementById('sesion-begin-link').value = '';
+      const audienciaEl = document.getElementById('sesion-begin-audiencia');
+      if (audienciaEl) audienciaEl.value = 'begin';
       document.getElementById('sesion-begin-preview-horario').classList.add('hidden');
 
       await cargarSesionesBeginTabla(uid);

@@ -40,7 +40,7 @@ const ETIQUETAS_ESTADO = {
   se_presento: { texto: 'Se presenta a llamada', clase: 'se-presento' }, en_seguimiento: { texto: 'En Seguimiento', clase: 'en-seguimiento' },
   cerrado: { texto: 'Cerrado', clase: 'cerrado' }, no_show: { texto: 'No-Show', clase: 'no-show' }, baja: { texto: 'Dado de baja', clase: 'baja' }
 };
-const PROGRAMAS = [{ v: 'begin', t: 'Begin' }, { v: 'next', t: 'Next' }, { v: 'exit', t: 'eXIT' }];
+const PROGRAMAS = [{ v: 'open', t: 'Open' }, { v: 'begin', t: 'Begin' }, { v: 'next', t: 'Next' }, { v: 'exit', t: 'eXIT' }];
 
 let miUid = null;
 let citasAgenda = [], leads = [], disponibilidad = {}, bloqueos = [], miPerfil = {};
