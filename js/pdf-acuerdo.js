@@ -123,13 +123,15 @@ const BENEFICIOS = {
   }
 };
 
-// OPEN: borrador derivado de BEGIN — sin la sesión mensual con el equipo, BOX de 3 preguntas
-// por semana y todo lo temporal en 2 meses. REVISAR el texto legal antes de usarlo con alumnos.
+// OPEN: derivado de BEGIN según el texto definido por el equipo — sin la sesión mensual con
+// Maca y Felipe ni Sinergia, una sola sesión semanal con el copiloto de cabecera, BOX de 3
+// preguntas por semana y todo lo temporal en 2 meses.
 BENEFICIOS.open = {
   items: BENEFICIOS.begin.items
-    .filter(t => !t.includes('Maca y Felipe'))
+    .filter(t => !t.includes('Maca y Felipe') && !t.includes('Sinergia'))
     .map(t => t
       .replace('hasta 5 preguntas por semana', 'hasta 3 preguntas por semana')
+      .replace('Sesiones semanales grupales con copiloto', 'Sesión semanal grupal con copiloto')
       .replace(/\(acceso: (1 año|6 meses|3 meses)\)/g, '(acceso: 2 meses)')
       .replace(/\(vigente durante el programa: 3 meses\)/g, '(vigente durante el programa: 2 meses)')
       .replace(/vigente durante el programa: 3 meses$/, 'vigente durante el programa: 2 meses')
