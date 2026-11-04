@@ -41,3 +41,6 @@ Los precios de los programas (CLP) y el tipo de cambio (CLP por USD) se editan e
 
 ## Alta de alumno (director)
 Un solo formulario (Nuevo Alumno): nombre, apellido, teléfono, correo, programa, copiloto (BEGIN y OPEN: el de cabecera, automático; NEXT y eXIT: se elige), fechas de ingreso (hoy) y egreso (según los meses de ACCESO del programa: OPEN 2, BEGIN 4, NEXT 6, eXIT 12; membresía sin egreso fijo), país (define la moneda), monto, descuento, total, abono, cuotas y saldo. Al guardar, el ciclo nace con `acuerdoCerrado: true` y las fechas puestas, así que el copiloto lo ve de inmediato; el resto de la ficha lo completa él. Los meses de acceso están en `PROGRAMAS` (`ciclos.js`). En eXIT el acompañamiento de Maca y Felipe y sus 8 sesiones son solo los primeros 6 meses.
+
+## Campos de teléfono
+Todos los campos de teléfono llevan selector de país con bandera (`js/telefono-pais.js` + `css/telefono-pais.css`, Chile +56 por defecto). Un campo nuevo solo necesita `type="tel"` o el atributo `data-telefono`: `activarSelectoresTelefono()` lo detecta (también los que se dibujan con JavaScript) y su `.value` sigue siendo el teléfono completo (`+56 987654321`; con `data-telefono-formato="digitos"`, `56987654321`). `data-tel-manual` lo deja para quien lo monte a mano (Nuevo Alumno). La página pública de agendamiento usa intl-tel-input aparte.

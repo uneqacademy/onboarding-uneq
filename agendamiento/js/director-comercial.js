@@ -10,6 +10,7 @@ import { ref, get, set, update, push, onValue } from "https://www.gstatic.com/fi
 import { getAuth, sendPasswordResetEmail, EmailAuthProvider, reauthenticateWithCredential, updateEmail, updatePassword } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-auth.js";
 import { getStorage, ref as sref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-storage.js";
 import { iniciarSesionStaff } from './staff-auth.js';
+import { activarSelectoresTelefono } from '../../js/telefono-pais.js';
 
 const authInstance = getAuth();
 const storageInstance = getStorage();
@@ -678,3 +679,6 @@ iniciarSesionStaff('directorComercial', async (uid) => {
   renderMisDatos();
   if (misDatos.nombre) document.getElementById('adm-sesion-nombre').textContent = misDatos.nombre;
 });
+
+// Selector de código de país (bandera) en los campos de teléfono.
+activarSelectoresTelefono();

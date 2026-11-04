@@ -155,7 +155,7 @@ async function cargarMentoresView() {
             <div class="field-grid mb-16">
               <div class="field"><label>Nombre</label><input class="edit-nombre-mentor" value="${escaparHtml(mentor.nombre || '')}"></div>
               <div class="field"><label>Correo</label><input class="edit-email-mentor" type="email" value="${escaparHtml(mentor.email || '')}"></div>
-              <div class="field"><label>Teléfono</label><input class="edit-telefono-mentor" value="${escaparHtml(mentor.telefono || '')}"></div>
+              <div class="field"><label>Teléfono</label><input class="edit-telefono-mentor" data-telefono value="${escaparHtml(mentor.telefono || '')}"></div>
             </div>
             <button class="btn btn--primary btn-guardar-datos-mentor" style="font-size:11px; padding:4px 10px;">Guardar</button>
           </td>`;

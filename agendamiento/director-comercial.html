@@ -6,6 +6,7 @@
 <title>Director Comercial — Agendamiento UNEQ</title>
 <script src="js/gtm-config.js"></script>
 <link rel="stylesheet" href="css/agendamiento.css?v=7">
+<link rel="stylesheet" href="../css/telefono-pais.css?v=1">
 </head>
 <body>
 
@@ -80,7 +81,7 @@
         </div>
         <div class="ag-field">
           <label>Número de WhatsApp para dudas (con código de país, sin +)</label>
-          <input type="text" id="gen-whatsapp-dudas" placeholder="56912345678">
+          <input type="text" id="gen-whatsapp-dudas" data-telefono data-telefono-formato="digitos" placeholder="9 1234 5678">
           <small class="ag-hint">Es el botón "¿Dudas?" que ve el lead en la confirmación.</small>
         </div>
         <button type="button" class="ag-btn ag-btn--primario" style="width:auto;" data-guardar="general">Guardar cambios</button>
@@ -146,7 +147,7 @@
         </div>
         <div class="adm-fila">
           <div class="ag-field"><label>Correo <span class="ag-req">*</span></label><input type="email" id="closer-correo"></div>
-          <div class="ag-field"><label>WhatsApp <span class="ag-req">*</span></label><input type="tel" id="closer-whatsapp" placeholder="+56912345678"></div>
+          <div class="ag-field"><label>WhatsApp <span class="ag-req">*</span></label><input type="tel" id="closer-whatsapp" placeholder="9 1234 5678"></div>
         </div>
         <div class="adm-fila">
           <div class="ag-field"><label>Fecha de nacimiento <span class="ag-req">*</span></label><input type="date" id="closer-fecha-nacimiento"></div>

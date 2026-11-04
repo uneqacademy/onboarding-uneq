@@ -54,7 +54,7 @@ function residenciaDeAlumno(alumno) {
 }
 import { actualizarBotonAccesoAlumno, cargarDashboardAlumno } from './alumno-portal.js';
 import { parsearMonto, formatMonto, hoyISO } from './util-pagos.js';
-import { montarSelectorTelefono } from './telefono-pais.js';
+import { montarSelectorTelefono, activarSelectoresTelefono } from './telefono-pais.js';
 import { conectarCascadaDireccion, prepararCamposDireccionVacios, precargarDireccionGuardada, nombrePaisDesdeCodigo, codigoPaisDesdeNombre, poblarSelectPaisesPorNombre } from './geodata.js';
 import './configuracion.js';
 import './hitos.js';
@@ -1578,6 +1578,8 @@ const inputTelefonoNuevo = document.getElementById('nuevo-alumno-telefono');
 if (inputTelefonoNuevo) {
   selectorTelefonoNuevo = montarSelectorTelefono(inputTelefonoNuevo, { onCambio: sincronizarPaisConTelefonoNuevoAlumno });
 }
+// Todos los demás campos de teléfono de la app (fichas, socio, copilotos, mentores, Mis Datos, soporte…).
+activarSelectoresTelefono();
 ['nuevo-alumno-descuento', 'nuevo-alumno-abono'].forEach(id => {
   document.getElementById(id)?.addEventListener('input', recalcularTotalesNuevoAlumno);
 });
