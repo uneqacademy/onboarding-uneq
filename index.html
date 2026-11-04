@@ -533,10 +533,10 @@
             <div class="field-grid mb-16">
               <div class="field"><label>Programa</label>
                 <select id="nuevo-ciclo-programa">
-                  <option value="open">Open (2 meses · $497.000)</option>
-                  <option value="begin">Begin (3 meses · $1.500.000)</option>
-                  <option value="next">Next (6 meses · $3.000.000)</option>
-                  <option value="exit">eXIT (6 meses · $5.000.000)</option>
+                  <option value="open">Open (2 meses de acceso · $497.000)</option>
+                  <option value="begin">Begin (4 meses de acceso · $1.500.000)</option>
+                  <option value="next">Next (6 meses de acceso · $3.000.000)</option>
+                  <option value="exit">eXIT (12 meses de acceso · $5.000.000)</option>
                 </select>
               </div>
               <div class="field" id="campo-nuevo-ciclo-coach"><label>Copiloto Asignado</label><select id="nuevo-ciclo-coach"></select></div>
@@ -883,29 +883,28 @@
         </div>
 
         <div class="panel mb-16">
-          <div class="panel__header"><h3>Identificación del Alumno</h3></div>
+          <div class="panel__header"><h3>Datos del Alumno</h3></div>
           <div class="panel__body">
-            <p class="text-soft mb-16">El resto de los datos (RUT, contacto, foto, ocupación, test, etc.) los completa el copiloto durante la sesión de onboarding.</p>
+            <p class="text-soft mb-16">Al guardar, estos datos pasan solos a la ficha, al acuerdo y a las fechas del alumno, y el copiloto ya lo ve. El resto (RUT, dirección, foto, ocupación, test, etc.) lo completa el copiloto en la sesión de onboarding.</p>
             <div class="field-grid">
               <div class="field"><label>Nombre</label><input id="nuevo-alumno-nombre" placeholder="Nombre"></div>
               <div class="field"><label>Apellido</label><input id="nuevo-alumno-apellido" placeholder="Apellido"></div>
-              <div class="field"><label>Teléfono (opcional)</label><input id="nuevo-alumno-telefono" placeholder="+56 9..."></div>
-              <div class="field"><label>Correo (opcional)</label><input id="nuevo-alumno-email" type="email" placeholder="correo@ejemplo.com"></div>
+              <div class="field"><label>Teléfono</label><input id="nuevo-alumno-telefono" placeholder="+56 9..."></div>
+              <div class="field"><label>Correo</label><input id="nuevo-alumno-email" type="email" placeholder="correo@ejemplo.com"></div>
             </div>
           </div>
         </div>
 
         <div class="panel mb-16">
-          <div class="panel__header"><h3>Programa y Copiloto</h3></div>
+          <div class="panel__header"><h3>Programa, Copiloto y Fechas</h3></div>
           <div class="panel__body">
-            <p class="text-soft mb-16">La Fecha de Ingreso se define automáticamente cuando el acuerdo quede "Firma Procesada" — no antes.</p>
             <div class="field-grid">
               <div class="field"><label>Programa</label>
                 <select id="nuevo-alumno-programa">
-                  <option value="open">Open (2 meses · $497.000)</option>
-                  <option value="begin">Begin (3 meses · $1.500.000)</option>
-                  <option value="next">Next (6 meses · $3.000.000)</option>
-                  <option value="exit">eXIT (6 meses · $5.000.000)</option>
+                  <option value="open">Open (2 meses de acceso · $497.000)</option>
+                  <option value="begin">Begin (4 meses de acceso · $1.500.000)</option>
+                  <option value="next">Next (6 meses de acceso · $3.000.000)</option>
+                  <option value="exit">eXIT (12 meses de acceso · $5.000.000)</option>
                 </select>
               </div>
               <div class="field" id="campo-nuevo-alumno-membresia" style="display:flex; align-items:center; gap:8px; margin-top:22px;">
@@ -917,32 +916,41 @@
               <div class="field" id="campo-nuevo-alumno-coach"><label>Copiloto Asignado</label>
                 <select id="nuevo-alumno-coach"><option value="">Cargando copilotos...</option></select>
               </div>
+              <div class="field"><label>Fecha de Ingreso (hoy)</label><input type="date" id="nuevo-alumno-fecha-ingreso" disabled></div>
+              <div class="field"><label>Fecha de Egreso (fin del acceso)</label><input type="date" id="nuevo-alumno-fecha-egreso" disabled></div>
             </div>
-            <p class="text-soft hidden" id="aviso-nuevo-alumno-begin-sin-coach" style="margin-top:-8px;">🚩 BEGIN y OPEN no llevan copiloto individual — los ve automáticamente el Copiloto de Cabecera.</p>
+            <p class="text-soft hidden" id="aviso-nuevo-alumno-begin-sin-coach" style="margin-top:-8px;"></p>
+            <p class="text-soft hidden" id="aviso-nuevo-alumno-egreso" style="font-size:12.5px; margin:0;"></p>
           </div>
         </div>
 
         <div class="panel mb-16">
-          <div class="panel__header"><h3>Acuerdo de Pago</h3></div>
+          <div class="panel__header"><h3>País y Acuerdo de Pago</h3></div>
           <div class="panel__body">
             <div class="field-grid mb-16">
-              <div class="field"><label id="label-nuevo-alumno-monto">Monto Total</label><input id="nuevo-alumno-monto" placeholder="Según programa"></div>
-              <div class="field"><label>País de residencia</label><select id="nuevo-alumno-residencia"><option value="chile">Chile</option><option value="extranjero">Extranjero</option></select></div>
-              <div class="field"><label>Moneda (según el país)</label><select id="nuevo-alumno-moneda" disabled title="Chile siempre en CLP; el extranjero en USD"><option>CLP</option><option>USD</option></select></div>
+              <div class="field"><label>País</label><select id="nuevo-alumno-pais"><option value="">Cargando países...</option></select></div>
+              <div class="field"><label>Moneda (según el país)</label><select id="nuevo-alumno-moneda" disabled title="Chile siempre en CLP; el extranjero en USD"><option value="">—</option><option>CLP</option><option>USD</option></select></div>
               <div class="field hidden" id="campo-tipo-cambio"><label>Tipo de Cambio (CLP por USD)</label><input type="number" id="nuevo-alumno-tipo-cambio" placeholder="Ej: 950"></div>
+              <div class="field"><label id="label-nuevo-alumno-monto">Monto del Programa</label><input id="nuevo-alumno-monto" readonly placeholder="Según programa y país" title="Sale de los precios de Configuración; los ajustes van en Descuento"></div>
             </div>
             <div id="bloque-pago-normal">
               <div class="field-grid mb-16">
                 <div class="field"><label>Descuento (opcional)</label><input id="nuevo-alumno-descuento" placeholder="0"></div>
-                <div class="field"><label>Abono</label><input id="nuevo-alumno-abono" placeholder="$0"></div>
+                <div class="field"><label>Monto Total a Pagar</label><input id="nuevo-alumno-total" readonly placeholder="Programa − descuento"></div>
+                <div class="field"><label>Abono</label><input id="nuevo-alumno-abono" placeholder="0"></div>
               </div>
+              <p class="text-soft" style="font-size:13px; margin:0 0 6px;"><strong>Cuotas acordadas</strong> (fecha y monto de cada una)</p>
               <table class="data-table mb-16" id="tabla-cuotas-nuevo">
                 <thead><tr><th>Fecha</th><th>Monto</th><th></th></tr></thead>
                 <tbody>
                   <tr><td><input type="date"></td><td><input placeholder="$0"></td><td><button class="btn btn--danger">Quitar</button></td></tr>
                 </tbody>
               </table>
-              <button class="btn btn--ghost" id="btn-agregar-cuota">+ Agregar Cuota</button>
+              <button class="btn btn--ghost mb-16" id="btn-agregar-cuota">+ Agregar Cuota</button>
+              <div class="field-grid">
+                <div class="field"><label>Saldo por Pagar (total − abono)</label><input id="nuevo-alumno-saldo" readonly placeholder="Total − abono"></div>
+              </div>
+              <p class="text-soft hidden" id="nuevo-alumno-aviso-cuotas" style="font-size:12.5px; margin:6px 0 0;"></p>
             </div>
             <p class="text-soft hidden" id="aviso-pago-membresia" style="font-size:13px;">Este monto se cobra <strong>mes a mes</strong> — no hace falta cargar un calendario de cuotas ahora. Una vez matriculado, cada pago mensual se va agregando desde su ficha, a medida que llega.</p>
           </div>
@@ -951,7 +959,7 @@
         <p id="nuevo-alumno-error" class="hidden" style="color:#C0392B; margin-bottom:12px;"></p>
         <div class="flex-between">
           <button class="btn btn--ghost" id="btn-cancelar-nuevo-alumno-2">Cancelar</button>
-          <button class="btn btn--primary" id="btn-crear-alumno">Crear Alumno y Asignar Copiloto</button>
+          <button class="btn btn--primary" id="btn-crear-alumno">Guardar Alumno</button>
         </div>
       </section>
 

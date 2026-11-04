@@ -130,6 +130,14 @@ export async function precargarDireccionGuardada({ pais, region, comuna }, prefi
 // El resto del código guarda/lee estos 3 campos por su .value — para
 // País necesita el NOMBRE completo (no el código ISO), así que este
 // helper hace esa traducción al momento de guardar.
+// Llena un select con TODOS los países (value = nombre, igual que se guarda en la ficha).
+export async function poblarSelectPaisesPorNombre(selectEl, nombreSeleccionado = 'Chile') {
+  await asegurarDatosGeograficosCargados();
+  selectEl.innerHTML = '<option value="">Selecciona el país...</option>'
+    + paisesCache.map(p => `<option value="${p.nombre}">${p.nombre}</option>`).join('');
+  selectEl.value = nombreSeleccionado;
+}
+
 export function nombrePaisDesdeCodigo(codigo) {
   if (!paisesCache) return codigo;
   const match = paisesCache.find(p => p.codigo === codigo);
