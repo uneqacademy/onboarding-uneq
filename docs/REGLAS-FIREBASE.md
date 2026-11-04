@@ -96,3 +96,8 @@ otro alumno = denegado; escribir `ranking/podio/2026-10` = denegado; leer `ranki
 
 ## Nivel OPEN
 OPEN es un clon técnico de BEGIN. Cambió una sola regla: el copiloto de cabecera también puede escribir el ciclo/estado de alumnos con programa `open` (antes solo `begin`). Hay que volver a publicar `database.rules.json` en Firebase.
+
+## Chat de soporte para alumnos
+- Base de datos: nuevo nodo `soporteChat/{uid}/{mensajeId}` (cada alumno lee y agrega solo lo suyo, los mensajes no se editan; el director también puede leerlo). El tope diario (`soporteChatUso`) lo escribe solo el servidor y no tiene reglas: queda cerrado a los clientes.
+- Storage: `fotos-perfil-ia/soporte-ia` (foto del asistente) se agrega junto a `director-ia`.
+- Hay que volver a publicar `database.rules.json` y `storage.rules`.

@@ -81,6 +81,29 @@
 
   <div class="sidebar-overlay" id="sidebar-overlay"></div>
 
+  <!-- Chat de soporte flotante (solo alumnos, todos los niveles). Ver soporte-chat.js -->
+  <div id="soporte-chat" class="hidden" data-role="alumno">
+    <button type="button" id="soporte-chat-burbuja" class="soporte-chat__burbuja" aria-label="Abrir el chat de soporte" aria-expanded="false">
+      <img id="soporte-chat-burbuja-img" src="" alt="">
+    </button>
+    <section id="soporte-chat-panel" class="soporte-chat__panel hidden" role="dialog" aria-label="Chat de soporte">
+      <header class="soporte-chat__cabecera">
+        <img id="soporte-chat-cabecera-img" class="soporte-chat__avatar soporte-chat__avatar--grande" src="" alt="">
+        <div class="soporte-chat__titulo">
+          <strong id="soporte-chat-nombre">Asistente UNEQ</strong>
+          <span>Soporte con IA · UNEQ Mentoring</span>
+        </div>
+        <button type="button" id="soporte-chat-cerrar" class="soporte-chat__cerrar" aria-label="Cerrar el chat">✕</button>
+      </header>
+      <div id="soporte-chat-mensajes" class="soporte-chat__mensajes"></div>
+      <a id="soporte-chat-humano" class="soporte-chat__humano hidden" href="#" target="_blank" rel="noopener noreferrer">¿Prefieres hablar con una persona? Escríbele a soporte por WhatsApp</a>
+      <footer class="soporte-chat__pie">
+        <textarea id="soporte-chat-input" rows="1" maxlength="1000" placeholder="Escribe tu duda..."></textarea>
+        <button type="button" id="soporte-chat-enviar" class="soporte-chat__enviar" aria-label="Enviar">➤</button>
+      </footer>
+    </section>
+  </div>
+
   <!-- Modal "Detalles Mentor" (BOX Inteligente / BEGIN) -->
   <div class="modal-overlay" id="modal-detalle-mentor">
     <div class="modal-card">
@@ -2220,6 +2243,30 @@
               <div style="flex:1; min-width:240px;">
                 <div class="field"><label>Nombre del asistente (lo ven Director, copilotos y mentores)</label><input id="config-director-ia-nombre" placeholder="Director IA"></div>
                 <p class="text-soft" style="font-size:12px; margin:0;">La foto y el nombre se usan en el chat de los 3 roles.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="panel mb-24" data-config-seccion="soporte-ia">
+          <div class="panel__header flex-between">
+            <h3>Asistente de soporte (chat flotante de los alumnos)</h3>
+            <div style="display:flex; gap:8px;">
+              <button class="btn btn--ghost hidden btn-editar-config-seccion" data-seccion="soporte-ia" style="font-size:12px; padding:5px 12px;">✏️ Editar</button>
+              <button class="btn btn--primary btn-guardar-config-seccion" data-seccion="soporte-ia" style="font-size:12px; padding:5px 12px;">Guardar</button>
+            </div>
+          </div>
+          <div class="panel__body">
+            <p id="config-error-soporte-ia" class="hidden" style="color:#C0392B; margin-bottom:12px; font-size:13px;"></p>
+            <div style="display:flex; gap:20px; align-items:flex-start; flex-wrap:wrap;">
+              <div style="text-align:center;">
+                <img id="config-soporte-ia-foto-preview" src="" alt="" style="width:96px; height:96px; border-radius:50%; object-fit:cover; background:#E4E7EC; display:block;">
+                <input type="file" id="config-soporte-ia-foto-input" accept="image/*" class="hidden">
+                <button type="button" class="btn btn--ghost" id="btn-config-soporte-ia-foto" style="font-size:12px; padding:5px 12px; margin-top:8px;">Cambiar foto</button>
+                <button type="button" class="btn btn--ghost hidden" id="btn-config-soporte-ia-quitar-foto" style="font-size:12px; padding:5px 12px; margin-top:6px;">Quitar foto</button>
+              </div>
+              <div style="flex:1; min-width:240px;">
+                <div class="field"><label>Nombre del asistente (lo ven los alumnos)</label><input id="config-soporte-ia-nombre" placeholder="Asistente UNEQ"></div>
+                <p class="text-soft" style="font-size:12px; margin:0;">Es el chat flotante que ven todos los alumnos. Deriva al WhatsApp del copiloto o al WhatsApp de soporte (se configura arriba, en Soporte).</p>
               </div>
             </div>
           </div>

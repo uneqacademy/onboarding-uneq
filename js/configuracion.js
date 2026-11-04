@@ -23,6 +23,7 @@ import { getCurrentRole } from './main.js';
 const TAMANO_MAXIMO_ARCHIVO_METODOLOGIA = 10 * 1024 * 1024;
 const TAMANO_MAXIMO_FOTO_DIRECTOR_IA = 5 * 1024 * 1024;
 const RUTA_FOTO_DIRECTOR_IA = 'fotos-perfil-ia/director-ia';
+const RUTA_FOTO_SOPORTE_IA = 'fotos-perfil-ia/soporte-ia';
 const PLACEHOLDER_FOTO_DIRECTOR_IA = 'data:image/svg+xml;utf8,' + encodeURIComponent(
   '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 80"><rect width="80" height="80" rx="40" fill="#1B2A4A"/><text x="40" y="52" font-size="34" text-anchor="middle" fill="#fff">✨</text></svg>'
 );
@@ -43,6 +44,7 @@ const CAMPOS_POR_SECCION_CONFIG = {
     contenidoHotmartExit: 'config-contenido-exit'
   },
   'director-ia': { directorIaNombre: 'config-director-ia-nombre' },
+  'soporte-ia': { soporteIaNombre: 'config-soporte-ia-nombre' },
   grabaciones: {
     grabacionesOpen: 'config-grabaciones-open',
     grabacionesBegin: 'config-grabaciones-begin',
@@ -64,6 +66,12 @@ function bloquearSeccionConfig(seccion, bloqueado) {
   if (seccion === 'metodologia' && btnAgregarArchivo) btnAgregarArchivo.disabled = bloqueado;
   if (seccion === 'director-ia') {
     ['btn-config-director-ia-foto', 'btn-config-director-ia-quitar-foto'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.disabled = bloqueado;
+    });
+  }
+  if (seccion === 'soporte-ia') {
+    ['btn-config-soporte-ia-foto', 'btn-config-soporte-ia-quitar-foto'].forEach(id => {
       const el = document.getElementById(id);
       if (el) el.disabled = bloqueado;
     });
@@ -189,6 +197,13 @@ export async function cargarConfiguracion() {
   }
   const nombreDirectorIaEl = document.getElementById('config-director-ia-nombre');
   if (nombreDirectorIaEl) nombreDirectorIaEl.value = c.directorIaNombre || '';
+  const fotoSoporteIaEl = document.getElementById('config-soporte-ia-foto-preview');
+  if (fotoSoporteIaEl) {
+    fotoSoporteIaEl.src = c.soporteIaFotoUrl || PLACEHOLDER_FOTO_DIRECTOR_IA;
+    document.getElementById('btn-config-soporte-ia-quitar-foto')?.classList.toggle('hidden', !c.soporteIaFotoUrl);
+  }
+  const nombreSoporteIaEl = document.getElementById('config-soporte-ia-nombre');
+  if (nombreSoporteIaEl) nombreSoporteIaEl.value = c.soporteIaNombre || '';
   document.getElementById('config-grabaciones-open').value = c.grabacionesOpen || '';
   document.getElementById('config-grabaciones-begin').value = c.grabacionesBegin || '';
   document.getElementById('config-grabaciones-next').value = c.grabacionesNext || '';
@@ -362,6 +377,57 @@ if (btnQuitarFotoDirectorIa) {
       alert('No se pudo quitar la foto. Intenta de nuevo.');
     } finally {
       btnQuitarFotoDirectorIa.disabled = false;
+    }
+  });
+}
+
+
+/* --- Foto del asistente de soporte (chat flotante de los alumnos) --- */
+const btnFotoSoporteIa = document.getElementById('btn-config-soporte-ia-foto');
+const inputFotoSoporteIa = document.getElementById('config-soporte-ia-foto-input');
+const btnQuitarFotoSoporteIa = document.getElementById('btn-config-soporte-ia-quitar-foto');
+
+if (btnFotoSoporteIa && inputFotoSoporteIa) {
+  btnFotoSoporteIa.addEventListener('click', () => inputFotoSoporteIa.click());
+  inputFotoSoporteIa.addEventListener('change', async () => {
+    const archivo = inputFotoSoporteIa.files[0];
+    inputFotoSoporteIa.value = '';
+    if (!archivo) return;
+    if (archivo.size > TAMANO_MAXIMO_FOTO_DIRECTOR_IA) {
+      alert('La imagen pesa más de 5MB. Elige una más liviana.');
+      return;
+    }
+    btnFotoSoporteIa.disabled = true;
+    try {
+      const fotoRef = storageRef(storage, RUTA_FOTO_SOPORTE_IA);
+      await uploadBytes(fotoRef, archivo);
+      const url = await getDownloadURL(fotoRef);
+      await update(ref(db, 'configuracion/general'), { soporteIaFotoUrl: url });
+      document.getElementById('config-soporte-ia-foto-preview').src = url;
+      btnQuitarFotoSoporteIa?.classList.remove('hidden');
+    } catch (err) {
+      console.error('Error subiendo la foto del asistente de soporte:', err);
+      alert('No se pudo subir la foto. Intenta de nuevo.');
+    } finally {
+      btnFotoSoporteIa.disabled = false;
+    }
+  });
+}
+
+if (btnQuitarFotoSoporteIa) {
+  btnQuitarFotoSoporteIa.addEventListener('click', async () => {
+    if (!confirm('¿Quitar la foto del asistente de soporte? Volverá el ícono por defecto.')) return;
+    btnQuitarFotoSoporteIa.disabled = true;
+    try {
+      await update(ref(db, 'configuracion/general'), { soporteIaFotoUrl: null });
+      try { await deleteObject(storageRef(storage, RUTA_FOTO_SOPORTE_IA)); } catch (e) { /* si ya no existe, da igual */ }
+      document.getElementById('config-soporte-ia-foto-preview').src = PLACEHOLDER_FOTO_DIRECTOR_IA;
+      btnQuitarFotoSoporteIa.classList.add('hidden');
+    } catch (err) {
+      console.error('Error quitando la foto del asistente de soporte:', err);
+      alert('No se pudo quitar la foto. Intenta de nuevo.');
+    } finally {
+      btnQuitarFotoSoporteIa.disabled = false;
     }
   });
 }
