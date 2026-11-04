@@ -247,12 +247,12 @@ export async function cargarDashboardAlumno(alumnoId) {
       ['exit', 'assets/logos/logo-exit.png', 'eXIT']
     ];
     stepperEl.innerHTML = `
-      <div style="display:flex; align-items:center; justify-content:center; gap:16px;">
+      <div style="display:flex; align-items:center; justify-content:center; gap:10px;">
         ${PROGRAMAS_ORDEN.map(([clave, logo, label]) => {
           const activo = clave === programaActual;
           return `
-          <div style="display:flex; align-items:center; justify-content:center; padding:${activo ? '12px 22px' : '10px 16px'}; border-radius:var(--radius-md, 10px); border:${activo ? (esBeginDashboard ? '1.5px solid #fff' : (esExitDashboard ? '1.5px solid #856C32' : '1.5px solid var(--color-accent, #2563EB)')) : '1.5px solid transparent'}; opacity:${activo ? '1' : '0.4'};">
-            <img src="${logo}" alt="${label}" style="height:${activo ? '42px' : '30px'}; width:auto; object-fit:contain;">
+          <div style="display:flex; align-items:center; justify-content:center; flex:1 1 0; min-width:0; max-width:150px; height:64px; padding:6px 8px; border-radius:var(--radius-md, 10px); border:${activo ? (esBeginDashboard ? '1.5px solid #fff' : (esExitDashboard ? '1.5px solid #856C32' : '1.5px solid var(--color-accent, #2563EB)')) : '1.5px solid transparent'}; opacity:${activo ? '1' : '0.4'};">
+            <img src="${logo}" alt="${label}" style="height:100%; width:auto; max-width:100%; object-fit:contain;">
           </div>`;
         }).join('')}
       </div>`;

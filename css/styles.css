@@ -1524,3 +1524,7 @@ body.tema-open .hitos-tab { color: #E9D3CD; }
 /* El contenedor del chat vive dentro de .app-shell (una grilla de 2 columnas): fuera del flujo
    para no ocupar una celda y empujar el menú y el contenido. */
 #soporte-chat { position: fixed; right: 0; bottom: 0; width: 0; height: 0; }
+
+/* El contenedor del chat es position: fixed (crea su propio contexto de apilamiento): sin z-index quedaba
+   por debajo de elementos del contenido con opacidad, que se veían a través de la cabecera del chat. */
+#soporte-chat { z-index: 900; }
