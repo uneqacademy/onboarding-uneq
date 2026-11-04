@@ -62,18 +62,18 @@ const BENEFICIOS = {
   begin: {
     items: [
       'Contenido pregrabado de ejecución práctica — Nivel Inicial, para las 4 fases de la metodología 2E (acceso: 1 año)',
-      'BOX Inteligente de consultas específicas por temática disponible 24/7, con Mentor IA, el cual es un CLON entrenado personalmente por el Mentor Humano especialista en esa temática. Las respuestas son revisadas y validadas por el mentor Humano y las complementa en caso de ser necesario (tiempo de respuesta: 10 segundos). Los alumnos podrán enviar hasta 5 preguntas por semana en total, con un máximo de 1 pregunta por Mentor — vigente durante el programa: 3 meses',
+      'BOX Inteligente de consultas específicas por temática disponible 24/7, con Mentor IA, el cual es un CLON entrenado personalmente por el Mentor Humano especialista en esa temática. Las respuestas son revisadas y validadas por el mentor Humano y las complementa en caso de ser necesario (tiempo de respuesta: 10 segundos). Los alumnos podrán enviar hasta 5 preguntas por semana en total, con un máximo de 1 pregunta por Mentor — vigente durante el programa: 4 meses',
       'Comunidad Exclusiva en APP propia de UNEQ (acceso: 6 meses)',
-      'Sesiones semanales grupales con copiloto de cabecera capacitado para revisar avances y resolver dudas de contenidos, además de responder preguntas previamente recibidas y algunas en vivo si el tiempo lo permite (vigente durante el programa: 3 meses)',
-      '1 sesión mensual grupal con Maca y Felipe (vigente durante el programa: 3 meses)',
-      'Acceso a Membresía ONE, con clases todos los miércoles a las 9:00 hrs (acceso: 3 meses)',
+      'Sesiones semanales grupales con copiloto de cabecera capacitado para revisar avances y resolver dudas de contenidos, además de responder preguntas previamente recibidas y algunas en vivo si el tiempo lo permite (vigente durante el programa: 4 meses)',
+      '1 sesión mensual grupal con Maca y Felipe (vigente durante el programa: 4 meses)',
+      'Acceso a Membresía ONE, con clases todos los miércoles a las 9:00 hrs (acceso: 4 meses)',
       'Acceso al Programa de Acompañamiento Sinergia (acceso: de por vida)',
       'Acceso al Curso Tu Cliente Soñado (acceso: de por vida)',
       'Grupo de WhatsApp exclusivo Begin (acceso: 6 meses)',
       'Grupo de WhatsApp Ex-Alumnos Begin (acceso: de por vida, una vez finalizado el programa)',
       'Plantillas prediseñadas listas para usar'
     ],
-    duracion: 'Duración del programa (sesiones en vivo y BOX de consultas): 3 meses.',
+    duracion: 'Duración del programa (sesiones en vivo y BOX de consultas): 4 meses.',
     nota: null
   },
   next: {
@@ -132,9 +132,9 @@ BENEFICIOS.open = {
     .map(t => t
       .replace('hasta 5 preguntas por semana', 'hasta 3 preguntas por semana')
       .replace('Sesiones semanales grupales con copiloto', 'Sesión semanal grupal con copiloto')
-      .replace(/\(acceso: (1 año|6 meses|3 meses)\)/g, '(acceso: 2 meses)')
-      .replace(/\(vigente durante el programa: 3 meses\)/g, '(vigente durante el programa: 2 meses)')
-      .replace(/vigente durante el programa: 3 meses$/, 'vigente durante el programa: 2 meses')
+      .replace(/\(acceso: (1 año|6 meses|4 meses)\)/g, '(acceso: 2 meses)')
+      .replace(/\(vigente durante el programa: 4 meses\)/g, '(vigente durante el programa: 2 meses)')
+      .replace(/vigente durante el programa: 4 meses$/, 'vigente durante el programa: 2 meses')
       .replace('exclusivo Begin', 'exclusivo Open')
       .replace('Ex-Alumnos Begin', 'Ex-Alumnos Open')),
   duracion: 'Duración del programa (BOX de consultas y sesiones con el copiloto de cabecera): 2 meses.',
