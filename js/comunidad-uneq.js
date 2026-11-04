@@ -498,7 +498,7 @@ function activarInteraccionSocial() {
 
     const btnCompartir = ev.target.closest('.btn-compartir-social');
     if (btnCompartir) {
-      const mensaje = encodeURIComponent(`¡Quiero compartir con ustedes! ${btnCompartir.dataset.titulo ? `"${btnCompartir.dataset.titulo}" en UNEQ Mentoring.` : ''}\n\nEntra a la Comunidad UNEQ en la app para verlo.`);
+      const mensaje = encodeURIComponent(`¡Quiero compartir con ustedes! ${btnCompartir.dataset.titulo ? `"${btnCompartir.dataset.titulo}" en Universo UNEQ.` : ''}\n\nEntra a la Comunidad UNEQ en la app para verlo.`);
       window.open(`https://wa.me/?text=${mensaje}`, '_blank');
       marcarCompartido(btnCompartir.dataset.basePath);
       return;
@@ -682,7 +682,7 @@ function activarInteraccionPreguntasLibres() {
     const btnCompartir = ev.target.closest('.btn-compartir-pregunta');
     if (btnCompartir) {
       const { preguntaId, titulo } = btnCompartir.dataset;
-      const mensaje = encodeURIComponent(`Tengo una pregunta para la comunidad de UNEQ Mentoring: "${titulo}"\n\nEntra y respóndeme acá:\n${enlacePreguntaLibre(preguntaId)}`);
+      const mensaje = encodeURIComponent(`Tengo una pregunta para la comunidad de Universo UNEQ: "${titulo}"\n\nEntra y respóndeme acá:\n${enlacePreguntaLibre(preguntaId)}`);
       window.open(`https://wa.me/?text=${mensaje}`, '_blank');
       marcarCompartido(`pregunta_${preguntaId}`);
       return;

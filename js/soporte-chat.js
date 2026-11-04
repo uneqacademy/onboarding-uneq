@@ -64,7 +64,7 @@ function burbujaHtml(texto, esUsuario) {
 
 function saludoInicial() {
   const nombre = nombreAlumno ? `, ${nombreAlumno}` : '';
-  return `¡Hola${nombre}! Soy ${nombreAsistente}. Puedo ayudarte con dudas de la app, de tu programa en UNEQ Mentoring y de tus pagos, y decirte con quién hablar si necesitas ayuda de una persona. ¿En qué te ayudo?`;
+  return `¡Hola${nombre}! Soy ${nombreAsistente}. Puedo ayudarte con dudas de la app, de tu programa en Universo UNEQ y de tus pagos, y decirte con quién hablar si necesitas ayuda de una persona. ¿En qué te ayudo?`;
 }
 
 function pintar() {

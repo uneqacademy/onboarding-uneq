@@ -326,9 +326,9 @@ export async function generarPdfAcuerdo(alumnoId, cicloId) {
 
   // --- NOVENO ---
   tituloSeccion('NOVENO: Protección de Datos Personales');
-  parrafo('UNEQ Mentoring protege la información personal del Alumno/a conforme a la normativa vigente. Los datos ingresados en la plataforma se almacenan en la infraestructura de Google Cloud / Firebase, con acceso restringido por reglas de seguridad y autenticación, y cifrado tanto en tránsito como en reposo.');
+  parrafo('Universo UNEQ protege la información personal del Alumno/a conforme a la normativa vigente. Los datos ingresados en la plataforma se almacenan en la infraestructura de Google Cloud / Firebase, con acceso restringido por reglas de seguridad y autenticación, y cifrado tanto en tránsito como en reposo.');
   parrafo('Las respuestas generadas por inteligencia artificial se procesan a través de la API paga de Google Gemini, bajo la cual Google se compromete contractualmente a no utilizar la información enviada (preguntas, respuestas, ni contenido de mentores o alumnos) para entrenar o mejorar sus propios modelos de IA.');
-  parrafo('UNEQ Mentoring tampoco utiliza los datos personales de sus alumnos con fines distintos a la prestación del servicio contratado.');
+  parrafo('Universo UNEQ tampoco utiliza los datos personales de sus alumnos con fines distintos a la prestación del servicio contratado.');
 
   // --- DÉCIMO ---
   tituloSeccion('DÉCIMO: Jurisdicción');

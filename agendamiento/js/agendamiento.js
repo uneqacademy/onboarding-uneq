@@ -355,7 +355,7 @@ function construirLinkGoogleCalendar(inicioMs, duracionMinutos, meetLink) {
     : 'Llamada con el equipo de UNEQ.';
   const params = new URLSearchParams({
     action: 'TEMPLATE',
-    text: 'Llamada con UNEQ Mentoring',
+    text: 'Llamada con Universo UNEQ',
     dates: `${fmt(inicioMs)}/${fmt(fin)}`,
     details: detalles
   });

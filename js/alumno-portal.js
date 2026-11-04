@@ -233,7 +233,7 @@ export async function cargarDashboardAlumno(alumnoId) {
   const bienvenidaEl = document.getElementById('alumno-bienvenida');
   if (bienvenidaEl) {
     const saludo = alumno.genero === 'Femenino' ? 'Bienvenida' : 'Bienvenido';
-    bienvenidaEl.textContent = `${saludo} a UNEQ Mentoring ${alumno.nombre || ''},`.trim();
+    bienvenidaEl.textContent = `${saludo} a Universo UNEQ ${alumno.nombre || ''},`.trim();
   }
 
   // --- Stepper del programa (Begin → Next → eXIT), con logos reales ---
