@@ -257,11 +257,23 @@ export function separarNumeroCompleto(texto) {
   return { iso: pais.iso, nacional: digitos.slice(pais.codigo.length) };
 }
 
+// El "value" nativo de un <input>: con él se lee y escribe el texto que muestra el campo (solo el número,
+// sin el código), aunque el campo tenga su propia propiedad "value" (ver valorCompleto).
+const descriptorValor = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value');
+const leerCrudo = (input) => descriptorValor.get.call(input);
+const escribirCrudo = (input, texto) => descriptorValor.set.call(input, texto);
+
 /**
  * Envuelve `input` con el selector de país.
- * opciones.onCambio(iso, { manual }) se llama al cambiar el país (por elegirlo o por pegar un número completo).
+ * opciones.onCambio(iso, { manual, cambio }) se llama al cambiar el país (por elegirlo o por pegar un número completo).
+ * opciones.valorCompleto: el `.value` del campo pasa a ser el teléfono COMPLETO ("+56 987654321") al leer y acepta un
+ *   teléfono completo al escribir; así el código que ya usa el campo (guardar, cargar) no necesita cambios.
+ * opciones.formato: 'completo' ("+56 987654321", por defecto) o 'digitos' ("56987654321").
+ * Montar dos veces el mismo campo devuelve el selector ya creado.
  */
 export function montarSelectorTelefono(input, opciones = {}) {
+  if (input._selectorTelefono) return input._selectorTelefono;
+
   const contenedor = document.createElement('div');
   contenedor.className = 'tel-pais';
   input.parentNode.insertBefore(contenedor, input);
@@ -277,6 +289,7 @@ export function montarSelectorTelefono(input, opciones = {}) {
   lista.className = 'tel-pais__lista hidden';
   lista.innerHTML = `<input type="search" class="tel-pais__buscar" placeholder="Buscar país o código..." aria-label="Buscar país"><div class="tel-pais__items" role="listbox"></div>`;
 
+  const valorInicial = leerCrudo(input);
   contenedor.append(boton, input, lista);
   input.classList.add('tel-pais__numero');
   input.setAttribute('inputmode', 'tel');
@@ -305,7 +318,6 @@ export function montarSelectorTelefono(input, opciones = {}) {
     buscar.value = '';
     lista.classList.remove('hidden');
     boton.setAttribute('aria-expanded', 'true');
-    // el país elegido queda a la vista
     items.querySelector('.is-activo')?.scrollIntoView({ block: 'center' });
     if (!window.matchMedia('(pointer: coarse)').matches) buscar.focus();
   }
@@ -321,6 +333,42 @@ export function montarSelectorTelefono(input, opciones = {}) {
     pintarBoton();
     if (!silencioso && opciones.onCambio) opciones.onCambio(iso, { manual, cambio });
   }
+
+  const digitosCrudos = () => leerCrudo(input).replace(/[^0-9]/g, '').replace(/^0+/, '');
+
+  const api = {
+    obtenerIso: () => iso,
+    establecerIso,
+    // Teléfono completo: "+56 987654321" (o "56987654321" con formato 'digitos'); '' si no hay número.
+    obtenerNumero() {
+      const nacional = digitosCrudos();
+      if (!nacional) return '';
+      const codigo = PAIS_POR_ISO[iso].codigo;
+      return opciones.formato === 'digitos' ? `${codigo}${nacional}` : `+${codigo} ${nacional}`;
+    },
+    // Cuántos dígitos tiene el número sin el código (para validar).
+    digitosNacionales: () => digitosCrudos().length,
+    // Acepta "+56 9...", "56 9..." o solo el número nacional (que queda con Chile, el país por defecto).
+    establecerNumero(texto, { silencioso = false } = {}) {
+      let t = String(texto || '').trim();
+      // Con formato 'digitos' el valor guardado ya trae el código del país (sin el +): se trata como número completo.
+      if (opciones.formato === 'digitos' && t && !t.startsWith('+')) t = '+' + t.replace(/[^0-9]/g, '');
+      const completo = separarNumeroCompleto(t);
+      if (completo) {
+        escribirCrudo(input, completo.nacional);
+        establecerIso(completo.iso, { manual: false, silencioso });
+        return;
+      }
+      const digitos = t.replace(/[^0-9]/g, '');
+      const esChileConCodigo = digitos.startsWith('56') && digitos.length >= 11;
+      escribirCrudo(input, esChileConCodigo ? digitos.slice(2) : digitos);
+      establecerIso('CL', { manual: false, silencioso });
+    },
+    restablecer() {
+      escribirCrudo(input, '');
+      establecerIso('CL', { silencioso: true });
+    }
+  };
 
   boton.addEventListener('click', () => (lista.classList.contains('hidden') ? abrir() : cerrar()));
   buscar.addEventListener('input', () => pintarItems(buscar.value));
@@ -339,47 +387,60 @@ export function montarSelectorTelefono(input, opciones = {}) {
 
   // Si se pega un número completo ("+54 9 11 ..." o "56987654321"), se reconoce el país y se separa.
   input.addEventListener('input', () => {
-    const completo = separarNumeroCompleto(input.value);
+    const crudo = leerCrudo(input);
+    const completo = separarNumeroCompleto(crudo);
     if (completo) {
-      input.value = completo.nacional;
+      escribirCrudo(input, completo.nacional);
       establecerIso(completo.iso, { manual: false });
       return;
     }
-    const digitos = input.value.replace(/[^0-9]/g, '');
+    const digitos = crudo.replace(/[^0-9]/g, '');
     const codigo = PAIS_POR_ISO[iso].codigo;
-    // Chile: "56987654321" pegado sin el "+"
-    if (iso === 'CL' && digitos.startsWith('56') && digitos.length >= 11) input.value = digitos.slice(2);
-    else if (codigo !== '56' && digitos.startsWith(codigo) && digitos.length >= codigo.length + 8) input.value = digitos.slice(codigo.length);
+    // "56987654321" pegado sin el "+" en Chile; o el código del país actual pegado sin el "+"
+    if (iso === 'CL' && digitos.startsWith('56') && digitos.length >= 11) escribirCrudo(input, digitos.slice(2));
+    else if (codigo !== '56' && digitos.startsWith(codigo) && digitos.length >= codigo.length + 8) escribirCrudo(input, digitos.slice(codigo.length));
   });
 
   pintarBoton();
+  if (valorInicial && valorInicial.trim()) api.establecerNumero(valorInicial, { silencioso: true });
 
-  return {
-    obtenerIso: () => iso,
-    establecerIso,
-    // Teléfono completo, "+56 987654321"; '' si no hay número.
-    obtenerNumero() {
-      const nacional = input.value.replace(/[^0-9]/g, '').replace(/^0+/, '');
-      return nacional ? `+${PAIS_POR_ISO[iso].codigo} ${nacional}` : '';
-    },
-    // Cuántos dígitos tiene el número sin el código (para validar).
-    digitosNacionales: () => input.value.replace(/[^0-9]/g, '').replace(/^0+/, '').length,
-    // Acepta "+56 9...", "56 9..." o solo el número nacional (queda el país actual).
-    establecerNumero(texto) {
-      const t = String(texto || '').trim();
-      const completo = separarNumeroCompleto(t);
-      if (completo) {
-        input.value = completo.nacional;
-        establecerIso(completo.iso, { manual: false });
-        return;
-      }
-      const digitos = t.replace(/[^0-9]/g, '');
-      input.value = (digitos.startsWith('56') && digitos.length >= 11) ? digitos.slice(2) : digitos;
-      if (digitos.startsWith('56') && digitos.length >= 11) establecerIso('CL', { manual: false });
-    },
-    restablecer() {
-      input.value = '';
-      establecerIso('CL', { silencioso: true });
+  if (opciones.valorCompleto) {
+    Object.defineProperty(input, 'value', {
+      configurable: true,
+      get: () => api.obtenerNumero(),
+      set: (texto) => api.establecerNumero(texto, { silencioso: true })
+    });
+  }
+
+  input._selectorTelefono = api;
+  return api;
+}
+
+const SELECTOR_CAMPOS_TELEFONO = 'input[type="tel"], input[data-telefono]';
+
+function montarSiCorresponde(input) {
+  // Los campos con data-tel-manual los monta su propio módulo (con sus propias reacciones al cambio de país).
+  if (input.dataset.telManual !== undefined || input._selectorTelefono) return;
+  montarSelectorTelefono(input, {
+    valorCompleto: true,
+    formato: input.dataset.telefonoFormato === 'digitos' ? 'digitos' : 'completo'
+  });
+}
+
+/**
+ * Pone el selector de país a TODOS los campos de teléfono (input type="tel" o con data-telefono),
+ * los que ya están en la página y los que se creen después (formularios que se dibujan con JavaScript).
+ * Son campos "valorCompleto": todo el código que los lee o los llena sigue funcionando igual.
+ */
+export function activarSelectoresTelefono() {
+  document.querySelectorAll(SELECTOR_CAMPOS_TELEFONO).forEach(montarSiCorresponde);
+  new MutationObserver((cambios) => {
+    for (const cambio of cambios) {
+      cambio.addedNodes.forEach(nodo => {
+        if (nodo.nodeType !== 1) return;
+        if (nodo.matches?.(SELECTOR_CAMPOS_TELEFONO)) montarSiCorresponde(nodo);
+        nodo.querySelectorAll?.(SELECTOR_CAMPOS_TELEFONO).forEach(montarSiCorresponde);
+      });
     }
-  };
+  }).observe(document.body, { childList: true, subtree: true });
 }

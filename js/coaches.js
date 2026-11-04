@@ -225,7 +225,7 @@ async function cargarCoachesView() {
             <div class="field-grid mb-16">
               <div class="field"><label>Nombre</label><input class="edit-nombre-coach" value="${escaparHtml(coach.nombre || '')}"></div>
               <div class="field"><label>Correo</label><input class="edit-email-coach" type="email" value="${escaparHtml(coach.email || '')}"></div>
-              <div class="field"><label>Teléfono</label><input class="edit-telefono-coach" value="${escaparHtml(coach.telefono || '')}"></div>
+              <div class="field"><label>Teléfono</label><input class="edit-telefono-coach" data-telefono value="${escaparHtml(coach.telefono || '')}"></div>
             </div>
             <button class="btn btn--primary btn-guardar-datos-coach" style="font-size:11px; padding:4px 10px;">Guardar</button>
           </td>`;

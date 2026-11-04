@@ -24,6 +24,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Sora:wght@600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/styles.css?v=20261015b">
+<link rel="stylesheet" href="css/telefono-pais.css?v=1">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/intl-tel-input@latest/build/css/intlTelInput.min.css">
 <script src="https://cdn.jsdelivr.net/npm/intl-tel-input@latest/build/js/intlTelInputWithUtils.min.js"></script>
 </head>
@@ -459,7 +460,7 @@
               <div class="field"><label>Nombre <span style="color:#C0392B;">*</span></label><input id="socio-nombre"></div>
               <div class="field"><label>Apellido <span style="color:#C0392B;">*</span></label><input id="socio-apellido"></div>
               <div class="field"><label>Correo</label><input id="socio-email" type="email"></div>
-              <div class="field"><label>Teléfono</label><input id="socio-telefono"></div>
+              <div class="field"><label>Teléfono</label><input id="socio-telefono" data-telefono></div>
             </div>
             <p id="socio-error" class="hidden" style="color:#C0392B; margin-bottom:12px;"></p>
             <div style="display:flex; gap:10px;">
@@ -889,7 +890,7 @@
             <div class="field-grid">
               <div class="field"><label>Nombre</label><input id="nuevo-alumno-nombre" placeholder="Nombre"></div>
               <div class="field"><label>Apellido</label><input id="nuevo-alumno-apellido" placeholder="Apellido"></div>
-              <div class="field"><label>Teléfono</label><input id="nuevo-alumno-telefono" placeholder="+56 9..."></div>
+              <div class="field"><label>Teléfono</label><input id="nuevo-alumno-telefono" data-tel-manual placeholder="9 1234 5678"></div>
               <div class="field"><label>Correo</label><input id="nuevo-alumno-email" type="email" placeholder="correo@ejemplo.com"></div>
             </div>
           </div>
@@ -993,7 +994,7 @@
             <div class="field-grid mb-16">
               <div class="field"><label>Nombre completo</label><input id="nuevo-coach-nombre" placeholder="Nombre y apellido" autocomplete="off"></div>
               <div class="field"><label>Correo</label><input type="email" id="nuevo-coach-email" placeholder="nombre@agenciauneq.com" autocomplete="off"></div>
-              <div class="field"><label>Teléfono</label><input id="nuevo-coach-telefono" placeholder="+56 9 1234 5678" autocomplete="off"></div>
+              <div class="field"><label>Teléfono</label><input id="nuevo-coach-telefono" data-telefono placeholder="9 1234 5678" autocomplete="off"></div>
             </div>
             <label style="display:flex; align-items:center; gap:8px; margin-bottom:16px; font-weight:400;">
               <input type="checkbox" id="nuevo-coach-tambien-mentor" style="width:auto;"> ¿También es Mentor?
@@ -2044,7 +2045,7 @@
           <div class="panel__body">
             <div class="field-grid mb-16">
               <div class="field"><label>Correo</label><input type="email" id="mis-datos-email"></div>
-              <div class="field"><label>Teléfono</label><input id="mis-datos-telefono"></div>
+              <div class="field"><label>Teléfono</label><input id="mis-datos-telefono" data-telefono></div>
             </div>
             <button class="btn btn--primary" id="btn-guardar-mis-datos">Guardar</button>
             <p class="text-soft" style="margin-top:10px; font-size:12px;">El correo aquí es solo el dato de contacto que ven los demás — no cambia el correo con el que inicias sesión.</p>
@@ -2206,7 +2207,7 @@
             <p id="config-error-comunidad" class="hidden" style="color:#C0392B; margin-bottom:12px; font-size:13px;"></p>
             <div class="field-grid mb-16">
               <div class="field"><label>Correo de Soporte</label><input type="email" id="config-correo-soporte" placeholder="soporte@agenciauneq.com"></div>
-              <div class="field"><label>WhatsApp de Soporte</label><input id="config-whatsapp-soporte" placeholder="+56 9 1234 5678"></div>
+              <div class="field"><label>WhatsApp de Soporte</label><input id="config-whatsapp-soporte" data-telefono placeholder="9 1234 5678"></div>
             </div>
             <div class="field" style="margin-top:14px;">
               <label>Código embed del formulario de contacto (HTML de Typeform, Google Forms, etc.)</label>

@@ -14,6 +14,7 @@ import { ref, get, set, update, push, remove } from "https://www.gstatic.com/fir
 import { getStorage, ref as sref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-storage.js";
 import { getAuth, EmailAuthProvider, reauthenticateWithCredential, updatePassword } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-auth.js";
 import { iniciarSesionStaff } from './staff-auth.js';
+import { activarSelectoresTelefono } from '../../js/telefono-pais.js';
 
 const storageInstance = getStorage();
 const authInstance = getAuth();
@@ -461,3 +462,6 @@ iniciarSesionStaff('closer', async (uid) => {
   await cargarPerfil(); renderPerfil();
   if (miPerfil.nombre) document.getElementById('closer-nombre-sesion').textContent = `${miPerfil.nombre} ${miPerfil.apellido || ''}`.trim();
 });
+
+// Selector de código de país (bandera) en los campos de teléfono.
+activarSelectoresTelefono();
