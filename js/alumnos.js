@@ -14,7 +14,7 @@ import {
   ref as storageRef, uploadBytes, getDownloadURL
 } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-storage.js";
 import {
-  PROGRAMAS, programaLabel, estadoProcesoLabel, diasEnEstadoProceso, estaEstancado, DIAS_ALERTA_POR_ESTADO,
+  PROGRAMAS, cargarPreciosProgramas, tipoCambioConfigurado, programaLabel, estadoProcesoLabel, diasEnEstadoProceso, estaEstancado, DIAS_ALERTA_POR_ESTADO,
   crearCiclo, iniciarOnboardingSiCorresponde, generarAcuerdoYEnviarRevision,
   marcarEnviadoParaFirma, marcarFirmaProcesada, toggleCandado, renderStepper, renderAcciones
 } from './ciclos.js';
@@ -30,6 +30,27 @@ import { cargarSesionesBeginCoach } from './dashboard-coach.js';
 
 // BEGIN y OPEN no llevan copiloto individual: los ve el Copiloto de Cabecera.
 const sinCopilotoIndividual = (programa) => programa === 'begin' || programa === 'open';
+
+// Moneda del acuerdo de pago según el país: Chile siempre en CLP; el extranjero en USD.
+const monedaPorResidencia = (residencia) => (residencia === 'extranjero' ? 'USD' : 'CLP');
+
+// País inferido del teléfono: +56 → Chile; otro código con "+" → extranjero; sin pista → null.
+function residenciaDesdeTelefono(telefono) {
+  const t = String(telefono || '').replace(/[^0-9+]/g, '');
+  if (!t) return null;
+  if (t.startsWith('+')) return t.startsWith('+56') ? 'chile' : 'extranjero';
+  if (t.startsWith('56') && t.length >= 11) return 'chile';
+  return null;
+}
+
+// 'chile' | 'extranjero' de un alumno ya guardado: lo marcado al crearlo; si no, el país de su
+// dirección; si no, su teléfono; sin pistas, Chile.
+function residenciaDeAlumno(alumno) {
+  if (alumno && alumno.residencia) return alumno.residencia;
+  const pais = alumno && alumno.direccion && alumno.direccion.pais;
+  if (pais) return /chile/i.test(pais) ? 'chile' : 'extranjero';
+  return residenciaDesdeTelefono(alumno && alumno.telefono) || 'chile';
+}
 import { actualizarBotonAccesoAlumno, cargarDashboardAlumno } from './alumno-portal.js';
 import { conectarCascadaDireccion, prepararCamposDireccionVacios, precargarDireccionGuardada, nombrePaisDesdeCodigo } from './geodata.js';
 import './configuracion.js';
@@ -59,10 +80,13 @@ export function abrirCrearAlumnoDesdePreOnboarding({ id, nombre, telefono, corre
   document.getElementById('nuevo-alumno-nombre').value = partes[0] || '';
   document.getElementById('nuevo-alumno-apellido').value = partes.slice(1).join(' ');
   document.getElementById('nuevo-alumno-telefono').value = telefono || '';
+  residenciaManualNuevoAlumno = false;
+  document.getElementById('nuevo-alumno-residencia').value = residenciaDesdeTelefono(telefono) || 'chile';
   document.getElementById('nuevo-alumno-email').value = correo || '';
   if (programa) document.getElementById('nuevo-alumno-programa').value = programa;
   actualizarCampoMembresiaSegunPrograma();
   actualizarCampoCoachSegunPrograma('nuevo-alumno-programa', 'campo-nuevo-alumno-coach', 'aviso-nuevo-alumno-begin-sin-coach');
+  aplicarResidenciaNuevoAlumno();
   showView('view-crear-alumno');
   marcarNavActivo('alumnos');
   document.getElementById('topbar-title').textContent = 'Nuevo Alumno';
@@ -1001,6 +1025,7 @@ async function abrirFicha(alumnoId) {
   if (role === 'director' && estadoAlumnoActual === 'egresado') {
     poblarSelectCoaches(document.getElementById('nuevo-ciclo-coach'), null);
     actualizarCampoCoachSegunPrograma('nuevo-ciclo-programa', 'campo-nuevo-ciclo-coach', 'aviso-nuevo-ciclo-begin-sin-coach');
+    autocompletarMontoNuevoCiclo();
   }
 
   await renderHistorialCiclos(alumno.ciclosAnteriores);
@@ -1074,7 +1099,8 @@ if (btnCrearAlumno) {
     const esMembresia = programa === 'next' && document.getElementById('nuevo-alumno-membresia').checked;
     const coachId = sinCopilotoIndividual(programa) ? null : document.getElementById('nuevo-alumno-coach').value;
     const monto = document.getElementById('nuevo-alumno-monto').value.trim();
-    const moneda = document.getElementById('nuevo-alumno-moneda').value;
+    const residencia = document.getElementById('nuevo-alumno-residencia').value;
+    const moneda = monedaPorResidencia(residencia); // Chile → CLP, extranjero → USD
     const descuento = esMembresia ? '0' : document.getElementById('nuevo-alumno-descuento').value.trim();
     const abono = esMembresia ? '0' : document.getElementById('nuevo-alumno-abono').value.trim();
 
@@ -1106,6 +1132,7 @@ if (btnCrearAlumno) {
       await set(alumnoRef, {
         nombre, apellido,
         rut: '', fechaNacimiento: '', genero: '', telefono: telefonoNuevo, email: emailNuevo, direccion: '', ocupacion: '', fotoUrl: '',
+        residencia,
         coachId,
         cicloActualId: null,
         ciclosAnteriores: [],
@@ -1133,7 +1160,10 @@ if (btnCrearAlumno) {
       document.getElementById('nuevo-alumno-programa').value = 'begin';
       document.getElementById('nuevo-alumno-membresia').checked = false;
       actualizarCampoMembresiaSegunPrograma();
-      document.getElementById('nuevo-alumno-moneda').value = 'CLP';
+      residenciaManualNuevoAlumno = false;
+      document.getElementById('nuevo-alumno-residencia').value = 'chile';
+      document.getElementById('nuevo-alumno-tipo-cambio').value = '';
+      aplicarResidenciaNuevoAlumno();
       poblarSelectCoaches(document.getElementById('nuevo-alumno-coach'), null);
       const tbodyCuotasNuevo = document.querySelector('#tabla-cuotas-nuevo tbody');
       tbodyCuotasNuevo.innerHTML = '<tr><td><input type="date"></td><td><input placeholder="$0"></td><td><button class="btn btn--danger">Quitar</button></td></tr>';
@@ -1372,7 +1402,7 @@ function actualizarFormularioPagoSegunMembresia() {
 const checkboxNuevoAlumnoMembresia = document.getElementById('nuevo-alumno-membresia');
 if (checkboxNuevoAlumnoMembresia) checkboxNuevoAlumnoMembresia.addEventListener('change', actualizarFormularioPagoSegunMembresia);
 
-function autocompletarMontoNuevoAlumno() {
+async function autocompletarMontoNuevoAlumno() {
   const selectPrograma = document.getElementById('nuevo-alumno-programa');
   const selectMoneda = document.getElementById('nuevo-alumno-moneda');
   const inputMonto = document.getElementById('nuevo-alumno-monto');
@@ -1380,6 +1410,7 @@ function autocompletarMontoNuevoAlumno() {
   const campoTipoCambio = document.getElementById('campo-tipo-cambio');
   if (!selectPrograma || !selectMoneda || !inputMonto) return;
 
+  await cargarPreciosProgramas(); // precios y tipo de cambio de Configuración
   const programa = PROGRAMAS[selectPrograma.value];
   if (!programa) return;
 
@@ -1388,6 +1419,7 @@ function autocompletarMontoNuevoAlumno() {
     inputMonto.value = programa.precioClp.toLocaleString('es-CL');
   } else if (selectMoneda.value === 'USD') {
     if (campoTipoCambio) campoTipoCambio.classList.remove('hidden');
+    if (inputTipoCambio && !inputTipoCambio.value && tipoCambioConfigurado() > 0) inputTipoCambio.value = tipoCambioConfigurado();
     const tipoCambio = parseFloat(inputTipoCambio ? inputTipoCambio.value : '');
     if (tipoCambio > 0) {
       inputMonto.value = (programa.precioClp / tipoCambio).toFixed(2);
@@ -1403,6 +1435,30 @@ if (selectNuevoAlumnoPrograma) {
   selectNuevoAlumnoPrograma.addEventListener('change', actualizarCampoMembresiaSegunPrograma);
 }
 if (selectNuevoAlumnoMoneda) selectNuevoAlumnoMoneda.addEventListener('change', autocompletarMontoNuevoAlumno);
+
+// La moneda sigue al país: Chile → CLP, extranjero → USD (el campo de moneda va bloqueado).
+let residenciaManualNuevoAlumno = false;
+function aplicarResidenciaNuevoAlumno() {
+  const residencia = document.getElementById('nuevo-alumno-residencia');
+  const moneda = document.getElementById('nuevo-alumno-moneda');
+  if (!residencia || !moneda) return;
+  moneda.value = monedaPorResidencia(residencia.value);
+  autocompletarMontoNuevoAlumno();
+}
+document.getElementById('nuevo-alumno-residencia')?.addEventListener('change', () => {
+  residenciaManualNuevoAlumno = true;
+  aplicarResidenciaNuevoAlumno();
+});
+// Mientras no se elija el país a mano, se deduce del teléfono (+56 = Chile).
+document.getElementById('nuevo-alumno-telefono')?.addEventListener('input', (ev) => {
+  const residenciaSelect = document.getElementById('nuevo-alumno-residencia');
+  const inferida = residenciaDesdeTelefono(ev.target.value);
+  if (residenciaManualNuevoAlumno || !inferida || !residenciaSelect || residenciaSelect.value === inferida) return;
+  residenciaSelect.value = inferida;
+  aplicarResidenciaNuevoAlumno();
+});
+// Al abrir el formulario se refrescan los precios por si cambiaron en Configuración.
+document.getElementById('btn-nuevo-alumno')?.addEventListener('click', () => { aplicarResidenciaNuevoAlumno(); });
 if (inputNuevoAlumnoTipoCambio) inputNuevoAlumnoTipoCambio.addEventListener('input', autocompletarMontoNuevoAlumno);
 autocompletarMontoNuevoAlumno(); // prefill inicial (Begin · CLP por defecto)
 actualizarCampoCoachSegunPrograma('nuevo-alumno-programa', 'campo-nuevo-alumno-coach', 'aviso-nuevo-alumno-begin-sin-coach');
@@ -1452,14 +1508,28 @@ if (btnMarcarEgresado) {
   });
 }
 
-function autocompletarMontoNuevoCiclo() {
+async function autocompletarMontoNuevoCiclo() {
   const selectPrograma = document.getElementById('nuevo-ciclo-programa');
   const selectMoneda = document.getElementById('nuevo-ciclo-moneda');
   const inputMonto = document.getElementById('nuevo-ciclo-monto');
   if (!selectPrograma || !selectMoneda || !inputMonto) return;
+  await cargarPreciosProgramas();
+  // La moneda sale del país del alumno: Chile → CLP, extranjero → USD.
+  let residencia = 'chile';
+  try {
+    const alumnoSnap = currentAlumnoId ? await get(ref(db, `alumnos/${currentAlumnoId}`)) : null;
+    if (alumnoSnap && alumnoSnap.exists()) residencia = residenciaDeAlumno(alumnoSnap.val());
+  } catch (err) {
+    console.error('No se pudo leer el país del alumno para elegir la moneda:', err);
+  }
+  selectMoneda.value = monedaPorResidencia(residencia);
   const programa = PROGRAMAS[selectPrograma.value];
-  if (selectMoneda.value === 'CLP' && programa) {
+  if (!programa) return;
+  if (selectMoneda.value === 'CLP') {
     inputMonto.value = programa.precioClp.toLocaleString('es-CL');
+  } else {
+    const tipoCambio = tipoCambioConfigurado();
+    inputMonto.value = tipoCambio > 0 ? (programa.precioClp / tipoCambio).toFixed(2) : '';
   }
 }
 const selectNuevoCicloPrograma = document.getElementById('nuevo-ciclo-programa');

@@ -544,7 +544,7 @@
             <p class="text-soft hidden" id="aviso-nuevo-ciclo-begin-sin-coach" style="margin-top:-8px;">🚩 BEGIN y OPEN no llevan copiloto individual — los ve automáticamente el Copiloto de Cabecera.</p>
             <div class="field-grid mb-16">
               <div class="field"><label>Monto Total</label><input id="nuevo-ciclo-monto"></div>
-              <div class="field"><label>Moneda</label><select id="nuevo-ciclo-moneda"><option>CLP</option><option>USD</option></select></div>
+              <div class="field"><label>Moneda (según el país del alumno)</label><select id="nuevo-ciclo-moneda" disabled title="Chile siempre en CLP; el extranjero en USD"><option>CLP</option><option>USD</option></select></div>
             </div>
             <button class="btn btn--primary" id="btn-crear-nuevo-ciclo">Crear Nuevo Ciclo</button>
           </div>
@@ -927,7 +927,8 @@
           <div class="panel__body">
             <div class="field-grid mb-16">
               <div class="field"><label id="label-nuevo-alumno-monto">Monto Total</label><input id="nuevo-alumno-monto" placeholder="Según programa"></div>
-              <div class="field"><label>Moneda</label><select id="nuevo-alumno-moneda"><option>CLP</option><option>USD</option></select></div>
+              <div class="field"><label>País de residencia</label><select id="nuevo-alumno-residencia"><option value="chile">Chile</option><option value="extranjero">Extranjero</option></select></div>
+              <div class="field"><label>Moneda (según el país)</label><select id="nuevo-alumno-moneda" disabled title="Chile siempre en CLP; el extranjero en USD"><option>CLP</option><option>USD</option></select></div>
               <div class="field hidden" id="campo-tipo-cambio"><label>Tipo de Cambio (CLP por USD)</label><input type="number" id="nuevo-alumno-tipo-cambio" placeholder="Ej: 950"></div>
             </div>
             <div id="bloque-pago-normal">
@@ -2245,6 +2246,27 @@
                 <p class="text-soft" style="font-size:12px; margin:0;">La foto y el nombre se usan en el chat de los 3 roles.</p>
               </div>
             </div>
+          </div>
+        </div>
+        <div class="panel mb-24" data-config-seccion="precios">
+          <div class="panel__header flex-between">
+            <h3>Precios de los programas</h3>
+            <div style="display:flex; gap:8px;">
+              <button class="btn btn--ghost hidden btn-editar-config-seccion" data-seccion="precios" style="font-size:12px; padding:5px 12px;">✏️ Editar</button>
+              <button class="btn btn--primary btn-guardar-config-seccion" data-seccion="precios" style="font-size:12px; padding:5px 12px;">Guardar</button>
+            </div>
+          </div>
+          <div class="panel__body">
+            <p id="config-error-precios" class="hidden" style="color:#C0392B; margin-bottom:12px; font-size:13px;"></p>
+            <p class="text-soft" style="font-size:12.5px; margin:0 0 12px;">Precios en CLP (alumnos de Chile). Los alumnos extranjeros se cobran en USD: el valor se calcula dividiendo el precio en CLP por el tipo de cambio. Al crear un alumno o un ciclo nuevo, el monto se completa solo con estos valores (igual se puede ajustar ahí).</p>
+            <div class="field-grid">
+              <div class="field"><label>Open (CLP)</label><input id="config-precio-open" placeholder="497.000"></div>
+              <div class="field"><label>Begin (CLP)</label><input id="config-precio-begin" placeholder="1.500.000"></div>
+              <div class="field"><label>Next (CLP)</label><input id="config-precio-next" placeholder="3.000.000"></div>
+              <div class="field"><label>eXIT (CLP)</label><input id="config-precio-exit" placeholder="5.000.000"></div>
+              <div class="field"><label>Tipo de cambio (CLP por 1 USD)</label><input type="number" step="0.01" min="0" id="config-tipo-cambio" placeholder="Ej: 950"></div>
+            </div>
+            <p id="config-precios-usd" class="text-soft" style="font-size:12.5px; margin:12px 0 0;"></p>
           </div>
         </div>
         <div class="panel mb-24" data-config-seccion="soporte-ia">

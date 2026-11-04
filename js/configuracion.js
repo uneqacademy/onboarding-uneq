@@ -19,6 +19,8 @@ import { escaparHtml } from './util-html.js';
 import { ref, get, set, push, update, remove } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-database.js";
 import { ref as storageRef, uploadBytes, getDownloadURL, deleteObject } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-storage.js";
 import { getCurrentRole } from './main.js';
+import { PROGRAMAS, cargarPreciosProgramas } from './ciclos.js';
+import { parsearMonto } from './util-pagos.js';
 
 const TAMANO_MAXIMO_ARCHIVO_METODOLOGIA = 10 * 1024 * 1024;
 const TAMANO_MAXIMO_FOTO_DIRECTOR_IA = 5 * 1024 * 1024;
@@ -45,6 +47,13 @@ const CAMPOS_POR_SECCION_CONFIG = {
   },
   'director-ia': { directorIaNombre: 'config-director-ia-nombre' },
   'soporte-ia': { soporteIaNombre: 'config-soporte-ia-nombre' },
+  precios: {
+    precioOpenClp: 'config-precio-open',
+    precioBeginClp: 'config-precio-begin',
+    precioNextClp: 'config-precio-next',
+    precioExitClp: 'config-precio-exit',
+    tipoCambioUsd: 'config-tipo-cambio'
+  },
   grabaciones: {
     grabacionesOpen: 'config-grabaciones-open',
     grabacionesBegin: 'config-grabaciones-begin',
@@ -94,6 +103,7 @@ document.querySelectorAll('.btn-guardar-config-seccion').forEach(btn => {
       });
       await update(ref(db, 'configuracion/general'), datos);
       bloquearSeccionConfig(seccion, true);
+      if (seccion === 'precios') await cargarPreciosProgramas(true); // el resto de la app usa los precios nuevos de inmediato
     } catch (err) {
       console.error('Error al guardar sección de configuración:', seccion, err);
       if (errorEl) {
@@ -197,6 +207,15 @@ export async function cargarConfiguracion() {
   }
   const nombreDirectorIaEl = document.getElementById('config-director-ia-nombre');
   if (nombreDirectorIaEl) nombreDirectorIaEl.value = c.directorIaNombre || '';
+  // Precios de los programas: lo guardado, o los de respaldo si aún no se definen.
+  ['open', 'begin', 'next', 'exit'].forEach(programa => {
+    const campo = `precio${programa.charAt(0).toUpperCase()}${programa.slice(1)}Clp`;
+    const input = document.getElementById(`config-precio-${programa}`);
+    if (input) input.value = c[campo] || PROGRAMAS[programa].precioClp.toLocaleString('es-CL');
+  });
+  const tipoCambioEl = document.getElementById('config-tipo-cambio');
+  if (tipoCambioEl) tipoCambioEl.value = c.tipoCambioUsd || '';
+  actualizarVistaPreviaPrecios();
   const fotoSoporteIaEl = document.getElementById('config-soporte-ia-foto-preview');
   if (fotoSoporteIaEl) {
     fotoSoporteIaEl.src = c.soporteIaFotoUrl || PLACEHOLDER_FOTO_DIRECTOR_IA;
@@ -381,6 +400,24 @@ if (btnQuitarFotoDirectorIa) {
   });
 }
 
+
+/* --- Precios: equivalente en USD según el tipo de cambio --- */
+function actualizarVistaPreviaPrecios() {
+  const el = document.getElementById('config-precios-usd');
+  if (!el) return;
+  const tipoCambio = parseFloat(String(document.getElementById('config-tipo-cambio').value).replace(',', '.'));
+  if (!(tipoCambio > 0)) {
+    el.textContent = 'Escribe el tipo de cambio para ver aquí el equivalente en USD de cada programa.';
+    return;
+  }
+  el.textContent = 'Equivalente en USD: ' + ['open', 'begin', 'next', 'exit'].map(programa => {
+    const clp = parsearMonto(document.getElementById(`config-precio-${programa}`).value);
+    return `${PROGRAMAS[programa].label} US$ ${(clp / tipoCambio).toLocaleString('es-CL', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  }).join(' · ');
+}
+['config-precio-open', 'config-precio-begin', 'config-precio-next', 'config-precio-exit', 'config-tipo-cambio'].forEach(id => {
+  document.getElementById(id)?.addEventListener('input', actualizarVistaPreviaPrecios);
+});
 
 /* --- Foto del asistente de soporte (chat flotante de los alumnos) --- */
 const btnFotoSoporteIa = document.getElementById('btn-config-soporte-ia-foto');
