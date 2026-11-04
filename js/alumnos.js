@@ -14,7 +14,7 @@ import {
   ref as storageRef, uploadBytes, getDownloadURL
 } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-storage.js";
 import {
-  PROGRAMAS, cargarPreciosProgramas, tipoCambioConfigurado, programaLabel, estadoProcesoLabel, diasEnEstadoProceso, estaEstancado, DIAS_ALERTA_POR_ESTADO,
+  PROGRAMAS, cargarPreciosProgramas, tipoCambioConfigurado, calcularFechaEgreso, programaLabel, estadoProcesoLabel, diasEnEstadoProceso, estaEstancado, DIAS_ALERTA_POR_ESTADO,
   crearCiclo, iniciarOnboardingSiCorresponde, generarAcuerdoYEnviarRevision,
   marcarEnviadoParaFirma, marcarFirmaProcesada, toggleCandado, renderStepper, renderAcciones
 } from './ciclos.js';
@@ -33,6 +33,7 @@ const sinCopilotoIndividual = (programa) => programa === 'begin' || programa ===
 
 // Moneda del acuerdo de pago según el país: Chile siempre en CLP; el extranjero en USD.
 const monedaPorResidencia = (residencia) => (residencia === 'extranjero' ? 'USD' : 'CLP');
+const residenciaDePais = (nombrePais) => (nombrePais === 'Chile' ? 'chile' : 'extranjero');
 
 // País inferido del teléfono: +56 → Chile; otro código con "+" → extranjero; sin pista → null.
 function residenciaDesdeTelefono(telefono) {
@@ -52,7 +53,8 @@ function residenciaDeAlumno(alumno) {
   return residenciaDesdeTelefono(alumno && alumno.telefono) || 'chile';
 }
 import { actualizarBotonAccesoAlumno, cargarDashboardAlumno } from './alumno-portal.js';
-import { conectarCascadaDireccion, prepararCamposDireccionVacios, precargarDireccionGuardada, nombrePaisDesdeCodigo } from './geodata.js';
+import { parsearMonto, formatMonto, hoyISO } from './util-pagos.js';
+import { conectarCascadaDireccion, prepararCamposDireccionVacios, precargarDireccionGuardada, nombrePaisDesdeCodigo, poblarSelectPaisesPorNombre } from './geodata.js';
 import './configuracion.js';
 import './hitos.js';
 import './mis-datos.js';
@@ -80,13 +82,14 @@ export function abrirCrearAlumnoDesdePreOnboarding({ id, nombre, telefono, corre
   document.getElementById('nuevo-alumno-nombre').value = partes[0] || '';
   document.getElementById('nuevo-alumno-apellido').value = partes.slice(1).join(' ');
   document.getElementById('nuevo-alumno-telefono').value = telefono || '';
-  residenciaManualNuevoAlumno = false;
-  document.getElementById('nuevo-alumno-residencia').value = residenciaDesdeTelefono(telefono) || 'chile';
+  paisManualNuevoAlumno = false;
+  const paisInferido = residenciaDesdeTelefono(telefono);
+  document.getElementById('nuevo-alumno-pais').value = paisInferido === 'extranjero' ? '' : 'Chile';
   document.getElementById('nuevo-alumno-email').value = correo || '';
   if (programa) document.getElementById('nuevo-alumno-programa').value = programa;
   actualizarCampoMembresiaSegunPrograma();
   actualizarCampoCoachSegunPrograma('nuevo-alumno-programa', 'campo-nuevo-alumno-coach', 'aviso-nuevo-alumno-begin-sin-coach');
-  aplicarResidenciaNuevoAlumno();
+  actualizarFormularioNuevoAlumno();
   showView('view-crear-alumno');
   marcarNavActivo('alumnos');
   document.getElementById('topbar-title').textContent = 'Nuevo Alumno';
@@ -374,13 +377,16 @@ function poblarSelectCoaches(selectEl, selectedCoachId) {
   });
 }
 
+let copilotoCabeceraNombre = '';
 async function cargarCoaches() {
   const snap = await get(ref(db, 'usuarios'));
   coachesMap = {};
+  copilotoCabeceraNombre = '';
   if (snap.exists()) {
     Object.entries(snap.val()).forEach(([uid, u]) => {
       const tieneRolCoach = (u.roles && typeof u.roles === 'object') ? u.roles.coach === true : u.rol === 'coach';
       if (tieneRolCoach) coachesMap[uid] = u.nombre || u.email;
+      if (tieneRolCoach && u.coachCabeceraBegin === true && u.activo !== false) copilotoCabeceraNombre = u.nombre || u.email;
     });
   }
   const selectNuevoAlumno = document.getElementById('nuevo-alumno-coach');
@@ -1095,17 +1101,41 @@ if (btnCrearAlumno) {
     const apellido = document.getElementById('nuevo-alumno-apellido').value.trim();
     const telefonoNuevo = document.getElementById('nuevo-alumno-telefono').value.trim();
     const emailNuevo = document.getElementById('nuevo-alumno-email').value.trim();
+    const paisNuevo = document.getElementById('nuevo-alumno-pais').value;
     const programa = document.getElementById('nuevo-alumno-programa').value;
     const esMembresia = programa === 'next' && document.getElementById('nuevo-alumno-membresia').checked;
     const coachId = sinCopilotoIndividual(programa) ? null : document.getElementById('nuevo-alumno-coach').value;
     const monto = document.getElementById('nuevo-alumno-monto').value.trim();
-    const residencia = document.getElementById('nuevo-alumno-residencia').value;
+    const residencia = residenciaDePais(paisNuevo);
     const moneda = monedaPorResidencia(residencia); // Chile → CLP, extranjero → USD
+    const fechaIngresoNuevo = document.getElementById('nuevo-alumno-fecha-ingreso').value || hoyISO();
+    const fechaEgresoNuevo = (programa === 'next' && document.getElementById('nuevo-alumno-membresia').checked)
+      ? null : calcularFechaEgreso(fechaIngresoNuevo, programa);
+    const saldoNuevo = document.getElementById('nuevo-alumno-saldo').value;
     const descuento = esMembresia ? '0' : document.getElementById('nuevo-alumno-descuento').value.trim();
     const abono = esMembresia ? '0' : document.getElementById('nuevo-alumno-abono').value.trim();
 
-    if (!nombre || !apellido || (!sinCopilotoIndividual(programa) && !coachId)) {
-      errorEl.textContent = 'Completa nombre, apellido y copiloto asignado.';
+    const faltantes = [];
+    if (!nombre) faltantes.push('nombre');
+    if (!apellido) faltantes.push('apellido');
+    if (!telefonoNuevo) faltantes.push('teléfono');
+    if (!emailNuevo) faltantes.push('correo');
+    if (!paisNuevo) faltantes.push('país');
+    if (!sinCopilotoIndividual(programa) && !coachId) faltantes.push('copiloto asignado');
+    if (faltantes.length) {
+      errorEl.textContent = `Completa: ${faltantes.join(', ')}.`;
+      errorEl.classList.remove('hidden');
+      return;
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailNuevo)) {
+      errorEl.textContent = 'El correo no parece válido.';
+      errorEl.classList.remove('hidden');
+      return;
+    }
+    if (!(parsearMonto(monto) > 0)) {
+      errorEl.textContent = moneda === 'USD'
+        ? 'Falta el monto del programa: indica el tipo de cambio (o defínelo en Configuración).'
+        : 'Falta el monto del programa. Revisa los precios en Configuración.';
       errorEl.classList.remove('hidden');
       return;
     }
@@ -1131,7 +1161,7 @@ if (btnCrearAlumno) {
       const alumnoId = alumnoRef.key;
       await set(alumnoRef, {
         nombre, apellido,
-        rut: '', fechaNacimiento: '', genero: '', telefono: telefonoNuevo, email: emailNuevo, direccion: '', ocupacion: '', fotoUrl: '',
+        rut: '', fechaNacimiento: '', genero: '', telefono: telefonoNuevo, email: emailNuevo, direccion: { pais: paisNuevo }, ocupacion: '', fotoUrl: '',
         residencia,
         coachId,
         cicloActualId: null,
@@ -1147,7 +1177,10 @@ if (btnCrearAlumno) {
         modalidadPago: esMembresia ? 'membresia' : null,
         acuerdoPago: esMembresia
           ? { montoMensual: monto, moneda, cuotas: {}, pdfUrl: '' }
-          : { montoTotal: monto, moneda, descuento, abono, saldo: monto, cuotas, pdfUrl: '' }
+          : { montoTotal: monto, moneda, descuento, abono, saldo: saldoNuevo || monto, cuotas, pdfUrl: '' },
+        fechaIngreso: fechaIngresoNuevo,
+        fechaEgreso: fechaEgresoNuevo,
+        acuerdoCerrado: true // un solo guardado: el copiloto ya lo ve
       });
 
       if (origenPreOnboardingId) {
@@ -1160,14 +1193,15 @@ if (btnCrearAlumno) {
       document.getElementById('nuevo-alumno-programa').value = 'begin';
       document.getElementById('nuevo-alumno-membresia').checked = false;
       actualizarCampoMembresiaSegunPrograma();
-      residenciaManualNuevoAlumno = false;
-      document.getElementById('nuevo-alumno-residencia').value = 'chile';
+      paisManualNuevoAlumno = false;
+      document.getElementById('nuevo-alumno-pais').value = 'Chile';
       document.getElementById('nuevo-alumno-tipo-cambio').value = '';
-      aplicarResidenciaNuevoAlumno();
+      actualizarFormularioNuevoAlumno();
       poblarSelectCoaches(document.getElementById('nuevo-alumno-coach'), null);
       const tbodyCuotasNuevo = document.querySelector('#tabla-cuotas-nuevo tbody');
       tbodyCuotasNuevo.innerHTML = '<tr><td><input type="date"></td><td><input placeholder="$0"></td><td><button class="btn btn--danger">Quitar</button></td></tr>';
       tbodyCuotasNuevo.querySelector('.btn--danger').addEventListener('click', (ev) => ev.target.closest('tr').remove());
+      recalcularTotalesNuevoAlumno();
 
       await cargarListasAlumnos();
       setNav('alumnos');
@@ -1176,7 +1210,7 @@ if (btnCrearAlumno) {
       errorEl.classList.remove('hidden');
     } finally {
       btnCrearAlumno.disabled = false;
-      btnCrearAlumno.textContent = 'Crear Alumno y Asignar Copiloto';
+      btnCrearAlumno.textContent = 'Guardar Alumno';
     }
   });
 }
@@ -1394,7 +1428,7 @@ function actualizarFormularioPagoSegunMembresia() {
   const labelMonto = document.getElementById('label-nuevo-alumno-monto');
   const bloquePagoNormal = document.getElementById('bloque-pago-normal');
   const avisoMembresia = document.getElementById('aviso-pago-membresia');
-  if (labelMonto) labelMonto.textContent = esMembresia ? 'Monto Mensual' : 'Monto Total';
+  if (labelMonto) labelMonto.textContent = esMembresia ? 'Monto Mensual' : 'Monto del Programa';
   if (bloquePagoNormal) bloquePagoNormal.classList.toggle('hidden', esMembresia);
   if (avisoMembresia) avisoMembresia.classList.toggle('hidden', !esMembresia);
 }
@@ -1414,16 +1448,46 @@ async function autocompletarMontoNuevoAlumno() {
   const programa = PROGRAMAS[selectPrograma.value];
   if (!programa) return;
 
-  if (selectMoneda.value === 'CLP') {
+  if (!selectMoneda.value) { // todavía sin país
+    if (campoTipoCambio) campoTipoCambio.classList.add('hidden');
+    inputMonto.value = '';
+  } else if (selectMoneda.value === 'CLP') {
     if (campoTipoCambio) campoTipoCambio.classList.add('hidden');
     inputMonto.value = programa.precioClp.toLocaleString('es-CL');
   } else if (selectMoneda.value === 'USD') {
     if (campoTipoCambio) campoTipoCambio.classList.remove('hidden');
     if (inputTipoCambio && !inputTipoCambio.value && tipoCambioConfigurado() > 0) inputTipoCambio.value = tipoCambioConfigurado();
     const tipoCambio = parseFloat(inputTipoCambio ? inputTipoCambio.value : '');
-    if (tipoCambio > 0) {
-      inputMonto.value = (programa.precioClp / tipoCambio).toFixed(2);
-    }
+    inputMonto.value = tipoCambio > 0 ? formatMonto(Math.round((programa.precioClp / tipoCambio) * 100) / 100, 'USD') : '';
+  }
+  recalcularTotalesNuevoAlumno();
+}
+
+/* --- Totales automáticos del formulario: Monto Total a Pagar = programa − descuento;
+       Saldo por Pagar = total − abono (y se avisa si las cuotas no lo cubren). --- */
+function recalcularTotalesNuevoAlumno() {
+  const moneda = document.getElementById('nuevo-alumno-moneda').value || 'CLP';
+  const monto = parsearMonto(document.getElementById('nuevo-alumno-monto').value);
+  const descuento = parsearMonto(document.getElementById('nuevo-alumno-descuento').value);
+  const abono = parsearMonto(document.getElementById('nuevo-alumno-abono').value);
+  const total = Math.max(monto - descuento, 0);
+  const saldo = Math.max(total - abono, 0);
+  document.getElementById('nuevo-alumno-total').value = monto ? formatMonto(total, moneda) : '';
+  document.getElementById('nuevo-alumno-saldo').value = monto ? formatMonto(saldo, moneda) : '';
+
+  const avisoEl = document.getElementById('nuevo-alumno-aviso-cuotas');
+  let suma = 0, hayCuotas = false;
+  document.querySelectorAll('#tabla-cuotas-nuevo tbody tr').forEach(fila => {
+    const montoCuota = fila.querySelectorAll('input')[1].value.trim();
+    if (montoCuota) { hayCuotas = true; suma += parsearMonto(montoCuota); }
+  });
+  if (!avisoEl) return;
+  avisoEl.classList.toggle('hidden', !(monto && hayCuotas));
+  if (monto && hayCuotas) {
+    const diferencia = Math.round((saldo - suma) * 100) / 100;
+    avisoEl.textContent = Math.abs(diferencia) < 0.5
+      ? '✔ Las cuotas cubren el saldo.'
+      : `Las cuotas suman ${formatMonto(suma, moneda)} y el saldo es ${formatMonto(saldo, moneda)} (${diferencia > 0 ? 'faltan' : 'sobran'} ${formatMonto(Math.abs(diferencia), moneda)}).`;
   }
 }
 const selectNuevoAlumnoPrograma = document.getElementById('nuevo-alumno-programa');
@@ -1431,34 +1495,85 @@ const selectNuevoAlumnoMoneda = document.getElementById('nuevo-alumno-moneda');
 const inputNuevoAlumnoTipoCambio = document.getElementById('nuevo-alumno-tipo-cambio');
 if (selectNuevoAlumnoPrograma) {
   selectNuevoAlumnoPrograma.addEventListener('change', autocompletarMontoNuevoAlumno);
+  selectNuevoAlumnoPrograma.addEventListener('change', () => { actualizarFechasNuevoAlumno(); actualizarAvisoCopilotoNuevoAlumno(); });
   selectNuevoAlumnoPrograma.addEventListener('change', () => actualizarCampoCoachSegunPrograma('nuevo-alumno-programa', 'campo-nuevo-alumno-coach', 'aviso-nuevo-alumno-begin-sin-coach'));
   selectNuevoAlumnoPrograma.addEventListener('change', actualizarCampoMembresiaSegunPrograma);
 }
 if (selectNuevoAlumnoMoneda) selectNuevoAlumnoMoneda.addEventListener('change', autocompletarMontoNuevoAlumno);
 
 // La moneda sigue al país: Chile → CLP, extranjero → USD (el campo de moneda va bloqueado).
-let residenciaManualNuevoAlumno = false;
-function aplicarResidenciaNuevoAlumno() {
-  const residencia = document.getElementById('nuevo-alumno-residencia');
-  const moneda = document.getElementById('nuevo-alumno-moneda');
-  if (!residencia || !moneda) return;
-  moneda.value = monedaPorResidencia(residencia.value);
-  autocompletarMontoNuevoAlumno();
+let paisManualNuevoAlumno = false;
+
+// Fechas automáticas: ingreso = hoy; egreso = ingreso + meses de acceso del programa (membresía: sin fecha fija).
+function actualizarFechasNuevoAlumno() {
+  const programa = document.getElementById('nuevo-alumno-programa').value;
+  const esMembresia = programa === 'next' && document.getElementById('nuevo-alumno-membresia').checked;
+  const ingreso = hoyISO();
+  document.getElementById('nuevo-alumno-fecha-ingreso').value = ingreso;
+  document.getElementById('nuevo-alumno-fecha-egreso').value = esMembresia ? '' : calcularFechaEgreso(ingreso, programa);
+  const aviso = document.getElementById('aviso-nuevo-alumno-egreso');
+  if (aviso) {
+    const texto = esMembresia ? 'Membresía: no tiene fecha de egreso fija (se renueva mes a mes).'
+      : (programa === 'exit' ? 'eXIT: 12 meses de acceso a la app. El acompañamiento de Maca y Felipe y las 8 sesiones son solo los primeros 6 meses.' : '');
+    aviso.textContent = texto;
+    aviso.classList.toggle('hidden', !texto);
+  }
 }
-document.getElementById('nuevo-alumno-residencia')?.addEventListener('change', () => {
-  residenciaManualNuevoAlumno = true;
-  aplicarResidenciaNuevoAlumno();
+
+// El aviso de BEGIN/OPEN dice qué copiloto queda asignado (el de cabecera).
+function actualizarAvisoCopilotoNuevoAlumno() {
+  const aviso = document.getElementById('aviso-nuevo-alumno-begin-sin-coach');
+  if (!aviso) return;
+  aviso.textContent = copilotoCabeceraNombre
+    ? `🚩 Copiloto asignado automáticamente: ${copilotoCabeceraNombre} (Copiloto de Cabecera de BEGIN y OPEN).`
+    : '🚩 BEGIN y OPEN los ve el Copiloto de Cabecera, pero todavía no hay uno definido (se asigna en Copilotos).';
+}
+
+async function aplicarPaisNuevoAlumno() {
+  const pais = document.getElementById('nuevo-alumno-pais');
+  const moneda = document.getElementById('nuevo-alumno-moneda');
+  if (!pais || !moneda) return;
+  moneda.value = pais.value ? monedaPorResidencia(residenciaDePais(pais.value)) : '';
+  await autocompletarMontoNuevoAlumno();
+}
+
+// Deja todo coherente con el programa, el país y las fechas elegidos.
+function actualizarFormularioNuevoAlumno() {
+  actualizarFechasNuevoAlumno();
+  actualizarAvisoCopilotoNuevoAlumno();
+  return aplicarPaisNuevoAlumno();
+}
+
+if (document.getElementById('nuevo-alumno-pais')) {
+  poblarSelectPaisesPorNombre(document.getElementById('nuevo-alumno-pais'), 'Chile')
+    .then(() => aplicarPaisNuevoAlumno())
+    .catch(err => console.error('No se pudo cargar la lista de países:', err));
+}
+document.getElementById('nuevo-alumno-pais')?.addEventListener('change', () => {
+  paisManualNuevoAlumno = true;
+  aplicarPaisNuevoAlumno();
 });
-// Mientras no se elija el país a mano, se deduce del teléfono (+56 = Chile).
+// Mientras no se elija el país a mano, se deduce del teléfono: +56 = Chile; otro código = el país se elige a mano.
 document.getElementById('nuevo-alumno-telefono')?.addEventListener('input', (ev) => {
-  const residenciaSelect = document.getElementById('nuevo-alumno-residencia');
+  const paisSelect = document.getElementById('nuevo-alumno-pais');
   const inferida = residenciaDesdeTelefono(ev.target.value);
-  if (residenciaManualNuevoAlumno || !inferida || !residenciaSelect || residenciaSelect.value === inferida) return;
-  residenciaSelect.value = inferida;
-  aplicarResidenciaNuevoAlumno();
+  if (paisManualNuevoAlumno || !inferida || !paisSelect) return;
+  const nuevoValor = inferida === 'chile' ? 'Chile' : '';
+  if (paisSelect.value === nuevoValor || (inferida === 'extranjero' && paisSelect.value !== 'Chile')) return;
+  paisSelect.value = nuevoValor;
+  aplicarPaisNuevoAlumno();
 });
-// Al abrir el formulario se refrescan los precios por si cambiaron en Configuración.
-document.getElementById('btn-nuevo-alumno')?.addEventListener('click', () => { aplicarResidenciaNuevoAlumno(); });
+['nuevo-alumno-descuento', 'nuevo-alumno-abono'].forEach(id => {
+  document.getElementById(id)?.addEventListener('input', recalcularTotalesNuevoAlumno);
+});
+const tablaCuotasNuevo = document.getElementById('tabla-cuotas-nuevo');
+if (tablaCuotasNuevo) {
+  tablaCuotasNuevo.addEventListener('input', recalcularTotalesNuevoAlumno);
+  new MutationObserver(recalcularTotalesNuevoAlumno).observe(tablaCuotasNuevo.querySelector('tbody'), { childList: true });
+}
+document.getElementById('nuevo-alumno-membresia')?.addEventListener('change', actualizarFechasNuevoAlumno);
+// Al abrir el formulario se refrescan fechas, copiloto de cabecera y precios (por si cambiaron en Configuración).
+document.getElementById('btn-nuevo-alumno')?.addEventListener('click', () => { actualizarFormularioNuevoAlumno(); });
 if (inputNuevoAlumnoTipoCambio) inputNuevoAlumnoTipoCambio.addEventListener('input', autocompletarMontoNuevoAlumno);
 autocompletarMontoNuevoAlumno(); // prefill inicial (Begin · CLP por defecto)
 actualizarCampoCoachSegunPrograma('nuevo-alumno-programa', 'campo-nuevo-alumno-coach', 'aviso-nuevo-alumno-begin-sin-coach');

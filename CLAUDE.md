@@ -38,3 +38,6 @@ Agendamiento: `agendamiento/staff/{uid}` (closer, director comercial).
 
 ## Precios y moneda
 Los precios de los programas (CLP) y el tipo de cambio (CLP por USD) se editan en Configuración > Precios de los programas (`configuracion/general`: `precioOpenClp`, `precioBeginClp`, `precioNextClp`, `precioExitClp`, `tipoCambioUsd`); `ciclos.js` los carga con `cargarPreciosProgramas()` y los de `PROGRAMAS` son solo de respaldo. La moneda del acuerdo depende del país: Chile siempre CLP, extranjero USD (`alumno.residencia`: `chile` | `extranjero`; en alumnos antiguos se deduce de la dirección o del teléfono).
+
+## Alta de alumno (director)
+Un solo formulario (Nuevo Alumno): nombre, apellido, teléfono, correo, programa, copiloto (BEGIN y OPEN: el de cabecera, automático; NEXT y eXIT: se elige), fechas de ingreso (hoy) y egreso (según los meses de ACCESO del programa: OPEN 2, BEGIN 4, NEXT 6, eXIT 12; membresía sin egreso fijo), país (define la moneda), monto, descuento, total, abono, cuotas y saldo. Al guardar, el ciclo nace con `acuerdoCerrado: true` y las fechas puestas, así que el copiloto lo ve de inmediato; el resto de la ficha lo completa él. Los meses de acceso están en `PROGRAMAS` (`ciclos.js`). En eXIT el acompañamiento de Maca y Felipe y sus 8 sesiones son solo los primeros 6 meses.

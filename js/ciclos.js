@@ -14,14 +14,16 @@ import {
 
 import { parsearMonto } from './util-pagos.js';
 
+// "meses" = meses de ACCESO a la app (define la fecha de egreso). OPEN 2, BEGIN 4, NEXT 6, eXIT 12.
+// (En eXIT el acompañamiento de Maca y Felipe y sus 8 sesiones son solo los primeros 6 meses.)
 // Los precios de abajo son los de respaldo: los vigentes los edita el director en
 // Configuración (configuracion/general: precioOpenClp, precioBeginClp, … y tipoCambioUsd)
 // y se cargan con cargarPreciosProgramas().
 export const PROGRAMAS = {
   open:  { label: 'Open',  meses: 2, precioClp: 497000 },
-  begin: { label: 'Begin', meses: 3, precioClp: 1500000 },
+  begin: { label: 'Begin', meses: 4, precioClp: 1500000 },
   next:  { label: 'Next',  meses: 6, precioClp: 3000000 },
-  exit:  { label: 'eXIT',  meses: 6, precioClp: 5000000 }
+  exit:  { label: 'eXIT',  meses: 12, precioClp: 5000000 }
 };
 
 const ORDEN_ESTADOS = ['asignado', 'en_onboarding', 'enviado_firma', 'en_revision', 'firma_procesada', 'matricula_finalizada'];
@@ -79,7 +81,7 @@ export function estadoProcesoLabel(estado) {
 }
 
 /* --- Crea un ciclo nuevo (llamado desde alumnos.js al crear alumno) --- */
-export async function crearCiclo({ alumnoId, coachId, programa, acuerdoPago, modalidadPago }) {
+export async function crearCiclo({ alumnoId, coachId, programa, acuerdoPago, modalidadPago, fechaIngreso = null, fechaEgreso = null, acuerdoCerrado = false }) {
   const cicloRef = push(ref(db, 'ciclos'));
   const cicloId = cicloRef.key;
 
@@ -91,10 +93,12 @@ export async function crearCiclo({ alumnoId, coachId, programa, acuerdoPago, mod
     estadoProceso: 'asignado',
     estadoProcesoDesde: Date.now(),
     estadoAlumno: 'en_proceso_matricula',
-    fechaIngreso: null,
-    fechaEgreso: null,
+    fechaIngreso,
+    fechaEgreso,
     bloqueoCoach: false,
-    acuerdoCerrado: false, // el coach lo ve recién cuando el Director hace "Guardar Acuerdo" (pagos.js)
+    // El copiloto lo ve cuando el acuerdo está cerrado. Al crear al alumno con todos los datos
+    // (formulario de Nuevo Alumno) ya nace cerrado; si no, lo cierra el Director con "Guardar Acuerdo" (pagos.js).
+    acuerdoCerrado,
     facturacionActual: '',
     objetivoFacturacion: '',
     situacionPersonal: '',
@@ -136,15 +140,18 @@ export async function marcarFirmaProcesada(cicloId, fechaFirmaStr) {
   // del mes en curso", recalculada sola cada vez que se muestra (ver
   // fechaEgresoVigente). Lo que se guarda acá es solo un valor de
   // referencia inicial, no el que realmente se usa para mostrarla.
+  // Si el alumno ya nació con fecha de ingreso y de egreso (formulario de Nuevo Alumno), se respetan:
+  // el ingreso es el día de creación y el egreso sigue la duración del acceso al programa.
+  const fechaIngreso = ciclo.fechaIngreso || fechaFirmaStr;
   const fechaEgreso = ciclo.modalidadPago === 'membresia'
     ? fechaEgresoVigente(ciclo)
-    : calcularFechaEgreso(fechaFirmaStr, ciclo.programa);
+    : (ciclo.fechaEgreso || calcularFechaEgreso(fechaIngreso, ciclo.programa));
 
   await update(ref(db, `ciclos/${cicloId}`), {
     estadoProceso: 'matricula_finalizada',
     estadoProcesoDesde: Date.now(),
     estadoAlumno: 'activo',
-    fechaIngreso: fechaFirmaStr,
+    fechaIngreso,
     fechaEgreso,
     bloqueoCoach: true
   });
@@ -154,7 +161,8 @@ export function calcularFechaEgreso(fechaIngresoStr, programaKey) {
   const meses = PROGRAMAS[programaKey] ? PROGRAMAS[programaKey].meses : 3;
   const fecha = new Date(fechaIngresoStr + 'T00:00:00');
   fecha.setMonth(fecha.getMonth() + meses);
-  return fecha.toISOString().slice(0, 10);
+  // Se arma con la fecha local (toISOString la pasaba a UTC y podía correr el día).
+  return `${fecha.getFullYear()}-${String(fecha.getMonth() + 1).padStart(2, '0')}-${String(fecha.getDate()).padStart(2, '0')}`;
 }
 
 // Para alumnos de Membresía (mismo Next, mismo acceso, pago mes a mes),
@@ -254,7 +262,7 @@ function actualizarEtiquetasPrecios() {
     if (!select) return;
     select.querySelectorAll('option').forEach(op => {
       const programa = PROGRAMAS[op.value];
-      if (programa) op.textContent = `${programa.label} (${programa.meses} meses · $${programa.precioClp.toLocaleString('es-CL')})`;
+      if (programa) op.textContent = `${programa.label} (${programa.meses} meses de acceso · $${programa.precioClp.toLocaleString('es-CL')})`;
     });
   });
 }
