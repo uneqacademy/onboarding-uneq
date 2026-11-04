@@ -1520,3 +1520,7 @@ body.tema-open .hitos-tab { color: #E9D3CD; }
   .soporte-chat__panel { right: 8px; left: 8px; width: auto; max-width: none; bottom: 84px; max-height: calc(100vh - 100px); }
   .soporte-chat__burbuja { right: 12px; bottom: 16px; }
 }
+
+/* El contenedor del chat vive dentro de .app-shell (una grilla de 2 columnas): fuera del flujo
+   para no ocupar una celda y empujar el menú y el contenido. */
+#soporte-chat { position: fixed; right: 0; bottom: 0; width: 0; height: 0; }
