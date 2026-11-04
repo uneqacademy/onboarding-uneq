@@ -24,10 +24,10 @@ service firebase.storage {
       allow delete: if esDe(uid);
     }
     match /fotos-perfil-ia/{mentorId} {
-      // 'director-ia' es la foto del director (configuracion.js).
+      // 'director-ia' es la foto del director y 'soporte-ia' la del chat de soporte (configuracion.js).
       allow read: if autenticado();
-      allow create, update: if (esDe(mentorId) || mentorId == 'director-ia') && fotoOk();
-      allow delete: if esDe(mentorId) || mentorId == 'director-ia';
+      allow create, update: if (esDe(mentorId) || mentorId == 'director-ia' || mentorId == 'soporte-ia') && fotoOk();
+      allow delete: if esDe(mentorId) || mentorId == 'director-ia' || mentorId == 'soporte-ia';
     }
     // Foto del premio del mes del ranking (la sube el director desde Configuración).
     match /premio-ranking/{archivo} {

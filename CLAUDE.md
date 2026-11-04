@@ -32,3 +32,6 @@ Agendamiento: `agendamiento/staff/{uid}` (closer, director comercial).
 
 ## Niveles (programas)
 `open` (2 meses, $497.000), `begin`, `next` y `exit`. OPEN se comporta como BEGIN (sin copiloto individual, lo ve el Copiloto de Cabecera, tema visual `tema-begin` + `tema-open`) pero: sin mentorías en vivo generales, BOX de 3 preguntas/semana (1 por mentor) y acceso de 2 meses. Las sesiones en vivo llevan su público: mentorías con `exclusivaPrograma` (`begin`/`open`/vacío = general) y sesiones de cabecera con `audiencia` (`begin`/`open`/`ambos`).
+
+## Chat de soporte (alumnos)
+`soporte-chat.js`: burbuja flotante solo para el rol alumno (el bloque `#soporte-chat` lleva `data-role="alumno"`). Llama a la función `chatSoporteAlumno`, que identifica a la persona por su sesión y lee solo SUS datos (programa, fase, copiloto, pagos); el navegador nunca envía un id de alumno. Historial en `soporteChat/{uid}`. Nombre y foto en `configuracion/general` (`soporteIaNombre`, `soporteIaFotoUrl`), editables en Configuración. La guía de la app que usa la IA está en `functions/index.js` (`GUIA_APP_ALUMNO`): si cambia el menú o un programa, hay que actualizarla ahí.

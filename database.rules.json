@@ -228,6 +228,15 @@
         ".write": "auth != null && auth.uid === $uid"
       }
     },
+    "soporteChat": {
+      "$uid": {
+        ".read": "auth != null && (auth.uid === $uid || (root.child('usuarios').child(auth.uid).child('roles').child('director').val() === true || root.child('usuarios').child(auth.uid).child('rol').val() === 'director'))",
+        "$mensajeId": {
+          ".write": "auth != null && auth.uid === $uid && !data.exists()",
+          ".validate": "newData.hasChildren(['rol', 'texto', 'createdAt']) && (newData.child('rol').val() === 'usuario' || newData.child('rol').val() === 'asistente') && newData.child('texto').isString() && newData.child('texto').val().length <= 4000"
+        }
+      }
+    },
     "entrenamientoClonHistorial": {
       "$uid": {
         ".read": "auth != null && auth.uid === $uid",
