@@ -12,6 +12,11 @@ import {
   ref, push, set, update, get
 } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-database.js";
 
+import { parsearMonto } from './util-pagos.js';
+
+// Los precios de abajo son los de respaldo: los vigentes los edita el director en
+// Configuración (configuracion/general: precioOpenClp, precioBeginClp, … y tipoCambioUsd)
+// y se cargan con cargarPreciosProgramas().
 export const PROGRAMAS = {
   open:  { label: 'Open',  meses: 2, precioClp: 497000 },
   begin: { label: 'Begin', meses: 3, precioClp: 1500000 },
@@ -210,4 +215,46 @@ export function renderAcciones(estadoProceso, role, listoParaGenerarAcuerdo = tr
 
   const banner = document.getElementById('banner-bloqueo-coach');
   banner.classList.toggle('hidden', !(role === 'coach' && (estadoProceso === 'enviado_firma' || estadoProceso === 'en_revision')));
+}
+
+/* ============================================================
+   Precios de los programas (editables en Configuración)
+   ============================================================ */
+const CAMPO_PRECIO_PROGRAMA = { open: 'precioOpenClp', begin: 'precioBeginClp', next: 'precioNextClp', exit: 'precioExitClp' };
+let tipoCambioCargado = 0;
+let preciosCargadosEn = 0;
+
+// Lee los precios y el tipo de cambio de Configuración (CLP por USD) y los aplica a PROGRAMAS.
+// Si no hay nada guardado, o la lectura falla, quedan los precios de respaldo.
+export async function cargarPreciosProgramas(forzar = false) {
+  if (!forzar && Date.now() - preciosCargadosEn < 30000) return;
+  try {
+    const snap = await get(ref(db, 'configuracion/general'));
+    const c = snap.exists() ? snap.val() : {};
+    Object.entries(CAMPO_PRECIO_PROGRAMA).forEach(([programa, campo]) => {
+      const precio = parsearMonto(c[campo]);
+      if (precio > 0) PROGRAMAS[programa].precioClp = precio;
+    });
+    const tipoCambio = parseFloat(String(c.tipoCambioUsd || '').replace(',', '.'));
+    tipoCambioCargado = tipoCambio > 0 ? tipoCambio : 0;
+    preciosCargadosEn = Date.now();
+    actualizarEtiquetasPrecios();
+  } catch (err) {
+    console.error('No se pudieron cargar los precios de Configuración (se usan los de respaldo):', err);
+  }
+}
+
+// Tipo de cambio guardado en Configuración (CLP por USD), o 0 si aún no se define.
+export function tipoCambioConfigurado() { return tipoCambioCargado; }
+
+// Textos de las listas de programa: "Begin (3 meses · $1.500.000)".
+function actualizarEtiquetasPrecios() {
+  ['nuevo-alumno-programa', 'nuevo-ciclo-programa'].forEach(id => {
+    const select = document.getElementById(id);
+    if (!select) return;
+    select.querySelectorAll('option').forEach(op => {
+      const programa = PROGRAMAS[op.value];
+      if (programa) op.textContent = `${programa.label} (${programa.meses} meses · $${programa.precioClp.toLocaleString('es-CL')})`;
+    });
+  });
 }

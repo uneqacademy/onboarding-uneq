@@ -35,3 +35,6 @@ Agendamiento: `agendamiento/staff/{uid}` (closer, director comercial).
 
 ## Chat de soporte (alumnos)
 `soporte-chat.js`: burbuja flotante solo para el rol alumno (el bloque `#soporte-chat` lleva `data-role="alumno"`). Llama a la función `chatSoporteAlumno`, que identifica a la persona por su sesión y lee solo SUS datos (programa, fase, copiloto, pagos); el navegador nunca envía un id de alumno. Historial en `soporteChat/{uid}`. Nombre y foto en `configuracion/general` (`soporteIaNombre`, `soporteIaFotoUrl`), editables en Configuración. La guía de la app que usa la IA está en `functions/index.js` (`GUIA_APP_ALUMNO`): si cambia el menú o un programa, hay que actualizarla ahí.
+
+## Precios y moneda
+Los precios de los programas (CLP) y el tipo de cambio (CLP por USD) se editan en Configuración > Precios de los programas (`configuracion/general`: `precioOpenClp`, `precioBeginClp`, `precioNextClp`, `precioExitClp`, `tipoCambioUsd`); `ciclos.js` los carga con `cargarPreciosProgramas()` y los de `PROGRAMAS` son solo de respaldo. La moneda del acuerdo depende del país: Chile siempre CLP, extranjero USD (`alumno.residencia`: `chile` | `extranjero`; en alumnos antiguos se deduce de la dirección o del teléfono).
