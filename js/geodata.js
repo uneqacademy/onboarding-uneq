@@ -138,6 +138,13 @@ export async function poblarSelectPaisesPorNombre(selectEl, nombreSeleccionado =
   selectEl.value = nombreSeleccionado;
 }
 
+// Código ISO ("AR") de un país por su nombre ("Argentina"), o '' si no se encuentra.
+export function codigoPaisDesdeNombre(nombre) {
+  if (!paisesCache) return '';
+  const match = paisesCache.find(p => p.nombre === nombre);
+  return match ? match.codigo : '';
+}
+
 export function nombrePaisDesdeCodigo(codigo) {
   if (!paisesCache) return codigo;
   const match = paisesCache.find(p => p.codigo === codigo);

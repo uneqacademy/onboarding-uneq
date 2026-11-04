@@ -54,7 +54,8 @@ function residenciaDeAlumno(alumno) {
 }
 import { actualizarBotonAccesoAlumno, cargarDashboardAlumno } from './alumno-portal.js';
 import { parsearMonto, formatMonto, hoyISO } from './util-pagos.js';
-import { conectarCascadaDireccion, prepararCamposDireccionVacios, precargarDireccionGuardada, nombrePaisDesdeCodigo, poblarSelectPaisesPorNombre } from './geodata.js';
+import { montarSelectorTelefono } from './telefono-pais.js';
+import { conectarCascadaDireccion, prepararCamposDireccionVacios, precargarDireccionGuardada, nombrePaisDesdeCodigo, codigoPaisDesdeNombre, poblarSelectPaisesPorNombre } from './geodata.js';
 import './configuracion.js';
 import './hitos.js';
 import './mis-datos.js';
@@ -81,10 +82,9 @@ export function abrirCrearAlumnoDesdePreOnboarding({ id, nombre, telefono, corre
   const partes = (nombre || '').trim().split(/\s+/);
   document.getElementById('nuevo-alumno-nombre').value = partes[0] || '';
   document.getElementById('nuevo-alumno-apellido').value = partes.slice(1).join(' ');
-  document.getElementById('nuevo-alumno-telefono').value = telefono || '';
   paisManualNuevoAlumno = false;
-  const paisInferido = residenciaDesdeTelefono(telefono);
-  document.getElementById('nuevo-alumno-pais').value = paisInferido === 'extranjero' ? '' : 'Chile';
+  selectorTelefonoNuevo.establecerNumero(telefono || '');
+  sincronizarPaisConTelefonoNuevoAlumno();
   document.getElementById('nuevo-alumno-email').value = correo || '';
   if (programa) document.getElementById('nuevo-alumno-programa').value = programa;
   actualizarCampoMembresiaSegunPrograma();
@@ -1099,7 +1099,7 @@ if (btnCrearAlumno) {
 
     const nombre = document.getElementById('nuevo-alumno-nombre').value.trim();
     const apellido = document.getElementById('nuevo-alumno-apellido').value.trim();
-    const telefonoNuevo = document.getElementById('nuevo-alumno-telefono').value.trim();
+    const telefonoNuevo = selectorTelefonoNuevo.obtenerNumero(); // "+56 987654321"
     const emailNuevo = document.getElementById('nuevo-alumno-email').value.trim();
     const paisNuevo = document.getElementById('nuevo-alumno-pais').value;
     const programa = document.getElementById('nuevo-alumno-programa').value;
@@ -1124,6 +1124,11 @@ if (btnCrearAlumno) {
     if (!sinCopilotoIndividual(programa) && !coachId) faltantes.push('copiloto asignado');
     if (faltantes.length) {
       errorEl.textContent = `Completa: ${faltantes.join(', ')}.`;
+      errorEl.classList.remove('hidden');
+      return;
+    }
+    if (selectorTelefonoNuevo.digitosNacionales() < 6) {
+      errorEl.textContent = 'El teléfono no parece válido (revisa el código de país y el número).';
       errorEl.classList.remove('hidden');
       return;
     }
@@ -1194,6 +1199,7 @@ if (btnCrearAlumno) {
       document.getElementById('nuevo-alumno-membresia').checked = false;
       actualizarCampoMembresiaSegunPrograma();
       paisManualNuevoAlumno = false;
+      selectorTelefonoNuevo.restablecer();
       document.getElementById('nuevo-alumno-pais').value = 'Chile';
       document.getElementById('nuevo-alumno-tipo-cambio').value = '';
       actualizarFormularioNuevoAlumno();
@@ -1549,20 +1555,29 @@ if (document.getElementById('nuevo-alumno-pais')) {
     .then(() => aplicarPaisNuevoAlumno())
     .catch(err => console.error('No se pudo cargar la lista de países:', err));
 }
-document.getElementById('nuevo-alumno-pais')?.addEventListener('change', () => {
+document.getElementById('nuevo-alumno-pais')?.addEventListener('change', (ev) => {
   paisManualNuevoAlumno = true;
+  // Si aún no hay número, el código del teléfono sigue al país elegido.
+  if (selectorTelefonoNuevo && selectorTelefonoNuevo.digitosNacionales() === 0) {
+    const iso = codigoPaisDesdeNombre(ev.target.value);
+    if (iso) selectorTelefonoNuevo.establecerIso(iso, { silencioso: true });
+  }
   aplicarPaisNuevoAlumno();
 });
-// Mientras no se elija el país a mano, se deduce del teléfono: +56 = Chile; otro código = el país se elige a mano.
-document.getElementById('nuevo-alumno-telefono')?.addEventListener('input', (ev) => {
+// Teléfono con selector de código de país (Chile por defecto): mientras no se elija el País a mano,
+// el País sigue al código del teléfono.
+let selectorTelefonoNuevo = null;
+function sincronizarPaisConTelefonoNuevoAlumno() {
   const paisSelect = document.getElementById('nuevo-alumno-pais');
-  const inferida = residenciaDesdeTelefono(ev.target.value);
-  if (paisManualNuevoAlumno || !inferida || !paisSelect) return;
-  const nuevoValor = inferida === 'chile' ? 'Chile' : '';
-  if (paisSelect.value === nuevoValor || (inferida === 'extranjero' && paisSelect.value !== 'Chile')) return;
-  paisSelect.value = nuevoValor;
+  if (!paisSelect || !selectorTelefonoNuevo || paisManualNuevoAlumno) return;
+  const nombre = nombrePaisDesdeCodigo(selectorTelefonoNuevo.obtenerIso());
+  paisSelect.value = [...paisSelect.options].some(o => o.value === nombre) ? nombre : '';
   aplicarPaisNuevoAlumno();
-});
+}
+const inputTelefonoNuevo = document.getElementById('nuevo-alumno-telefono');
+if (inputTelefonoNuevo) {
+  selectorTelefonoNuevo = montarSelectorTelefono(inputTelefonoNuevo, { onCambio: sincronizarPaisConTelefonoNuevoAlumno });
+}
 ['nuevo-alumno-descuento', 'nuevo-alumno-abono'].forEach(id => {
   document.getElementById(id)?.addEventListener('input', recalcularTotalesNuevoAlumno);
 });
