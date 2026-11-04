@@ -1512,10 +1512,11 @@ body.tema-open .hitos-tab { color: #E9D3CD; }
 .soporte-chat__humano { display: block; padding: 8px 14px; font-size: 12px; text-align: center; color: #1B6FD0; background: #fff; border-top: 1px solid #E5E7EB; text-decoration: none; }
 .soporte-chat__humano.hidden { display: none; }
 .soporte-chat__pie { display: flex; gap: 8px; align-items: flex-end; padding: 10px; background: #fff; border-top: 1px solid #E5E7EB; }
-.soporte-chat__pie textarea { flex: 1; resize: none; max-height: 90px; min-height: 38px; padding: 9px 12px; border: 1px solid #D0D5DD; border-radius: 12px; font: inherit; font-size: 14px; color: #1B2333; background: #fff; }
+/* 16px: con menos, iOS hace zoom al tocar el campo y el panel queda más ancho que la pantalla (se esconde el botón de enviar). */
+.soporte-chat__pie textarea { flex: 1; min-width: 0; width: auto; resize: none; max-height: 90px; min-height: 38px; padding: 9px 12px; border: 1px solid #D0D5DD; border-radius: 12px; font: inherit; font-size: 16px; color: #1B2333; background: #fff; }
 .soporte-chat__enviar { width: 40px; height: 40px; border: 0; border-radius: 50%; background: #1B2A4A; color: #fff; font-size: 16px; cursor: pointer; flex-shrink: 0; }
 .soporte-chat__enviar:disabled { opacity: 0.5; cursor: default; }
 @media (max-width: 600px) {
-  .soporte-chat__panel { right: 8px; left: 8px; width: auto; bottom: 84px; max-height: calc(100vh - 100px); }
+  .soporte-chat__panel { right: 8px; left: 8px; width: auto; max-width: none; bottom: 84px; max-height: calc(100vh - 100px); }
   .soporte-chat__burbuja { right: 12px; bottom: 16px; }
 }
