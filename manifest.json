@@ -1,6 +1,6 @@
 {
-  "name": "UNEQ APP",
-  "short_name": "UNEQ APP",
+  "name": "Universo UNEQ",
+  "short_name": "Universo UNEQ",
   "start_url": "./index.html",
   "display": "standalone",
   "background_color": "#1B2A4A",

@@ -254,7 +254,7 @@ function descargarIcs(fechaInicio, duracionMinutos) {
     `DTSTAMP:${fmt(new Date())}`,
     `DTSTART:${fmt(fechaInicio)}`,
     `DTEND:${fmt(fechaFin)}`,
-    'SUMMARY:Llamada con UNEQ Mentoring',
+    'SUMMARY:Llamada con Universo UNEQ',
     'DESCRIPTION:Tu llamada agendada con el equipo de UNEQ. El link de la videollamada llega por correo.',
     'END:VEVENT', 'END:VCALENDAR'
   ].join('\r\n');

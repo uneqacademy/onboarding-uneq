@@ -765,7 +765,7 @@ const DOMINIO_PREVIEW_HITOS = 'https://hitos.uneqacademy.com';
 
 function compartirHitoWhatsapp(hitoId, titulo) {
   const url = `${DOMINIO_PREVIEW_HITOS}/?id=${hitoId}`;
-  const mensaje = encodeURIComponent(`¡Quiero compartir con ustedes que logré "${titulo}" en mi programa con UNEQ Mentoring! 🎉\n\nMíralo y déjame un comentario acá:\n${url}`);
+  const mensaje = encodeURIComponent(`¡Quiero compartir con ustedes que logré "${titulo}" en mi programa con Universo UNEQ! 🎉\n\nMíralo y déjame un comentario acá:\n${url}`);
   window.open(`https://wa.me/?text=${mensaje}`, '_blank');
   marcarCompartido(`hito_${hitoId}`);
 }
