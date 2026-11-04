@@ -175,7 +175,7 @@ async function enviar() {
     cont.scrollTop = cont.scrollHeight;
     input.disabled = false;
     btn.disabled = false;
-    input.focus();
+    if (!(window.matchMedia && window.matchMedia('(pointer: coarse)').matches)) input.focus();
   }
 }
 
@@ -187,7 +187,9 @@ function alternarPanel(abrir) {
   panel.classList.toggle('hidden', !mostrar);
   burbuja?.setAttribute('aria-expanded', String(mostrar));
   if (mostrar) {
-    iniciarChat().then(() => el('soporte-chat-input')?.focus());
+    // En celulares no se enfoca solo el campo: abriría el teclado y taparía el chat.
+    const esTactil = window.matchMedia && window.matchMedia('(pointer: coarse)').matches;
+    iniciarChat().then(() => { if (!esTactil) el('soporte-chat-input')?.focus(); });
   }
 }
 
