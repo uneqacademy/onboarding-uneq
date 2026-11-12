@@ -158,6 +158,8 @@ function renderSelectorRol() {
 
 export function showLogin() {
   try { sessionStorage.removeItem(CLAVE_SECCION); } catch (err) { /* no pasa nada */ }
+  Object.keys(CLAVES_SUB).forEach(borrarSub);
+  terminarRestauracion();
   document.body.classList.remove('tema-alumno-oscuro', 'tema-begin', 'tema-open', 'tema-exit', 'modo-demo');
   document.getElementById('view-splash').classList.add('hidden');
   document.getElementById('app-shell').classList.add('hidden');
@@ -217,6 +219,43 @@ const CLAVE_SECCION = 'uneq.seccionActiva';
 let seccionGuardadaAlCargar = null;
 try { seccionGuardadaAlCargar = JSON.parse(sessionStorage.getItem(CLAVE_SECCION) || 'null'); } catch (err) { /* sin almacenamiento: siempre al Dashboard */ }
 
+// Estado más fino que la sección (modo demo, ficha de alumno abierta, pantalla de Contenidos): también sobrevive al F5.
+const CLAVES_SUB = { demo: 'uneq.demo', ficha: 'uneq.ficha', contenidos: 'uneq.contenidos' };
+const subAlCargar = {};
+Object.entries(CLAVES_SUB).forEach(([k, clave]) => {
+  try { subAlCargar[k] = JSON.parse(sessionStorage.getItem(clave) || 'null'); } catch (err) { subAlCargar[k] = null; }
+});
+export function guardarSub(k, valor) { try { sessionStorage.setItem(CLAVES_SUB[k], JSON.stringify(valor)); } catch (err) { /* no pasa nada */ } }
+export function borrarSub(k) { try { sessionStorage.removeItem(CLAVES_SUB[k]); } catch (err) { /* no pasa nada */ } }
+// Lo que había al cargar la página; se entrega una sola vez (solo vale justo después de recargar).
+export function consumirSub(k) { const v = subAlCargar[k] || null; subAlCargar[k] = null; return v; }
+
+// Mientras se restaura, la pantalla de carga tapa la app: así no se ve pasar por el Dashboard ni por pantallas a medio cargar.
+if ((seccionGuardadaAlCargar && seccionGuardadaAlCargar.section !== 'dashboard') || subAlCargar.demo || subAlCargar.ficha) {
+  document.body.classList.add('restaurando');
+  setTimeout(() => terminarRestauracion(), 12000);   // por si algo falla: nunca dejar la app tapada
+}
+export function terminarRestauracion() { document.body.classList.remove('restaurando'); }
+
+const restauradores = {};
+export function registrarRestauradores(r) { Object.assign(restauradores, r); }
+
+// Se llama al terminar de entrar a la app: vuelve al modo demo, la sección y la ficha en que se estaba.
+export async function restaurarEstadoGuardado() {
+  try {
+    const demo = subAlCargar.demo; subAlCargar.demo = null;
+    if (demo && ['director', 'coach', 'mentor'].includes(currentRole) && restauradores.demo) await restauradores.demo(demo);
+    restaurarSeccionGuardada();
+    const ficha = consumirSub('ficha');
+    if (ficha && ficha.alumnoId && currentRole !== 'alumno' && restauradores.ficha) await restauradores.ficha(ficha);
+    await new Promise(r => setTimeout(r, 250));   // deja que la sección pinte su "Cargando…" antes de destapar
+  } catch (err) {
+    console.warn('No se pudo restaurar la vista anterior:', err);
+  } finally {
+    terminarRestauracion();
+  }
+}
+
 function guardarSeccionActiva(section) {
   if (!currentRole || ![...document.querySelectorAll('.nav-item[data-nav]')].some(i => i.dataset.nav === section)) return;
   try { sessionStorage.setItem(CLAVE_SECCION, JSON.stringify({ role: currentRole, section })); } catch (err) { /* no pasa nada */ }
@@ -238,6 +277,8 @@ export function setNav(section) {
   marcarNavActivo(section);
   document.body.classList.toggle('vista-ranking', section === 'ranking'); // fondo del espacio solo en el Ranking
   guardarSeccionActiva(section);
+  borrarSub('ficha');                                  // salir a otra sección cierra la ficha abierta
+  if (section !== 'contenidos') borrarSub('contenidos');
 
   if (section === 'dashboard') {
     const vista = currentRole === 'director' ? 'view-dashboard-director'
@@ -322,6 +363,7 @@ document.querySelectorAll('.tab[data-tab]').forEach(tab => {
     if (tab.classList.contains('is-locked')) return;
     document.querySelectorAll('.tab[data-tab]').forEach(t => t.classList.remove('is-active'));
     tab.classList.add('is-active');
+    try { const f = JSON.parse(sessionStorage.getItem(CLAVES_SUB.ficha) || 'null'); if (f) { f.tab = tab.dataset.tab; guardarSub('ficha', f); } } catch (err) { /* no pasa nada */ }
     document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('is-active'));
     const panel = document.querySelector(`.tab-panel[data-panel="${tab.dataset.tab}"]`);
     if (panel) panel.classList.add('is-active');

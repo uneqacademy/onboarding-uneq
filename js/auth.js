@@ -17,11 +17,16 @@ import {
   updatePassword
 } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-auth.js";
 import { ref, get, set } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-database.js";
-import { applyRole, showLogin, restaurarSeccionGuardada, RUTAS_AGENDAMIENTO } from './main.js';
+import { applyRole, showLogin, restaurarEstadoGuardado, terminarRestauracion, RUTAS_AGENDAMIENTO } from './main.js';
 
 // Un enlace a un hito (WhatsApp) manda sobre la sección recordada.
 async function abrirDestinoInicial() {
-  if (!(await abrirHitoDeEnlace())) restaurarSeccionGuardada();
+  try {
+    if (await abrirHitoDeEnlace()) terminarRestauracion();
+    else await restaurarEstadoGuardado();
+  } catch (err) {
+    terminarRestauracion();
+  }
 }
 import { initAlumnosModule } from './alumnos.js';
 import { cargarDashboardAlumno, cargarBoxAlumno } from './alumno-portal.js';

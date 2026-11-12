@@ -15,7 +15,7 @@ import { db, auth, storage } from './firebase-config.js';
 import { escaparHtml } from './util-html.js';
 import { ref, get, set, push, update, remove, onValue, query, limitToLast } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-database.js";
 import { ref as storageRef, uploadBytes, getDownloadURL, deleteObject } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-storage.js";
-import { getCurrentRole, getCurrentUserNombre, esModoDemo } from './main.js';
+import { getCurrentRole, getCurrentUserNombre, esModoDemo, guardarSub, consumirSub } from './main.js';
 import { marcaDemo, ocultarParaAlumno, cicloParaVista } from './demo.js';
 import { marcarClaseConcluida, marcarValoracion } from './puntos-marcas.js';
 import { iniciarSeguimiento } from './seguimiento-video.js';
@@ -254,9 +254,11 @@ export async function cargarContenidos() {
   estado.verTodo = role !== 'alumno';
   estado.verBorradores = estado.verTodo || esModoDemo();
   estado.vista = 'modulos'; estado.moduloId = null; estado.claseId = null;
+  const previo = consumirSub('contenidos');   // solo tras recargar la página: vuelve a la pantalla en que se estaba
   cont.innerHTML = '<p class="text-soft">Cargando...</p>';
   try {
     if (estado.verTodo) {
+      if (previo && PROGRAMAS_CONTENIDO.includes(previo.programa)) estado.programa = previo.programa;
       if (!estado.programa) estado.programa = 'begin';
       const uid = auth.currentUser ? auth.currentUser.uid : null;
       estado.alumnoId = null; estado.clave = uid; estado.miFoto = '';
@@ -275,6 +277,9 @@ export async function cargarContenidos() {
     }
     await recargarDatos();
     if (id !== cargaActual) return;
+    if (previo && ['modulos', 'modulo', 'leccion'].includes(previo.vista)) {
+      estado.vista = previo.vista; estado.moduloId = previo.moduloId || null; estado.claseId = previo.claseId || null;
+    }
     pintar();
   } catch (err) {
     console.error('No se pudieron cargar los contenidos:', err);
@@ -360,6 +365,7 @@ function pintar() {
   if (estado.vista === 'modulos') cont.innerHTML = vistaModulos(modulos);
   else if (estado.vista === 'modulo') cont.innerHTML = vistaModulo(actual[0], actual[1]);
   else cont.innerHTML = vistaLeccion(actual[0], actual[1], estado.claseId);
+  guardarSub('contenidos', { programa: estado.programa, vista: estado.vista, moduloId: estado.moduloId, claseId: estado.claseId });   // para volver aquí al recargar (F5)
 
   if (estado.vista === 'leccion') {
     const clase = actual[1].clases[estado.claseId];
