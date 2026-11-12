@@ -397,7 +397,8 @@ function modal(titulo, cuerpoHtml, onGuardar) {
       pintar();
     } catch (e) {
       console.error(e);
-      err.textContent = e.mensaje || 'No se pudo guardar. Intenta de nuevo.';
+      const detalle = e.code ? ` (${e.code.startsWith('storage/') ? 'al subir un archivo' : 'al guardar los datos'}: ${e.code})` : '';
+      err.textContent = e.mensaje || `No se pudo guardar. Intenta de nuevo.${detalle}`;
       err.classList.remove('hidden');
       btn.disabled = false;
     }
