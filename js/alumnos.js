@@ -18,6 +18,7 @@ import {
   crearCiclo, iniciarOnboardingSiCorresponde, generarAcuerdoYEnviarRevision,
   marcarEnviadoParaFirma, marcarFirmaProcesada, toggleCandado, renderStepper, renderAcciones
 } from './ciclos.js';
+import { getFaseDemo, setFaseDemo } from './demo.js';
 import { showView, marcarNavActivo, setNav, setCandado, aplicarBloqueoCamposFicha, getCurrentRole, getCurrentUserNombre, getCurrentRolesDisponibles, applyRole } from './main.js';
 import { cargarTestParaCiclo } from './test.js';
 import { cargarAcuerdoParaCiclo } from './pagos.js';
@@ -1834,8 +1835,15 @@ function mostrarBannerModoDemo(programa) {
     if (mainCol) mainCol.prepend(banner);
   }
   banner.innerHTML = `👁️ Viendo como Alumno Demo (${ETIQUETAS_DEMO[programa]}) — esto no es un alumno real, nada de lo que hagas acá cuenta en el sistema ni lo ven los alumnos.
+    <label style="display:flex; align-items:center; gap:6px;">Fase que simula: <select id="select-fase-demo" style="font-size:12px; padding:2px 6px;">${['Inicio (sin fase)', 'Fase 1', 'Fase 2', 'Fase 3', 'Fase 4', 'Final (egresado)'].map((x, i) => `<option value="${i}"${i === getFaseDemo() ? ' selected' : ''}>${x}</option>`).join('')}</select></label>
     <button type="button" id="btn-salir-modo-demo" class="btn btn--ghost" style="font-size:11px; padding:3px 12px; background:#fff;">🔙 Volver a mi vista</button>`;
   document.getElementById('btn-salir-modo-demo').addEventListener('click', salirModoDemo);
+  document.getElementById('select-fase-demo').addEventListener('change', ev => {
+    setFaseDemo(ev.target.value);
+    // Vuelve a cargar la sección abierta para que se vea con la nueva fase.
+    const activo = document.querySelector('.nav-item[data-nav].is-active');
+    if (activo) activo.click();
+  });
 }
 
 function salirModoDemo() {

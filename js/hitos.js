@@ -16,7 +16,7 @@ import { ref, get, set, push, update, remove } from "https://www.gstatic.com/fir
 import { ref as storageRef, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-storage.js";
 import { getCurrentRole } from './main.js';
 import { marcarCompartido } from './puntos-marcas.js';
-import { marcaDemo, ocultarParaAlumno, sinDemo } from './demo.js';
+import { marcaDemo, ocultarParaAlumno, sinDemo, cicloParaVista } from './demo.js';
 import { ordenarFijadasPrimero, registrarFijadas, botonFijar, etiquetaFijada } from './fijados.js';
 
 const FASES_HITOS = { fase1: 'Fase 1: Claridad y Fundamentos', fase2: 'Fase 2: Cliente Soñado', fase3: 'Fase 3: Oferta y Método', fase4: 'Fase 4: Acción y Sistemas' };
@@ -160,7 +160,7 @@ export async function cargarMisHitos() {
     if (cicloIdPropio) {
       const cicloSnap = await get(ref(db, `ciclos/${cicloIdPropio}`));
       if (cicloSnap.exists()) {
-        cicloPropio = cicloSnap.val();
+        cicloPropio = cicloParaVista(cicloSnap.val());
         programaPropio = cicloSnap.val().programa || null;
         idsProyectoPropio = Array.isArray(cicloSnap.val().alumnoIds) ? cicloSnap.val().alumnoIds : [alumnoIdPropio];
       }
