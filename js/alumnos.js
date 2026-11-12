@@ -19,6 +19,7 @@ import {
   marcarEnviadoParaFirma, marcarFirmaProcesada, toggleCandado, renderStepper, renderAcciones
 } from './ciclos.js';
 import { getFaseDemo, setFaseDemo } from './demo.js';
+import { guardarSub, borrarSub, registrarRestauradores } from './main.js';
 import { showView, marcarNavActivo, setNav, setCandado, aplicarBloqueoCamposFicha, getCurrentRole, getCurrentUserNombre, getCurrentRolesDisponibles, applyRole } from './main.js';
 import { cargarTestParaCiclo } from './test.js';
 import { cargarAcuerdoParaCiclo } from './pagos.js';
@@ -1084,6 +1085,7 @@ async function abrirFicha(alumnoId) {
   }
 
   showView('view-ficha-alumno');
+  guardarSub('ficha', { alumnoId, tab: 'datos' });
   marcarNavActivo('alumnos');
   document.getElementById('topbar-title').textContent = 'Ficha de Alumno';
 }
@@ -1847,6 +1849,7 @@ function mostrarBannerModoDemo(programa) {
 }
 
 function salirModoDemo() {
+  borrarSub('demo');
   const banner = document.getElementById('banner-modo-demo');
   if (banner) banner.remove();
   document.body.classList.remove('modo-demo');
@@ -1888,7 +1891,18 @@ async function verComoAlumnoDemo(programa) {
   document.dispatchEvent(new CustomEvent('modo-demo-alumno', { detail: { activo: true, alumnoId: demoId } }));
   await cargarDashboardAlumno(demoId);
   setNav('dashboard');
+  guardarSub('demo', programa);
 }
+
+// Al recargar la página (F5) se vuelve al modo demo y a la ficha que estaban abiertos.
+registrarRestauradores({
+  demo: programa => verComoAlumnoDemo(programa),
+  ficha: async ({ alumnoId, tab }) => {
+    await abrirFicha(alumnoId);
+    const t = tab && tab !== 'datos' ? document.querySelector(`.tab[data-tab="${tab}"]`) : null;
+    if (t && !t.classList.contains('hidden')) t.click();
+  }
+});
 
 // Botones "Ver como Alumno" (Dashboard de director, copiloto y mentor).
 document.querySelectorAll('.btn-ver-demo').forEach(b => b.addEventListener('click', () => verComoAlumnoDemo(b.dataset.programa)));

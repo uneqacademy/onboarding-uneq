@@ -1818,3 +1818,6 @@ body.tema-open .hitos-tab { color: #E9D3CD; }
 .ct-card.ct-drop-despues { box-shadow: 6px 0 0 var(--color-primary, #1b2a4e); }
 .ct-fila.ct-drop-antes { box-shadow: 0 -3px 0 var(--color-primary, #1b2a4e); }
 .ct-fila.ct-drop-despues { box-shadow: 0 3px 0 var(--color-primary, #1b2a4e); }
+
+/* Al recargar la página (F5) la pantalla de carga tapa la app hasta volver a donde se estaba. */
+body.restaurando #view-splash { display: flex !important; position: fixed; inset: 0; z-index: 99999; }
