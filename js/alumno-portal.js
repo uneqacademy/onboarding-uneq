@@ -21,6 +21,7 @@ import { initializeApp, deleteApp } from "https://www.gstatic.com/firebasejs/12.
 import { getCurrentRole } from './main.js';
 import { getAuth, createUserWithEmailAndPassword, signOut as signOutSecundaria, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-auth.js";
 import { programaLabel, testEsDe } from './ciclos.js';
+import { registrarTestsAnalisis, botonAnalisisHtml } from './analisis-test.js';
 import { ordenarFijadasPrimero, registrarFijadas, botonFijar, etiquetaFijada } from './fijados.js';
 
 function generarPassword() {
@@ -964,12 +965,13 @@ export async function cargarTestAlumnoCompleto() {
   const testsObj = testsSnap.exists() ? testsSnap.val() : {};
   const idsSocios = idsSnap.exists() ? idsSnap.val() : [];
   // Con dos socios en el ciclo, cada uno ve solo sus propios tests.
-  const tests = Object.values(testsObj).filter(t => testEsDe(t, alumnoIdActual, idsSocios)).sort((a, b) => b.completadoAt - a.completadoAt);
+  const tests = Object.entries(testsObj).map(([id, t]) => ({ id, ...t })).filter(t => testEsDe(t, alumnoIdActual, idsSocios)).sort((a, b) => b.completadoAt - a.completadoAt);
 
   if (!tests.length) {
     el.innerHTML = '<p class="text-soft">Aún no has completado el Test Brújula — tu copiloto te va a guiar en eso.</p>';
     return;
   }
+  registrarTestsAnalisis(alumno.cicloActualId, tests, [alumno.nombre, alumno.apellido].filter(Boolean).join(' '));
 
   const [ultimo, ...anteriores] = tests;
   const btnHistorialPagina = document.getElementById('btn-test-ver-historial');
@@ -979,7 +981,10 @@ export async function cargarTestAlumnoCompleto() {
   }
   el.innerHTML = `
     <div style="margin-bottom:24px;">
-      <p class="text-soft mb-16"><strong>Tu test más reciente</strong></p>
+      <div class="flex-between mb-16" style="gap:10px; flex-wrap:wrap;">
+        <p class="text-soft" style="margin:0;"><strong>Tu test más reciente</strong></p>
+        ${botonAnalisisHtml(ultimo)}
+      </div>
       ${renderDetalleCompletoTest(ultimo)}
     </div>
     ${anteriores.length ? `
@@ -995,10 +1000,10 @@ export async function cargarTestAlumnoCompleto() {
       const fila = document.createElement('div');
       fila.className = 'panel mb-16';
       fila.style.cssText = 'padding:14px; cursor:pointer;';
-      fila.innerHTML = `<strong>${fecha}</strong> <span class="text-soft" style="font-size:12px;">— clic para ver el detalle</span><div class="hidden" style="margin-top:12px;"></div>`;
+      fila.innerHTML = `<div class="flex-between" style="gap:10px; flex-wrap:wrap;"><span><strong>${fecha}</strong> <span class="text-soft" style="font-size:12px;">— clic para ver el detalle</span></span>${botonAnalisisHtml(t)}</div><div class="hidden" style="margin-top:12px;"></div>`;
       contenedorAnteriores.appendChild(fila);
 
-      const detalleDiv = fila.querySelector('div');
+      const detalleDiv = fila.querySelector(':scope > div.hidden');
       let expandido = false;
       fila.addEventListener('click', () => {
         expandido = !expandido;
