@@ -16,6 +16,7 @@ import { ref, get, set, push, update, remove } from "https://www.gstatic.com/fir
 import { ref as storageRef, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-storage.js";
 import { getCurrentRole } from './main.js';
 import { marcarCompartido } from './puntos-marcas.js';
+import { marcaDemo, ocultarParaAlumno, sinDemo } from './demo.js';
 import { ordenarFijadasPrimero, registrarFijadas, botonFijar, etiquetaFijada } from './fijados.js';
 
 const FASES_HITOS = { fase1: 'Fase 1: Claridad y Fundamentos', fase2: 'Fase 2: Cliente Soñado', fase3: 'Fase 3: Oferta y Método', fase4: 'Fase 4: Acción y Sistemas' };
@@ -260,7 +261,7 @@ export async function cargarHitosComunidad() {
 
   const todosLosHitos = hitosSnap.exists() ? Object.entries(hitosSnap.val()) : [];
   const hitosVisibles = todosLosHitos
-    .filter(([, h]) => !(h.estado === 'oculto_denuncia' && !esDirector))
+    .filter(([, h]) => !(h.estado === 'oculto_denuncia' && !esDirector) && !ocultarParaAlumno(h))
     .map(([id, h]) => [id, { ...h, coachId: coachPorProyecto[h.proyectoId] || '' }])
     .sort((a, b) => b[1].createdAt - a[1].createdAt);
 
@@ -439,7 +440,7 @@ function etiquetaProgramaHito(p) {
 }
 
 function renderMiniaturasReacciones(hitoId, reacciones) {
-  const lista = Object.values(reacciones || {});
+  const lista = Object.values(sinDemo(reacciones) || {});
   if (!lista.length) return '';
   const PLACEHOLDER = 'https://app.uneqacademy.com/assets/logos/isotipo-uneq.png';
   const primeras5 = lista.slice(0, 5);
@@ -453,7 +454,7 @@ function renderMiniaturasReacciones(hitoId, reacciones) {
 }
 
 function comentariosVisibles(comentarios, esDirector) {
-  return Object.entries(comentarios || {})
+  return Object.entries(sinDemo(comentarios) || {})
     .filter(([, c]) => c && (c.estado !== 'oculto_denuncia' || esDirector))
     .sort((a, b) => a[1].createdAt - b[1].createdAt);
 }
@@ -463,7 +464,7 @@ const VENTANA_EDICION_MS = 24 * 60 * 60 * 1000;
 function dentroDeVentana(createdAt) { return (Date.now() - createdAt) < VENTANA_EDICION_MS; }
 
 function renderRespuestasComentario(hitoId, comentarioId, respuestas, fotoAutorHito, nombreAutorHito, esAutorHito, esDirector) {
-  const lista = Object.entries(respuestas || {}).sort((a, b) => a[1].createdAt - b[1].createdAt);
+  const lista = Object.entries(sinDemo(respuestas) || {}).sort((a, b) => a[1].createdAt - b[1].createdAt);
   if (!lista.length) return '';
   return `<div class="hito-comentario-respuestas">${lista.map(([respuestaId, r]) => `
     <div class="hito-comentario-respuesta" data-respuesta-id="${respuestaId}">
@@ -475,7 +476,7 @@ function renderRespuestasComentario(hitoId, comentarioId, respuestas, fotoAutorH
 
 // Reacción (❤️) a un comentario específico: un toggle por persona, con el total.
 function botonReaccionComentario(comentario, uidActual, atributos) {
-  const reacciones = comentario.reacciones || {};
+  const reacciones = sinDemo(comentario.reacciones) || {};
   const total = Object.keys(reacciones).length;
   const yaReacciono = !!(uidActual && reacciones[uidActual]);
   return `<button type="button" class="btn-reaccion-comentario ${yaReacciono ? 'is-activa' : ''}" ${atributos} title="${yaReacciono ? 'Quitar mi reacción' : 'Reaccionar a este comentario'}">❤️${total ? ' ' + total : ''}</button>`;
@@ -590,7 +591,7 @@ function renderFeedHitos(hitosVisibles, usuarios, ctx) {
     const puedeEditar = (esAutor && dentroDe24hHito) || ctx.esDirector;
     const puedeDenunciar = ctx.esAlumno && !esAutor;
     const yaReacciono = h.reacciones && h.reacciones[ctx.uid];
-    const totalReacciones = h.reacciones ? Object.keys(h.reacciones).length : 0;
+    const totalReacciones = h.reacciones ? Object.keys(sinDemo(h.reacciones)).length : 0;
     const esDenunciado = h.estado === 'oculto_denuncia';
     const totalComentarios = comentariosVisibles(h.comentarios, ctx.esDirector).length;
     const comentariosExpandidos = hitosComentariosExpandidos.has(hitoId);
@@ -704,6 +705,7 @@ if (btnPublicarHito) {
       await set(nuevoRef, {
         proyectoId: cicloId,
         alumnoIdPublicador: alumnoId,
+        ...marcaDemo(),
         nombreAutor,
         programa: ciclo.programa || null,
         fase: hitoDef.fase,
@@ -750,6 +752,7 @@ async function enviarComentario(hitoId, texto, recargarFn) {
     autorId: uid,
     autorNombre,
     autorTipo: esAlumno ? 'alumno' : 'staff',
+    ...marcaDemo(),
     texto: texto.trim(),
     createdAt: Date.now(),
     estado: 'visible'
@@ -823,7 +826,7 @@ function activarInteraccionFeed(feedEl, recargarFn) {
           nombre = u.nombre || '';
           fotoUrl = u.fotoUrl || '';
         }
-        await set(refReaccion, { nombre, fotoUrl, createdAt: Date.now() });
+        await set(refReaccion, { nombre, fotoUrl, createdAt: Date.now(), ...marcaDemo() });
       }
       await recargarFn();
       return;
@@ -843,7 +846,7 @@ function activarInteraccionFeed(feedEl, recargarFn) {
     if (btnVerTodasReacciones) {
       const hitoId = btnVerTodasReacciones.dataset.hitoId;
       const snap = await get(ref(db, `hitos/${hitoId}/reacciones`));
-      const lista = Object.values(snap.exists() ? snap.val() : {});
+      const lista = Object.values(sinDemo(snap.exists() ? snap.val() : {}) || {});
       const PLACEHOLDER = 'https://app.uneqacademy.com/assets/logos/isotipo-uneq.png';
       const modal = document.getElementById('hito-modal-reacciones');
       const listaEl = document.getElementById('hito-modal-reacciones-lista');
@@ -966,7 +969,7 @@ function activarInteraccionFeed(feedEl, recargarFn) {
             nombre = u.nombre || '';
             fotoUrl = u.fotoUrl || '';
           }
-          await set(refReaccion, { nombre, fotoUrl });
+          await set(refReaccion, { nombre, fotoUrl, ...marcaDemo() });
         }
         await recargarFn();
       } catch (err) {
@@ -1038,7 +1041,7 @@ function activarInteraccionFeed(feedEl, recargarFn) {
         autorNombre = nombrePublicoDeAlumno(a);
       }
       await set(push(ref(db, `hitos/${hitoId}/comentarios/${comentarioId}/respuestas`)), {
-        autorId: uid, autorNombre, texto: input.value.trim(), createdAt: Date.now()
+        autorId: uid, autorNombre, texto: input.value.trim(), createdAt: Date.now(), ...marcaDemo()
       });
       await recargarFn();
       return;

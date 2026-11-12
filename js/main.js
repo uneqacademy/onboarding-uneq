@@ -94,7 +94,8 @@ export function applyRole(role, nombre, rolesDisponibles) {
   // Contenidos (clases): por ahora solo el staff (el director las administra; mentores y
   // copilotos las ven). Los alumnos NO la ven hasta que esté lista al 100%.
   const navContenidos = document.querySelector('.nav-item[data-nav="contenidos"]');
-  if (navContenidos) navContenidos.classList.toggle('hidden', !['director', 'mentor', 'coach'].includes(role));
+  // El Alumno Demo (modo demo) también la ve, para poder presentarla.
+  if (navContenidos) navContenidos.classList.toggle('hidden', !(['director', 'mentor', 'coach'].includes(role) || (role === 'alumno' && esModoDemo())));
 
   const navMentoriasMentor = document.querySelector('.nav-item[data-nav="mentorias-mentor"]');
   if (navMentoriasMentor) navMentoriasMentor.classList.toggle('hidden', role !== 'mentor');
@@ -157,7 +158,7 @@ function renderSelectorRol() {
 
 export function showLogin() {
   try { sessionStorage.removeItem(CLAVE_SECCION); } catch (err) { /* no pasa nada */ }
-  document.body.classList.remove('tema-alumno-oscuro', 'tema-begin', 'tema-open', 'tema-exit');
+  document.body.classList.remove('tema-alumno-oscuro', 'tema-begin', 'tema-open', 'tema-exit', 'modo-demo');
   document.getElementById('view-splash').classList.add('hidden');
   document.getElementById('app-shell').classList.add('hidden');
   document.getElementById('view-login').classList.remove('hidden');
@@ -166,6 +167,8 @@ export function showLogin() {
 }
 
 export function getCurrentRole() { return currentRole; }
+// "Modo demo": director, copiloto o mentor viendo la app como Alumno Demo (lo marca alumnos.js).
+export function esModoDemo() { return document.body.classList.contains('modo-demo'); }
 export function getCurrentUserNombre() { return currentNombre; }
 export function getCurrentRolesDisponibles() { return currentRolesDisponibles; }
 

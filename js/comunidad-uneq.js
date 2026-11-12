@@ -18,6 +18,7 @@ import { cargarHitosComunidad } from './hitos.js';
 import { cargarPreguntasComunidad } from './alumno-portal.js';
 import { marcarCompartido } from './puntos-marcas.js';
 import { ordenarFijadasPrimero, registrarFijadas, botonFijar } from './fijados.js';
+import { marcaDemo, ocultarParaAlumno, sinDemo } from './demo.js';
 
 const VENTANA_EDICION_MS = 24 * 60 * 60 * 1000;
 const TAMANO_MAXIMO_FOTO = 10 * 1024 * 1024;
@@ -331,7 +332,7 @@ async function obtenerContextoAlumno(uid) {
    ============================================================ */
 
 function renderRespuestasSociales(basePath, comentarioId, respuestas, nombreDueño, esDueño, esDirector) {
-  const lista = Object.entries(respuestas || {}).sort((a, b) => a[1].createdAt - b[1].createdAt);
+  const lista = Object.entries(sinDemo(respuestas) || {}).sort((a, b) => a[1].createdAt - b[1].createdAt);
   if (!lista.length) return '';
   return `<div class="hito-comentario-respuestas">${lista.map(([respuestaId, r]) => `
     <div class="hito-comentario-respuesta" data-respuesta-id="${respuestaId}">
@@ -343,14 +344,14 @@ function renderRespuestasSociales(basePath, comentarioId, respuestas, nombreDue�
 
 // Reacción (❤️) a un comentario específico: un toggle por persona, con el total.
 function botonReaccionComentarioSocial(comentario, uid, basePath, comentarioId) {
-  const reacciones = comentario.reacciones || {};
+  const reacciones = sinDemo(comentario.reacciones) || {};
   const total = Object.keys(reacciones).length;
   const yaReacciono = !!(uid && reacciones[uid]);
   return `<button type="button" class="btn-reaccion-comentario-social ${yaReacciono ? 'is-activa' : ''}" data-base-path="${escaparHtml(basePath)}" data-comentario-id="${escaparHtml(comentarioId)}" title="${yaReacciono ? 'Quitar mi reacción' : 'Reaccionar a este comentario'}">❤️${total ? ' ' + total : ''}</button>`;
 }
 
 function renderComentariosSociales(basePath, comentarios, esDirector, uid, nombreDueño, esDueño, expandido) {
-  const todos = Object.entries(comentarios || {}).sort((a, b) => a[1].createdAt - b[1].createdAt);
+  const todos = Object.entries(sinDemo(comentarios) || {}).sort((a, b) => a[1].createdAt - b[1].createdAt);
   if (!todos.length) return '<p class="text-soft" style="font-size:12px;">Sin comentarios todavía.</p>';
   const lista = expandido ? todos : todos.slice(-2);
   return lista.map(([comentarioId, c]) => `
@@ -374,8 +375,8 @@ function renderComentariosSociales(basePath, comentarios, esDirector, uid, nombr
 function renderTarjetaSocial(basePath, id, item, ctx) {
   const { esDirector, uid, autorFotoUrl, esDueño, puedeEditar, puedeEliminar, onEditar, extraFooterHtml, ocultarCompartirGenerico, extraBotonesHtml } = ctx;
   const yaReacciono = item.reacciones && item.reacciones[uid];
-  const totalReacciones = item.reacciones ? Object.keys(item.reacciones).length : 0;
-  const totalComentarios = Object.keys(item.comentarios || {}).length;
+  const totalReacciones = item.reacciones ? Object.keys(sinDemo(item.reacciones)).length : 0;
+  const totalComentarios = Object.keys(sinDemo(item.comentarios) || {}).length;
   const comentariosExpandidos = tarjetasComentariosExpandidos.has(basePath);
   return `
   <div class="panel mb-16" id="social-${id}" data-base-path="${basePath}" data-es-dueño="${esDueño ? '1' : '0'}" data-nombre-dueño="${(item.alumnoNombre || '').replace(/"/g, '&quot;')}" data-on-editar="${onEditar || ''}" ${item.titulo !== undefined ? `data-titulo-original="${escaparHtml(item.titulo)}"` : ''}>
@@ -419,7 +420,7 @@ function renderTarjetaSocial(basePath, id, item, ctx) {
 }
 
 function renderMiniaturasReaccionesSociales(basePath, reacciones) {
-  const lista = Object.values(reacciones || {});
+  const lista = Object.values(sinDemo(reacciones) || {});
   if (!lista.length) return '';
   const primeras5 = lista.slice(0, 5);
   return `<div style="display:flex; align-items:center; margin-top:8px;">
@@ -464,7 +465,7 @@ function activarInteraccionSocial() {
         if ((await get(refReaccion)).exists()) { await remove(refReaccion); }
         else {
           const perfil = await datosPerfilActual();
-          await set(refReaccion, { nombre: perfil.nombre, fotoUrl: perfil.fotoUrl, createdAt: Date.now() });
+          await set(refReaccion, { nombre: perfil.nombre, fotoUrl: perfil.fotoUrl, createdAt: Date.now(), ...marcaDemo() });
         }
         recargarTarjeta(basePath);
       } catch (err) { console.error('No se pudo reaccionar:', err); }
@@ -479,7 +480,7 @@ function activarInteraccionSocial() {
         if ((await get(refReaccion)).exists()) { await remove(refReaccion); }
         else {
           const perfil = await datosPerfilActual();
-          await set(refReaccion, { nombre: perfil.nombre, fotoUrl: perfil.fotoUrl });
+          await set(refReaccion, { nombre: perfil.nombre, fotoUrl: perfil.fotoUrl, ...marcaDemo() });
         }
         recargarTarjeta(basePath);
       } catch (err) {
@@ -545,7 +546,7 @@ function activarInteraccionSocial() {
       try {
         const perfil = await datosPerfilActual();
         await set(push(ref(db, `${basePath}/comentarios`)), {
-          autorId: uid, autorNombre: perfil.nombre, autorFotoUrl: perfil.fotoUrl, autorTipo: perfil.tipo,
+          autorId: uid, autorNombre: perfil.nombre, autorFotoUrl: perfil.fotoUrl, autorTipo: perfil.tipo, ...marcaDemo(),
           texto: input.value.trim(), createdAt: Date.now()
         });
         input.value = '';
@@ -589,7 +590,7 @@ function activarInteraccionSocial() {
       try {
         const perfil = await datosPerfilActual();
         await set(push(ref(db, `${basePath}/comentarios/${comentarioId}/respuestas`)), {
-          autorId: uid, autorNombre: perfil.nombre, texto: input.value.trim(), createdAt: Date.now()
+          autorId: uid, autorNombre: perfil.nombre, texto: input.value.trim(), createdAt: Date.now(), ...marcaDemo()
         });
         recargarTarjeta(basePath);
       } catch (err) { console.error('No se pudo responder:', err); alert('No se pudo enviar la respuesta. Intenta de nuevo.'); }
@@ -715,7 +716,7 @@ async function cargarPreguntasLibres() {
   }
   preguntasLibresActuales = Object.entries(snap.exists() ? snap.val() : {})
     .map(([id, p]) => ({ id, ...p }))
-    .filter(p => esDirector || p.estado !== 'oculta');
+    .filter(p => (esDirector || p.estado !== 'oculta') && !ocultarParaAlumno(p));
   registrarFijadas('preguntaslibres', preguntasLibresActuales, p => p.fijadaEn);
 
   function render() {
@@ -772,7 +773,7 @@ async function cargarPreguntasLibres() {
           autorId: uid, alumnoId: ctxAlumno.alumnoId || null,
           alumnoNombre: perfil.nombre || ctxAlumno.nombre || 'Alguien',
           autorFotoUrl: perfil.fotoUrl || '', programa: ctxAlumno.programa || null,
-          titulo, texto, createdAt: Date.now()
+          titulo, texto, createdAt: Date.now(), ...marcaDemo()
         });
         document.getElementById('plc-titulo-form').value = '';
         document.getElementById('plc-texto-form').value = '';
@@ -844,7 +845,7 @@ async function cargarPresentacion() {
   // alumno, o (si es BEGIN) del coach de cabecera BEGIN — no de
   // cualquier coach.
   const esCoachCabeceraBegin = esCoach && !!(propioUsuarioSnap && propioUsuarioSnap.exists() && propioUsuarioSnap.val().coachCabeceraBegin);
-  const todas = presSnap.exists() ? Object.entries(presSnap.val()) : [];
+  const todas = presSnap.exists() ? Object.entries(presSnap.val()).filter(([id, p]) => !ocultarParaAlumno({ alumnoId: id, ...p })) : [];
 
   const conDatos = todas.map(([alumnoId, p]) => {
     const alumno = alumnos[alumnoId] || {};
@@ -962,7 +963,7 @@ async function renderPropiaPresentacion(ctxAlumno) {
       try {
         const fotos = await subirFotos('comunidad-presentaciones', ctxAlumno.alumnoId, fotosSeleccionadasPres);
         await set(ref(db, `comunidad/presentaciones/${ctxAlumno.alumnoId}`), {
-          texto, estado: 'pendiente', createdAt: Date.now(), alumnoNombre: ctxAlumno.nombre, fotos, programa: ctxAlumno.programa || null
+          texto, estado: 'pendiente', createdAt: Date.now(), alumnoNombre: ctxAlumno.nombre, fotos, programa: ctxAlumno.programa || null, ...marcaDemo()
         });
         fotosSeleccionadasPres.length = 0;
         btn.disabled = false; btn.textContent = 'Enviar presentación';
@@ -1022,7 +1023,7 @@ async function cargarHistoriasReales() {
   Object.entries(alumnos).forEach(([id, a]) => { if (a.authUid) alumnoPorAuthUid[a.authUid] = { id, ...a }; });
 
   let todas = historiasSnap.exists() ? Object.entries(historiasSnap.val()) : [];
-  todas = todas.filter(([, h]) => esDirector || h.estado !== 'oculta')
+  todas = todas.filter(([, h]) => (esDirector || h.estado !== 'oculta') && !ocultarParaAlumno(h))
     .map(([id, h]) => {
       const alumno = alumnoPorAuthUid[h.autorId] || {};
       const ciclo = alumno.cicloActualId ? ciclos[alumno.cicloActualId] : null;
@@ -1108,7 +1109,7 @@ async function cargarHistoriasReales() {
       try {
         const nuevoRef = push(ref(db, 'comunidad/historiasReales'));
         const fotos = await subirFotos('comunidad-historias', nuevoRef.key, fotosSeleccionadasHist);
-        await set(nuevoRef, { autorId: uid, alumnoId: ctxAlumno.alumnoId || null, alumnoNombre: ctxAlumno.nombre, texto, createdAt: Date.now(), fotos, programa: ctxAlumno.programa || null });
+        await set(nuevoRef, { autorId: uid, alumnoId: ctxAlumno.alumnoId || null, alumnoNombre: ctxAlumno.nombre, texto, createdAt: Date.now(), fotos, programa: ctxAlumno.programa || null, ...marcaDemo() });
         fotosSeleccionadasHist.length = 0;
         document.getElementById('hist-texto-form').value = '';
         document.getElementById('hist-fotos-preview').innerHTML = '';

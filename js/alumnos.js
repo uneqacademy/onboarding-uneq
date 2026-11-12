@@ -1791,6 +1791,10 @@ async function asegurarAlumnoDemo(programa) {
     return demoId;
   }
 
+  if (getCurrentRole() === 'mentor') {
+    alert('Este Alumno Demo todavía no existe. Pídele a la Dirección que lo active una vez con "Ver como Alumno" en su Dashboard.');
+    return null;
+  }
   const hoy = new Date().toISOString().slice(0, 10);
   await set(ref(db, `alumnos/${demoId}`), {
     nombre: 'Alumno Demo',
@@ -1829,14 +1833,15 @@ function mostrarBannerModoDemo(programa) {
     const mainCol = document.querySelector('.main');
     if (mainCol) mainCol.prepend(banner);
   }
-  banner.innerHTML = `👁️ Viendo como Alumno Demo (${ETIQUETAS_DEMO[programa]}) — esto no es un alumno real, nada de lo que hagas acá cuenta en el sistema.
-    <button type="button" id="btn-salir-modo-demo" class="btn btn--ghost" style="font-size:11px; padding:3px 12px; background:#fff;">🔙 Volver a Director</button>`;
+  banner.innerHTML = `👁️ Viendo como Alumno Demo (${ETIQUETAS_DEMO[programa]}) — esto no es un alumno real, nada de lo que hagas acá cuenta en el sistema ni lo ven los alumnos.
+    <button type="button" id="btn-salir-modo-demo" class="btn btn--ghost" style="font-size:11px; padding:3px 12px; background:#fff;">🔙 Volver a mi vista</button>`;
   document.getElementById('btn-salir-modo-demo').addEventListener('click', salirModoDemo);
 }
 
 function salirModoDemo() {
   const banner = document.getElementById('banner-modo-demo');
   if (banner) banner.remove();
+  document.body.classList.remove('modo-demo');
   document.dispatchEvent(new CustomEvent('modo-demo-alumno', { detail: { activo: false } }));
   const uidActual = auth.currentUser ? auth.currentUser.uid : null;
   const restaurar = async () => {
@@ -1856,18 +1861,20 @@ function salirModoDemo() {
 }
 
 async function verComoAlumnoDemo(programa) {
-  if (getCurrentRole() !== 'director') return;
+  if (!['director', 'coach', 'mentor'].includes(getCurrentRole())) return;
   const uid = auth.currentUser ? auth.currentUser.uid : null;
   if (!uid) return;
   if (!estadoDirectorAntesDeDemo) {
     estadoDirectorAntesDeDemo = { rol: getCurrentRole(), nombre: getCurrentUserNombre(), roles: getCurrentRolesDisponibles() };
   }
   const demoId = await asegurarAlumnoDemo(programa);
+  if (!demoId) { estadoDirectorAntesDeDemo = null; return; }
   // Sin esto, las reglas de seguridad rechazarían cualquier escritura
   // "como alumno" (preguntas al BOX, Preguntas en Vivo, etc.) — el
   // director sigue autenticado con su propia cuenta, así que esta
   // cuenta necesita, temporalmente, mapear también a este alumno.
   await update(ref(db, 'alumnoPorAuthUid'), { [uid]: demoId });
+  document.body.classList.add('modo-demo'); // antes de applyRole: así el menú muestra lo del demo
   applyRole('alumno', `Alumno Demo (${ETIQUETAS_DEMO[programa]})`, ['alumno']);
   mostrarBannerModoDemo(programa);
   document.dispatchEvent(new CustomEvent('modo-demo-alumno', { detail: { activo: true, alumnoId: demoId } }));
@@ -1875,14 +1882,8 @@ async function verComoAlumnoDemo(programa) {
   setNav('dashboard');
 }
 
-const btnVerDemoOpen = document.getElementById('btn-ver-demo-open');
-if (btnVerDemoOpen) btnVerDemoOpen.addEventListener('click', () => verComoAlumnoDemo('open'));
-const btnVerDemoBegin = document.getElementById('btn-ver-demo-begin');
-if (btnVerDemoBegin) btnVerDemoBegin.addEventListener('click', () => verComoAlumnoDemo('begin'));
-const btnVerDemoNext = document.getElementById('btn-ver-demo-next');
-if (btnVerDemoNext) btnVerDemoNext.addEventListener('click', () => verComoAlumnoDemo('next'));
-const btnVerDemoExit = document.getElementById('btn-ver-demo-exit');
-if (btnVerDemoExit) btnVerDemoExit.addEventListener('click', () => verComoAlumnoDemo('exit'));
+// Botones "Ver como Alumno" (Dashboard de director, copiloto y mentor).
+document.querySelectorAll('.btn-ver-demo').forEach(b => b.addEventListener('click', () => verComoAlumnoDemo(b.dataset.programa)));
 
 /* ============================================================
    Agregar Socio/a — otra persona que comparte el mismo proyecto
