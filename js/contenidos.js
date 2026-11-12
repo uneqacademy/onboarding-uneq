@@ -419,9 +419,8 @@ function tarjetaModulo(mid, m, i, n) {
   const img = urlSegura(m.portadaUrl) ? `<img src="${escaparHtml(m.portadaUrl)}" alt="">` : '<div class="ct-card__vacia">📚</div>';
   const etqs = [
     m.publicado === false ? '<span class="ct-etq">Borrador</span>' : '',
-    m._origen === 'comun' && estado.programa !== 'comun' ? '<span class="ct-etq">🌐 Base común</span>' : '',
-    estado.verTodo && (Number(m.desdeFase) || 0) > 0 ? `<span class="ct-etq">${escaparHtml(TEXTOS_FASE[m.desdeFase] || '')}</span>` : '',
-    bloq ? `<span class="ct-etq">🔒 ${escaparHtml(TEXTOS_FASE[m.desdeFase] || '')}</span>` : ''
+    estado.verTodo && m._origen === 'comun' && estado.programa !== 'comun' ? '<span class="ct-etq">🌐 Base común</span>' : '',
+    estado.verTodo && (Number(m.desdeFase) || 0) > 0 ? `<span class="ct-etq">${escaparHtml(TEXTOS_FASE[m.desdeFase] || '')}</span>` : ''
   ].join('');
   return `
     <article${arrastrable()} class="ct-card${bloq ? ' is-bloqueado' : ''}${estado.seleccion.has(mid) ? ' is-sel' : ''}" ${bloq ? 'data-bloq="1" aria-disabled="true"' : 'data-act="ir-modulo"'} data-m="${mid}" data-fase="${escaparHtml(TEXTOS_FASE[m.desdeFase] || '')}">
@@ -449,7 +448,7 @@ function vistaModulo(mid, m) {
       ${urlSegura(c.portadaUrl) ? `<img class="ct-portada ct-portada--mini" src="${escaparHtml(c.portadaUrl)}" alt="">` : ''}
       <span class="ct-fila__titulo">${escaparHtml(c.titulo || 'Lección sin título')}
         ${c.publicado === false ? '<span class="ct-etq ct-etq--borrador">Borrador</span>' : ''}
-        ${m._origen === 'comun' && c.excluirDe && PROGRAMAS_REALES.some(p => c.excluirDe[p]) ? `<span class="ct-etq">No va en: ${PROGRAMAS_REALES.filter(p => c.excluirDe[p]).map(p => escaparHtml(programaLabel(p))).join(', ')}</span>` : ''}
+        ${estado.verTodo && m._origen === 'comun' && c.excluirDe && PROGRAMAS_REALES.some(p => c.excluirDe[p]) ? `<span class="ct-etq">No va en: ${PROGRAMAS_REALES.filter(p => c.excluirDe[p]).map(p => escaparHtml(programaLabel(p))).join(', ')}</span>` : ''}
         ${(c.materiales && Object.keys(c.materiales).length) ? '<span title="Tiene material">📎</span>' : ''}</span>
       ${Number(c.duracionMin) > 0 ? `<span class="ct-fila__dur">${ICONO_RELOJ} ${Number(c.duracionMin)} minutos</span>` : ''}
       <span class="ct-fila__estado${vista ? ' is-vista' : ''}" data-est="${cid}">${vista ? ICONO_CHECK : ICONO_PLAY}</span>
