@@ -523,8 +523,8 @@ function escucharComentarios(cid) {
               <div class="ct-com__cuerpo">${cabeceraComentario(cid, h, yo)}<p class="ct-com__texto">${textoMultilinea(h.texto)}</p></div>
             </div>`).join('')}</div>
           <div class="ct-com__form hidden" data-form="${escaparHtml(r.k)}">
-            <textarea maxlength="1000" rows="2" placeholder="Escribe una respuesta..."></textarea>
-            <button type="button" class="btn btn--primary" data-act="com-resp-enviar" data-c="${cid}" data-k="${escaparHtml(r.k)}">Responder</button>
+            <textarea maxlength="1000" rows="1" placeholder="Escribe una respuesta..."></textarea>
+            <button type="button" class="ct-com-enviar" data-act="com-resp-enviar" data-c="${cid}" data-k="${escaparHtml(r.k)}" title="Responder">➤</button>
           </div>
         </div>
       </div>`).join('') : '<p class="text-soft" style="margin:0;">Aún no hay comentarios. ¡Sé el primero!</p>';
