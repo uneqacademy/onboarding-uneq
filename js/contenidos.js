@@ -24,6 +24,8 @@ import { faseMaximaChecklist } from './hitos.js';
 
 // 'comun' es la base que se repite en todos los programas: se sube una sola vez y aparece en los cuatro.
 const PROGRAMAS_CONTENIDO = ['comun', 'open', 'begin', 'next', 'exit'];
+const PROGRAMAS_REALES = ['open', 'begin', 'next', 'exit'];
+const excluidaDe = (c, p) => !!(c && c.excluirDe && c.excluirDe[p]);
 const etiquetaPrograma = p => p === 'comun' ? '🌐 Base común' : programaLabel(p);
 // Los módulos de la base común solo se editan desde su pestaña; en los programas se ven y ya.
 const puedeEditar = m => estado.esDirector && (estado.programa === 'comun' || !m || m._origen !== 'comun');
@@ -298,12 +300,18 @@ function moduloBloqueado(m) {
 }
 function visibles() {
   // Para el alumno: solo módulos y clases publicados.
-  return ordenar(estado.datos)
-    .filter(([, m]) => estado.verBorradores || m.publicado !== false)
-    .map(([id, m]) => [id, {
-      ...m,
-      clases: Object.fromEntries(clasesDe(m).filter(([, c]) => estado.verBorradores || c.publicado !== false))
-    }]);
+  // En un programa, de la base común se quitan las lecciones que el director sacó de ese programa;
+  // si un módulo común se queda sin ninguna, tampoco se muestra.
+  const enPrograma = estado.programa !== 'comun';
+  const resultado = [];
+  ordenar(estado.datos).forEach(([id, m]) => {
+    if (!estado.verBorradores && m.publicado === false) return;
+    const todas = clasesDe(m);
+    const clases = todas.filter(([, c]) => (estado.verBorradores || c.publicado !== false) && !(enPrograma && excluidaDe(c, estado.programa)));
+    if (enPrograma && m._origen === 'comun' && todas.length && !clases.length && todas.every(([, c]) => excluidaDe(c, estado.programa))) return;
+    resultado.push([id, { ...m, clases: Object.fromEntries(clases) }]);
+  });
+  return resultado;
 }
 
 function irA(vista, moduloId = null, claseId = null) {
@@ -428,6 +436,7 @@ function vistaModulo(mid, m) {
       ${urlSegura(c.portadaUrl) ? `<img class="ct-portada ct-portada--mini" src="${escaparHtml(c.portadaUrl)}" alt="">` : ''}
       <span class="ct-fila__titulo">${escaparHtml(c.titulo || 'Lección sin título')}
         ${c.publicado === false ? '<span class="ct-etq ct-etq--borrador">Borrador</span>' : ''}
+        ${estado.programa === 'comun' && c.excluirDe && PROGRAMAS_REALES.some(p => c.excluirDe[p]) ? `<span class="ct-etq">No va en: ${PROGRAMAS_REALES.filter(p => c.excluirDe[p]).map(p => escaparHtml(programaLabel(p))).join(', ')}</span>` : ''}
         ${(c.materiales && Object.keys(c.materiales).length) ? '<span title="Tiene material">📎</span>' : ''}</span>
       ${Number(c.duracionMin) > 0 ? `<span class="ct-fila__dur">${ICONO_RELOJ} ${Number(c.duracionMin)} minutos</span>` : ''}
       <span class="ct-fila__estado${vista ? ' is-vista' : ''}" data-est="${cid}">${vista ? ICONO_CHECK : ICONO_PLAY}</span>
@@ -877,11 +886,17 @@ function editarClase(mid, cid) {
     <div class="field mb-16"><label>Materiales (PDF)</label><div id="ct-c-mats"></div>
       <button type="button" class="btn btn--ghost" id="ct-c-addmat" style="font-size:12px; margin-top:6px;">+ Agregar PDF</button>
       <input type="file" id="ct-c-file" accept="application/pdf,.pdf" class="hidden"></div>
+    ${estado.programa === 'comun' ? `<div class="field mb-16"><label>Aparece en estos programas</label><div style="display:flex; gap:14px; flex-wrap:wrap; font-size:13.5px;">${PROGRAMAS_REALES.map(p => `<label style="display:flex; gap:6px; align-items:center;"><input type="checkbox" class="ct-c-prog" data-p="${p}" ${excluidaDe(c, p) ? '' : 'checked'}> ${escaparHtml(programaLabel(p))}</label>`).join('')}</div><p class="text-soft" style="font-size:12px; margin:4px 0 0;">Desmarca un programa para sacar esta lección de ahí (el resto de la base común sigue).</p></div>` : ''}
     <label style="display:flex; gap:8px; align-items:center; font-size:13.5px;"><input type="checkbox" id="ct-c-pub" ${!c || c.publicado !== false ? 'checked' : ''}> Publicada (visible para los alumnos)</label>`,
   async ov => {
     const titulo = val(ov, '#ct-c-titulo');
     if (!titulo) throw fallo('Escribe el título de la clase.');
     const campos = { titulo, descripcion: val(ov, '#ct-c-desc'), publicado: ov.querySelector('#ct-c-pub').checked };
+    if (estado.programa === 'comun') {
+      const fuera = {};
+      ov.querySelectorAll('.ct-c-prog').forEach(x => { if (!x.checked) fuera[x.dataset.p] = true; });
+      campos.excluirDe = Object.keys(fuera).length ? fuera : null;
+    }
     campos.duracionMin = Number(val(ov, '#ct-c-dur')) > 0 ? Math.round(Number(val(ov, '#ct-c-dur'))) : null;
     const codigo = ov.querySelector('#ct-c-embed').value.trim();
     // Si se cambia el video y la duración no se tocó a mano, se vuelve a medir sola.
