@@ -31,7 +31,9 @@ const estado = {
   faseMax: 0,
   esDirector: false,  // administra (crear/editar/ordenar/borrar)
   verTodo: false,     // staff: ve todos los programas, sin candado ni progreso
-  claseAbierta: null  // { moduloId, claseId }
+  vista: 'modulos',   // 'modulos' (tablero) | 'modulo' (lecciones) | 'leccion'
+  moduloId: null,
+  claseId: null
 };
 let cargaActual = 0;
 let scriptsPlayer = [];
@@ -112,7 +114,7 @@ export async function cargarContenidos() {
   const id = ++cargaActual;
   estado.esDirector = role === 'director';
   estado.verTodo = role !== 'alumno';
-  estado.claseAbierta = null;
+  estado.vista = 'modulos'; estado.moduloId = null; estado.claseId = null;
   cont.innerHTML = '<p class="text-soft">Cargando...</p>';
   try {
     if (estado.verTodo) {
@@ -139,7 +141,7 @@ async function recargarDatos() {
   estado.datos = snap.exists() ? snap.val() : {};
 }
 
-/* ---------- Pintado ---------- */
+/* ---------- Pintado: tres pantallas (módulos > lecciones > lección) ---------- */
 
 function moduloBloqueado(m) {
   return !estado.verTodo && (Number(m.desdeFase) || 0) > estado.faseMax;
@@ -154,138 +156,177 @@ function visibles() {
     }]);
 }
 
+function irA(vista, moduloId = null, claseId = null) {
+  estado.vista = vista; estado.moduloId = moduloId; estado.claseId = claseId;
+  pintar();
+  const cont = el('contenidos-contenido');
+  if (cont) cont.scrollIntoView({ block: 'start' });
+}
+
+function progresoDeModulo(m) {
+  const cl = clasesDe(m);
+  const vistas = cl.filter(([cid]) => estado.progreso[cid]).length;
+  return { total: cl.length, vistas, pct: cl.length ? Math.round(vistas * 100 / cl.length) : 0 };
+}
+
+const botonesAdmin = (tipo, mid, cid, i, n) => `
+  <span class="ct-acciones">
+    <button type="button" class="ct-icono" data-act="${tipo}-arriba" data-m="${mid}" data-c="${cid || ''}" ${i === 0 ? 'disabled' : ''} title="Subir">▲</button>
+    <button type="button" class="ct-icono" data-act="${tipo}-abajo" data-m="${mid}" data-c="${cid || ''}" ${i === n - 1 ? 'disabled' : ''} title="Bajar">▼</button>
+    <button type="button" class="ct-icono" data-act="${tipo}-editar" data-m="${mid}" data-c="${cid || ''}" title="Editar">✏️</button>
+    <button type="button" class="ct-icono" data-act="${tipo}-borrar" data-m="${mid}" data-c="${cid || ''}" title="Borrar">🗑️</button>
+  </span>`;
+
 function pintar() {
   const cont = el('contenidos-contenido');
+  if (!cont) return;
+  if (estado.vista !== 'leccion') {
+    if (desuscribirComentarios) { desuscribirComentarios(); desuscribirComentarios = null; }
+    scriptsPlayer.forEach(s => s.remove());
+    scriptsPlayer = [];
+  }
   const modulos = visibles();
-  const abiertos = new Set([...cont.querySelectorAll('details.ct-modulo[open]')].map(d => d.dataset.modulo));
-  const primeraVez = !cont.querySelector('.ct-modulos');
+  const actual = estado.moduloId ? modulos.find(([id]) => id === estado.moduloId) : null;
+  if (estado.vista !== 'modulos' && (!actual || moduloBloqueado(actual[1]))) irAlTablero();
+  if (estado.vista === 'leccion' && !(actual[1].clases && actual[1].clases[estado.claseId])) estado.vista = 'modulo';
 
-  let total = 0, vistas = 0;
-  modulos.forEach(([, m]) => {
-    if (moduloBloqueado(m)) return;
-    clasesDe(m).forEach(([cid]) => { total++; if (estado.progreso[cid]) vistas++; });
-  });
-  const pct = total ? Math.round(vistas * 100 / total) : 0;
+  if (estado.vista === 'modulos') cont.innerHTML = vistaModulos(modulos);
+  else if (estado.vista === 'modulo') cont.innerHTML = vistaModulo(actual[0], actual[1]);
+  else cont.innerHTML = vistaLeccion(actual[0], actual[1], estado.claseId);
 
+  if (estado.vista === 'leccion') {
+    const clase = actual[1].clases[estado.claseId];
+    montarReproductor(el('ct-player'), clase.vturb);
+    escucharComentarios(estado.claseId);
+  }
+}
+function irAlTablero() { estado.vista = 'modulos'; estado.moduloId = null; estado.claseId = null; }
+
+/* --- Pantalla 1: tablero de módulos --- */
+function vistaModulos(modulos) {
   const tabs = estado.verTodo ? `<div class="ct-tabs">${PROGRAMAS_CONTENIDO.map(p =>
     `<button type="button" class="ct-tab${p === estado.programa ? ' is-active' : ''}" data-programa="${p}">${escaparHtml(programaLabel(p))}</button>`).join('')}</div>` : '';
-
-  const progreso = !estado.verTodo ? `
-    <div class="ct-progreso">
-      <div class="ct-progreso__texto"><strong>${vistas}</strong> de <strong>${total}</strong> clases vistas · ${pct}%</div>
-      <div class="ct-barra"><span style="width:${pct}%"></span></div>
-    </div>` : (estado.esDirector ? `<div class="ct-admin-barra"><button type="button" class="btn btn--primary" id="ct-nuevo-modulo">+ Nuevo módulo</button></div>` : '');
-
-  const listaHtml = modulos.length ? modulos.map(([mid, m], i) => htmlModulo(mid, m, i, modulos.length, primeraVez || abiertos.has(mid))).join('')
-    : `<div class="panel"><div class="panel__body"><p class="text-soft" style="margin:0;">${estado.esDirector ? 'Este programa aún no tiene módulos. Crea el primero con “+ Nuevo módulo”.' : estado.verTodo ? 'Este programa aún no tiene módulos.' : 'Pronto verás aquí las clases de tu programa.'}</p></div></div>`;
-
-  cont.innerHTML = `${tabs}${progreso}
-    <div class="panel ct-visor hidden" id="ct-visor"></div>
-    <div class="ct-modulos">${listaHtml}</div>`;
-  if (estado.claseAbierta) abrirClase(estado.claseAbierta.moduloId, estado.claseAbierta.claseId, false);
+  const nuevo = estado.esDirector ? '<div class="ct-admin-barra"><button type="button" class="btn btn--primary" id="ct-nuevo-modulo">+ Nuevo módulo</button></div>' : '';
+  const tarjetas = modulos.length
+    ? `<div class="ct-grid">${modulos.map(([mid, m], i) => tarjetaModulo(mid, m, i, modulos.length)).join('')}</div>`
+    : `<div class="panel"><div class="panel__body"><p class="text-soft" style="margin:0;">${estado.esDirector ? 'Este programa aún no tiene módulos. Crea el primero con “+ Nuevo módulo”.' : estado.verTodo ? 'Este programa aún no tiene módulos.' : 'Pronto verás aquí los contenidos de tu programa.'}</p></div></div>`;
+  return `${tabs}${nuevo}${tarjetas}`;
 }
 
-function htmlModulo(mid, m, i, n, abierto) {
-  const bloqueado = moduloBloqueado(m);
-  const clases = clasesDe(m);
-  const vistasM = clases.filter(([cid]) => estado.progreso[cid]).length;
-  const borrador = m.publicado === false ? '<span class="ct-etq ct-etq--borrador">Borrador</span>' : '';
-  const fase = estado.verTodo && (Number(m.desdeFase) || 0) > 0 ? `<span class="ct-etq">${TEXTOS_FASE[m.desdeFase]}</span>` : '';
-  const admin = estado.esDirector ? `
-    <span class="ct-acciones" data-stop>
-      <button type="button" class="ct-icono" data-act="mod-arriba" data-m="${mid}" ${i === 0 ? 'disabled' : ''} title="Subir">▲</button>
-      <button type="button" class="ct-icono" data-act="mod-abajo" data-m="${mid}" ${i === n - 1 ? 'disabled' : ''} title="Bajar">▼</button>
-      <button type="button" class="ct-icono" data-act="mod-editar" data-m="${mid}" title="Editar módulo">✏️</button>
-      <button type="button" class="ct-icono" data-act="mod-borrar" data-m="${mid}" title="Borrar módulo">🗑️</button>
-    </span>` : '';
-
-  let cuerpo;
-  if (bloqueado) {
-    cuerpo = `<p class="ct-bloqueado">🔒 Este módulo se desbloquea cuando llegues a la <strong>${escaparHtml(TEXTOS_FASE[m.desdeFase] || '')}</strong>.</p>`;
-  } else {
-    cuerpo = `${urlSegura(m.portadaUrl) ? `<img class="ct-portada ct-portada--mod" src="${escaparHtml(m.portadaUrl)}" alt="">` : ''}
-      ${m.descripcion ? `<p class="text-soft ct-desc-mod">${textoMultilinea(m.descripcion)}</p>` : ''}
-      <ul class="ct-clases">${clases.map(([cid, c], j) => `
-        <li class="ct-clase" data-clase="${cid}" data-m="${mid}">
-          <button type="button" class="ct-clase__abrir" data-act="abrir" data-m="${mid}" data-c="${cid}">
-            <span class="ct-check${estado.progreso[cid] ? ' is-vista' : ''}">${estado.progreso[cid] ? '✓' : ''}</span>
-            ${urlSegura(c.portadaUrl) ? `<img class="ct-portada ct-portada--mini" src="${escaparHtml(c.portadaUrl)}" alt="">` : ''}
-            <span class="ct-clase__titulo">${escaparHtml(c.titulo || 'Clase sin título')}</span>
-            ${c.publicado === false ? '<span class="ct-etq ct-etq--borrador">Borrador</span>' : ''}
-            ${(c.materiales && Object.keys(c.materiales).length) ? '<span class="ct-clip" title="Tiene material">📎</span>' : ''}
-          </button>
-          ${estado.esDirector ? `<span class="ct-acciones">
-            <button type="button" class="ct-icono" data-act="cla-arriba" data-m="${mid}" data-c="${cid}" ${j === 0 ? 'disabled' : ''} title="Subir">▲</button>
-            <button type="button" class="ct-icono" data-act="cla-abajo" data-m="${mid}" data-c="${cid}" ${j === clases.length - 1 ? 'disabled' : ''} title="Bajar">▼</button>
-            <button type="button" class="ct-icono" data-act="cla-editar" data-m="${mid}" data-c="${cid}" title="Editar clase">✏️</button>
-            <button type="button" class="ct-icono" data-act="cla-borrar" data-m="${mid}" data-c="${cid}" title="Borrar clase">🗑️</button>
-          </span>` : ''}
-        </li>`).join('')}</ul>
-      ${!clases.length && !estado.esDirector ? '<p class="text-soft" style="margin:0;">Aún no hay clases en este módulo.</p>' : ''}
-      ${estado.esDirector ? `<button type="button" class="btn btn--ghost ct-nueva-clase" data-act="cla-nueva" data-m="${mid}">+ Nueva clase</button>` : ''}`;
-  }
+function tarjetaModulo(mid, m, i, n) {
+  const bloq = moduloBloqueado(m);
+  const p = progresoDeModulo(m);
+  const img = urlSegura(m.portadaUrl) ? `<img src="${escaparHtml(m.portadaUrl)}" alt="">` : '<div class="ct-card__vacia">📚</div>';
+  const etqs = [
+    m.publicado === false ? '<span class="ct-etq">Borrador</span>' : '',
+    estado.verTodo && (Number(m.desdeFase) || 0) > 0 ? `<span class="ct-etq">${escaparHtml(TEXTOS_FASE[m.desdeFase] || '')}</span>` : '',
+    bloq ? `<span class="ct-etq">🔒 ${escaparHtml(TEXTOS_FASE[m.desdeFase] || '')}</span>` : ''
+  ].join('');
   return `
-    <details class="panel ct-modulo${bloqueado ? ' is-bloqueado' : ''}" data-modulo="${mid}" ${abierto ? 'open' : ''}>
-      <summary class="ct-modulo__cab">
-        <span class="ct-modulo__num">${i + 1}</span>
-        <span class="ct-modulo__titulo">${escaparHtml(m.titulo || 'Módulo sin título')}</span>
-        ${borrador}${fase}
-        ${bloqueado ? '<span class="ct-etq">🔒</span>' : `<span class="ct-modulo__cuenta">${estado.verTodo ? clases.length : vistasM}/${clases.length}</span>`}
-        ${admin}
-      </summary>
-      <div class="panel__body">${cuerpo}</div>
-    </details>`;
+    <article class="ct-card${bloq ? ' is-bloqueado' : ''}" data-act="${bloq ? 'bloqueado' : 'ir-modulo'}" data-m="${mid}" data-fase="${escaparHtml(TEXTOS_FASE[m.desdeFase] || '')}">
+      <div class="ct-card__img">${img}
+        <div class="ct-card__etqs">${etqs}</div>
+        ${estado.esDirector ? `<div class="ct-card__admin">${botonesAdmin('mod', mid, '', i, n)}</div>` : ''}
+      </div>
+      <p class="ct-card__titulo">${escaparHtml(m.titulo || 'Módulo sin título')}</p>
+      ${m.descripcion ? `<p class="ct-card__desc">${escaparHtml(m.descripcion)}</p>` : ''}
+      <p class="ct-card__meta">📚 ${p.total} ${p.total === 1 ? 'lección' : 'lecciones'}</p>
+      ${!estado.verTodo ? `<div class="ct-card__prog"><div class="ct-barra"><span style="width:${p.pct}%"></span></div><b>${p.pct}%</b></div>` : ''}
+    </article>`;
 }
 
-/* ---------- Visor de clase ---------- */
+/* --- Pantalla 2: lecciones del módulo --- */
+function vistaModulo(mid, m) {
+  const clases = clasesDe(m);
+  const filas = clases.map(([cid, c], j) => {
+    const vista = !!estado.progreso[cid];
+    return `
+    <div class="ct-fila" data-act="abrir" data-m="${mid}" data-c="${cid}">
+      <span class="ct-fila__num">${j + 1}</span>
+      ${urlSegura(c.portadaUrl) ? `<img class="ct-portada ct-portada--mini" src="${escaparHtml(c.portadaUrl)}" alt="">` : ''}
+      <span class="ct-fila__titulo">${escaparHtml(c.titulo || 'Lección sin título')}
+        ${c.publicado === false ? '<span class="ct-etq ct-etq--borrador">Borrador</span>' : ''}
+        ${(c.materiales && Object.keys(c.materiales).length) ? '<span title="Tiene material">📎</span>' : ''}</span>
+      ${Number(c.duracionMin) > 0 ? `<span class="ct-fila__dur">⏱ ${Number(c.duracionMin)} minutos</span>` : ''}
+      <span class="ct-fila__estado${vista ? ' is-vista' : ''}">${vista ? '✓' : '▶'}</span>
+      ${estado.esDirector ? botonesAdmin('cla', mid, cid, j, clases.length) : ''}
+    </div>`;
+  }).join('');
+  return `
+    <button type="button" class="ct-volver" data-act="volver-modulos">← Todos los módulos</button>
+    <div class="ct-modhead">
+      ${urlSegura(m.portadaUrl) ? `<img class="ct-portada" src="${escaparHtml(m.portadaUrl)}" alt="">` : ''}
+      <div><h3 style="margin:0 0 4px;">${escaparHtml(m.titulo || '')}</h3>
+        ${m.descripcion ? `<p class="text-soft" style="margin:0;">${textoMultilinea(m.descripcion)}</p>` : ''}
+        <p class="text-soft" style="margin:6px 0 0; font-size:13px;">${clases.length} ${clases.length === 1 ? 'lección' : 'lecciones'}</p></div>
+    </div>
+    <div class="ct-filas">${filas || '<div class="panel"><div class="panel__body"><p class="text-soft" style="margin:0;">Aún no hay lecciones en este módulo.</p></div></div>'}</div>
+    ${estado.esDirector ? `<button type="button" class="btn btn--primary ct-nueva-clase" data-act="cla-nueva" data-m="${mid}">+ Nueva lección</button>` : ''}`;
+}
 
-function abrirClase(mid, cid, desplazar = true) {
-  const modulo = estado.datos[mid];
-  const clase = modulo && modulo.clases && modulo.clases[cid];
-  const visor = el('ct-visor');
-  if (!clase || !visor) return;
-  estado.claseAbierta = { moduloId: mid, claseId: cid };
-  const lista = visibles().flatMap(([m, mod]) => moduloBloqueado(mod) ? [] : clasesDe(mod).map(([c]) => [m, c]));
-  const idx = lista.findIndex(([m, c]) => m === mid && c === cid);
-  const ant = idx > 0 ? lista[idx - 1] : null;
-  const sig = idx >= 0 && idx < lista.length - 1 ? lista[idx + 1] : null;
-  const materiales = Object.entries(clase.materiales || {}).filter(([, mt]) => mt && typeof mt.url === 'string' && mt.url.startsWith('https://'));
+/* --- Pantalla 3: la lección (video a la izquierda, lista del módulo a la derecha) --- */
+function vistaLeccion(mid, m, cid) {
+  const clases = clasesDe(m);
+  const idx = clases.findIndex(([id]) => id === cid);
+  const clase = clases[idx][1];
+  const ant = idx > 0 ? clases[idx - 1][0] : null;
+  const sig = idx < clases.length - 1 ? clases[idx + 1][0] : null;
+  const materiales = Object.values(clase.materiales || {}).filter(mt => mt && urlSegura(mt.url));
   const vista = !!estado.progreso[cid];
 
-  visor.classList.remove('hidden');
-  visor.innerHTML = `
-    <div class="panel__body">
-      <p class="ct-visor__modulo">${escaparHtml(modulo.titulo || '')}</p>
-      <!-- la portada de la lección se ve en la lista; aquí va el video -->
-
-      <h3 class="ct-visor__titulo">${escaparHtml(clase.titulo || '')}</h3>
-      <div class="ct-player" id="ct-player"></div>
-      ${clase.descripcion ? `<p class="ct-visor__desc">${textoMultilinea(clase.descripcion)}</p>` : ''}
-      ${materiales.length ? `<div class="ct-materiales"><p class="ct-materiales__t">Material de la clase</p>${materiales.map(([, mt]) =>
-        `<a class="ct-material" href="${escaparHtml(mt.url)}" target="_blank" rel="noopener noreferrer">📄 ${escaparHtml(mt.nombre || 'Material')}</a>`).join('')}</div>` : ''}
-      <div class="ct-visor__pie">
-        <button type="button" class="btn btn--ghost" id="ct-ant" ${ant ? '' : 'disabled'}>← Anterior</button>
-        ${!estado.verTodo ? `<button type="button" class="btn ${vista ? 'btn--ghost' : 'btn--accent'}" id="ct-marcar">${vista ? '✓ Vista (desmarcar)' : 'Marcar como vista'}</button>` : ''}
-        <button type="button" class="btn btn--ghost" id="ct-sig" ${sig ? '' : 'disabled'}>Siguiente →</button>
-        <button type="button" class="btn btn--ghost" id="ct-cerrar-visor">Cerrar</button>
-      </div>
-      <div class="ct-comentarios">
-        <p class="ct-materiales__t">💬 Comentarios</p>
-        <div id="ct-comentarios-lista" class="ct-comentarios__lista"><p class="text-soft" style="margin:0;">Cargando...</p></div>
-        <div class="ct-comentarios__nuevo">
-          <textarea id="ct-comentario-texto" maxlength="1000" rows="2" placeholder="Escribe un comentario o una duda sobre esta clase..."></textarea>
-          <button type="button" class="btn btn--primary" data-act="com-enviar" data-c="${cid}">Publicar</button>
-        </div>
-      </div>
+  const acciones = `
+    <div class="ct-lec__acciones">
+      ${!estado.verTodo ? `<button type="button" class="btn ${vista ? 'btn--ghost' : 'btn--accent'}" id="ct-concluir" data-act="concluir" data-c="${cid}">${vista ? '✓ Concluida' : 'Marcar como concluida'}</button>` : ''}
+      ${estado.esDirector ? `<button type="button" class="btn btn--ghost" data-act="cla-editar" data-m="${mid}" data-c="${cid}">✏️ Editar lección</button>` : ''}
     </div>`;
-  montarReproductor(el('ct-player'), clase.vturb);
-  escucharComentarios(cid);
-  if (ant) el('ct-ant').addEventListener('click', () => abrirClase(ant[0], ant[1]));
-  if (sig) el('ct-sig').addEventListener('click', () => abrirClase(sig[0], sig[1]));
-  el('ct-cerrar-visor').addEventListener('click', cerrarVisor);
-  const marcar = el('ct-marcar');
-  if (marcar) marcar.addEventListener('click', () => alternarVista(mid, cid, marcar));
-  if (desplazar) visor.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+  const lista = clases.map(([id, c], j) => `
+    <div class="ct-lado__item${id === cid ? ' is-actual' : ''}" data-act="abrir" data-m="${mid}" data-c="${id}">
+      <span class="ct-lado__num">${j + 1}</span>
+      <span class="ct-lado__txt">${escaparHtml(c.titulo || 'Lección sin título')}</span>
+      <span class="ct-lado__est${estado.progreso[id] ? ' is-vista' : ''}" data-est="${id}">${estado.progreso[id] ? '✓' : '▶'}</span>
+    </div>`).join('');
+
+  return `
+    <button type="button" class="ct-volver" data-act="volver-modulo" data-m="${mid}">← ${escaparHtml(m.titulo || 'Módulo')}</button>
+    <div class="ct-lec">
+      <div class="ct-lec__main">
+        <div class="ct-lec__cab">
+          <h3 class="ct-lec__titulo">${idx + 1} | ${escaparHtml(clase.titulo || '')}</h3>
+          <div class="ct-lec__nav">
+            <button type="button" class="ct-link" data-act="abrir" data-m="${mid}" data-c="${ant || ''}" ${ant ? '' : 'disabled'}>‹ Anterior</button>
+            <button type="button" class="ct-link" data-act="abrir" data-m="${mid}" data-c="${sig || ''}" ${sig ? '' : 'disabled'}>Próxima ›</button>
+          </div>
+        </div>
+        <div class="ct-player" id="ct-player"></div>
+        ${acciones}
+        ${clase.descripcion ? `<div class="panel mb-16"><div class="panel__body"><p class="ct-materiales__t">Descripción de la lección</p><p class="ct-visor__desc" style="margin:6px 0 0;">${textoMultilinea(clase.descripcion)}</p></div></div>` : ''}
+        <div class="panel"><div class="panel__body">
+          <p class="ct-materiales__t">💬 Comentarios</p>
+          <div id="ct-comentarios-lista" class="ct-comentarios__lista"><p class="text-soft" style="margin:0;">Cargando...</p></div>
+          <div class="ct-comentarios__nuevo">
+            <textarea id="ct-comentario-texto" maxlength="1000" rows="2" placeholder="Escribe un comentario o una duda sobre esta lección..."></textarea>
+            <button type="button" class="btn btn--primary" data-act="com-enviar" data-c="${cid}">Publicar</button>
+          </div>
+        </div></div>
+      </div>
+      <aside class="panel ct-lado">
+        <div class="ct-lado__tabs">
+          <button type="button" class="ct-lado__tab is-active" data-act="tab" data-t="videos">Videos</button>
+          <button type="button" class="ct-lado__tab" data-act="tab" data-t="downloads">Downloads</button>
+        </div>
+        <div class="panel__body">
+          <div data-pane="videos">
+            <p class="ct-lado__mod">📚 ${escaparHtml(m.titulo || '')}</p>
+            <div class="ct-lado__lista">${lista}</div>
+          </div>
+          <div data-pane="downloads" class="hidden">
+            ${materiales.length ? materiales.map(mt => `<a class="ct-material" style="display:block; margin-bottom:8px;" href="${escaparHtml(mt.url)}" target="_blank" rel="noopener noreferrer">📄 ${escaparHtml(mt.nombre || 'Material')}</a>`).join('')
+              : '<p class="text-soft" style="margin:0;">Esta lección no tiene material para descargar.</p>'}
+          </div>
+        </div>
+      </aside>
+    </div>`;
 }
 
 /* ---------- Comentarios de la clase ---------- */
@@ -341,28 +382,26 @@ async function publicarComentario(cid, boton) {
   boton.disabled = false;
 }
 
-function cerrarVisor() {
-  if (desuscribirComentarios) { desuscribirComentarios(); desuscribirComentarios = null; }
-  estado.claseAbierta = null;
-  scriptsPlayer.forEach(s => s.remove());
-  scriptsPlayer = [];
-  const visor = el('ct-visor');
-  if (visor) { visor.classList.add('hidden'); visor.innerHTML = ''; }
-}
-
-async function alternarVista(mid, cid, boton) {
+async function alternarVista(cid, boton) {
   if (!estado.alumnoId) return;
   boton.disabled = true;
   try {
     const nueva = estado.progreso[cid] ? null : Date.now();
     await set(ref(db, `progresoClases/${estado.alumnoId}/${cid}`), nueva);
     if (nueva) estado.progreso[cid] = nueva; else delete estado.progreso[cid];
-    pintar();
+    // Se actualiza solo lo necesario para no reiniciar el video.
+    boton.textContent = nueva ? '✓ Concluida' : 'Marcar como concluida';
+    boton.classList.toggle('btn--ghost', !!nueva);
+    boton.classList.toggle('btn--accent', !nueva);
+    document.querySelectorAll(`[data-est="${cid}"]`).forEach(e => {
+      e.textContent = nueva ? '✓' : '▶';
+      e.classList.toggle('is-vista', !!nueva);
+    });
   } catch (err) {
     console.error('No se pudo guardar el progreso:', err);
     alert('No se pudo guardar. Intenta de nuevo.');
-    boton.disabled = false;
   }
+  boton.disabled = false;
 }
 
 /* ---------- Administración (director) ---------- */
@@ -521,6 +560,7 @@ function editarClase(mid, cid) {
   const ov = modal(c ? 'Editar clase' : 'Nueva clase', `
     ${htmlCampoPortada(portadaActual)}
     <div class="field mb-16"><label>Título</label><input id="ct-c-titulo" maxlength="140" value="${escaparHtml(c ? c.titulo : '')}"></div>
+    <div class="field mb-16"><label>Duración en minutos (opcional)</label><input id="ct-c-dur" type="number" min="0" max="600" value="${c && c.duracionMin ? Number(c.duracionMin) : ''}"></div>
     <div class="field mb-16"><label>Descripción (opcional)</label><textarea id="ct-c-desc" maxlength="2000">${escaparHtml(c ? c.descripcion || '' : '')}</textarea></div>
     <div class="field mb-16"><label>Código de inserción de Vturb</label>
       <textarea id="ct-c-embed" placeholder="Pega aquí el código JS del video (botón &lt;/&gt; en Vturb)" style="min-height:90px; font-family:monospace; font-size:12px;"></textarea>
@@ -533,6 +573,7 @@ function editarClase(mid, cid) {
     const titulo = val(ov, '#ct-c-titulo');
     if (!titulo) throw fallo('Escribe el título de la clase.');
     const campos = { titulo, descripcion: val(ov, '#ct-c-desc'), publicado: ov.querySelector('#ct-c-pub').checked };
+    campos.duracionMin = Number(val(ov, '#ct-c-dur')) > 0 ? Math.round(Number(val(ov, '#ct-c-dur'))) : null;
     const codigo = ov.querySelector('#ct-c-embed').value.trim();
     if (codigo) {
       const v = parsearEmbedVturb(codigo);
@@ -612,7 +653,8 @@ async function borrar(tipo, mid, cid) {
   const idsClases = tipo === 'mod' ? Object.keys(estado.datos[mid].clases || {}) : [cid];
   for (const id of idsClases) { try { await remove(ref(db, `comentariosClases/${id}`)); } catch (e) { /* sin comentarios */ } }
   await remove(ref(db, tipo === 'mod' ? `contenidos/${estado.programa}/${mid}` : `contenidos/${estado.programa}/${mid}/clases/${cid}`));
-  if (estado.claseAbierta && (tipo === 'mod' || estado.claseAbierta.claseId === cid)) cerrarVisor();
+  if (tipo === 'mod') irAlTablero();
+  else if (estado.claseId === cid) { estado.vista = 'modulo'; estado.claseId = null; }
   await recargarDatos();
   pintar();
 }
@@ -623,7 +665,7 @@ const contEl = el('contenidos-contenido');
 if (contEl) {
   contEl.addEventListener('click', async ev => {
     const tab = ev.target.closest('.ct-tab');
-    if (tab) { estado.programa = tab.dataset.programa; cerrarVisor(); await recargarDatos(); pintar(); return; }
+    if (tab) { estado.programa = tab.dataset.programa; irAlTablero(); await recargarDatos(); pintar(); return; }
     if (ev.target.closest('#ct-nuevo-modulo')) { editarModulo(null); return; }
     const b = ev.target.closest('[data-act]');
     if (!b) return;
@@ -631,7 +673,16 @@ if (contEl) {
     ev.stopPropagation();
     const { act, m, c } = b.dataset;
     try {
-      if (act === 'abrir') abrirClase(m, c);
+      if (act === 'abrir') { if (c) irA('leccion', m, c); }
+      else if (act === 'ir-modulo') irA('modulo', m);
+      else if (act === 'volver-modulos') irA('modulos');
+      else if (act === 'volver-modulo') irA('modulo', m);
+      else if (act === 'bloqueado') alert(`Este módulo se desbloquea cuando llegues a la ${b.dataset.fase || 'fase indicada'}.`);
+      else if (act === 'concluir') await alternarVista(c, b);
+      else if (act === 'tab') {
+        contEl.querySelectorAll('.ct-lado__tab').forEach(x => x.classList.toggle('is-active', x === b));
+        contEl.querySelectorAll('[data-pane]').forEach(p => p.classList.toggle('hidden', p.dataset.pane !== b.dataset.t));
+      }
       else if (act === 'mod-editar') editarModulo(m);
       else if (act === 'mod-arriba') await mover('mod', m, null, -1);
       else if (act === 'mod-abajo') await mover('mod', m, null, 1);
