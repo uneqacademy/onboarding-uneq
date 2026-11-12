@@ -33,14 +33,23 @@ const estado = {
   verTodo: false,     // staff: ve todos los programas, sin candado ni progreso
   vista: 'modulos',   // 'modulos' (tablero) | 'modulo' (lecciones) | 'leccion'
   moduloId: null,
-  claseId: null
+  claseId: null,
+  favoritos: {},      // { claseId: true } del usuario
+  clave: null,        // id bajo el que se guarda lo personal (alumnoId, o el uid del staff)
+  miFoto: ''
 };
 let cargaActual = 0;
+let desuscribirValoraciones = null;
 let scriptsPlayer = [];
 
 let desuscribirComentarios = null;
 const NOMBRES_ROL_COMENTARIO = { director: 'Director/a', mentor: 'Mentor/a', coach: 'Copiloto', alumno: 'Alumno/a' };
 const urlSegura = u => (typeof u === 'string' && u.startsWith('https://')) ? u : '';
+
+// Íconos de las lecciones (reloj de duración y estado: play = pendiente, check = concluida).
+const ICONO_RELOJ = '<svg class="ct-ico ct-ico--reloj" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>';
+const ICONO_PLAY = '<svg class="ct-ico" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="M8 5.5v13l11-6.5z"/></svg>';
+const ICONO_CHECK = '<svg class="ct-ico" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
 
 const el = id => document.getElementById(id);
 const textoMultilinea = t => escaparHtml(t || '').replace(/\n/g, '<br>');
@@ -88,21 +97,38 @@ function ordenar(obj) {
 }
 const clasesDe = modulo => ordenar(modulo.clases);
 
+// Lo personal (clases concluidas y favoritas) de quien está viendo la sección.
+async function cargarMisMarcas() {
+  estado.progreso = {}; estado.favoritos = {};
+  if (!estado.clave) return;
+  try {
+    const [p, f] = await Promise.all([
+      get(ref(db, `progresoClases/${estado.clave}`)),
+      get(ref(db, `favoritosClases/${estado.clave}`))
+    ]);
+    estado.progreso = p.exists() ? p.val() : {};
+    estado.favoritos = f.exists() ? f.val() : {};
+  } catch (err) {
+    console.warn('No se pudo leer el avance personal:', err);
+  }
+}
+
 async function resolverAlumno() {
   const uid = auth.currentUser ? auth.currentUser.uid : null;
-  estado.alumnoId = null; estado.faseMax = 0; estado.progreso = {};
+  estado.alumnoId = null; estado.faseMax = 0; estado.progreso = {}; estado.favoritos = {}; estado.clave = null; estado.miFoto = '';
   if (!uid) return null;
   const mapa = await get(ref(db, `alumnoPorAuthUid/${uid}`));
   if (!mapa.exists()) return null;
   estado.alumnoId = mapa.val();
+  estado.clave = estado.alumnoId;
   const alumno = await get(ref(db, `alumnos/${estado.alumnoId}`));
   const cicloId = alumno.exists() ? alumno.val().cicloActualId : null;
   if (!cicloId) return null;
   const ciclo = await get(ref(db, `ciclos/${cicloId}`));
   if (!ciclo.exists()) return null;
   estado.faseMax = faseMaximaChecklist(ciclo.val());
-  const prog = await get(ref(db, `progresoClases/${estado.alumnoId}`));
-  estado.progreso = prog.exists() ? prog.val() : {};
+  estado.miFoto = alumno.val().fotoUrl || '';
+  await cargarMisMarcas();
   return ciclo.val().programa || null;
 }
 
@@ -119,6 +145,13 @@ export async function cargarContenidos() {
   try {
     if (estado.verTodo) {
       if (!estado.programa) estado.programa = 'begin';
+      const uid = auth.currentUser ? auth.currentUser.uid : null;
+      estado.alumnoId = null; estado.clave = uid; estado.miFoto = '';
+      try {
+        const f = uid ? await get(ref(db, `usuarios/${uid}/fotoUrl`)) : null;
+        estado.miFoto = f && f.exists() ? f.val() : '';
+      } catch (err) { /* sin foto */ }
+      await cargarMisMarcas();
     } else {
       estado.programa = await resolverAlumno();
     }
@@ -166,7 +199,8 @@ function irA(vista, moduloId = null, claseId = null) {
 function progresoDeModulo(m) {
   const cl = clasesDe(m);
   const vistas = cl.filter(([cid]) => estado.progreso[cid]).length;
-  return { total: cl.length, vistas, pct: cl.length ? Math.round(vistas * 100 / cl.length) : 0 };
+  const minutos = cl.reduce((s, [, c]) => s + (Number(c.duracionMin) || 0), 0);
+  return { total: cl.length, vistas, minutos, pct: cl.length ? Math.round(vistas * 100 / cl.length) : 0 };
 }
 
 const botonesAdmin = (tipo, mid, cid, i, n) => `
@@ -182,6 +216,7 @@ function pintar() {
   if (!cont) return;
   if (estado.vista !== 'leccion') {
     if (desuscribirComentarios) { desuscribirComentarios(); desuscribirComentarios = null; }
+    if (desuscribirValoraciones) { desuscribirValoraciones(); desuscribirValoraciones = null; }
     scriptsPlayer.forEach(s => s.remove());
     scriptsPlayer = [];
   }
@@ -198,6 +233,7 @@ function pintar() {
     const clase = actual[1].clases[estado.claseId];
     montarReproductor(el('ct-player'), clase.vturb);
     escucharComentarios(estado.claseId);
+    escucharValoraciones(estado.claseId);
   }
 }
 function irAlTablero() { estado.vista = 'modulos'; estado.moduloId = null; estado.claseId = null; }
@@ -230,14 +266,15 @@ function tarjetaModulo(mid, m, i, n) {
       </div>
       <p class="ct-card__titulo">${escaparHtml(m.titulo || 'Módulo sin título')}</p>
       ${m.descripcion ? `<p class="ct-card__desc">${escaparHtml(m.descripcion)}</p>` : ''}
-      <p class="ct-card__meta">📚 ${p.total} ${p.total === 1 ? 'lección' : 'lecciones'}</p>
-      ${!estado.verTodo ? `<div class="ct-card__prog"><div class="ct-barra"><span style="width:${p.pct}%"></span></div><b>${p.pct}%</b></div>` : ''}
+      <p class="ct-card__meta">📚 ${p.total} ${p.total === 1 ? 'lección' : 'lecciones'}${p.minutos ? ` · ⏱ ${formatoDuracion(p.minutos)}` : ''}</p>
+      <div class="ct-card__prog"><div class="ct-barra"><span style="width:${p.pct}%"></span></div><b>${p.pct}%</b></div>
     </article>`;
 }
 
 /* --- Pantalla 2: lecciones del módulo --- */
 function vistaModulo(mid, m) {
   const clases = clasesDe(m);
+  const prog = progresoDeModulo(m);
   const filas = clases.map(([cid, c], j) => {
     const vista = !!estado.progreso[cid];
     return `
@@ -247,8 +284,8 @@ function vistaModulo(mid, m) {
       <span class="ct-fila__titulo">${escaparHtml(c.titulo || 'Lección sin título')}
         ${c.publicado === false ? '<span class="ct-etq ct-etq--borrador">Borrador</span>' : ''}
         ${(c.materiales && Object.keys(c.materiales).length) ? '<span title="Tiene material">📎</span>' : ''}</span>
-      ${Number(c.duracionMin) > 0 ? `<span class="ct-fila__dur">⏱ ${Number(c.duracionMin)} minutos</span>` : ''}
-      <span class="ct-fila__estado${vista ? ' is-vista' : ''}">${vista ? '✓' : '▶'}</span>
+      ${Number(c.duracionMin) > 0 ? `<span class="ct-fila__dur">${ICONO_RELOJ} ${Number(c.duracionMin)} minutos</span>` : ''}
+      <span class="ct-fila__estado${vista ? ' is-vista' : ''}" data-est="${cid}">${vista ? ICONO_CHECK : ICONO_PLAY}</span>
       ${estado.esDirector ? botonesAdmin('cla', mid, cid, j, clases.length) : ''}
     </div>`;
   }).join('');
@@ -258,13 +295,29 @@ function vistaModulo(mid, m) {
       ${urlSegura(m.portadaUrl) ? `<img class="ct-portada" src="${escaparHtml(m.portadaUrl)}" alt="">` : ''}
       <div><h3 style="margin:0 0 4px;">${escaparHtml(m.titulo || '')}</h3>
         ${m.descripcion ? `<p class="text-soft" style="margin:0;">${textoMultilinea(m.descripcion)}</p>` : ''}
-        <p class="text-soft" style="margin:6px 0 0; font-size:13px;">${clases.length} ${clases.length === 1 ? 'lección' : 'lecciones'}</p></div>
+        <p class="text-soft" style="margin:6px 0 0; font-size:13px;">${clases.length} ${clases.length === 1 ? 'lección' : 'lecciones'}${prog.minutos ? ` · ⏱ ${formatoDuracion(prog.minutos)}` : ''} · ${prog.pct}% completado</p>
+        <div class="ct-barra" style="max-width:320px; margin-top:8px;"><span style="width:${prog.pct}%"></span></div></div>
     </div>
     <div class="ct-filas">${filas || '<div class="panel"><div class="panel__body"><p class="text-soft" style="margin:0;">Aún no hay lecciones en este módulo.</p></div></div>'}</div>
     ${estado.esDirector ? `<button type="button" class="btn btn--primary ct-nueva-clase" data-act="cla-nueva" data-m="${mid}">+ Nueva lección</button>` : ''}`;
 }
 
 /* --- Pantalla 3: la lección (video a la izquierda, lista del módulo a la derecha) --- */
+function formatoDuracion(min) {
+  min = Math.round(Number(min) || 0);
+  if (min <= 0) return '';
+  if (min < 60) return `${min} min`;
+  const h = Math.floor(min / 60), r = min % 60;
+  return r ? `${h} h ${r} min` : `${h} h`;
+}
+
+function avatarHtml(foto, nombre, grande) {
+  const url = urlSegura(foto);
+  const clase = `ct-av${grande ? ' ct-av--lg' : ''}`;
+  return url ? `<img class="${clase}" src="${escaparHtml(url)}" alt="">`
+    : `<span class="${clase}">${escaparHtml(String(nombre || '?').trim().charAt(0).toUpperCase())}</span>`;
+}
+
 function vistaLeccion(mid, m, cid) {
   const clases = clasesDe(m);
   const idx = clases.findIndex(([id]) => id === cid);
@@ -273,18 +326,25 @@ function vistaLeccion(mid, m, cid) {
   const sig = idx < clases.length - 1 ? clases[idx + 1][0] : null;
   const materiales = Object.values(clase.materiales || {}).filter(mt => mt && urlSegura(mt.url));
   const vista = !!estado.progreso[cid];
+  const fav = !!estado.favoritos[cid];
+  const dur = formatoDuracion(clase.duracionMin);
 
   const acciones = `
     <div class="ct-lec__acciones">
-      ${!estado.verTodo ? `<button type="button" class="btn ${vista ? 'btn--ghost' : 'btn--accent'}" id="ct-concluir" data-act="concluir" data-c="${cid}">${vista ? '✓ Concluida' : 'Marcar como concluida'}</button>` : ''}
-      ${estado.esDirector ? `<button type="button" class="btn btn--ghost" data-act="cla-editar" data-m="${mid}" data-c="${cid}">✏️ Editar lección</button>` : ''}
+      <div class="ct-estrellas" id="ct-estrellas">${[1, 2, 3, 4, 5].map(n =>
+        `<button type="button" class="ct-estrella" data-act="valorar" data-c="${cid}" data-n="${n}" title="${n} de 5">★</button>`).join('')}</div>
+      <span class="ct-estrellas__info" id="ct-valoracion-info"></span>
+      <span class="ct-lec__espacio"></span>
+      <button type="button" class="ct-btn-txt${fav ? ' is-on' : ''}" id="ct-fav" data-act="favorito" data-c="${cid}">${fav ? '♥ Favorita' : '♡ Favoritar'}</button>
+      <button type="button" class="ct-btn-txt${vista ? ' is-on' : ''}" id="ct-concluir" data-act="concluir" data-c="${cid}">${vista ? '✓ Concluida' : '○ No concluida'}</button>
+      ${estado.esDirector ? `<button type="button" class="ct-btn-txt" data-act="cla-editar" data-m="${mid}" data-c="${cid}">✏️ Editar</button>` : ''}
     </div>`;
 
   const lista = clases.map(([id, c], j) => `
     <div class="ct-lado__item${id === cid ? ' is-actual' : ''}" data-act="abrir" data-m="${mid}" data-c="${id}">
       <span class="ct-lado__num">${j + 1}</span>
-      <span class="ct-lado__txt">${escaparHtml(c.titulo || 'Lección sin título')}</span>
-      <span class="ct-lado__est${estado.progreso[id] ? ' is-vista' : ''}" data-est="${id}">${estado.progreso[id] ? '✓' : '▶'}</span>
+      <span class="ct-lado__txt">${escaparHtml(c.titulo || 'Lección sin título')}${Number(c.duracionMin) > 0 ? `<small class="ct-lado__dur">${ICONO_RELOJ} ${formatoDuracion(c.duracionMin)}</small>` : ''}</span>
+      <span class="ct-lado__est${estado.progreso[id] ? ' is-vista' : ''}" data-est="${id}">${estado.progreso[id] ? ICONO_CHECK : ICONO_PLAY}</span>
     </div>`).join('');
 
   return `
@@ -292,22 +352,22 @@ function vistaLeccion(mid, m, cid) {
     <div class="ct-lec">
       <div class="ct-lec__main">
         <div class="ct-lec__cab">
-          <h3 class="ct-lec__titulo">${idx + 1} | ${escaparHtml(clase.titulo || '')}</h3>
+          <h3 class="ct-lec__titulo">${idx + 1} | ${escaparHtml(clase.titulo || '')}${dur ? ` <span class="ct-etq" style="vertical-align:middle;">⏱ ${dur}</span>` : ''}</h3>
           <div class="ct-lec__nav">
             <button type="button" class="ct-link" data-act="abrir" data-m="${mid}" data-c="${ant || ''}" ${ant ? '' : 'disabled'}>‹ Anterior</button>
             <button type="button" class="ct-link" data-act="abrir" data-m="${mid}" data-c="${sig || ''}" ${sig ? '' : 'disabled'}>Próxima ›</button>
           </div>
         </div>
         <div class="ct-player" id="ct-player"></div>
-        ${acciones}
-        ${clase.descripcion ? `<div class="panel mb-16"><div class="panel__body"><p class="ct-materiales__t">Descripción de la lección</p><p class="ct-visor__desc" style="margin:6px 0 0;">${textoMultilinea(clase.descripcion)}</p></div></div>` : ''}
-        <div class="panel"><div class="panel__body">
-          <p class="ct-materiales__t">💬 Comentarios</p>
-          <div id="ct-comentarios-lista" class="ct-comentarios__lista"><p class="text-soft" style="margin:0;">Cargando...</p></div>
-          <div class="ct-comentarios__nuevo">
-            <textarea id="ct-comentario-texto" maxlength="1000" rows="2" placeholder="Escribe un comentario o una duda sobre esta lección..."></textarea>
-            <button type="button" class="btn btn--primary" data-act="com-enviar" data-c="${cid}">Publicar</button>
+        <div class="panel ct-lec__panel"><div class="panel__body">
+          ${clase.descripcion ? `<p class="ct-materiales__t">Descripción de la lección</p><p class="ct-visor__desc" style="margin:6px 0 0;">${textoMultilinea(clase.descripcion)}</p>` : ''}
+          ${acciones}
+          <div class="ct-com-nuevo">
+            ${avatarHtml(estado.miFoto, getCurrentUserNombre(), true)}
+            <textarea id="ct-comentario-texto" maxlength="1000" rows="1" placeholder="Agregar comentario"></textarea>
+            <button type="button" class="ct-com-enviar" data-act="com-enviar" data-c="${cid}" title="Publicar">➤</button>
           </div>
+          <div id="ct-comentarios-lista" class="ct-com-lista"><p class="text-soft" style="margin:0;">Cargando...</p></div>
         </div></div>
       </div>
       <aside class="panel ct-lado">
@@ -329,52 +389,84 @@ function vistaLeccion(mid, m, cid) {
     </div>`;
 }
 
-/* ---------- Comentarios de la clase ---------- */
+/* ---------- Comentarios de la clase (con respuestas) ---------- */
+
+let comentariosActuales = [];
+
+function cabeceraComentario(cid, c, yo) {
+  const nombre = String(c.nombre || 'Usuario');
+  const puedeBorrar = estado.esDirector || c.autorId === yo;
+  const fecha = c.fecha ? new Intl.DateTimeFormat('es-CL', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'America/Santiago' }).format(new Date(c.fecha)) : '';
+  return `<p class="ct-com__nombre">${escaparHtml(nombre)}
+    ${NOMBRES_ROL_COMENTARIO[c.rol] && c.rol !== 'alumno' ? `<span class="ct-etq">${NOMBRES_ROL_COMENTARIO[c.rol]}</span>` : ''}
+    <span class="ct-com__fecha">${escaparHtml(fecha)}</span>
+    ${puedeBorrar ? `<button type="button" class="ct-icono" data-act="com-borrar" data-c="${cid}" data-k="${escaparHtml(c.k)}" title="Borrar">🗑️</button>` : ''}</p>`;
+}
 
 function escucharComentarios(cid) {
   if (desuscribirComentarios) desuscribirComentarios();
   const lista = el('ct-comentarios-lista');
   if (!lista) return;
-  const consulta = query(ref(db, `comentariosClases/${cid}`), limitToLast(200));
+  const consulta = query(ref(db, `comentariosClases/${cid}`), limitToLast(300));
   desuscribirComentarios = onValue(consulta, snap => {
     const yo = auth.currentUser ? auth.currentUser.uid : null;
-    const items = Object.entries(snap.exists() ? snap.val() : {})
-      .sort((a, b) => (a[1].fecha || 0) - (b[1].fecha || 0));
-    lista.innerHTML = items.length ? items.map(([k, c]) => {
-      const nombre = String(c.nombre || 'Usuario');
-      const puedeBorrar = estado.esDirector || c.autorId === yo;
-      const fecha = c.fecha ? new Intl.DateTimeFormat('es-CL', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'America/Santiago' }).format(new Date(c.fecha)) : '';
-      return `<div class="ct-comentario">
-        <span class="ct-avatar">${escaparHtml(nombre.trim().charAt(0).toUpperCase())}</span>
-        <div class="ct-comentario__cuerpo">
-          <div class="ct-comentario__cab"><strong>${escaparHtml(nombre)}</strong>
-            ${NOMBRES_ROL_COMENTARIO[c.rol] && c.rol !== 'alumno' ? `<span class="ct-etq">${NOMBRES_ROL_COMENTARIO[c.rol]}</span>` : ''}
-            <span class="text-soft" style="font-size:11.5px;">${escaparHtml(fecha)}</span>
-            ${puedeBorrar ? `<button type="button" class="ct-icono" data-act="com-borrar" data-c="${cid}" data-k="${escaparHtml(k)}" title="Borrar comentario">🗑️</button>` : ''}</div>
-          <p>${textoMultilinea(c.texto)}</p>
-        </div></div>`;
-    }).join('') : '<p class="text-soft" style="margin:0;">Aún no hay comentarios. ¡Sé el primero!</p>';
+    const items = Object.entries(snap.exists() ? snap.val() : {}).map(([k, c]) => ({ ...c, k }));
+    comentariosActuales = items;
+    const ids = new Set(items.map(x => x.k));
+    const raices = items.filter(x => !x.padreId || !ids.has(x.padreId)).sort((a, b) => (b.fecha || 0) - (a.fecha || 0));
+    const hijas = pid => items.filter(x => x.padreId === pid).sort((a, b) => (a.fecha || 0) - (b.fecha || 0));
+
+    // Conserva las respuestas que alguien está escribiendo.
+    const abiertas = {};
+    lista.querySelectorAll('.ct-com__form:not(.hidden)').forEach(f => { abiertas[f.dataset.form] = f.querySelector('textarea').value; });
+
+    lista.innerHTML = raices.length ? raices.map(r => `
+      <div class="ct-com">
+        ${avatarHtml(r.fotoUrl, r.nombre, true)}
+        <div class="ct-com__cuerpo">
+          ${cabeceraComentario(cid, r, yo)}
+          <p class="ct-com__texto">${textoMultilinea(r.texto)}</p>
+          <button type="button" class="ct-com__resp" data-act="com-responder" data-k="${escaparHtml(r.k)}">Responder</button>
+          <div class="ct-com__resps">${hijas(r.k).map(h => `
+            <div class="ct-com ct-com--resp">
+              ${avatarHtml(h.fotoUrl, h.nombre, false)}
+              <div class="ct-com__cuerpo">${cabeceraComentario(cid, h, yo)}<p class="ct-com__texto">${textoMultilinea(h.texto)}</p></div>
+            </div>`).join('')}</div>
+          <div class="ct-com__form hidden" data-form="${escaparHtml(r.k)}">
+            <textarea maxlength="1000" rows="2" placeholder="Escribe una respuesta..."></textarea>
+            <button type="button" class="btn btn--primary" data-act="com-resp-enviar" data-c="${cid}" data-k="${escaparHtml(r.k)}">Responder</button>
+          </div>
+        </div>
+      </div>`).join('') : '<p class="text-soft" style="margin:0;">Aún no hay comentarios. ¡Sé el primero!</p>';
+
+    Object.entries(abiertas).forEach(([k, texto]) => {
+      const f = lista.querySelector(`.ct-com__form[data-form="${CSS.escape(k)}"]`);
+      if (f) { f.classList.remove('hidden'); f.querySelector('textarea').value = texto; }
+    });
   }, err => {
     console.error('No se pudieron leer los comentarios:', err);
     lista.innerHTML = '<p class="text-soft" style="margin:0;">No se pudieron cargar los comentarios.</p>';
   });
 }
 
-async function publicarComentario(cid, boton) {
-  const caja = el('ct-comentario-texto');
+async function enviarComentario(cid, caja, boton, padreId) {
   const texto = caja ? caja.value.trim() : '';
   const uid = auth.currentUser ? auth.currentUser.uid : null;
   if (!texto || !uid) return;
   boton.disabled = true;
   try {
-    await set(push(ref(db, `comentariosClases/${cid}`)), {
+    const datos = {
       autorId: uid,
       nombre: (getCurrentUserNombre() || 'Usuario').slice(0, 120),
       rol: getCurrentRole(),
       texto: texto.slice(0, 1000),
       fecha: Date.now()
-    });
+    };
+    if (urlSegura(estado.miFoto) && estado.miFoto.length <= 600) datos.fotoUrl = estado.miFoto;
+    if (padreId) datos.padreId = padreId;
+    await set(push(ref(db, `comentariosClases/${cid}`)), datos);
     caja.value = '';
+    if (padreId) caja.closest('.ct-com__form').classList.add('hidden');
   } catch (err) {
     console.error('No se pudo publicar el comentario:', err);
     alert('No se pudo publicar el comentario. Intenta de nuevo.');
@@ -382,19 +474,84 @@ async function publicarComentario(cid, boton) {
   boton.disabled = false;
 }
 
+async function borrarComentario(cid, k) {
+  if (!confirm('¿Borrar este comentario?')) return;
+  if (estado.esDirector) {
+    // El director borra también las respuestas del comentario.
+    const cambios = { [k]: null };
+    comentariosActuales.filter(x => x.padreId === k).forEach(x => { cambios[x.k] = null; });
+    await update(ref(db, `comentariosClases/${cid}`), cambios);
+  } else {
+    await remove(ref(db, `comentariosClases/${cid}/${k}`));
+  }
+}
+
+/* ---------- Valoración con estrellas ---------- */
+
+function escucharValoraciones(cid) {
+  if (desuscribirValoraciones) desuscribirValoraciones();
+  const uid = auth.currentUser ? auth.currentUser.uid : null;
+  desuscribirValoraciones = onValue(ref(db, `valoracionesClases/${cid}`), snap => {
+    const todas = snap.exists() ? snap.val() : {};
+    const notas = Object.values(todas).map(Number).filter(n => n >= 1 && n <= 5);
+    const mia = uid ? Number(todas[uid]) || 0 : 0;
+    const cont = el('ct-estrellas');
+    if (cont) {
+      cont.dataset.mia = String(mia);
+      cont.querySelectorAll('.ct-estrella').forEach(b => b.classList.toggle('is-on', Number(b.dataset.n) <= mia));
+    }
+    const info = el('ct-valoracion-info');
+    if (info) {
+      info.textContent = notas.length
+        ? `${(notas.reduce((a, b) => a + b, 0) / notas.length).toFixed(1)} · ${notas.length} ${notas.length === 1 ? 'valoración' : 'valoraciones'}`
+        : 'Sin valoraciones';
+    }
+  }, err => console.warn('No se pudieron leer las valoraciones:', err));
+}
+
+async function valorar(cid, n) {
+  const uid = auth.currentUser ? auth.currentUser.uid : null;
+  if (!uid) return;
+  const mia = Number((el('ct-estrellas') || {}).dataset?.mia) || 0;
+  try {
+    // Tocar otra vez la misma nota la quita.
+    await set(ref(db, `valoracionesClases/${cid}/${uid}`), mia === n ? null : n);
+  } catch (err) {
+    console.error('No se pudo guardar la valoración:', err);
+    alert('No se pudo guardar tu valoración. Intenta de nuevo.');
+  }
+}
+
+/* ---------- Favorito y concluida ---------- */
+
+async function alternarFavorito(cid, boton) {
+  if (!estado.clave) return;
+  boton.disabled = true;
+  try {
+    const nueva = !estado.favoritos[cid];
+    await set(ref(db, `favoritosClases/${estado.clave}/${cid}`), nueva ? true : null);
+    if (nueva) estado.favoritos[cid] = true; else delete estado.favoritos[cid];
+    boton.textContent = nueva ? '♥ Favorita' : '♡ Favoritar';
+    boton.classList.toggle('is-on', nueva);
+  } catch (err) {
+    console.error('No se pudo guardar el favorito:', err);
+    alert('No se pudo guardar. Intenta de nuevo.');
+  }
+  boton.disabled = false;
+}
+
 async function alternarVista(cid, boton) {
-  if (!estado.alumnoId) return;
+  if (!estado.clave) return;
   boton.disabled = true;
   try {
     const nueva = estado.progreso[cid] ? null : Date.now();
-    await set(ref(db, `progresoClases/${estado.alumnoId}/${cid}`), nueva);
+    await set(ref(db, `progresoClases/${estado.clave}/${cid}`), nueva);
     if (nueva) estado.progreso[cid] = nueva; else delete estado.progreso[cid];
     // Se actualiza solo lo necesario para no reiniciar el video.
-    boton.textContent = nueva ? '✓ Concluida' : 'Marcar como concluida';
-    boton.classList.toggle('btn--ghost', !!nueva);
-    boton.classList.toggle('btn--accent', !nueva);
+    boton.textContent = nueva ? '✓ Concluida' : '○ No concluida';
+    boton.classList.toggle('is-on', !!nueva);
     document.querySelectorAll(`[data-est="${cid}"]`).forEach(e => {
-      e.textContent = nueva ? '✓' : '▶';
+      e.innerHTML = nueva ? ICONO_CHECK : ICONO_PLAY;
       e.classList.toggle('is-vista', !!nueva);
     });
   } catch (err) {
@@ -560,7 +717,7 @@ function editarClase(mid, cid) {
   const ov = modal(c ? 'Editar clase' : 'Nueva clase', `
     ${htmlCampoPortada(portadaActual)}
     <div class="field mb-16"><label>Título</label><input id="ct-c-titulo" maxlength="140" value="${escaparHtml(c ? c.titulo : '')}"></div>
-    <div class="field mb-16"><label>Duración en minutos (opcional)</label><input id="ct-c-dur" type="number" min="0" max="600" value="${c && c.duracionMin ? Number(c.duracionMin) : ''}"></div>
+    <div class="field mb-16"><label>Duración del video (minutos)</label><input id="ct-c-dur" type="number" min="0" max="600" value="${c && c.duracionMin ? Number(c.duracionMin) : ''}"></div>
     <div class="field mb-16"><label>Descripción (opcional)</label><textarea id="ct-c-desc" maxlength="2000">${escaparHtml(c ? c.descripcion || '' : '')}</textarea></div>
     <div class="field mb-16"><label>Código de inserción de Vturb</label>
       <textarea id="ct-c-embed" placeholder="Pega aquí el código JS del video (botón &lt;/&gt; en Vturb)" style="min-height:90px; font-family:monospace; font-size:12px;"></textarea>
@@ -651,7 +808,10 @@ async function borrar(tipo, mid, cid) {
   }
   for (const ruta of rutas) { try { await deleteObject(storageRef(storage, ruta)); } catch (e) { /* ya no estaba */ } }
   const idsClases = tipo === 'mod' ? Object.keys(estado.datos[mid].clases || {}) : [cid];
-  for (const id of idsClases) { try { await remove(ref(db, `comentariosClases/${id}`)); } catch (e) { /* sin comentarios */ } }
+  for (const id of idsClases) {
+    try { await remove(ref(db, `comentariosClases/${id}`)); } catch (e) { /* sin comentarios */ }
+    try { await remove(ref(db, `valoracionesClases/${id}`)); } catch (e) { /* sin valoraciones */ }
+  }
   await remove(ref(db, tipo === 'mod' ? `contenidos/${estado.programa}/${mid}` : `contenidos/${estado.programa}/${mid}/clases/${cid}`));
   if (tipo === 'mod') irAlTablero();
   else if (estado.claseId === cid) { estado.vista = 'modulo'; estado.claseId = null; }
@@ -692,13 +852,29 @@ if (contEl) {
       else if (act === 'cla-arriba') await mover('cla', m, c, -1);
       else if (act === 'cla-abajo') await mover('cla', m, c, 1);
       else if (act === 'cla-borrar') await borrar('cla', m, c);
-      else if (act === 'com-enviar') await publicarComentario(c, b);
-      else if (act === 'com-borrar') {
-        if (confirm('¿Borrar este comentario?')) await remove(ref(db, `comentariosClases/${c}/${b.dataset.k}`));
+      else if (act === 'com-enviar') await enviarComentario(c, el('ct-comentario-texto'), b, null);
+      else if (act === 'com-borrar') await borrarComentario(c, b.dataset.k);
+      else if (act === 'com-responder') {
+        const f = contEl.querySelector(`.ct-com__form[data-form="${CSS.escape(b.dataset.k)}"]`);
+        if (f) { f.classList.toggle('hidden'); if (!f.classList.contains('hidden')) f.querySelector('textarea').focus(); }
       }
+      else if (act === 'com-resp-enviar') await enviarComentario(c, b.closest('.ct-com__form').querySelector('textarea'), b, b.dataset.k);
+      else if (act === 'favorito') await alternarFavorito(c, b);
+      else if (act === 'valorar') await valorar(c, Number(b.dataset.n));
     } catch (err) {
       console.error(err);
       alert('No se pudo completar la acción. Intenta de nuevo.');
+    }
+  });
+}
+
+// Enter publica el comentario (Shift+Enter hace un salto de línea).
+if (contEl) {
+  contEl.addEventListener('keydown', ev => {
+    if (ev.key === 'Enter' && !ev.shiftKey && ev.target && ev.target.id === 'ct-comentario-texto') {
+      ev.preventDefault();
+      const enviar = contEl.querySelector('[data-act="com-enviar"]');
+      if (enviar) enviar.click();
     }
   });
 }
