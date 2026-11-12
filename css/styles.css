@@ -1385,10 +1385,10 @@ body.vista-ranking .content .ranking-como summary, body.vista-ranking .content .
 .rk-puntos strong { font-family: var(--font-display); font-size: 25px; }
 .rk-puntos span { font-size: 13px; margin-top: 2px; }
 
-.rk-fila--top { min-height: 76px; padding: 6px 4px 6px 8px; gap: 10px; }
+.rk-fila--top { min-height: 84px; padding: 6px 4px 6px 8px; gap: 10px; }
 .rk-fila--top .rk-puntos { margin: -6px 0 -6px auto; }
 .rk-medalla { flex: 0 0 62px; align-self: stretch; display: flex; flex-direction: column; align-items: center; justify-content: space-between; }
-.rk-medalla > img { width: 64px; height: 64px; margin-top: -38px; object-fit: contain; }
+.rk-medalla > img { width: 50px; height: 50px; margin-top: -14px; object-fit: contain; }
 .rk-medalla .hito-etiqueta-programa { padding: 3px 7px; }
 .rk-medalla .hito-etiqueta-programa img { height: 12px; }
 
@@ -1403,7 +1403,7 @@ body.vista-ranking .content .ranking-como summary, body.vista-ranking .content .
 .rk-fila--resto .rk-puntos span { font-size: 10px; margin-top: 0; }
 
 .rk-astro { position: absolute; pointer-events: none; z-index: 0; }
-.rk-astro--estrella { right: -14px; top: 88px; width: 78px; z-index: 0; }
+.rk-astro--estrella { right: -12px; top: 66px; width: 78px; z-index: 3; }
 .rk-astro--cohete { left: calc(100% + 4px); top: 50%; transform: translateY(-50%); width: 47%; }
 
 @media (min-width: 1024px) {

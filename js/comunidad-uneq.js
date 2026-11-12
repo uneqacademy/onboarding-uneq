@@ -155,6 +155,8 @@ async function revisarPresentacionAprobada() {
   const uid = auth.currentUser?.uid;
   const mapaSnap = uid ? await get(ref(db, `alumnoPorAuthUid/${uid}`)) : null;
   const alumnoId = mapaSnap && mapaSnap.exists() ? mapaSnap.val() : null;
+  // El Alumno Demo del director (ids "demo-...") ve toda la Comunidad sin presentarse; los alumnos reales, no.
+  if (alumnoId && String(alumnoId).startsWith('demo-')) { presentacionAprobada = true; return; }
   const presSnap = alumnoId ? await get(ref(db, `comunidad/presentaciones/${alumnoId}`)) : null;
   presentacionAprobada = !!(presSnap && presSnap.exists() && presSnap.val().estado === 'aprobada');
 }
