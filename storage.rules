@@ -35,6 +35,12 @@ service firebase.storage {
       allow create, update: if autenticado() && fotoOk();
       allow delete: if autenticado();
     }
+    // Portadas (16:9) de módulos y clases de Contenidos.
+    match /contenidos-portadas/{programa}/{archivo} {
+      allow read: if autenticado();
+      allow create, update: if autenticado() && fotoOk();
+      allow delete: if autenticado();
+    }
     // PDF de las clases (los sube el director desde Contenidos).
     match /contenidos-materiales/{programa}/{claseId}/{archivo} {
       allow read: if autenticado();

@@ -13,9 +13,9 @@
 
 import { db, auth, storage } from './firebase-config.js';
 import { escaparHtml } from './util-html.js';
-import { ref, get, set, push, update, remove } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-database.js";
+import { ref, get, set, push, update, remove, onValue, query, limitToLast } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-database.js";
 import { ref as storageRef, uploadBytes, getDownloadURL, deleteObject } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-storage.js";
-import { getCurrentRole } from './main.js';
+import { getCurrentRole, getCurrentUserNombre } from './main.js';
 import { programaLabel } from './ciclos.js';
 import { faseMaximaChecklist } from './hitos.js';
 
@@ -35,6 +35,10 @@ const estado = {
 };
 let cargaActual = 0;
 let scriptsPlayer = [];
+
+let desuscribirComentarios = null;
+const NOMBRES_ROL_COMENTARIO = { director: 'Director/a', mentor: 'Mentor/a', coach: 'Copiloto', alumno: 'Alumno/a' };
+const urlSegura = u => (typeof u === 'string' && u.startsWith('https://')) ? u : '';
 
 const el = id => document.getElementById(id);
 const textoMultilinea = t => escaparHtml(t || '').replace(/\n/g, '<br>');
@@ -199,11 +203,13 @@ function htmlModulo(mid, m, i, n, abierto) {
   if (bloqueado) {
     cuerpo = `<p class="ct-bloqueado">🔒 Este módulo se desbloquea cuando llegues a la <strong>${escaparHtml(TEXTOS_FASE[m.desdeFase] || '')}</strong>.</p>`;
   } else {
-    cuerpo = `${m.descripcion ? `<p class="text-soft ct-desc-mod">${textoMultilinea(m.descripcion)}</p>` : ''}
+    cuerpo = `${urlSegura(m.portadaUrl) ? `<img class="ct-portada ct-portada--mod" src="${escaparHtml(m.portadaUrl)}" alt="">` : ''}
+      ${m.descripcion ? `<p class="text-soft ct-desc-mod">${textoMultilinea(m.descripcion)}</p>` : ''}
       <ul class="ct-clases">${clases.map(([cid, c], j) => `
         <li class="ct-clase" data-clase="${cid}" data-m="${mid}">
           <button type="button" class="ct-clase__abrir" data-act="abrir" data-m="${mid}" data-c="${cid}">
             <span class="ct-check${estado.progreso[cid] ? ' is-vista' : ''}">${estado.progreso[cid] ? '✓' : ''}</span>
+            ${urlSegura(c.portadaUrl) ? `<img class="ct-portada ct-portada--mini" src="${escaparHtml(c.portadaUrl)}" alt="">` : ''}
             <span class="ct-clase__titulo">${escaparHtml(c.titulo || 'Clase sin título')}</span>
             ${c.publicado === false ? '<span class="ct-etq ct-etq--borrador">Borrador</span>' : ''}
             ${(c.materiales && Object.keys(c.materiales).length) ? '<span class="ct-clip" title="Tiene material">📎</span>' : ''}
@@ -250,6 +256,8 @@ function abrirClase(mid, cid, desplazar = true) {
   visor.innerHTML = `
     <div class="panel__body">
       <p class="ct-visor__modulo">${escaparHtml(modulo.titulo || '')}</p>
+      <!-- la portada de la lección se ve en la lista; aquí va el video -->
+
       <h3 class="ct-visor__titulo">${escaparHtml(clase.titulo || '')}</h3>
       <div class="ct-player" id="ct-player"></div>
       ${clase.descripcion ? `<p class="ct-visor__desc">${textoMultilinea(clase.descripcion)}</p>` : ''}
@@ -261,8 +269,17 @@ function abrirClase(mid, cid, desplazar = true) {
         <button type="button" class="btn btn--ghost" id="ct-sig" ${sig ? '' : 'disabled'}>Siguiente →</button>
         <button type="button" class="btn btn--ghost" id="ct-cerrar-visor">Cerrar</button>
       </div>
+      <div class="ct-comentarios">
+        <p class="ct-materiales__t">💬 Comentarios</p>
+        <div id="ct-comentarios-lista" class="ct-comentarios__lista"><p class="text-soft" style="margin:0;">Cargando...</p></div>
+        <div class="ct-comentarios__nuevo">
+          <textarea id="ct-comentario-texto" maxlength="1000" rows="2" placeholder="Escribe un comentario o una duda sobre esta clase..."></textarea>
+          <button type="button" class="btn btn--primary" data-act="com-enviar" data-c="${cid}">Publicar</button>
+        </div>
+      </div>
     </div>`;
   montarReproductor(el('ct-player'), clase.vturb);
+  escucharComentarios(cid);
   if (ant) el('ct-ant').addEventListener('click', () => abrirClase(ant[0], ant[1]));
   if (sig) el('ct-sig').addEventListener('click', () => abrirClase(sig[0], sig[1]));
   el('ct-cerrar-visor').addEventListener('click', cerrarVisor);
@@ -271,7 +288,61 @@ function abrirClase(mid, cid, desplazar = true) {
   if (desplazar) visor.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
+/* ---------- Comentarios de la clase ---------- */
+
+function escucharComentarios(cid) {
+  if (desuscribirComentarios) desuscribirComentarios();
+  const lista = el('ct-comentarios-lista');
+  if (!lista) return;
+  const consulta = query(ref(db, `comentariosClases/${cid}`), limitToLast(200));
+  desuscribirComentarios = onValue(consulta, snap => {
+    const yo = auth.currentUser ? auth.currentUser.uid : null;
+    const items = Object.entries(snap.exists() ? snap.val() : {})
+      .sort((a, b) => (a[1].fecha || 0) - (b[1].fecha || 0));
+    lista.innerHTML = items.length ? items.map(([k, c]) => {
+      const nombre = String(c.nombre || 'Usuario');
+      const puedeBorrar = estado.esDirector || c.autorId === yo;
+      const fecha = c.fecha ? new Intl.DateTimeFormat('es-CL', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'America/Santiago' }).format(new Date(c.fecha)) : '';
+      return `<div class="ct-comentario">
+        <span class="ct-avatar">${escaparHtml(nombre.trim().charAt(0).toUpperCase())}</span>
+        <div class="ct-comentario__cuerpo">
+          <div class="ct-comentario__cab"><strong>${escaparHtml(nombre)}</strong>
+            ${NOMBRES_ROL_COMENTARIO[c.rol] && c.rol !== 'alumno' ? `<span class="ct-etq">${NOMBRES_ROL_COMENTARIO[c.rol]}</span>` : ''}
+            <span class="text-soft" style="font-size:11.5px;">${escaparHtml(fecha)}</span>
+            ${puedeBorrar ? `<button type="button" class="ct-icono" data-act="com-borrar" data-c="${cid}" data-k="${escaparHtml(k)}" title="Borrar comentario">🗑️</button>` : ''}</div>
+          <p>${textoMultilinea(c.texto)}</p>
+        </div></div>`;
+    }).join('') : '<p class="text-soft" style="margin:0;">Aún no hay comentarios. ¡Sé el primero!</p>';
+  }, err => {
+    console.error('No se pudieron leer los comentarios:', err);
+    lista.innerHTML = '<p class="text-soft" style="margin:0;">No se pudieron cargar los comentarios.</p>';
+  });
+}
+
+async function publicarComentario(cid, boton) {
+  const caja = el('ct-comentario-texto');
+  const texto = caja ? caja.value.trim() : '';
+  const uid = auth.currentUser ? auth.currentUser.uid : null;
+  if (!texto || !uid) return;
+  boton.disabled = true;
+  try {
+    await set(push(ref(db, `comentariosClases/${cid}`)), {
+      autorId: uid,
+      nombre: (getCurrentUserNombre() || 'Usuario').slice(0, 120),
+      rol: getCurrentRole(),
+      texto: texto.slice(0, 1000),
+      fecha: Date.now()
+    });
+    caja.value = '';
+  } catch (err) {
+    console.error('No se pudo publicar el comentario:', err);
+    alert('No se pudo publicar el comentario. Intenta de nuevo.');
+  }
+  boton.disabled = false;
+}
+
 function cerrarVisor() {
+  if (desuscribirComentarios) { desuscribirComentarios(); desuscribirComentarios = null; }
   estado.claseAbierta = null;
   scriptsPlayer.forEach(s => s.remove());
   scriptsPlayer = [];
@@ -340,11 +411,89 @@ function siguienteOrden(obj) {
   return Object.values(obj || {}).reduce((mx, x) => Math.max(mx, Number(x.orden) || 0), 0) + 1;
 }
 
+/* --- Portada horizontal 16:9: la imagen elegida se recorta al centro y se reduce a 1280×720 --- */
+function recortar16x9(archivo) {
+  return new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(archivo);
+    const img = new Image();
+    img.onload = () => {
+      const W = 1280, H = 720;
+      let sw = img.width, sh = img.width * 9 / 16;
+      if (sh > img.height) { sh = img.height; sw = img.height * 16 / 9; }
+      const canvas = document.createElement('canvas');
+      canvas.width = W; canvas.height = H;
+      canvas.getContext('2d').drawImage(img, (img.width - sw) / 2, (img.height - sh) / 2, sw, sh, 0, 0, W, H);
+      URL.revokeObjectURL(url);
+      canvas.toBlob(b => b ? resolve(b) : reject(new Error('No se pudo procesar la imagen')), 'image/jpeg', 0.85);
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('No se pudo leer la imagen')); };
+    img.src = url;
+  });
+}
+
+function htmlCampoPortada(actual) {
+  return `<div class="field mb-16"><label>Portada (horizontal 16:9)</label>
+    <div class="ct-portada-prev" id="ct-p-prev">${urlSegura(actual.url) ? `<img src="${escaparHtml(actual.url)}" alt="">` : '<span>Sin portada</span>'}</div>
+    <div style="display:flex; gap:8px; margin-top:6px;">
+      <button type="button" class="btn btn--ghost" id="ct-p-elegir" style="font-size:12px;">Elegir imagen</button>
+      <button type="button" class="btn btn--ghost" id="ct-p-quitar" style="font-size:12px;">Quitar</button></div>
+    <input type="file" id="ct-p-file" accept="image/*" class="hidden">
+    <p class="text-soft" style="font-size:12px; margin:4px 0 0;">Se recorta sola al centro en formato 16:9.</p></div>`;
+}
+
+function activarPortada(ov) {
+  const est = { blob: null, quitar: false };
+  const prev = ov.querySelector('#ct-p-prev');
+  const input = ov.querySelector('#ct-p-file');
+  ov.querySelector('#ct-p-elegir').addEventListener('click', () => input.click());
+  ov.querySelector('#ct-p-quitar').addEventListener('click', () => {
+    est.blob = null; est.quitar = true;
+    prev.innerHTML = '<span>Sin portada</span>';
+  });
+  input.addEventListener('change', async () => {
+    const f = input.files[0];
+    input.value = '';
+    if (!f) return;
+    if (!f.type.startsWith('image/')) return alert('Elige una imagen (JPG o PNG).');
+    try {
+      est.blob = await recortar16x9(f); est.quitar = false;
+      prev.innerHTML = '';
+      const im = document.createElement('img');
+      im.src = URL.createObjectURL(est.blob);
+      prev.appendChild(im);
+    } catch (e) { alert('No se pudo procesar la imagen. Prueba con otra.'); }
+  });
+  return est;
+}
+
+// Sube/quita la portada según lo elegido y deja los campos listos para guardar.
+async function aplicarPortada(est, actual, rutaBase, campos) {
+  const borrarAnterior = async () => {
+    if (actual.ruta) { try { await deleteObject(storageRef(storage, actual.ruta)); } catch (e) { /* ya no estaba */ } }
+  };
+  if (est.blob) {
+    const ruta = `${rutaBase}_${Date.now()}.jpg`;
+    const sref = storageRef(storage, ruta);
+    await uploadBytes(sref, est.blob, { contentType: 'image/jpeg' });
+    campos.portadaUrl = await getDownloadURL(sref);
+    campos.portadaRuta = ruta;
+    await borrarAnterior();
+  } else if (est.quitar) {
+    campos.portadaUrl = null;
+    campos.portadaRuta = null;
+    await borrarAnterior();
+  }
+}
+
 function editarModulo(mid) {
   const m = mid ? estado.datos[mid] : null;
+  const portadaActual = { url: m && m.portadaUrl, ruta: m && m.portadaRuta };
+  const nuevoId = mid || push(ref(db, `contenidos/${estado.programa}`)).key;
   const opcionesFase = Object.entries(TEXTOS_FASE).map(([k, t]) =>
     `<option value="${k}" ${(Number(m && m.desdeFase) || 0) === Number(k) ? 'selected' : ''}>${t}</option>`).join('');
-  modal(m ? 'Editar módulo' : 'Nuevo módulo', `
+  let portada;
+  const ovM = modal(m ? 'Editar módulo' : 'Nuevo módulo', `
+    ${htmlCampoPortada(portadaActual)}
     <div class="field mb-16"><label>Título</label><input id="ct-m-titulo" maxlength="120" value="${escaparHtml(m ? m.titulo : '')}"></div>
     <div class="field mb-16"><label>Descripción (opcional)</label><textarea id="ct-m-desc" maxlength="600">${escaparHtml(m ? m.descripcion || '' : '')}</textarea></div>
     <div class="field mb-16"><label>Se desbloquea para el alumno</label><select id="ct-m-fase">${opcionesFase}</select></div>
@@ -353,9 +502,11 @@ function editarModulo(mid) {
     const titulo = val(ov, '#ct-m-titulo');
     if (!titulo) throw fallo('Escribe el título del módulo.');
     const campos = { titulo, descripcion: val(ov, '#ct-m-desc'), desdeFase: Number(ov.querySelector('#ct-m-fase').value), publicado: ov.querySelector('#ct-m-pub').checked };
+    await aplicarPortada(portada, portadaActual, `contenidos-portadas/${estado.programa}/${nuevoId}`, campos);
     if (mid) await update(ref(db, `contenidos/${estado.programa}/${mid}`), campos);
-    else await set(push(ref(db, `contenidos/${estado.programa}`)), { ...campos, orden: siguienteOrden(estado.datos) });
+    else await set(ref(db, `contenidos/${estado.programa}/${nuevoId}`), { ...campos, orden: siguienteOrden(estado.datos) });
   });
+  portada = activarPortada(ovM);
 }
 
 function editarClase(mid, cid) {
@@ -363,7 +514,11 @@ function editarClase(mid, cid) {
   let materiales = { ...(c && c.materiales ? c.materiales : {}) };
   const quitados = [];
   const nuevos = [];
+  const portadaActual = { url: c && c.portadaUrl, ruta: c && c.portadaRuta };
+  const claseId = cid || push(ref(db, `contenidos/${estado.programa}/${mid}/clases`)).key;
+  let portada;
   const ov = modal(c ? 'Editar clase' : 'Nueva clase', `
+    ${htmlCampoPortada(portadaActual)}
     <div class="field mb-16"><label>Título</label><input id="ct-c-titulo" maxlength="140" value="${escaparHtml(c ? c.titulo : '')}"></div>
     <div class="field mb-16"><label>Descripción (opcional)</label><textarea id="ct-c-desc" maxlength="2000">${escaparHtml(c ? c.descripcion || '' : '')}</textarea></div>
     <div class="field mb-16"><label>Código de inserción de Vturb</label>
@@ -383,8 +538,8 @@ function editarClase(mid, cid) {
       if (!v) throw fallo('No pude leer el código de Vturb. Copia el código JS completo (con <vturb-smartplayer> y el script de converteai.net).');
       campos.vturb = v;
     }
-    const claseId = cid || push(ref(db, `contenidos/${estado.programa}/${mid}/clases`)).key;
     const base = `contenidos/${estado.programa}/${mid}/clases/${claseId}`;
+    await aplicarPortada(portada, portadaActual, `contenidos-portadas/${estado.programa}/${claseId}`, campos);
     // Sube los PDF nuevos y registra los que quedan.
     for (const n of nuevos) {
       if (!materiales[n.clave]) continue;
@@ -399,6 +554,7 @@ function editarClase(mid, cid) {
     for (const ruta of quitados) { try { await deleteObject(storageRef(storage, ruta)); } catch (e) { /* ya no estaba */ } }
   });
 
+  portada = activarPortada(ov);
   const pintarMats = () => {
     ov.querySelector('#ct-c-mats').innerHTML = Object.entries(materiales).map(([k, mt]) =>
       `<div style="display:flex; justify-content:space-between; gap:8px; font-size:13px; padding:4px 0;"><span>📄 ${escaparHtml(mt.nombre || 'PDF')}</span><button type="button" class="ct-icono" data-quitar="${k}" title="Quitar">✕</button></div>`).join('')
@@ -446,11 +602,14 @@ async function borrar(tipo, mid, cid) {
   const extra = tipo === 'mod' ? ' y todas sus clases' : '';
   if (!confirm(`¿Borrar "${nombre}"${extra}? No se puede deshacer.`)) return;
   const clases = tipo === 'mod' ? Object.values(estado.datos[mid].clases || {}) : [estado.datos[mid].clases[cid]];
+  const rutas = tipo === 'mod' && estado.datos[mid].portadaRuta ? [estado.datos[mid].portadaRuta] : [];
   for (const c of clases) {
-    for (const mt of Object.values(c.materiales || {})) {
-      if (mt && mt.ruta) { try { await deleteObject(storageRef(storage, mt.ruta)); } catch (e) { /* ya no estaba */ } }
-    }
+    if (c.portadaRuta) rutas.push(c.portadaRuta);
+    for (const mt of Object.values(c.materiales || {})) if (mt && mt.ruta) rutas.push(mt.ruta);
   }
+  for (const ruta of rutas) { try { await deleteObject(storageRef(storage, ruta)); } catch (e) { /* ya no estaba */ } }
+  const idsClases = tipo === 'mod' ? Object.keys(estado.datos[mid].clases || {}) : [cid];
+  for (const id of idsClases) { try { await remove(ref(db, `comentariosClases/${id}`)); } catch (e) { /* sin comentarios */ } }
   await remove(ref(db, tipo === 'mod' ? `contenidos/${estado.programa}/${mid}` : `contenidos/${estado.programa}/${mid}/clases/${cid}`));
   if (estado.claseAbierta && (tipo === 'mod' || estado.claseAbierta.claseId === cid)) cerrarVisor();
   await recargarDatos();
@@ -481,6 +640,10 @@ if (contEl) {
       else if (act === 'cla-arriba') await mover('cla', m, c, -1);
       else if (act === 'cla-abajo') await mover('cla', m, c, 1);
       else if (act === 'cla-borrar') await borrar('cla', m, c);
+      else if (act === 'com-enviar') await publicarComentario(c, b);
+      else if (act === 'com-borrar') {
+        if (confirm('¿Borrar este comentario?')) await remove(ref(db, `comentariosClases/${c}/${b.dataset.k}`));
+      }
     } catch (err) {
       console.error(err);
       alert('No se pudo completar la acción. Intenta de nuevo.');
