@@ -46,6 +46,11 @@ let desuscribirComentarios = null;
 const NOMBRES_ROL_COMENTARIO = { director: 'Director/a', mentor: 'Mentor/a', coach: 'Copiloto', alumno: 'Alumno/a' };
 const urlSegura = u => (typeof u === 'string' && u.startsWith('https://')) ? u : '';
 
+// Íconos de las lecciones (reloj de duración y estado: play = pendiente, check = concluida).
+const ICONO_RELOJ = '<svg class="ct-ico ct-ico--reloj" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>';
+const ICONO_PLAY = '<svg class="ct-ico" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="M8 5.5v13l11-6.5z"/></svg>';
+const ICONO_CHECK = '<svg class="ct-ico" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
+
 const el = id => document.getElementById(id);
 const textoMultilinea = t => escaparHtml(t || '').replace(/\n/g, '<br>');
 
@@ -279,8 +284,8 @@ function vistaModulo(mid, m) {
       <span class="ct-fila__titulo">${escaparHtml(c.titulo || 'Lección sin título')}
         ${c.publicado === false ? '<span class="ct-etq ct-etq--borrador">Borrador</span>' : ''}
         ${(c.materiales && Object.keys(c.materiales).length) ? '<span title="Tiene material">📎</span>' : ''}</span>
-      ${Number(c.duracionMin) > 0 ? `<span class="ct-fila__dur">⏱ ${Number(c.duracionMin)} minutos</span>` : ''}
-      <span class="ct-fila__estado${vista ? ' is-vista' : ''}">${vista ? '✓' : '▶'}</span>
+      ${Number(c.duracionMin) > 0 ? `<span class="ct-fila__dur">${ICONO_RELOJ} ${Number(c.duracionMin)} minutos</span>` : ''}
+      <span class="ct-fila__estado${vista ? ' is-vista' : ''}" data-est="${cid}">${vista ? ICONO_CHECK : ICONO_PLAY}</span>
       ${estado.esDirector ? botonesAdmin('cla', mid, cid, j, clases.length) : ''}
     </div>`;
   }).join('');
@@ -338,8 +343,8 @@ function vistaLeccion(mid, m, cid) {
   const lista = clases.map(([id, c], j) => `
     <div class="ct-lado__item${id === cid ? ' is-actual' : ''}" data-act="abrir" data-m="${mid}" data-c="${id}">
       <span class="ct-lado__num">${j + 1}</span>
-      <span class="ct-lado__txt">${escaparHtml(c.titulo || 'Lección sin título')}${Number(c.duracionMin) > 0 ? `<small class="ct-lado__dur">⏱ ${formatoDuracion(c.duracionMin)}</small>` : ''}</span>
-      <span class="ct-lado__est${estado.progreso[id] ? ' is-vista' : ''}" data-est="${id}">${estado.progreso[id] ? '✓' : '▶'}</span>
+      <span class="ct-lado__txt">${escaparHtml(c.titulo || 'Lección sin título')}${Number(c.duracionMin) > 0 ? `<small class="ct-lado__dur">${ICONO_RELOJ} ${formatoDuracion(c.duracionMin)}</small>` : ''}</span>
+      <span class="ct-lado__est${estado.progreso[id] ? ' is-vista' : ''}" data-est="${id}">${estado.progreso[id] ? ICONO_CHECK : ICONO_PLAY}</span>
     </div>`).join('');
 
   return `
@@ -546,7 +551,7 @@ async function alternarVista(cid, boton) {
     boton.textContent = nueva ? '✓ Concluida' : '○ No concluida';
     boton.classList.toggle('is-on', !!nueva);
     document.querySelectorAll(`[data-est="${cid}"]`).forEach(e => {
-      e.textContent = nueva ? '✓' : '▶';
+      e.innerHTML = nueva ? ICONO_CHECK : ICONO_PLAY;
       e.classList.toggle('is-vista', !!nueva);
     });
   } catch (err) {
