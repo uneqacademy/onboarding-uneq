@@ -42,6 +42,7 @@ const estado = {
   progreso: {},       // { claseId: timestamp }
   alumnoId: null,
   faseMax: 0,
+  faseDemo: 1,        // solo Alumno Demo: fase que simula para probar los candados
   esDirector: false,  // administra (crear/editar/ordenar/borrar)
   modoSeleccion: false, // director: casillas para acciones masivas (Editar / Replicar)
   seleccion: new Set(),
@@ -238,7 +239,7 @@ async function resolverAlumno() {
   const ciclo = await get(ref(db, `ciclos/${cicloId}`));
   if (!ciclo.exists()) return null;
   estado.faseMax = faseMaximaChecklist(ciclo.val());
-  if (esModoDemo()) estado.faseMax = 4;   // el Alumno Demo ve todo, sin candado, para presentar
+  if (esModoDemo()) estado.faseMax = estado.faseDemo;   // el Alumno Demo elige la fase que quiere simular
   estado.miFoto = alumno.val().fotoUrl || '';
   await cargarMisMarcas();
   return ciclo.val().programa || null;
@@ -400,7 +401,8 @@ function irAlTablero() { estado.modoSeleccion = false; estado.seleccion.clear();
 function vistaModulos(modulos) {
   const tabs = estado.verTodo ? `<div class="ct-tabs">${PROGRAMAS_CONTENIDO.map(p =>
     `<button type="button" class="ct-tab${p === estado.programa ? ' is-active' : ''}" data-programa="${p}">${escaparHtml(etiquetaPrograma(p))}</button>`).join('')}</div>` : '';
-  const nota = estado.programa === 'comun' ? '<p class="text-soft" style="margin:0 0 12px;">Lo que subas aquí aparece automáticamente al comienzo de los 4 programas (OPEN, BEGIN, NEXT y eXIT). Súbelo una sola vez.</p>' : '';
+  const simulador = esModoDemo() ? `<div class="ct-demo-fase"><label>Probar como alumno en: <select id="ct-demo-fase">${[0, 1, 2, 3, 4].map(n => `<option value="${n}"${n === estado.faseDemo ? ' selected' : ''}>${n === 0 ? 'Inicio (sin fase)' : 'Fase ' + n}</option>`).join('')}</select></label><span class="text-soft">Los módulos de fases más adelante se ven bloqueados.</span></div>` : '';
+  const nota = simulador + (estado.programa === 'comun' ? '<p class="text-soft" style="margin:0 0 12px;">Lo que subas aquí aparece automáticamente al comienzo de los 4 programas (OPEN, BEGIN, NEXT y eXIT). Súbelo una sola vez.</p>' : '');
   const nuevo = nota + (estado.esDirector ? `<div class="ct-admin-barra"><button type="button" class="btn btn--primary" id="ct-nuevo-modulo">+ Nuevo módulo</button> ${botonModoSeleccion()}</div>${estado.modoSeleccion ? barraMasiva() : ''}` : '');
   const tarjetas = modulos.length
     ? `<div class="ct-grid">${modulos.map(([mid, m], i) => tarjetaModulo(mid, m, i, modulos.length)).join('')}</div>`
@@ -419,8 +421,9 @@ function tarjetaModulo(mid, m, i, n) {
     bloq ? `<span class="ct-etq">🔒 ${escaparHtml(TEXTOS_FASE[m.desdeFase] || '')}</span>` : ''
   ].join('');
   return `
-    <article${arrastrable()} class="ct-card${bloq ? ' is-bloqueado' : ''}${estado.seleccion.has(mid) ? ' is-sel' : ''}" data-act="${bloq ? 'bloqueado' : 'ir-modulo'}" data-m="${mid}" data-fase="${escaparHtml(TEXTOS_FASE[m.desdeFase] || '')}">
+    <article${arrastrable()} class="ct-card${bloq ? ' is-bloqueado' : ''}${estado.seleccion.has(mid) ? ' is-sel' : ''}" ${bloq ? 'data-bloq="1" aria-disabled="true"' : 'data-act="ir-modulo"'} data-m="${mid}" data-fase="${escaparHtml(TEXTOS_FASE[m.desdeFase] || '')}">
       <div class="ct-card__img">${img}
+        ${bloq ? '<div class="ct-card__candado" title="Bloqueado: se activa al avanzar"><svg viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg></div>' : ''}
         <div class="ct-card__etqs">${etqs}</div>
         ${puedeEditar(m) ? (estado.modoSeleccion ? `<label class="ct-sel"><input type="checkbox" ${estado.seleccion.has(mid) ? 'checked' : ''} tabindex="-1"></label>` : `<div class="ct-card__admin">${botonesAdmin('mod', mid, '', i, n)}</div>`) : ''}
       </div>
@@ -1238,6 +1241,16 @@ if (contEl) {
     catch (err) { console.error(err); alert('No se pudo cambiar el orden. Intenta de nuevo.'); }
   });
   contEl.addEventListener('dragend', () => { arrastre = null; limpiarMarcas(); });
+}
+
+if (contEl) {
+  contEl.addEventListener('change', async ev => {
+    if (ev.target && ev.target.id === 'ct-demo-fase' && esModoDemo()) {
+      estado.faseDemo = Number(ev.target.value) || 0;
+      estado.faseMax = estado.faseDemo;
+      pintar();
+    }
+  });
 }
 
 // Enter publica el comentario (Shift+Enter hace un salto de línea).
