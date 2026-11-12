@@ -522,7 +522,7 @@ function escucharComentarios(cid) {
           <button type="button" class="ct-com__resp" data-act="com-responder" data-k="${escaparHtml(r.k)}">Responder</button>
           <div class="ct-com__resps">${hijas(r.k).map(h => `
             <div class="ct-com ct-com--resp">
-              ${avatarHtml(h.fotoUrl, h.nombre, false)}
+              ${avatarHtml(h.fotoUrl, h.nombre, true)}
               <div class="ct-com__cuerpo">${cabeceraComentario(cid, h, yo)}<p class="ct-com__texto">${textoMultilinea(h.texto)}</p></div>
             </div>`).join('')}</div>
           <div class="ct-com__form hidden" data-form="${escaparHtml(r.k)}">
