@@ -1749,10 +1749,47 @@ document.querySelectorAll('.nav-item[data-nav]').forEach(item => {
 const ETIQUETAS_DEMO = { open: 'OPEN', begin: 'BEGIN', next: 'NEXT', exit: 'eXIT' };
 let estadoDirectorAntesDeDemo = null;
 
+// Foto genérica del Alumno Demo (así su perfil no se ve vacío).
+const FOTO_DEMO = 'data:image/svg+xml;utf8,' + encodeURIComponent(
+  '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 160"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#5B7CFA"/><stop offset="1" stop-color="#1B2A6B"/></linearGradient></defs><rect width="160" height="160" fill="url(#g)"/><circle cx="80" cy="62" r="28" fill="#F3F4F7"/><path d="M24 160c0-34 25-58 56-58s56 24 56 58z" fill="#F3F4F7"/></svg>'
+);
+
+// Test Brújula ficticio (mismas preguntas que test.js) para ver la pestaña completa.
+function testBrujulaDemo() {
+  const respuestas = {
+    f1_1: 7, f1_2: 6, f1_3: 8, f1_4: 7,
+    f2_1: 5, f2_2: 4, f2_3: 6, f2_4: 5, f2_5: 6,
+    f3_1: 6, f3_2: 7, f3_3: 5, f3_4: 6, f3_5: 8,
+    f4_1: 4, f4_2: 3, f4_3: 5, f4_4: 4, f4_5: 5,
+    sab_perfeccionista: 8, sab_procrastinador: 5, sab_comparador: 6, sab_disperso: 4, sab_controlador: 7, sab_victima: 2,
+    bv_rogar: 7, bv_dinero: 4, bv_expectativas: 6, bv_perseguir: 8, bv_aburrir: 3
+  };
+  const promedio = (prefijo) => {
+    const v = Object.entries(respuestas).filter(([k]) => k.startsWith(prefijo)).map(([, n]) => n);
+    return parseFloat((v.reduce((a, b) => a + b, 0) / v.length).toFixed(1));
+  };
+  return { respuestas, promedios: { fase1: promedio('f1_'), fase2: promedio('f2_'), fase3: promedio('f3_'), fase4: promedio('f4_') } };
+}
+
+async function completarDatosDemo(demoId) {
+  const alumnoSnap = await get(ref(db, `alumnos/${demoId}`));
+  if (alumnoSnap.exists() && !alumnoSnap.val().fotoUrl) {
+    await set(ref(db, `alumnos/${demoId}/fotoUrl`), FOTO_DEMO);
+  }
+  const testsSnap = await get(ref(db, `ciclos/${demoId}/tests`));
+  if (!testsSnap.exists()) {
+    const t = testBrujulaDemo();
+    await set(push(ref(db, `ciclos/${demoId}/tests`)), { ...t, alumnoId: demoId, completadoAt: Date.now() - 14 * 86400000 });
+  }
+}
+
 async function asegurarAlumnoDemo(programa) {
   const demoId = `demo-${programa}`;
   const alumnoSnap = await get(ref(db, `alumnos/${demoId}`));
-  if (alumnoSnap.exists()) return demoId;
+  if (alumnoSnap.exists()) {
+    try { await completarDatosDemo(demoId); } catch (err) { console.warn('No se pudo completar el demo:', err); }
+    return demoId;
+  }
 
   const hoy = new Date().toISOString().slice(0, 10);
   await set(ref(db, `alumnos/${demoId}`), {
@@ -1761,6 +1798,7 @@ async function asegurarAlumnoDemo(programa) {
     email: `demo-${programa}@uneq.local`,
     cicloActualId: demoId,
     esDemo: true,
+    fotoUrl: FOTO_DEMO,
     createdAt: Date.now()
   });
   await set(ref(db, `ciclos/${demoId}`), {
@@ -1778,6 +1816,7 @@ async function asegurarAlumnoDemo(programa) {
     esDemo: true,
     createdAt: Date.now()
   });
+  try { await completarDatosDemo(demoId); } catch (err) { console.warn('No se pudo completar el demo:', err); }
   return demoId;
 }
 
