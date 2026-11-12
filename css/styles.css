@@ -1796,3 +1796,14 @@ body.tema-open .hitos-tab { color: #E9D3CD; }
 .asis-fila.hidden { display: none; }
 .asis-fila input[type="checkbox"] { width: 20px; height: 20px; flex-shrink: 0; margin: 0; }
 .asis-pie { display: flex; justify-content: flex-end; gap: 8px; margin-top: 12px; }
+
+.ct-admin-barra { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.ct-masiva { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin: 0 0 14px; padding: 10px 12px; background: var(--color-surface-2, #f3f5f9); border-radius: var(--radius-md); }
+.ct-masiva .btn { font-size: 12.5px; padding: 6px 10px; }
+.ct-masiva__todos { display: flex; gap: 6px; align-items: center; font-weight: 600; font-size: 13.5px; }
+.ct-masiva__n { font-size: 13px; color: var(--color-ink-soft); margin-right: 6px; }
+.ct-sel { position: absolute; top: 8px; left: 8px; background: rgba(255, 255, 255, .95); border-radius: 6px; padding: 4px 6px; line-height: 0; }
+.ct-sel input { width: 18px; height: 18px; pointer-events: none; }
+.ct-sel--fila { position: static; background: none; padding: 0 4px; }
+.ct-card.is-sel .ct-card__img { outline: 3px solid var(--color-primary, #1b2a4e); }
+.ct-fila.is-sel { outline: 2px solid var(--color-primary, #1b2a4e); }

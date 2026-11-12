@@ -39,6 +39,8 @@ const estado = {
   alumnoId: null,
   faseMax: 0,
   esDirector: false,  // administra (crear/editar/ordenar/borrar)
+  modoSeleccion: false, // director: casillas para acciones masivas (Editar / Replicar)
+  seleccion: new Set(),
   verBorradores: false, // staff y Alumno Demo: ven también lo que está sin publicar
   verTodo: false,     // staff: ve todos los programas, sin candado ni progreso
   vista: 'modulos',   // 'modulos' (tablero) | 'modulo' (lecciones) | 'leccion'
@@ -315,6 +317,7 @@ function visibles() {
 }
 
 function irA(vista, moduloId = null, claseId = null) {
+  estado.modoSeleccion = false; estado.seleccion.clear();
   estado.vista = vista; estado.moduloId = moduloId; estado.claseId = claseId;
   pintar();
   const cont = el('contenidos-contenido');
@@ -387,14 +390,14 @@ function pintar() {
     detectarDuracionesFaltantes();
   }
 }
-function irAlTablero() { estado.vista = 'modulos'; estado.moduloId = null; estado.claseId = null; }
+function irAlTablero() { estado.modoSeleccion = false; estado.seleccion.clear(); estado.vista = 'modulos'; estado.moduloId = null; estado.claseId = null; }
 
 /* --- Pantalla 1: tablero de módulos --- */
 function vistaModulos(modulos) {
   const tabs = estado.verTodo ? `<div class="ct-tabs">${PROGRAMAS_CONTENIDO.map(p =>
     `<button type="button" class="ct-tab${p === estado.programa ? ' is-active' : ''}" data-programa="${p}">${escaparHtml(etiquetaPrograma(p))}</button>`).join('')}</div>` : '';
   const nota = estado.programa === 'comun' ? '<p class="text-soft" style="margin:0 0 12px;">Lo que subas aquí aparece automáticamente al comienzo de los 4 programas (OPEN, BEGIN, NEXT y eXIT). Súbelo una sola vez.</p>' : '';
-  const nuevo = nota + (estado.esDirector ? '<div class="ct-admin-barra"><button type="button" class="btn btn--primary" id="ct-nuevo-modulo">+ Nuevo módulo</button></div>' : '');
+  const nuevo = nota + (estado.esDirector ? `<div class="ct-admin-barra"><button type="button" class="btn btn--primary" id="ct-nuevo-modulo">+ Nuevo módulo</button> ${botonModoSeleccion()}</div>${estado.modoSeleccion ? barraMasiva() : ''}` : '');
   const tarjetas = modulos.length
     ? `<div class="ct-grid">${modulos.map(([mid, m], i) => tarjetaModulo(mid, m, i, modulos.length)).join('')}</div>`
     : `<div class="panel"><div class="panel__body"><p class="text-soft" style="margin:0;">${estado.esDirector ? (estado.programa === 'comun' ? 'Aún no hay base común. Crea el primer módulo con “+ Nuevo módulo”.' : 'Este programa aún no tiene módulos. Crea el primero con “+ Nuevo módulo”.') : estado.verTodo ? 'Este programa aún no tiene módulos.' : 'Pronto verás aquí los contenidos de tu programa.'}</p></div></div>`;
@@ -412,10 +415,10 @@ function tarjetaModulo(mid, m, i, n) {
     bloq ? `<span class="ct-etq">🔒 ${escaparHtml(TEXTOS_FASE[m.desdeFase] || '')}</span>` : ''
   ].join('');
   return `
-    <article class="ct-card${bloq ? ' is-bloqueado' : ''}" data-act="${bloq ? 'bloqueado' : 'ir-modulo'}" data-m="${mid}" data-fase="${escaparHtml(TEXTOS_FASE[m.desdeFase] || '')}">
+    <article class="ct-card${bloq ? ' is-bloqueado' : ''}${estado.seleccion.has(mid) ? ' is-sel' : ''}" data-act="${bloq ? 'bloqueado' : 'ir-modulo'}" data-m="${mid}" data-fase="${escaparHtml(TEXTOS_FASE[m.desdeFase] || '')}">
       <div class="ct-card__img">${img}
         <div class="ct-card__etqs">${etqs}</div>
-        ${puedeEditar(m) ? `<div class="ct-card__admin">${botonesAdmin('mod', mid, '', i, n)}</div>` : ''}
+        ${puedeEditar(m) ? (estado.modoSeleccion ? `<label class="ct-sel"><input type="checkbox" ${estado.seleccion.has(mid) ? 'checked' : ''} tabindex="-1"></label>` : `<div class="ct-card__admin">${botonesAdmin('mod', mid, '', i, n)}</div>`) : ''}
       </div>
       <p class="ct-card__titulo">${escaparHtml(m.titulo || 'Módulo sin título')}</p>
       ${m.descripcion ? `<p class="ct-card__desc">${escaparHtml(m.descripcion)}</p>` : ''}
@@ -431,7 +434,7 @@ function vistaModulo(mid, m) {
   const filas = clases.map(([cid, c], j) => {
     const vista = !!estado.progreso[cid];
     return `
-    <div class="ct-fila" data-act="abrir" data-m="${mid}" data-c="${cid}">
+    <div class="ct-fila${estado.seleccion.has(cid) ? ' is-sel' : ''}" data-act="abrir" data-m="${mid}" data-c="${cid}">
       <span class="ct-fila__num">${j + 1}</span>
       ${urlSegura(c.portadaUrl) ? `<img class="ct-portada ct-portada--mini" src="${escaparHtml(c.portadaUrl)}" alt="">` : ''}
       <span class="ct-fila__titulo">${escaparHtml(c.titulo || 'Lección sin título')}
@@ -440,7 +443,7 @@ function vistaModulo(mid, m) {
         ${(c.materiales && Object.keys(c.materiales).length) ? '<span title="Tiene material">📎</span>' : ''}</span>
       ${Number(c.duracionMin) > 0 ? `<span class="ct-fila__dur">${ICONO_RELOJ} ${Number(c.duracionMin)} minutos</span>` : ''}
       <span class="ct-fila__estado${vista ? ' is-vista' : ''}" data-est="${cid}">${vista ? ICONO_CHECK : ICONO_PLAY}</span>
-      ${puedeEditar(m) ? botonesAdmin('cla', mid, cid, j, clases.length) : ''}
+      ${puedeEditar(m) ? (estado.modoSeleccion ? `<label class="ct-sel ct-sel--fila"><input type="checkbox" ${estado.seleccion.has(cid) ? 'checked' : ''} tabindex="-1"></label>` : botonesAdmin('cla', mid, cid, j, clases.length)) : ''}
     </div>`;
   }).join('');
   return `
@@ -453,7 +456,7 @@ function vistaModulo(mid, m) {
         <div class="ct-barra" style="max-width:320px; margin-top:8px;"><span style="width:${prog.pct}%"></span></div></div>
     </div>
     <div class="ct-filas">${filas || '<div class="panel"><div class="panel__body"><p class="text-soft" style="margin:0;">Aún no hay lecciones en este módulo.</p></div></div>'}</div>
-    ${puedeEditar(m) ? `<button type="button" class="btn btn--primary ct-nueva-clase" data-act="cla-nueva" data-m="${mid}">+ Nueva lección</button>` : ''}`;
+    ${puedeEditar(m) ? `<div class="ct-admin-barra"><button type="button" class="btn btn--primary ct-nueva-clase" data-act="cla-nueva" data-m="${mid}">+ Nueva lección</button> ${botonModoSeleccion()}</div>${estado.modoSeleccion ? barraMasiva() : ''}` : ''}`;
 }
 
 /* --- Pantalla 3: la lección (video a la izquierda, lista del módulo a la derecha) --- */
@@ -825,10 +828,20 @@ function activarPortada(ov) {
 }
 
 // Sube/quita la portada según lo elegido y deja los campos listos para guardar.
+// Las copias (Enviar a otro programa) comparten los mismos archivos: solo se borra el archivo si nadie más lo usa.
+// propias = cuántas veces lo nombra el elemento que se está cambiando y que aún está guardado.
+async function borrarArchivoSiLibre(ruta, propias = 0) {
+  if (!ruta) return;
+  try {
+    const s = await get(ref(db, 'contenidos'));
+    const usos = s.exists() ? JSON.stringify(s.val()).split(JSON.stringify(ruta)).length - 1 : 0;
+    if (usos > propias) return;
+  } catch (e) { return; }
+  try { await deleteObject(storageRef(storage, ruta)); } catch (e) { /* ya no estaba */ }
+}
+
 async function aplicarPortada(est, actual, rutaBase, campos) {
-  const borrarAnterior = async () => {
-    if (actual.ruta) { try { await deleteObject(storageRef(storage, actual.ruta)); } catch (e) { /* ya no estaba */ } }
-  };
+  const borrarAnterior = async () => { await borrarArchivoSiLibre(actual.ruta, 1); };
   if (est.blob) {
     const ruta = `${rutaBase}_${Date.now()}.jpg`;
     const sref = storageRef(storage, ruta);
@@ -922,7 +935,7 @@ function editarClase(mid, cid) {
     campos.materiales = Object.keys(materiales).length ? materiales : null;
     if (cid) await update(ref(db, base), campos);
     else await set(ref(db, base), { ...campos, orden: siguienteOrden(estado.datos[mid].clases) });
-    for (const ruta of quitados) { try { await deleteObject(storageRef(storage, ruta)); } catch (e) { /* ya no estaba */ } }
+    for (const ruta of quitados) await borrarArchivoSiLibre(ruta, 0);
   });
 
   portada = activarPortada(ov);
@@ -972,21 +985,134 @@ async function borrar(tipo, mid, cid) {
   const nombre = tipo === 'mod' ? estado.datos[mid].titulo : estado.datos[mid].clases[cid].titulo;
   const extra = tipo === 'mod' ? ' y todas sus clases' : '';
   if (!confirm(`¿Borrar "${nombre}"${extra}? No se puede deshacer.`)) return;
+  await borrarUno(tipo, mid, cid);
+  if (tipo === 'mod') irAlTablero();
+  else if (estado.claseId === cid) { estado.vista = 'modulo'; estado.claseId = null; }
+  await recargarDatos();
+  pintar();
+}
+
+async function borrarUno(tipo, mid, cid, conservarDatos = false) {
   const clases = tipo === 'mod' ? Object.values(estado.datos[mid].clases || {}) : [estado.datos[mid].clases[cid]];
   const rutas = tipo === 'mod' && estado.datos[mid].portadaRuta ? [estado.datos[mid].portadaRuta] : [];
   for (const c of clases) {
     if (c.portadaRuta) rutas.push(c.portadaRuta);
     for (const mt of Object.values(c.materiales || {})) if (mt && mt.ruta) rutas.push(mt.ruta);
   }
-  for (const ruta of rutas) { try { await deleteObject(storageRef(storage, ruta)); } catch (e) { /* ya no estaba */ } }
   const idsClases = tipo === 'mod' ? Object.keys(estado.datos[mid].clases || {}) : [cid];
-  for (const id of idsClases) {
+  for (const id of conservarDatos ? [] : idsClases) {
     try { await remove(ref(db, `comentariosClases/${id}`)); } catch (e) { /* sin comentarios */ }
     try { await remove(ref(db, `valoracionesClases/${id}`)); } catch (e) { /* sin valoraciones */ }
   }
   await remove(ref(db, tipo === 'mod' ? `contenidos/${estado.programa}/${mid}` : `contenidos/${estado.programa}/${mid}/clases/${cid}`));
-  if (tipo === 'mod') irAlTablero();
-  else if (estado.claseId === cid) { estado.vista = 'modulo'; estado.claseId = null; }
+  for (const ruta of rutas) await borrarArchivoSiLibre(ruta, 0);   // después de quitarlo, por si una copia usa el mismo archivo
+}
+
+/* ---------- Editar / Replicar: acciones masivas sobre módulos o lecciones ---------- */
+
+function seleccionables() {
+  const modulos = visibles();
+  if (estado.vista === 'modulos') return { tipo: 'mod', mid: null, ids: modulos.filter(([, m]) => puedeEditar(m)).map(([id]) => id) };
+  const a = modulos.find(([id]) => id === estado.moduloId);
+  return { tipo: 'cla', mid: estado.moduloId, ids: a && puedeEditar(a[1]) ? clasesDe(a[1]).map(([id]) => id) : [] };
+}
+
+function barraMasiva() {
+  const { ids } = seleccionables();
+  const n = estado.seleccion.size;
+  const dis = n ? '' : ' disabled';
+  const todos = ids.length > 0 && ids.every(id => estado.seleccion.has(id));
+  const destinos = ['open', 'begin', 'next', 'exit'].filter(p => p !== estado.programa)
+    .map(p => '<button type="button" class="btn btn--ghost" data-act="masiva" data-a="enviar:' + p + '"' + dis + '>Enviar a ' + escaparHtml(programaLabel(p)) + '</button>').join('');
+  const base = estado.programa !== 'comun' ? '<button type="button" class="btn btn--ghost" data-act="masiva" data-a="enviar:comun"' + dis + '>Enviar a todos (Base)</button>' : '';
+  return '<div class="ct-masiva">' +
+    '<label class="ct-masiva__todos"><input type="checkbox" data-act="sel-todos" ' + (todos ? 'checked' : '') + '> Todos</label>' +
+    '<span class="ct-masiva__n">' + n + ' seleccionado' + (n === 1 ? '' : 's') + '</span>' +
+    '<button type="button" class="btn btn--ghost" data-act="masiva" data-a="eliminar"' + dis + '>Eliminar</button>' +
+    '<button type="button" class="btn btn--ghost" data-act="masiva" data-a="ocultar"' + dis + '>Ocultar</button>' +
+    '<button type="button" class="btn btn--ghost" data-act="masiva" data-a="publicar"' + dis + '>Publicar</button>' +
+    destinos + base + '</div>';
+}
+
+const botonModoSeleccion = () => '<button type="button" class="btn btn--ghost" data-act="sel-modo">' + (estado.modoSeleccion ? '✕ Terminar' : '☑ Editar / Replicar') + '</button>';
+
+function alternarSeleccion(id) {
+  const { ids } = seleccionables();
+  if (!ids.includes(id)) return;
+  if (estado.seleccion.has(id)) estado.seleccion.delete(id); else estado.seleccion.add(id);
+  pintar();
+}
+
+function copiaLimpia(obj, paraBase) {
+  const c = JSON.parse(JSON.stringify(obj));
+  delete c._origen; delete c.orden;
+  if (!paraBase) delete c.excluirDe;
+  return c;
+}
+
+// Copia módulos o lecciones al programa destino (los archivos se comparten; el avance y los comentarios empiezan de cero).
+// conservarIds (al mover a la Base): las lecciones mantienen su id, así sus comentarios, estrellas y avance siguen ahí.
+async function enviarA(destino, tipo, mid, ids, conservarIds = false) {
+  const snap = await get(ref(db, 'contenidos/' + destino));
+  const dest = snap.exists() ? snap.val() : {};
+  const cambios = {};
+  const base = 'contenidos/' + destino;
+  const paraBase = destino === 'comun';
+  const clasesCopia = clases => {
+    const out = {};
+    let k = 0;
+    clasesDe({ clases }).forEach(([cid, c]) => { out[conservarIds ? cid : push(ref(db, base)).key] = { ...copiaLimpia(c, paraBase), orden: ++k }; });
+    return out;
+  };
+  if (tipo === 'mod') {
+    let orden = siguienteOrden(dest);
+    for (const id of ids) {
+      const m = estado.datos[id];
+      const { clases, ...resto } = copiaLimpia(m, paraBase);
+      cambios[push(ref(db, base)).key] = { ...resto, orden: orden++, ...(clases ? { clases: clasesCopia(m.clases) } : {}) };
+    }
+  } else {
+    const origen = estado.datos[mid];
+    const titulo = String(origen.titulo || '').trim().toLowerCase();
+    let destMid = Object.keys(dest).find(k => dest[k] && String(dest[k].titulo || '').trim().toLowerCase() === titulo);
+    if (!destMid) {
+      destMid = push(ref(db, base)).key;
+      const { clases, ...resto } = copiaLimpia(origen, paraBase);
+      cambios[destMid] = { ...resto, orden: siguienteOrden(dest) };
+    }
+    let orden = siguienteOrden(dest[destMid] && dest[destMid].clases);
+    for (const id of ids) {
+      const nueva = conservarIds ? id : push(ref(db, base)).key;
+      cambios[destMid + '/clases/' + nueva] = { ...copiaLimpia(origen.clases[id], paraBase), orden: orden++ };
+    }
+  }
+  await update(ref(db, base), cambios);
+}
+
+async function accionMasiva(a) {
+  const { tipo, mid } = seleccionables();
+  const ids = [...estado.seleccion];
+  if (!ids.length) return;
+  const n = ids.length;
+  const que = tipo === 'mod' ? (n === 1 ? 'módulo' : 'módulos') : (n === 1 ? 'lección' : 'lecciones');
+  const rutaDe = id => tipo === 'mod' ? id : mid + '/clases/' + id;
+  if (a === 'eliminar') {
+    if (!confirm('¿Eliminar ' + n + ' ' + que + (tipo === 'mod' ? ' con todas sus lecciones' : '') + '? No se puede deshacer.')) return;
+    for (const id of ids) await borrarUno(tipo, tipo === 'mod' ? id : mid, tipo === 'mod' ? null : id);
+  } else if (a === 'ocultar' || a === 'publicar') {
+    const cambios = {};
+    ids.forEach(id => { cambios[rutaDe(id) + '/publicado'] = a === 'publicar'; });
+    await update(ref(db, 'contenidos/' + estado.programa), cambios);
+  } else if (a.startsWith('enviar:')) {
+    const destino = a.slice(7);
+    const nombreDestino = destino === 'comun' ? 'todos los programas (Base común)' : programaLabel(destino);
+    const mover = destino === 'comun';
+    if (!confirm('¿Enviar ' + n + ' ' + que + ' a ' + nombreDestino + '?' + (mover ? ' Se mueven a la Base común y conservan sus comentarios, estrellas y avance.' : ' Se copian (los originales se quedan donde están).'))) return;
+    await enviarA(destino, tipo, mid, ids, mover);
+    if (mover) for (const id of ids) await borrarUno(tipo, tipo === 'mod' ? id : mid, tipo === 'mod' ? null : id, true);
+    alert('Listo: ' + n + ' ' + que + ' enviado' + (n === 1 ? '' : 's') + ' a ' + nombreDestino + '.');
+  }
+  estado.seleccion.clear();
   await recargarDatos();
   pintar();
 }
@@ -1005,6 +1131,10 @@ if (contEl) {
     ev.stopPropagation();
     const { act, m, c } = b.dataset;
     try {
+      if (estado.modoSeleccion && (act === 'ir-modulo' || act === 'abrir' || act === 'bloqueado')) { alternarSeleccion(act === 'abrir' ? c : m); return; }
+      if (act === 'sel-modo') { estado.modoSeleccion = !estado.modoSeleccion; estado.seleccion.clear(); pintar(); return; }
+      if (act === 'sel-todos') { const { ids } = seleccionables(); if (ids.every(id => estado.seleccion.has(id))) estado.seleccion.clear(); else ids.forEach(id => estado.seleccion.add(id)); pintar(); return; }
+      if (act === 'masiva') { b.disabled = true; try { await accionMasiva(b.dataset.a); } finally { b.disabled = false; } return; }
       if (act === 'abrir') { if (c) irA('leccion', m, c); }
       else if (act === 'ir-modulo') irA('modulo', m);
       else if (act === 'volver-modulos') irA('modulos');
