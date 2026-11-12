@@ -18,6 +18,7 @@ import { ref as storageRef, uploadBytes, getDownloadURL, deleteObject } from "ht
 import { getCurrentRole, getCurrentUserNombre, esModoDemo } from './main.js';
 import { marcaDemo, ocultarParaAlumno } from './demo.js';
 import { marcarClaseConcluida, marcarValoracion } from './puntos-marcas.js';
+import { iniciarSeguimiento } from './seguimiento-video.js';
 import { programaLabel } from './ciclos.js';
 import { faseMaximaChecklist } from './hitos.js';
 
@@ -42,6 +43,25 @@ const estado = {
 };
 let cargaActual = 0;
 let desuscribirValoraciones = null;
+let detenerSeguimiento = null;   // detiene la medición del video de la lección abierta
+let tokenSeguimiento = 0;
+function pararSeguimiento() {
+  tokenSeguimiento++;
+  if (detenerSeguimiento) { detenerSeguimiento(); detenerSeguimiento = null; }
+}
+
+// Texto bajo los botones: cuánto del video se lleva visto (para el 70% que pide el ranking).
+function mostrarVisto(info) {
+  const p = document.getElementById('ct-visto');
+  if (!p) return;
+  if (!info.guardando) {
+    p.textContent = `Prueba de medición (no se guarda): visto ${info.porcentaje}%.`;
+  } else if (info.duracionSeg > 0 && info.porcentaje >= 70) {
+    p.textContent = `Visto: ${info.porcentaje}%. ✓ Ya viste lo suficiente para que concluir esta lección sume puntos.`;
+  } else {
+    p.textContent = `Visto: ${info.porcentaje}%. Mira al menos el 70% del video para que concluir esta lección sume puntos.`;
+  }
+}
 let scriptsPlayer = [];
 
 let desuscribirComentarios = null;
@@ -296,6 +316,7 @@ function pintar() {
   if (estado.vista !== 'leccion') {
     if (desuscribirComentarios) { desuscribirComentarios(); desuscribirComentarios = null; }
     if (desuscribirValoraciones) { desuscribirValoraciones(); desuscribirValoraciones = null; }
+    pararSeguimiento();
     scriptsPlayer.forEach(s => s.remove());
     scriptsPlayer = [];
   }
@@ -310,9 +331,19 @@ function pintar() {
 
   if (estado.vista === 'leccion') {
     const clase = actual[1].clases[estado.claseId];
+    pararSeguimiento();
     const jugador = montarReproductor(el('ct-player'), clase.vturb);
     escucharComentarios(estado.claseId);
     escucharValoraciones(estado.claseId);
+    if (jugador) {
+      const miToken = ++tokenSeguimiento;
+      const claseSeg = estado.claseId;
+      iniciarSeguimiento(jugador, claseSeg, (Number(clase.duracionMin) || 0) * 60, mostrarVisto).then(detener => {
+        // Si mientras tanto cambió la lección, se cancela esta medición.
+        if (miToken !== tokenSeguimiento || estado.vista !== 'leccion' || estado.claseId !== claseSeg) { if (detener) detener(); }
+        else detenerSeguimiento = detener;
+      }).catch(err => console.warn('No se pudo iniciar la medición del video:', err));
+    }
     // El director abre una lección sin duración: se mide con este mismo reproductor y se guarda.
     const cid = estado.claseId, mid = actual[0], programa = estado.programa;
     if (jugador && estado.esDirector && !(Number(clase.duracionMin) > 0) && !duracionIntentada.has(cid)) {
@@ -456,6 +487,7 @@ function vistaLeccion(mid, m, cid) {
         <div class="panel ct-lec__panel"><div class="panel__body">
           ${clase.descripcion ? `<p class="ct-materiales__t">Descripción de la lección</p><p class="ct-visor__desc" style="margin:6px 0 0;">${textoMultilinea(clase.descripcion)}</p>` : ''}
           ${acciones}
+          ${clase.vturb ? '<p class="ct-visto" id="ct-visto"></p>' : ''}
           <div class="ct-com-nuevo">
             ${avatarHtml(estado.miFoto, getCurrentUserNombre(), true)}
             <textarea id="ct-comentario-texto" maxlength="1000" rows="1" placeholder="Agregar comentario"></textarea>
