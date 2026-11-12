@@ -1723,3 +1723,37 @@ body.tema-open .hitos-tab { color: #E9D3CD; }
 .ct-lado__num { font-weight: 700; width: 18px; flex: none; }
 .ct-lado__txt { flex: 1; min-width: 0; }
 .ct-lado__est { width: 22px; height: 22px; border-radius: 50%; border: 2px solid var(--color-border); display: inline-flex; align-items: center; justify-content: center; font-size: 10px; flex: none; }
+
+/* --- Contenidos: valoración, botones y comentarios --- */
+.ct-lec__acciones { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; margin: 16px 0; }
+.ct-lec__espacio { flex: 1; }
+.ct-estrellas { display: inline-flex; gap: 2px; }
+.ct-estrella { background: none; border: 0; cursor: pointer; font-size: 26px; line-height: 1; padding: 0 1px; color: #D0D4DA; }
+.ct-estrella.is-on { color: #F5B301; }
+.ct-estrellas:hover .ct-estrella { color: #F5B301; }
+.ct-estrella:hover ~ .ct-estrella { color: #D0D4DA; }
+.ct-estrellas__info { font-size: 12.5px; color: var(--color-ink-soft); }
+.ct-btn-txt { background: none; border: 0; cursor: pointer; font: inherit; font-size: 14px; font-weight: 600; color: var(--color-ink-soft); padding: 6px 4px; }
+.ct-btn-txt:hover { color: var(--color-ink); }
+.ct-btn-txt.is-on { color: var(--color-accent); }
+.ct-btn-txt:disabled { opacity: .5; }
+.ct-com-nuevo { display: flex; align-items: center; gap: 12px; margin: 6px 0 22px; }
+.ct-com-nuevo textarea { flex: 1; resize: none; min-height: 42px; border: 0; background: var(--color-surface-alt); border-radius: var(--radius-md); padding: 11px 14px; font: inherit; font-size: 14px; color: var(--color-ink); }
+.ct-com-enviar { width: 42px; height: 42px; border: 0; border-radius: var(--radius-md); background: #6B7280; color: #fff; cursor: pointer; font-size: 14px; flex: none; }
+.ct-com-enviar:hover { background: var(--color-primary); }
+.ct-av { width: 36px; height: 36px; border-radius: 50%; object-fit: cover; background: #E4E7EC; color: #1B2333; display: inline-flex; align-items: center; justify-content: center; font-weight: 700; font-size: 14px; flex: none; }
+.ct-av--lg { width: 52px; height: 52px; font-size: 19px; }
+.ct-com-lista { display: flex; flex-direction: column; gap: 22px; }
+.ct-com { display: flex; gap: 14px; align-items: flex-start; }
+.ct-com--resp { margin-top: 14px; }
+.ct-com__cuerpo { flex: 1; min-width: 0; }
+.ct-com__nombre { margin: 0; font-size: 13.5px; font-weight: 700; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.ct-com__fecha { font-size: 11.5px; font-weight: 400; color: var(--color-ink-soft); }
+.ct-com__nombre .ct-icono { margin-left: auto; }
+.ct-com__texto { margin: 6px 0 4px; font-size: 14.5px; line-height: 1.5; overflow-wrap: anywhere; }
+.ct-com__resp { background: none; border: 0; cursor: pointer; padding: 0; font: inherit; font-size: 12.5px; font-weight: 600; color: var(--color-ink-soft); }
+.ct-com__resp:hover { color: var(--color-accent); }
+.ct-com__resps { margin-top: 4px; }
+.ct-com__form { display: flex; gap: 8px; align-items: flex-end; margin-top: 10px; }
+.ct-com__form textarea { flex: 1; resize: vertical; }
+.ct-lado__dur { display: block; font-size: 11.5px; color: var(--color-ink-soft); margin-top: 2px; }
