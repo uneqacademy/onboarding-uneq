@@ -12,6 +12,7 @@
 import { db, auth, storage, firebaseConfig } from './firebase-config.js';
 import { escaparHtml, sanearHtml, textoAlumnoAHtml } from './util-html.js';
 import { renderAdjuntosMentor } from './adjuntos.js';
+import { botonAsistenciaHtml, abrirAsistenciaVivo, textoAsistentes } from './asistencia-vivo.js';
 import { ref, get, set, update, push } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-database.js";
 import { ref as storageRef, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-storage.js";
 import { initializeApp, deleteApp } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-app.js";
@@ -1048,10 +1049,12 @@ async function cargarMentoriasView() {
   const tbody = document.getElementById('tabla-mentorias-body');
   if (!uid || !tbody) return;
 
-  const [mentoriasSnap, npsSnap] = await Promise.all([
+  const [mentoriasSnap, npsSnap, asistenciaSnap] = await Promise.all([
     get(ref(db, `mentorias/${uid}`)),
-    get(ref(db, `npsMentorias/${uid}`))
+    get(ref(db, `npsMentorias/${uid}`)),
+    get(ref(db, `asistenciaVivo/mentorias/${uid}`)).catch(() => null)
   ]);
+  const asistencias = asistenciaSnap && asistenciaSnap.exists() ? asistenciaSnap.val() : {};
   const mentorias = mentoriasSnap.exists() ? mentoriasSnap.val() : {};
   const npsTodas = npsSnap.exists() ? npsSnap.val() : {};
 
@@ -1078,6 +1081,7 @@ async function cargarMentoriasView() {
           <input type="file" class="input-resumen-mentoria hidden" accept=".doc,.docx">
         </td>
         <td><button class="btn btn--ghost btn-ver-preguntas-vivo" style="font-size:11px; padding:4px 8px;">Ver Preguntas</button></td>
+        <td>${botonAsistenciaHtml(Object.keys(asistencias[mentoriaId] || {}).length)}</td>
         <td><button class="btn btn--ghost btn-copiar-link-nps-mentoria" style="font-size:11px; padding:4px 8px;">Copiar Link NPS</button></td>
         <td>
           ${estadoMentoria === 'dictada'
@@ -1103,12 +1107,17 @@ async function cargarMentoriasView() {
       if (btnNoDictada) btnNoDictada.addEventListener('click', () => cambiarEstadoMentoria('no_dictada',
         '¿Marcar esta sesión como "No Dictada"? Una vez marcada queda bloqueada y no podrás cambiarla. Si necesitas agendarla de nuevo, tendrás que crear una mentoría nueva.'));
 
+      tr.querySelector('.btn-asistencia-vivo').addEventListener('click', () => abrirAsistenciaVivo({
+        tipo: 'mentorias', ownerUid: uid, sesionId: mentoriaId, fecha: m.fecha,
+        alGuardar: (n) => { tr.querySelector('.asistencia-vivo-contador').textContent = textoAsistentes(n); }
+      }));
+
       let filaComentariosNps = null;
       const btnComentariosNps = tr.querySelector('.btn-ver-comentarios-nps');
       if (btnComentariosNps) btnComentariosNps.addEventListener('click', () => {
         if (filaComentariosNps) { filaComentariosNps.remove(); filaComentariosNps = null; return; }
         filaComentariosNps = document.createElement('tr');
-        filaComentariosNps.innerHTML = `<td colspan="8" style="background:#F7F8FA; padding:14px 16px;">${renderEntradasNps(entradas)}</td>`;
+        filaComentariosNps.innerHTML = `<td colspan="9" style="background:#F7F8FA; padding:14px 16px;">${renderEntradasNps(entradas)}</td>`;
         tr.insertAdjacentElement('afterend', filaComentariosNps);
       });
 
@@ -1120,7 +1129,7 @@ async function cargarMentoriasView() {
         const preguntas = Object.entries(preguntasObj).sort((a, b) => a[1].createdAt - b[1].createdAt);
         filaPreguntasVivo = document.createElement('tr');
         filaPreguntasVivo.innerHTML = `
-          <td colspan="8" style="background:#F7F8FA; padding:14px 16px;">
+          <td colspan="9" style="background:#F7F8FA; padding:14px 16px;">
             ${preguntas.length ? preguntas.map(([preguntaId, p]) => `
               <div class="pregunta-vivo-item" data-pregunta-id="${preguntaId}" style="padding:8px 0; border-bottom:0.5px solid var(--border); font-size:13px;">
                 <strong>${escaparHtml(p.alumnoNombre || 'Alumno')}</strong>
