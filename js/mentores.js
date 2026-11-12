@@ -11,6 +11,7 @@
 
 import { db, auth, storage, firebaseConfig } from './firebase-config.js';
 import { escaparHtml, sanearHtml, textoAlumnoAHtml } from './util-html.js';
+import { renderAdjuntosMentor } from './adjuntos.js';
 import { ref, get, set, update, push } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-database.js";
 import { ref as storageRef, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-storage.js";
 import { initializeApp, deleteApp } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-app.js";
@@ -39,17 +40,7 @@ const FASE_LABELS = { fase1: 'Fase 1', fase2: 'Fase 2', fase3: 'Fase 3', fase4: 
 // (archivos: [{url, nombre, tipo}, ...]) — mismo patrón que en
 // alumno-portal.js, para la vista del mentor.
 function renderArchivosAdjuntosMentor(archivos, imagenesLegado) {
-  const items = [];
-  (archivos || []).forEach(a => items.push(a));
-  (imagenesLegado || []).forEach(url => items.push({ url, nombre: 'Imagen', tipo: 'imagen' }));
-  if (!items.length) return '';
-  return `<div style="display:flex; gap:6px; flex-wrap:wrap; margin-bottom:10px;">${items.map(a => {
-    if (a.tipo === 'imagen') {
-      return `<img src="${escaparHtml(a.url)}" alt="" style="max-width:120px; max-height:120px; border-radius:6px; object-fit:cover;">`;
-    }
-    const icono = a.tipo === 'pdf' ? '📄' : a.tipo === 'word' ? '📝' : '📎';
-    return `<a href="${escaparHtml(a.url)}" target="_blank" rel="noopener" style="display:inline-flex; align-items:center; gap:6px; background:var(--color-surface-alt); padding:6px 12px; border-radius:8px; font-size:12px; text-decoration:none; color:var(--color-ink);">${icono} ${escaparHtml(a.nombre || 'Archivo')}</a>`;
-  }).join('')}</div>`;
+  return renderAdjuntosMentor(archivos, imagenesLegado);
 }
 const URL_REDES = {
   Instagram: u => `https://instagram.com/${u.replace(/^@/, '')}`,
@@ -1134,7 +1125,7 @@ async function cargarMentoriasView() {
               <div class="pregunta-vivo-item" data-pregunta-id="${preguntaId}" style="padding:8px 0; border-bottom:0.5px solid var(--border); font-size:13px;">
                 <strong>${escaparHtml(p.alumnoNombre || 'Alumno')}</strong>
                 <p class="texto-alumno" style="margin:4px 0;">${textoAlumnoAHtml(p.texto || '')}</p>
-                ${(p.imagenes || []).map(url => `<img src="${url}" alt="" style="max-width:120px; border-radius:6px; margin:4px 4px 0 0;">`).join('')}
+                ${renderAdjuntosMentor(p.archivos, p.imagenes)}
                 ${p.revisada
                   ? '<span class="badge badge--activo" style="font-size:10px;">✓ Revisada</span>'
                   : '<button type="button" class="btn btn--ghost btn-marcar-revisada" style="font-size:11px; padding:3px 8px;">Marcar Revisada</button>'}
@@ -1631,7 +1622,7 @@ async function cargarBoxBeginMentor() {
         if (quedaOculto || detalle.dataset.cargado) return;
         detalle.dataset.cargado = '1';
         detalle.innerHTML = `
-          ${(p.imagenes || []).map(url => `<img src="${url}" alt="" style="max-width:120px; border-radius:6px; margin:0 4px 6px 0;">`).join('')}
+          ${renderAdjuntosMentor(p.archivos, p.imagenes)}
           ${p.respuesta
             ? `<div style="padding:10px; background:#F7F8FA; border-radius:8px;"><strong style="font-size:12px;">Respuesta de ${escaparHtml(p.respuesta.mentorNombre || 'un mentor')}</strong><p style="margin:4px 0 0; white-space:pre-wrap;">${escaparHtml(p.respuesta.texto || '')}</p></div>`
             : `<textarea class="box-begin-textarea-respuesta" placeholder="Escribe la respuesta..." style="min-height:120px; width:100%;"></textarea>
