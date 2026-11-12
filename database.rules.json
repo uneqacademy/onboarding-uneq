@@ -519,6 +519,24 @@
       }
     },
 
+    "progresoVideo": {
+      "$alumnoId": {
+        ".read": "auth != null && root.child('alumnoPorAuthUid').child(auth.uid).val() === $alumnoId",
+        "$claseId": {
+          ".write": "auth != null && root.child('alumnoPorAuthUid').child(auth.uid).val() === $alumnoId && !root.child('usuarios').child(auth.uid).exists()",
+          ".validate": "newData.hasChildren(['vistos', 'seg', 'inicio']) && newData.child('vistos').isString() && newData.child('vistos').val().length <= 3000 && newData.child('vistos').val().matches(/^[01]*$/) && newData.child('seg').isNumber() && newData.child('seg').val() >= 0 && newData.child('seg').val() <= 36000 && (!data.exists() || newData.child('seg').val() >= data.child('seg').val()) && newData.child('inicio').isNumber() && newData.child('inicio').val() <= now + 300000 && (!data.exists() || newData.child('inicio').val() === data.child('inicio').val()) && newData.child('seg').val() <= ((now - newData.child('inicio').val()) / 1000) * 2.2 + 300",
+          "vistos": { ".validate": true },
+          "seg": { ".validate": true },
+          "inicio": { ".validate": true },
+          "duracion": { ".validate": "newData.isNumber() && newData.val() > 0 && newData.val() <= 86400" },
+          "dias": {
+            "$dia": { ".validate": "$dia.matches(/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/) && newData.isNumber() && newData.val() >= 0 && newData.val() <= 86400 && (!data.exists() || newData.val() >= data.val())" }
+          },
+          "$otro": { ".validate": false }
+        }
+      }
+    },
+
     "puntosMarcas": {
       "$alumnoId": {
         "clasesConcluidas": {

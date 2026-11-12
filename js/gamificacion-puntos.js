@@ -25,10 +25,11 @@ export const ACCIONES_PUNTOS = [
   { clave: 'compartir', etiqueta: 'Compartir una publicación por WhatsApp', puntos: 2, tope: 3, topeEditable: true },
   { clave: 'fase', etiqueta: 'Pasar de fase', puntos: 50, tope: 0, topeEditable: false },
   // Contenidos (clases). Entre estas cuatro hay un tope diario conjunto de 30 puntos (lo aplica el servidor).
-  { clave: 'claseConcluida', etiqueta: 'Concluir una lección (cada una cuenta una vez)', puntos: 5, tope: 5, topeEditable: true, deContenidos: true },
+  { clave: 'claseConcluida', etiqueta: 'Concluir una lección (cada una cuenta una vez; hay que haber visto al menos el 70% del video)', puntos: 5, tope: 5, topeEditable: true, deContenidos: true },
   { clave: 'comentarioClase', etiqueta: 'Comentar en una lección (mínimo 15 letras)', puntos: 3, tope: 5, topeEditable: true, deContenidos: true },
   { clave: 'comentarioClaseRecibido', etiqueta: 'Recibir una respuesta a tu comentario de una lección', puntos: 1, tope: 5, topeEditable: true, deContenidos: true },
   { clave: 'valoracionClase', etiqueta: 'Valorar una lección con estrellas (una vez por lección)', puntos: 1, tope: 3, topeEditable: true, deContenidos: true },
+  { clave: 'tiempoVideo', etiqueta: 'Ver video de las lecciones (cada 5 minutos realmente vistos)', puntos: 1, tope: 8, topeEditable: true, deContenidos: true },
   { clave: 'moduloCompleto', etiqueta: 'Completar un módulo entero (con 2 lecciones o más)', puntos: 25, tope: 0, topeEditable: false, deContenidos: true }
 ];
 

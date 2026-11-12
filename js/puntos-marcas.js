@@ -14,7 +14,7 @@ const FORMATO_DIA = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Santia
 
 let alumnoIdMarcas = undefined; // undefined = sin averiguar; null = no es un alumno real
 
-async function alumnoRealActual() {
+export async function alumnoRealActual() {
   if (alumnoIdMarcas !== undefined) return alumnoIdMarcas;
   alumnoIdMarcas = null;
   const uid = auth.currentUser ? auth.currentUser.uid : null;
