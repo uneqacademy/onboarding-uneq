@@ -19,7 +19,7 @@ import { ref, get, set, update, push } from "https://www.gstatic.com/firebasejs/
 import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-functions.js";
 import { initializeApp, deleteApp } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-app.js";
 import { getCurrentRole } from './main.js';
-import { ocultarParaAlumno } from './demo.js';
+import { ocultarParaAlumno, cicloParaVista } from './demo.js';
 import { getAuth, createUserWithEmailAndPassword, signOut as signOutSecundaria, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-auth.js";
 import { programaLabel, testEsDe } from './ciclos.js';
 import { registrarTestsAnalisis, botonAnalisisHtml } from './analisis-test.js';
@@ -207,7 +207,7 @@ export async function cargarDashboardAlumno(alumnoId) {
   let ciclo = null;
   if (alumno.cicloActualId) {
     const cicloSnap = await get(ref(db, `ciclos/${alumno.cicloActualId}`));
-    ciclo = cicloSnap.exists() ? cicloSnap.val() : null;
+    ciclo = cicloSnap.exists() ? cicloParaVista(cicloSnap.val()) : null;   // en modo demo: con la fase simulada
   }
 
   // --- Estética por nivel: BEGIN tiene su propio tema (azul) sobre el

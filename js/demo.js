@@ -45,3 +45,26 @@ export function sinDemo(obj) {
   if (!obj || typeof obj !== 'object' || !miraAlumnoReal()) return obj;
   return Object.fromEntries(Object.entries(obj).filter(([, v]) => !esDelDemo(v)));
 }
+
+/* --- Fase simulada del Alumno Demo ---
+   El demo elige en qué fase "está" (0 = inicio, 1-4, 5 = final/egresado) para previsualizar lo que cada
+   fase desbloquea o muestra. Todas las pantallas que dependen de la fase leen el ciclo a través de
+   cicloParaVista(). Solo actúa en modo demo. */
+const CLAVE_FASE_DEMO = 'uneq.demoFase';
+let faseDemoSel = 1;
+try { const g = parseInt(sessionStorage.getItem(CLAVE_FASE_DEMO), 10); if (g >= 0 && g <= 5) faseDemoSel = g; } catch (e) { /* sin almacenamiento */ }
+
+export const getFaseDemo = () => faseDemoSel;
+export function setFaseDemo(n) {
+  faseDemoSel = Math.min(5, Math.max(0, Number(n) || 0));
+  try { sessionStorage.setItem(CLAVE_FASE_DEMO, String(faseDemoSel)); } catch (e) { /* sin almacenamiento */ }
+}
+export function cicloParaVista(ciclo) {
+  if (!ciclo || !esModoDemo()) return ciclo;
+  const n = faseDemoSel;
+  return {
+    ...ciclo,
+    faseMetodologia: n >= 1 && n <= 4 ? 'fase' + n : '',
+    estadoAlumno: n === 5 ? 'egresado' : (ciclo.estadoAlumno === 'egresado' ? 'activo' : ciclo.estadoAlumno)
+  };
+}
