@@ -91,9 +91,10 @@ export function applyRole(role, nombre, rolesDisponibles) {
   const navRanking = document.querySelector('.nav-item[data-nav="ranking"]');
   if (navRanking) navRanking.classList.remove('hidden');
 
-  // Contenidos (clases): el alumno las ve y avanza; el director las administra.
+  // Contenidos (clases): por ahora solo el staff (el director las administra; mentores y
+  // copilotos las ven). Los alumnos NO la ven hasta que esté lista al 100%.
   const navContenidos = document.querySelector('.nav-item[data-nav="contenidos"]');
-  if (navContenidos) navContenidos.classList.toggle('hidden', !(role === 'alumno' || role === 'director'));
+  if (navContenidos) navContenidos.classList.toggle('hidden', !['director', 'mentor', 'coach'].includes(role));
 
   const navMentoriasMentor = document.querySelector('.nav-item[data-nav="mentorias-mentor"]');
   if (navMentoriasMentor) navMentoriasMentor.classList.toggle('hidden', role !== 'mentor');

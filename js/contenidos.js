@@ -29,7 +29,8 @@ const estado = {
   progreso: {},       // { claseId: timestamp }
   alumnoId: null,
   faseMax: 0,
-  esDirector: false,
+  esDirector: false,  // administra (crear/editar/ordenar/borrar)
+  verTodo: false,     // staff: ve todos los programas, sin candado ni progreso
   claseAbierta: null  // { moduloId, claseId }
 };
 let cargaActual = 0;
@@ -102,13 +103,15 @@ async function resolverAlumno() {
 export async function cargarContenidos() {
   const role = getCurrentRole();
   const cont = el('contenidos-contenido');
-  if (!cont || !['alumno', 'director'].includes(role)) return;
+  // Por ahora los alumnos no ven esta sección (el menú la oculta): solo el staff.
+  if (!cont || !['director', 'mentor', 'coach'].includes(role)) return;
   const id = ++cargaActual;
   estado.esDirector = role === 'director';
+  estado.verTodo = role !== 'alumno';
   estado.claseAbierta = null;
   cont.innerHTML = '<p class="text-soft">Cargando...</p>';
   try {
-    if (estado.esDirector) {
+    if (estado.verTodo) {
       if (!estado.programa) estado.programa = 'begin';
     } else {
       estado.programa = await resolverAlumno();
@@ -135,15 +138,15 @@ async function recargarDatos() {
 /* ---------- Pintado ---------- */
 
 function moduloBloqueado(m) {
-  return !estado.esDirector && (Number(m.desdeFase) || 0) > estado.faseMax;
+  return !estado.verTodo && (Number(m.desdeFase) || 0) > estado.faseMax;
 }
 function visibles() {
   // Para el alumno: solo módulos y clases publicados.
   return ordenar(estado.datos)
-    .filter(([, m]) => estado.esDirector || m.publicado !== false)
+    .filter(([, m]) => estado.verTodo || m.publicado !== false)
     .map(([id, m]) => [id, {
       ...m,
-      clases: Object.fromEntries(clasesDe(m).filter(([, c]) => estado.esDirector || c.publicado !== false))
+      clases: Object.fromEntries(clasesDe(m).filter(([, c]) => estado.verTodo || c.publicado !== false))
     }]);
 }
 
@@ -160,17 +163,17 @@ function pintar() {
   });
   const pct = total ? Math.round(vistas * 100 / total) : 0;
 
-  const tabs = estado.esDirector ? `<div class="ct-tabs">${PROGRAMAS_CONTENIDO.map(p =>
+  const tabs = estado.verTodo ? `<div class="ct-tabs">${PROGRAMAS_CONTENIDO.map(p =>
     `<button type="button" class="ct-tab${p === estado.programa ? ' is-active' : ''}" data-programa="${p}">${escaparHtml(programaLabel(p))}</button>`).join('')}</div>` : '';
 
-  const progreso = !estado.esDirector ? `
+  const progreso = !estado.verTodo ? `
     <div class="ct-progreso">
       <div class="ct-progreso__texto"><strong>${vistas}</strong> de <strong>${total}</strong> clases vistas · ${pct}%</div>
       <div class="ct-barra"><span style="width:${pct}%"></span></div>
-    </div>` : `<div class="ct-admin-barra"><button type="button" class="btn btn--primary" id="ct-nuevo-modulo">+ Nuevo módulo</button></div>`;
+    </div>` : (estado.esDirector ? `<div class="ct-admin-barra"><button type="button" class="btn btn--primary" id="ct-nuevo-modulo">+ Nuevo módulo</button></div>` : '');
 
   const listaHtml = modulos.length ? modulos.map(([mid, m], i) => htmlModulo(mid, m, i, modulos.length, primeraVez || abiertos.has(mid))).join('')
-    : `<div class="panel"><div class="panel__body"><p class="text-soft" style="margin:0;">${estado.esDirector ? 'Este programa aún no tiene módulos. Crea el primero con “+ Nuevo módulo”.' : 'Pronto verás aquí las clases de tu programa.'}</p></div></div>`;
+    : `<div class="panel"><div class="panel__body"><p class="text-soft" style="margin:0;">${estado.esDirector ? 'Este programa aún no tiene módulos. Crea el primero con “+ Nuevo módulo”.' : estado.verTodo ? 'Este programa aún no tiene módulos.' : 'Pronto verás aquí las clases de tu programa.'}</p></div></div>`;
 
   cont.innerHTML = `${tabs}${progreso}
     <div class="panel ct-visor hidden" id="ct-visor"></div>
@@ -183,7 +186,7 @@ function htmlModulo(mid, m, i, n, abierto) {
   const clases = clasesDe(m);
   const vistasM = clases.filter(([cid]) => estado.progreso[cid]).length;
   const borrador = m.publicado === false ? '<span class="ct-etq ct-etq--borrador">Borrador</span>' : '';
-  const fase = estado.esDirector && (Number(m.desdeFase) || 0) > 0 ? `<span class="ct-etq">${TEXTOS_FASE[m.desdeFase]}</span>` : '';
+  const fase = estado.verTodo && (Number(m.desdeFase) || 0) > 0 ? `<span class="ct-etq">${TEXTOS_FASE[m.desdeFase]}</span>` : '';
   const admin = estado.esDirector ? `
     <span class="ct-acciones" data-stop>
       <button type="button" class="ct-icono" data-act="mod-arriba" data-m="${mid}" ${i === 0 ? 'disabled' : ''} title="Subir">▲</button>
@@ -221,7 +224,7 @@ function htmlModulo(mid, m, i, n, abierto) {
         <span class="ct-modulo__num">${i + 1}</span>
         <span class="ct-modulo__titulo">${escaparHtml(m.titulo || 'Módulo sin título')}</span>
         ${borrador}${fase}
-        ${bloqueado ? '<span class="ct-etq">🔒</span>' : `<span class="ct-modulo__cuenta">${estado.esDirector ? clases.length : vistasM}/${clases.length}</span>`}
+        ${bloqueado ? '<span class="ct-etq">🔒</span>' : `<span class="ct-modulo__cuenta">${estado.verTodo ? clases.length : vistasM}/${clases.length}</span>`}
         ${admin}
       </summary>
       <div class="panel__body">${cuerpo}</div>
@@ -254,7 +257,7 @@ function abrirClase(mid, cid, desplazar = true) {
         `<a class="ct-material" href="${escaparHtml(mt.url)}" target="_blank" rel="noopener noreferrer">📄 ${escaparHtml(mt.nombre || 'Material')}</a>`).join('')}</div>` : ''}
       <div class="ct-visor__pie">
         <button type="button" class="btn btn--ghost" id="ct-ant" ${ant ? '' : 'disabled'}>← Anterior</button>
-        ${!estado.esDirector ? `<button type="button" class="btn ${vista ? 'btn--ghost' : 'btn--accent'}" id="ct-marcar">${vista ? '✓ Vista (desmarcar)' : 'Marcar como vista'}</button>` : ''}
+        ${!estado.verTodo ? `<button type="button" class="btn ${vista ? 'btn--ghost' : 'btn--accent'}" id="ct-marcar">${vista ? '✓ Vista (desmarcar)' : 'Marcar como vista'}</button>` : ''}
         <button type="button" class="btn btn--ghost" id="ct-sig" ${sig ? '' : 'disabled'}>Siguiente →</button>
         <button type="button" class="btn btn--ghost" id="ct-cerrar-visor">Cerrar</button>
       </div>
