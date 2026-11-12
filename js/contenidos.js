@@ -30,6 +30,8 @@ const etiquetaPrograma = p => p === 'comun' ? '🌐 Base común' : programaLabel
 // Los módulos de la base común solo se editan desde su pestaña; en los programas se ven y ya.
 // El director edita todo desde cualquier pestaña; lo de la Base común se guarda siempre en la Base (su origen).
 const puedeEditar = () => estado.esDirector;
+// El director reordena arrastrando (las flechas siguen como respaldo, p. ej. en el celular).
+const arrastrable = () => estado.esDirector && !estado.modoSeleccion ? ' draggable="true"' : '';
 const origenDe = mid => (mid && estado.datos[mid] && estado.datos[mid]._origen) || estado.programa;
 const TAMANO_MAXIMO_PDF = 25 * 1024 * 1024;
 const TEXTOS_FASE = { 0: 'Desde el inicio', 1: 'Fase 1', 2: 'Fase 2', 3: 'Fase 3', 4: 'Fase 4' };
@@ -417,7 +419,7 @@ function tarjetaModulo(mid, m, i, n) {
     bloq ? `<span class="ct-etq">🔒 ${escaparHtml(TEXTOS_FASE[m.desdeFase] || '')}</span>` : ''
   ].join('');
   return `
-    <article class="ct-card${bloq ? ' is-bloqueado' : ''}${estado.seleccion.has(mid) ? ' is-sel' : ''}" data-act="${bloq ? 'bloqueado' : 'ir-modulo'}" data-m="${mid}" data-fase="${escaparHtml(TEXTOS_FASE[m.desdeFase] || '')}">
+    <article${arrastrable()} class="ct-card${bloq ? ' is-bloqueado' : ''}${estado.seleccion.has(mid) ? ' is-sel' : ''}" data-act="${bloq ? 'bloqueado' : 'ir-modulo'}" data-m="${mid}" data-fase="${escaparHtml(TEXTOS_FASE[m.desdeFase] || '')}">
       <div class="ct-card__img">${img}
         <div class="ct-card__etqs">${etqs}</div>
         ${puedeEditar(m) ? (estado.modoSeleccion ? `<label class="ct-sel"><input type="checkbox" ${estado.seleccion.has(mid) ? 'checked' : ''} tabindex="-1"></label>` : `<div class="ct-card__admin">${botonesAdmin('mod', mid, '', i, n)}</div>`) : ''}
@@ -436,7 +438,7 @@ function vistaModulo(mid, m) {
   const filas = clases.map(([cid, c], j) => {
     const vista = !!estado.progreso[cid];
     return `
-    <div class="ct-fila${estado.seleccion.has(cid) ? ' is-sel' : ''}" data-act="abrir" data-m="${mid}" data-c="${cid}">
+    <div${arrastrable()} class="ct-fila${estado.seleccion.has(cid) ? ' is-sel' : ''}" data-act="abrir" data-m="${mid}" data-c="${cid}">
       <span class="ct-fila__num">${j + 1}</span>
       ${urlSegura(c.portadaUrl) ? `<img class="ct-portada ct-portada--mini" src="${escaparHtml(c.portadaUrl)}" alt="">` : ''}
       <span class="ct-fila__titulo">${escaparHtml(c.titulo || 'Lección sin título')}
@@ -970,6 +972,21 @@ function editarClase(mid, cid) {
   });
 }
 
+// Arrastrar y soltar: deja `idArrastrado` antes o después de `idDestino` entre sus hermanos.
+async function reordenarArrastrando(tipo, mid, idArrastrado, idDestino, despues) {
+  const hermanos = tipo === 'mod' ? ordenar(estado.datos).filter(([, x]) => x._origen === origenDe(mid)) : clasesDe(estado.datos[mid]);
+  const lista = hermanos.map(([id]) => id).filter(id => id !== idArrastrado);
+  const i = lista.indexOf(idDestino);
+  if (i < 0 || !hermanos.some(([id]) => id === idArrastrado)) return;
+  lista.splice(despues ? i + 1 : i, 0, idArrastrado);
+  const base = tipo === 'mod' ? `contenidos/${origenDe(mid)}` : `contenidos/${origenDe(mid)}/${mid}/clases`;
+  const cambios = {};
+  lista.forEach((id, k) => { cambios[`${id}/orden`] = k + 1; });
+  await update(ref(db, base), cambios);
+  await recargarDatos();
+  pintar();
+}
+
 async function mover(tipo, mid, cid, delta) {
   const hermanos = tipo === 'mod' ? ordenar(estado.datos).filter(([, x]) => x._origen === origenDe(mid)) : clasesDe(estado.datos[mid]);
   const idActual = tipo === 'mod' ? mid : cid;
@@ -1178,6 +1195,49 @@ if (contEl) {
       alert('No se pudo completar la acción. Intenta de nuevo.');
     }
   });
+}
+
+// Arrastrar módulos (entre los de su mismo grupo) y lecciones (dentro de su módulo).
+let arrastre = null;
+const itemArrastrable = ev => ev.target.closest && ev.target.closest('[draggable="true"][data-act]');
+const infoItem = it => it.dataset.act === 'ir-modulo' || it.dataset.act === 'bloqueado'
+  ? { tipo: 'mod', id: it.dataset.m, mid: it.dataset.m } : { tipo: 'cla', id: it.dataset.c, mid: it.dataset.m };
+const compatible = (a, b) => a.tipo === b.tipo && a.id !== b.id && (a.tipo === 'mod' ? origenDe(a.id) === origenDe(b.id) : a.mid === b.mid);
+const despuesDe = (ev, it, tipo) => {
+  const r = it.getBoundingClientRect();
+  return tipo === 'mod' ? ev.clientX > r.left + r.width / 2 : ev.clientY > r.top + r.height / 2;
+};
+const limpiarMarcas = () => contEl && contEl.querySelectorAll('.ct-drop-antes, .ct-drop-despues, .is-arrastrando').forEach(x => x.classList.remove('ct-drop-antes', 'ct-drop-despues', 'is-arrastrando'));
+if (contEl) {
+  contEl.addEventListener('dragstart', ev => {
+    const it = itemArrastrable(ev);
+    if (!it || !estado.esDirector || estado.modoSeleccion) return;
+    arrastre = infoItem(it);
+    ev.dataTransfer.effectAllowed = 'move';
+    try { ev.dataTransfer.setData('text/plain', arrastre.id); } catch (e) { /* sin datos */ }
+    it.classList.add('is-arrastrando');
+  });
+  contEl.addEventListener('dragover', ev => {
+    const it = itemArrastrable(ev);
+    if (!arrastre || !it || !compatible(arrastre, infoItem(it))) return;
+    ev.preventDefault();
+    const despues = despuesDe(ev, it, arrastre.tipo);
+    contEl.querySelectorAll('.ct-drop-antes, .ct-drop-despues').forEach(x => x.classList.remove('ct-drop-antes', 'ct-drop-despues'));
+    it.classList.add(despues ? 'ct-drop-despues' : 'ct-drop-antes');
+  });
+  contEl.addEventListener('drop', async ev => {
+    const it = itemArrastrable(ev);
+    const a = arrastre;
+    arrastre = null;
+    if (!a || !it || !compatible(a, infoItem(it))) { limpiarMarcas(); return; }
+    ev.preventDefault();
+    const destino = infoItem(it);
+    const despues = despuesDe(ev, it, a.tipo);
+    limpiarMarcas();
+    try { await reordenarArrastrando(a.tipo, a.mid, a.id, destino.id, despues); }
+    catch (err) { console.error(err); alert('No se pudo cambiar el orden. Intenta de nuevo.'); }
+  });
+  contEl.addEventListener('dragend', () => { arrastre = null; limpiarMarcas(); });
 }
 
 // Enter publica el comentario (Shift+Enter hace un salto de línea).

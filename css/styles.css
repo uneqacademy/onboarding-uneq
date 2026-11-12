@@ -1807,3 +1807,11 @@ body.tema-open .hitos-tab { color: #E9D3CD; }
 .ct-sel--fila { position: static; background: none; padding: 0 4px; }
 .ct-card.is-sel .ct-card__img { outline: 3px solid var(--color-primary, #1b2a4e); }
 .ct-fila.is-sel { outline: 2px solid var(--color-primary, #1b2a4e); }
+
+.ct-card[draggable="true"], .ct-fila[draggable="true"] { cursor: grab; }
+.ct-card img, .ct-fila img { -webkit-user-drag: none; user-select: none; }
+.is-arrastrando { opacity: .4; }
+.ct-card.ct-drop-antes { box-shadow: -6px 0 0 var(--color-primary, #1b2a4e); }
+.ct-card.ct-drop-despues { box-shadow: 6px 0 0 var(--color-primary, #1b2a4e); }
+.ct-fila.ct-drop-antes { box-shadow: 0 -3px 0 var(--color-primary, #1b2a4e); }
+.ct-fila.ct-drop-despues { box-shadow: 0 3px 0 var(--color-primary, #1b2a4e); }
