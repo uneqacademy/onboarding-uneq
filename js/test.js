@@ -16,6 +16,7 @@ import { ref, get, set, push } from "https://www.gstatic.com/firebasejs/12.17.1/
 import html2canvas from "https://esm.sh/html2canvas@1.4.1";
 import { testEsDe } from './ciclos.js';
 import { escaparHtml } from './util-html.js';
+import { registrarTestsAnalisis, botonAnalisisHtml } from './analisis-test.js';
 
 const root = document.getElementById('test-wizard-root');
 
@@ -142,6 +143,7 @@ export async function cargarTestParaCiclo(cicloId, alumnoId, alumnoIds, nombreAl
     historial.sort((a, b) => b.completadoAt - a.completadoAt);
   }
 
+  registrarTestsAnalisis(cicloId, historial, nombreAlumno || document.getElementById('ficha-nombre-alumno')?.textContent.trim());
   if (historial.length > 0) {
     testSeleccionadoId = historial[0].id;
     state = { stepIndex: 0, respuestas: respuestasPorDefecto(), modo: 'historial' };
@@ -254,6 +256,7 @@ function renderHistorial() {
       <td>${fecha}${esActiva ? ' <span class="text-soft">(viendo)</span>' : ''}</td>
       <td>${t.promedios.fase1}</td><td>${t.promedios.fase2}</td>
       <td>${t.promedios.fase3}</td><td>${t.promedios.fase4}</td>
+      <td>${botonAnalisisHtml(t)}</td>
     </tr>`;
   }).join('');
 
@@ -268,7 +271,7 @@ function renderHistorial() {
       </div>
       <div class="panel__body" style="padding:0;">
         <table class="data-table">
-          <thead><tr><th>Fecha</th><th>Fase 1</th><th>Fase 2</th><th>Fase 3</th><th>Fase 4</th></tr></thead>
+          <thead><tr><th>Fecha</th><th>Fase 1</th><th>Fase 2</th><th>Fase 3</th><th>Fase 4</th><th>Análisis</th></tr></thead>
           <tbody>${filas}</tbody>
         </table>
       </div>
