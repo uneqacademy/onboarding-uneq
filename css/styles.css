@@ -1765,3 +1765,12 @@ body.tema-open .hitos-tab { color: #E9D3CD; }
 .ct-lado__est .ct-ico { width: 11px; height: 11px; }
 .ct-fila__estado .ct-ico { margin-left: 1px; }
 .ct-fila__estado.is-vista .ct-ico { margin-left: 0; }
+
+/* Respuesta a un comentario: mismo estilo que la caja de comentario */
+.ct-com-nuevo textarea, .ct-com__form textarea { border: 0; background: var(--color-surface-alt); border-radius: var(--radius-md); padding: 11px 14px; font: inherit; font-size: 14px; color: var(--color-ink); min-height: 42px; resize: none; }
+.ct-com__form { align-items: center; }
+.ct-com__form textarea { flex: 1; }
+.ct-com__form textarea::placeholder, .ct-com-nuevo textarea::placeholder { color: var(--color-ink-soft); }
+.ct-com__form textarea:focus, .ct-com-nuevo textarea:focus { outline: 2px solid var(--color-accent-soft); }
+/* Separación entre el video y la tarjeta de valoración y comentarios */
+.ct-lec__panel { margin-top: 24px; }
