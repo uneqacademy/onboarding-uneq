@@ -22,7 +22,13 @@ import { iniciarSeguimiento } from './seguimiento-video.js';
 import { programaLabel } from './ciclos.js';
 import { faseMaximaChecklist } from './hitos.js';
 
-const PROGRAMAS_CONTENIDO = ['open', 'begin', 'next', 'exit'];
+// 'comun' es la base que se repite en todos los programas: se sube una sola vez y aparece en los cuatro.
+const PROGRAMAS_CONTENIDO = ['comun', 'open', 'begin', 'next', 'exit'];
+const PROGRAMAS_REALES = ['open', 'begin', 'next', 'exit'];
+const excluidaDe = (c, p) => !!(c && c.excluirDe && c.excluirDe[p]);
+const etiquetaPrograma = p => p === 'comun' ? '🌐 Base común' : programaLabel(p);
+// Los módulos de la base común solo se editan desde su pestaña; en los programas se ven y ya.
+const puedeEditar = m => estado.esDirector && (estado.programa === 'comun' || !m || m._origen !== 'comun');
 const TAMANO_MAXIMO_PDF = 25 * 1024 * 1024;
 const TEXTOS_FASE = { 0: 'Desde el inicio', 1: 'Fase 1', 2: 'Fase 2', 3: 'Fase 3', 4: 'Fase 4' };
 
@@ -143,8 +149,9 @@ const duracionIntentada = new Set();   // lecciones ya probadas en esta sesión 
 let detectandoDuraciones = false;
 
 async function guardarDuracion(programa, mid, cid, minutos) {
+  if (estado.datos[mid] && estado.datos[mid]._origen === 'comun') programa = 'comun';
   await update(ref(db, `contenidos/${programa}/${mid}/clases/${cid}`), { duracionMin: minutos });
-  if (estado.programa === programa && estado.datos[mid] && estado.datos[mid].clases && estado.datos[mid].clases[cid]) {
+  if (estado.datos[mid] && estado.datos[mid].clases && estado.datos[mid].clases[cid]) {
     estado.datos[mid].clases[cid].duracionMin = minutos;
   }
 }
@@ -271,8 +278,19 @@ export async function cargarContenidos() {
 }
 
 async function recargarDatos() {
-  const snap = await get(ref(db, `contenidos/${estado.programa}`));
-  estado.datos = snap.exists() ? snap.val() : {};
+  const programa = estado.programa;
+  const snap = await get(ref(db, `contenidos/${programa}`));
+  const propios = snap.exists() ? snap.val() : {};
+  Object.values(propios).forEach(m => { if (m && typeof m === 'object') m._origen = programa; });
+  if (programa === 'comun') { estado.datos = propios; return; }
+  // La base común va primero (su orden se resta solo en pantalla, no se guarda).
+  let comunes = {};
+  try {
+    const sc = await get(ref(db, 'contenidos/comun'));
+    if (sc.exists()) comunes = sc.val();
+  } catch (err) { console.warn('No se pudo leer la base común:', err); }
+  Object.values(comunes).forEach(m => { if (m && typeof m === 'object') { m._origen = 'comun'; m.orden = (Number(m.orden) || 0) - 1000000; } });
+  estado.datos = { ...propios, ...comunes };
 }
 
 /* ---------- Pintado: tres pantallas (módulos > lecciones > lección) ---------- */
@@ -282,12 +300,18 @@ function moduloBloqueado(m) {
 }
 function visibles() {
   // Para el alumno: solo módulos y clases publicados.
-  return ordenar(estado.datos)
-    .filter(([, m]) => estado.verBorradores || m.publicado !== false)
-    .map(([id, m]) => [id, {
-      ...m,
-      clases: Object.fromEntries(clasesDe(m).filter(([, c]) => estado.verBorradores || c.publicado !== false))
-    }]);
+  // En un programa, de la base común se quitan las lecciones que el director sacó de ese programa;
+  // si un módulo común se queda sin ninguna, tampoco se muestra.
+  const enPrograma = estado.programa !== 'comun';
+  const resultado = [];
+  ordenar(estado.datos).forEach(([id, m]) => {
+    if (!estado.verBorradores && m.publicado === false) return;
+    const todas = clasesDe(m);
+    const clases = todas.filter(([, c]) => (estado.verBorradores || c.publicado !== false) && !(enPrograma && excluidaDe(c, estado.programa)));
+    if (enPrograma && m._origen === 'comun' && todas.length && !clases.length && todas.every(([, c]) => excluidaDe(c, estado.programa))) return;
+    resultado.push([id, { ...m, clases: Object.fromEntries(clases) }]);
+  });
+  return resultado;
 }
 
 function irA(vista, moduloId = null, claseId = null) {
@@ -368,11 +392,12 @@ function irAlTablero() { estado.vista = 'modulos'; estado.moduloId = null; estad
 /* --- Pantalla 1: tablero de módulos --- */
 function vistaModulos(modulos) {
   const tabs = estado.verTodo ? `<div class="ct-tabs">${PROGRAMAS_CONTENIDO.map(p =>
-    `<button type="button" class="ct-tab${p === estado.programa ? ' is-active' : ''}" data-programa="${p}">${escaparHtml(programaLabel(p))}</button>`).join('')}</div>` : '';
-  const nuevo = estado.esDirector ? '<div class="ct-admin-barra"><button type="button" class="btn btn--primary" id="ct-nuevo-modulo">+ Nuevo módulo</button></div>' : '';
+    `<button type="button" class="ct-tab${p === estado.programa ? ' is-active' : ''}" data-programa="${p}">${escaparHtml(etiquetaPrograma(p))}</button>`).join('')}</div>` : '';
+  const nota = estado.programa === 'comun' ? '<p class="text-soft" style="margin:0 0 12px;">Lo que subas aquí aparece automáticamente al comienzo de los 4 programas (OPEN, BEGIN, NEXT y eXIT). Súbelo una sola vez.</p>' : '';
+  const nuevo = nota + (estado.esDirector ? '<div class="ct-admin-barra"><button type="button" class="btn btn--primary" id="ct-nuevo-modulo">+ Nuevo módulo</button></div>' : '');
   const tarjetas = modulos.length
     ? `<div class="ct-grid">${modulos.map(([mid, m], i) => tarjetaModulo(mid, m, i, modulos.length)).join('')}</div>`
-    : `<div class="panel"><div class="panel__body"><p class="text-soft" style="margin:0;">${estado.esDirector ? 'Este programa aún no tiene módulos. Crea el primero con “+ Nuevo módulo”.' : estado.verTodo ? 'Este programa aún no tiene módulos.' : 'Pronto verás aquí los contenidos de tu programa.'}</p></div></div>`;
+    : `<div class="panel"><div class="panel__body"><p class="text-soft" style="margin:0;">${estado.esDirector ? (estado.programa === 'comun' ? 'Aún no hay base común. Crea el primer módulo con “+ Nuevo módulo”.' : 'Este programa aún no tiene módulos. Crea el primero con “+ Nuevo módulo”.') : estado.verTodo ? 'Este programa aún no tiene módulos.' : 'Pronto verás aquí los contenidos de tu programa.'}</p></div></div>`;
   return `${tabs}${nuevo}${tarjetas}`;
 }
 
@@ -382,6 +407,7 @@ function tarjetaModulo(mid, m, i, n) {
   const img = urlSegura(m.portadaUrl) ? `<img src="${escaparHtml(m.portadaUrl)}" alt="">` : '<div class="ct-card__vacia">📚</div>';
   const etqs = [
     m.publicado === false ? '<span class="ct-etq">Borrador</span>' : '',
+    m._origen === 'comun' && estado.programa !== 'comun' ? '<span class="ct-etq">🌐 Base común</span>' : '',
     estado.verTodo && (Number(m.desdeFase) || 0) > 0 ? `<span class="ct-etq">${escaparHtml(TEXTOS_FASE[m.desdeFase] || '')}</span>` : '',
     bloq ? `<span class="ct-etq">🔒 ${escaparHtml(TEXTOS_FASE[m.desdeFase] || '')}</span>` : ''
   ].join('');
@@ -389,7 +415,7 @@ function tarjetaModulo(mid, m, i, n) {
     <article class="ct-card${bloq ? ' is-bloqueado' : ''}" data-act="${bloq ? 'bloqueado' : 'ir-modulo'}" data-m="${mid}" data-fase="${escaparHtml(TEXTOS_FASE[m.desdeFase] || '')}">
       <div class="ct-card__img">${img}
         <div class="ct-card__etqs">${etqs}</div>
-        ${estado.esDirector ? `<div class="ct-card__admin">${botonesAdmin('mod', mid, '', i, n)}</div>` : ''}
+        ${puedeEditar(m) ? `<div class="ct-card__admin">${botonesAdmin('mod', mid, '', i, n)}</div>` : ''}
       </div>
       <p class="ct-card__titulo">${escaparHtml(m.titulo || 'Módulo sin título')}</p>
       ${m.descripcion ? `<p class="ct-card__desc">${escaparHtml(m.descripcion)}</p>` : ''}
@@ -410,10 +436,11 @@ function vistaModulo(mid, m) {
       ${urlSegura(c.portadaUrl) ? `<img class="ct-portada ct-portada--mini" src="${escaparHtml(c.portadaUrl)}" alt="">` : ''}
       <span class="ct-fila__titulo">${escaparHtml(c.titulo || 'Lección sin título')}
         ${c.publicado === false ? '<span class="ct-etq ct-etq--borrador">Borrador</span>' : ''}
+        ${estado.programa === 'comun' && c.excluirDe && PROGRAMAS_REALES.some(p => c.excluirDe[p]) ? `<span class="ct-etq">No va en: ${PROGRAMAS_REALES.filter(p => c.excluirDe[p]).map(p => escaparHtml(programaLabel(p))).join(', ')}</span>` : ''}
         ${(c.materiales && Object.keys(c.materiales).length) ? '<span title="Tiene material">📎</span>' : ''}</span>
       ${Number(c.duracionMin) > 0 ? `<span class="ct-fila__dur">${ICONO_RELOJ} ${Number(c.duracionMin)} minutos</span>` : ''}
       <span class="ct-fila__estado${vista ? ' is-vista' : ''}" data-est="${cid}">${vista ? ICONO_CHECK : ICONO_PLAY}</span>
-      ${estado.esDirector ? botonesAdmin('cla', mid, cid, j, clases.length) : ''}
+      ${puedeEditar(m) ? botonesAdmin('cla', mid, cid, j, clases.length) : ''}
     </div>`;
   }).join('');
   return `
@@ -426,7 +453,7 @@ function vistaModulo(mid, m) {
         <div class="ct-barra" style="max-width:320px; margin-top:8px;"><span style="width:${prog.pct}%"></span></div></div>
     </div>
     <div class="ct-filas">${filas || '<div class="panel"><div class="panel__body"><p class="text-soft" style="margin:0;">Aún no hay lecciones en este módulo.</p></div></div>'}</div>
-    ${estado.esDirector ? `<button type="button" class="btn btn--primary ct-nueva-clase" data-act="cla-nueva" data-m="${mid}">+ Nueva lección</button>` : ''}`;
+    ${puedeEditar(m) ? `<button type="button" class="btn btn--primary ct-nueva-clase" data-act="cla-nueva" data-m="${mid}">+ Nueva lección</button>` : ''}`;
 }
 
 /* --- Pantalla 3: la lección (video a la izquierda, lista del módulo a la derecha) --- */
@@ -464,7 +491,7 @@ function vistaLeccion(mid, m, cid) {
       <span class="ct-lec__espacio"></span>
       <button type="button" class="ct-btn-txt${fav ? ' is-on' : ''}" id="ct-fav" data-act="favorito" data-c="${cid}">${fav ? '♥ Favorita' : '♡ Favoritar'}</button>
       <button type="button" class="ct-btn-txt${vista ? ' is-on' : ''}" id="ct-concluir" data-act="concluir" data-c="${cid}">${vista ? '✓ Concluida' : '○ No concluida'}</button>
-      ${estado.esDirector ? `<button type="button" class="ct-btn-txt" data-act="cla-editar" data-m="${mid}" data-c="${cid}">✏️ Editar</button>` : ''}
+      ${puedeEditar(m) ? `<button type="button" class="ct-btn-txt" data-act="cla-editar" data-m="${mid}" data-c="${cid}">✏️ Editar</button>` : ''}
     </div>`;
 
   const lista = clases.map(([id, c], j) => `
@@ -859,11 +886,17 @@ function editarClase(mid, cid) {
     <div class="field mb-16"><label>Materiales (PDF)</label><div id="ct-c-mats"></div>
       <button type="button" class="btn btn--ghost" id="ct-c-addmat" style="font-size:12px; margin-top:6px;">+ Agregar PDF</button>
       <input type="file" id="ct-c-file" accept="application/pdf,.pdf" class="hidden"></div>
+    ${estado.programa === 'comun' ? `<div class="field mb-16"><label>Aparece en estos programas</label><div style="display:flex; gap:14px; flex-wrap:wrap; font-size:13.5px;">${PROGRAMAS_REALES.map(p => `<label style="display:flex; gap:6px; align-items:center;"><input type="checkbox" class="ct-c-prog" data-p="${p}" ${excluidaDe(c, p) ? '' : 'checked'}> ${escaparHtml(programaLabel(p))}</label>`).join('')}</div><p class="text-soft" style="font-size:12px; margin:4px 0 0;">Desmarca un programa para sacar esta lección de ahí (el resto de la base común sigue).</p></div>` : ''}
     <label style="display:flex; gap:8px; align-items:center; font-size:13.5px;"><input type="checkbox" id="ct-c-pub" ${!c || c.publicado !== false ? 'checked' : ''}> Publicada (visible para los alumnos)</label>`,
   async ov => {
     const titulo = val(ov, '#ct-c-titulo');
     if (!titulo) throw fallo('Escribe el título de la clase.');
     const campos = { titulo, descripcion: val(ov, '#ct-c-desc'), publicado: ov.querySelector('#ct-c-pub').checked };
+    if (estado.programa === 'comun') {
+      const fuera = {};
+      ov.querySelectorAll('.ct-c-prog').forEach(x => { if (!x.checked) fuera[x.dataset.p] = true; });
+      campos.excluirDe = Object.keys(fuera).length ? fuera : null;
+    }
     campos.duracionMin = Number(val(ov, '#ct-c-dur')) > 0 ? Math.round(Number(val(ov, '#ct-c-dur'))) : null;
     const codigo = ov.querySelector('#ct-c-embed').value.trim();
     // Si se cambia el video y la duración no se tocó a mano, se vuelve a medir sola.
@@ -921,7 +954,7 @@ function editarClase(mid, cid) {
 }
 
 async function mover(tipo, mid, cid, delta) {
-  const hermanos = tipo === 'mod' ? ordenar(estado.datos) : clasesDe(estado.datos[mid]);
+  const hermanos = tipo === 'mod' ? ordenar(estado.datos).filter(([, x]) => x._origen === estado.programa) : clasesDe(estado.datos[mid]);
   const idActual = tipo === 'mod' ? mid : cid;
   const i = hermanos.findIndex(([id]) => id === idActual);
   const j = i + delta;
