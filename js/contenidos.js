@@ -33,6 +33,7 @@ const estado = {
   alumnoId: null,
   faseMax: 0,
   esDirector: false,  // administra (crear/editar/ordenar/borrar)
+  verBorradores: false, // staff y Alumno Demo: ven también lo que está sin publicar
   verTodo: false,     // staff: ve todos los programas, sin candado ni progreso
   vista: 'modulos',   // 'modulos' (tablero) | 'modulo' (lecciones) | 'leccion'
   moduloId: null,
@@ -239,6 +240,7 @@ export async function cargarContenidos() {
   const id = ++cargaActual;
   estado.esDirector = role === 'director';
   estado.verTodo = role !== 'alumno';
+  estado.verBorradores = estado.verTodo || esModoDemo();
   estado.vista = 'modulos'; estado.moduloId = null; estado.claseId = null;
   cont.innerHTML = '<p class="text-soft">Cargando...</p>';
   try {
@@ -281,10 +283,10 @@ function moduloBloqueado(m) {
 function visibles() {
   // Para el alumno: solo módulos y clases publicados.
   return ordenar(estado.datos)
-    .filter(([, m]) => estado.verTodo || m.publicado !== false)
+    .filter(([, m]) => estado.verBorradores || m.publicado !== false)
     .map(([id, m]) => [id, {
       ...m,
-      clases: Object.fromEntries(clasesDe(m).filter(([, c]) => estado.verTodo || c.publicado !== false))
+      clases: Object.fromEntries(clasesDe(m).filter(([, c]) => estado.verBorradores || c.publicado !== false))
     }]);
 }
 
