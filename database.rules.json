@@ -193,6 +193,20 @@
       }
     },
 
+    "asistenciaVivo": {
+      "$tipo": {
+        "$ownerId": {
+          ".read": "auth != null && (auth.uid === $ownerId || root.child('usuarios').child(auth.uid).child('roles').child('director').val() === true || root.child('usuarios').child(auth.uid).child('rol').val() === 'director')",
+          ".write": "auth != null && (auth.uid === $ownerId || root.child('usuarios').child(auth.uid).child('roles').child('director').val() === true || root.child('usuarios').child(auth.uid).child('rol').val() === 'director')",
+          "$sesionId": {
+            "$alumnoId": {
+              ".validate": "!newData.exists() || (newData.hasChildren(['fecha', 'at']) && newData.child('fecha').isString() && newData.child('at').isNumber())"
+            }
+          }
+        }
+      }
+    },
+
     "box": {
       "$mentorId": {
         ".read": "auth != null && (auth.uid === $mentorId || (root.child('usuarios').child(auth.uid).child('roles').child('director').val() === true || root.child('usuarios').child(auth.uid).child('rol').val() === 'director') || (root.child('usuarios').child(auth.uid).child('roles').child('coach').val() === true || root.child('usuarios').child(auth.uid).child('rol').val() === 'coach') || (root.child('usuarios').child(auth.uid).child('roles').child('mentor').val() === true || root.child('usuarios').child(auth.uid).child('rol').val() === 'mentor') || root.child('alumnoPorAuthUid').child(auth.uid).exists())",

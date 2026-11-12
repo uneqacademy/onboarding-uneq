@@ -23,6 +23,7 @@ export const ACCIONES_PUNTOS = [
   { clave: 'comentarioRecibido', etiqueta: 'Recibir un comentario en tu publicación', puntos: 2, tope: 10, topeEditable: true },
   { clave: 'entrada', etiqueta: 'Entrar a la app (una vez al día)', puntos: 1, tope: 1, topeEditable: false },
   { clave: 'compartir', etiqueta: 'Compartir una publicación por WhatsApp', puntos: 2, tope: 3, topeEditable: true },
+  { clave: 'asistenciaVivo', etiqueta: 'Asistir a una mentoría o sesión en vivo (la registra el mentor)', puntos: 20, tope: 0, topeEditable: true },
   { clave: 'fase', etiqueta: 'Pasar de fase', puntos: 50, tope: 0, topeEditable: false },
   // Contenidos (clases). Entre estas cuatro hay un tope diario conjunto de 30 puntos (lo aplica el servidor).
   { clave: 'claseConcluida', etiqueta: 'Concluir una lección (cada una cuenta una vez; hay que haber visto al menos el 70% del video)', puntos: 5, tope: 5, topeEditable: true, deContenidos: true },

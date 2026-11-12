@@ -11,6 +11,7 @@
 import { db, auth, storage } from './firebase-config.js';
 import { escaparHtml, textoAlumnoAHtml } from './util-html.js';
 import { renderAdjuntosMentor } from './adjuntos.js';
+import { botonAsistenciaHtml, abrirAsistenciaVivo, textoAsistentes } from './asistencia-vivo.js';
 import { ref, get, set, update, push } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-database.js";
 import { ref as storageRef, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-storage.js";
 import { getCurrentRole } from './main.js';
@@ -105,10 +106,12 @@ async function cargarSesionesBeginTabla(uid) {
   const tbody = document.getElementById('tabla-sesiones-begin-body');
   if (!tbody) return;
 
-  const [sesionesSnap, npsSnap] = await Promise.all([
+  const [sesionesSnap, npsSnap, asistenciaSnap] = await Promise.all([
     get(ref(db, `sesionesBegin/${uid}`)),
-    get(ref(db, `npsSesionesBegin/${uid}`))
+    get(ref(db, `npsSesionesBegin/${uid}`)),
+    get(ref(db, `asistenciaVivo/sesionesBegin/${uid}`)).catch(() => null)
   ]);
+  const asistencias = asistenciaSnap && asistenciaSnap.exists() ? asistenciaSnap.val() : {};
   const sesiones = sesionesSnap.exists() ? sesionesSnap.val() : {};
   const npsTodas = npsSnap.exists() ? npsSnap.val() : {};
 
@@ -135,6 +138,7 @@ async function cargarSesionesBeginTabla(uid) {
           <input type="file" class="input-resumen-sesion-begin hidden" accept=".doc,.docx">
         </td>
         <td><button class="btn btn--ghost btn-ver-preguntas-begin" style="font-size:11px; padding:4px 8px;">Ver Preguntas</button></td>
+        <td>${botonAsistenciaHtml(Object.keys(asistencias[sesionId] || {}).length)}</td>
         <td><button class="btn btn--ghost btn-copiar-link-nps-begin" style="font-size:11px; padding:4px 8px;">Copiar Link NPS</button></td>
         <td>
           ${estadoSesion === 'dictada'
@@ -147,6 +151,11 @@ async function cargarSesionesBeginTabla(uid) {
                  </div>`}
         </td>`;
       tbody.appendChild(tr);
+
+      tr.querySelector('.btn-asistencia-vivo').addEventListener('click', () => abrirAsistenciaVivo({
+        tipo: 'sesionesBegin', ownerUid: uid, sesionId, fecha: s.fecha,
+        alGuardar: (n) => { tr.querySelector('.asistencia-vivo-contador').textContent = textoAsistentes(n); }
+      }));
 
       tr.querySelector('.btn-copiar-link-nps-begin').addEventListener('click', () => {
         const url = construirLinkNpsSesionBegin(uid, sesionId, '');
@@ -176,7 +185,7 @@ async function cargarSesionesBeginTabla(uid) {
       if (btnComentariosNps) btnComentariosNps.addEventListener('click', () => {
         if (filaComentariosNps) { filaComentariosNps.remove(); filaComentariosNps = null; return; }
         filaComentariosNps = document.createElement('tr');
-        filaComentariosNps.innerHTML = `<td colspan="8" style="background:#F7F8FA; padding:14px 16px;">${renderEntradasNps(entradas)}</td>`;
+        filaComentariosNps.innerHTML = `<td colspan="9" style="background:#F7F8FA; padding:14px 16px;">${renderEntradasNps(entradas)}</td>`;
         tr.insertAdjacentElement('afterend', filaComentariosNps);
       });
 
@@ -188,7 +197,7 @@ async function cargarSesionesBeginTabla(uid) {
         const preguntas = Object.entries(preguntasObj).sort((a, b) => a[1].createdAt - b[1].createdAt);
         filaPreguntas = document.createElement('tr');
         filaPreguntas.innerHTML = `
-          <td colspan="8" style="background:#F7F8FA; padding:14px 16px;">
+          <td colspan="9" style="background:#F7F8FA; padding:14px 16px;">
             ${preguntas.length ? preguntas.map(([preguntaId, p]) => `
               <div class="pregunta-vivo-item" data-pregunta-id="${preguntaId}" style="padding:8px 0; border-bottom:0.5px solid var(--border); font-size:13px;">
                 <strong>${escaparHtml(p.alumnoNombre || 'Alumno')}</strong>
