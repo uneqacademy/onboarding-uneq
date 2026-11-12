@@ -992,7 +992,7 @@ async function borrar(tipo, mid, cid) {
   pintar();
 }
 
-async function borrarUno(tipo, mid, cid) {
+async function borrarUno(tipo, mid, cid, conservarDatos = false) {
   const clases = tipo === 'mod' ? Object.values(estado.datos[mid].clases || {}) : [estado.datos[mid].clases[cid]];
   const rutas = tipo === 'mod' && estado.datos[mid].portadaRuta ? [estado.datos[mid].portadaRuta] : [];
   for (const c of clases) {
@@ -1000,7 +1000,7 @@ async function borrarUno(tipo, mid, cid) {
     for (const mt of Object.values(c.materiales || {})) if (mt && mt.ruta) rutas.push(mt.ruta);
   }
   const idsClases = tipo === 'mod' ? Object.keys(estado.datos[mid].clases || {}) : [cid];
-  for (const id of idsClases) {
+  for (const id of conservarDatos ? [] : idsClases) {
     try { await remove(ref(db, `comentariosClases/${id}`)); } catch (e) { /* sin comentarios */ }
     try { await remove(ref(db, `valoracionesClases/${id}`)); } catch (e) { /* sin valoraciones */ }
   }
@@ -1051,7 +1051,8 @@ function copiaLimpia(obj, paraBase) {
 }
 
 // Copia módulos o lecciones al programa destino (los archivos se comparten; el avance y los comentarios empiezan de cero).
-async function enviarA(destino, tipo, mid, ids) {
+// conservarIds (al mover a la Base): las lecciones mantienen su id, así sus comentarios, estrellas y avance siguen ahí.
+async function enviarA(destino, tipo, mid, ids, conservarIds = false) {
   const snap = await get(ref(db, 'contenidos/' + destino));
   const dest = snap.exists() ? snap.val() : {};
   const cambios = {};
@@ -1060,7 +1061,7 @@ async function enviarA(destino, tipo, mid, ids) {
   const clasesCopia = clases => {
     const out = {};
     let k = 0;
-    clasesDe({ clases }).forEach(([, c]) => { out[push(ref(db, base)).key] = { ...copiaLimpia(c, paraBase), orden: ++k }; });
+    clasesDe({ clases }).forEach(([cid, c]) => { out[conservarIds ? cid : push(ref(db, base)).key] = { ...copiaLimpia(c, paraBase), orden: ++k }; });
     return out;
   };
   if (tipo === 'mod') {
@@ -1081,7 +1082,7 @@ async function enviarA(destino, tipo, mid, ids) {
     }
     let orden = siguienteOrden(dest[destMid] && dest[destMid].clases);
     for (const id of ids) {
-      const nueva = push(ref(db, base)).key;
+      const nueva = conservarIds ? id : push(ref(db, base)).key;
       cambios[destMid + '/clases/' + nueva] = { ...copiaLimpia(origen.clases[id], paraBase), orden: orden++ };
     }
   }
@@ -1106,9 +1107,9 @@ async function accionMasiva(a) {
     const destino = a.slice(7);
     const nombreDestino = destino === 'comun' ? 'todos los programas (Base común)' : programaLabel(destino);
     const mover = destino === 'comun';
-    if (!confirm('¿Enviar ' + n + ' ' + que + ' a ' + nombreDestino + '?' + (mover ? ' Se copian a la Base común y se quitan de este programa.' : ' Se copian (los originales se quedan donde están).'))) return;
-    await enviarA(destino, tipo, mid, ids);
-    if (mover) for (const id of ids) await borrarUno(tipo, tipo === 'mod' ? id : mid, tipo === 'mod' ? null : id);
+    if (!confirm('¿Enviar ' + n + ' ' + que + ' a ' + nombreDestino + '?' + (mover ? ' Se mueven a la Base común y conservan sus comentarios, estrellas y avance.' : ' Se copian (los originales se quedan donde están).'))) return;
+    await enviarA(destino, tipo, mid, ids, mover);
+    if (mover) for (const id of ids) await borrarUno(tipo, tipo === 'mod' ? id : mid, tipo === 'mod' ? null : id, true);
     alert('Listo: ' + n + ' ' + que + ' enviado' + (n === 1 ? '' : 's') + ' a ' + nombreDestino + '.');
   }
   estado.seleccion.clear();
