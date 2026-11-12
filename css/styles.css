@@ -1774,3 +1774,10 @@ body.tema-open .hitos-tab { color: #E9D3CD; }
 .ct-com__form textarea:focus, .ct-com-nuevo textarea:focus { outline: 2px solid var(--color-accent-soft); }
 /* Separación entre el video y la tarjeta de valoración y comentarios */
 .ct-lec__panel { margin-top: 24px; }
+
+/* Respuestas en hilo: cuelgan del comentario con una línea en L; varias se suman hacia abajo */
+.ct-com__resps { margin-top: 8px; }
+.ct-com--resp { position: relative; margin-top: 20px; }
+.ct-com--resp::before { content: ''; position: absolute; left: -40px; top: -18px; width: 38px; height: 44px; border-left: 2px solid #2B2B2B; border-bottom: 2px solid #2B2B2B; border-bottom-left-radius: 14px; }
+.ct-com--resp:not(:last-child)::after { content: ''; position: absolute; left: -40px; top: 26px; bottom: -20px; border-left: 2px solid #2B2B2B; }
+.ct-com--resp .ct-com__fecha { display: none; }
