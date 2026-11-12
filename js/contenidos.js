@@ -15,7 +15,8 @@ import { db, auth, storage } from './firebase-config.js';
 import { escaparHtml } from './util-html.js';
 import { ref, get, set, push, update, remove, onValue, query, limitToLast } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-database.js";
 import { ref as storageRef, uploadBytes, getDownloadURL, deleteObject } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-storage.js";
-import { getCurrentRole, getCurrentUserNombre } from './main.js';
+import { getCurrentRole, getCurrentUserNombre, esModoDemo } from './main.js';
+import { marcaDemo, ocultarParaAlumno } from './demo.js';
 import { programaLabel } from './ciclos.js';
 import { faseMaximaChecklist } from './hitos.js';
 
@@ -202,6 +203,7 @@ async function resolverAlumno() {
   const ciclo = await get(ref(db, `ciclos/${cicloId}`));
   if (!ciclo.exists()) return null;
   estado.faseMax = faseMaximaChecklist(ciclo.val());
+  if (esModoDemo()) estado.faseMax = 4;   // el Alumno Demo ve todo, sin candado, para presentar
   estado.miFoto = alumno.val().fotoUrl || '';
   await cargarMisMarcas();
   return ciclo.val().programa || null;
@@ -211,7 +213,8 @@ export async function cargarContenidos() {
   const role = getCurrentRole();
   const cont = el('contenidos-contenido');
   // Por ahora los alumnos no ven esta sección (el menú la oculta): solo el staff.
-  if (!cont || !['director', 'mentor', 'coach'].includes(role)) return;
+  // Solo el staff y el Alumno Demo (modo demo). Los alumnos reales no la ven todavía.
+  if (!cont || !(['director', 'mentor', 'coach'].includes(role) || (role === 'alumno' && esModoDemo()))) return;
   const id = ++cargaActual;
   estado.esDirector = role === 'director';
   estado.verTodo = role !== 'alumno';
@@ -500,7 +503,7 @@ function escucharComentarios(cid) {
   const consulta = query(ref(db, `comentariosClases/${cid}`), limitToLast(300));
   desuscribirComentarios = onValue(consulta, snap => {
     const yo = auth.currentUser ? auth.currentUser.uid : null;
-    const items = Object.entries(snap.exists() ? snap.val() : {}).map(([k, c]) => ({ ...c, k }));
+    const items = Object.entries(snap.exists() ? snap.val() : {}).map(([k, c]) => ({ ...c, k })).filter(c => !ocultarParaAlumno(c));
     comentariosActuales = items;
     const ids = new Set(items.map(x => x.k));
     const raices = items.filter(x => !x.padreId || !ids.has(x.padreId)).sort((a, b) => (b.fecha || 0) - (a.fecha || 0));
@@ -550,7 +553,8 @@ async function enviarComentario(cid, caja, boton, padreId) {
       nombre: (getCurrentUserNombre() || 'Usuario').slice(0, 120),
       rol: getCurrentRole(),
       texto: texto.slice(0, 1000),
-      fecha: Date.now()
+      fecha: Date.now(),
+      ...marcaDemo()
     };
     if (urlSegura(estado.miFoto) && estado.miFoto.length <= 600) datos.fotoUrl = estado.miFoto;
     if (padreId) datos.padreId = padreId;
@@ -578,13 +582,17 @@ async function borrarComentario(cid, k) {
 
 /* ---------- Valoración con estrellas ---------- */
 
+// La valoración se guarda bajo el uid propio; en modo demo, bajo el id del Alumno Demo (así no se mezcla).
+const claveValoracion = () => (esModoDemo() && estado.clave) ? estado.clave : (auth.currentUser ? auth.currentUser.uid : null);
+
 function escucharValoraciones(cid) {
   if (desuscribirValoraciones) desuscribirValoraciones();
   const uid = auth.currentUser ? auth.currentUser.uid : null;
   desuscribirValoraciones = onValue(ref(db, `valoracionesClases/${cid}`), snap => {
-    const todas = snap.exists() ? snap.val() : {};
+    // Las valoraciones del Alumno Demo no cuentan para los alumnos reales.
+    const todas = Object.fromEntries(Object.entries(snap.exists() ? snap.val() : {}).filter(([k]) => !ocultarParaAlumno({ alumnoId: k })));
     const notas = Object.values(todas).map(Number).filter(n => n >= 1 && n <= 5);
-    const mia = uid ? Number(todas[uid]) || 0 : 0;
+    const mia = Number(todas[claveValoracion()]) || 0;
     const cont = el('ct-estrellas');
     if (cont) {
       cont.dataset.mia = String(mia);
@@ -605,7 +613,7 @@ async function valorar(cid, n) {
   const mia = Number((el('ct-estrellas') || {}).dataset?.mia) || 0;
   try {
     // Tocar otra vez la misma nota la quita.
-    await set(ref(db, `valoracionesClases/${cid}/${uid}`), mia === n ? null : n);
+    await set(ref(db, `valoracionesClases/${cid}/${claveValoracion()}`), mia === n ? null : n);
   } catch (err) {
     console.error('No se pudo guardar la valoración:', err);
     alert('No se pudo guardar tu valoración. Intenta de nuevo.');

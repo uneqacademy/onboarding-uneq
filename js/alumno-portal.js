@@ -19,6 +19,7 @@ import { ref, get, set, update, push } from "https://www.gstatic.com/firebasejs/
 import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-functions.js";
 import { initializeApp, deleteApp } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-app.js";
 import { getCurrentRole } from './main.js';
+import { ocultarParaAlumno } from './demo.js';
 import { getAuth, createUserWithEmailAndPassword, signOut as signOutSecundaria, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-auth.js";
 import { programaLabel, testEsDe } from './ciclos.js';
 import { registrarTestsAnalisis, botonAnalisisHtml } from './analisis-test.js';
@@ -1698,6 +1699,7 @@ export async function cargarPreguntasComunidad() {
     const [mentorUid] = mentores[idx];
     Object.entries(snap.val()).forEach(([preguntaId, p]) => {
       if (!p.respuesta) return;
+      if (ocultarParaAlumno(p)) return; // preguntas del Alumno Demo: los alumnos no las ven
       if (p.estado === 'oculta' && !esDirector) return; // el director oculta desde acá; nadie más la ve
       const alumno = alumnos[p.alumnoId] || {};
       const ciclo = alumno.cicloActualId ? ciclos[alumno.cicloActualId] : null;

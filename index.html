@@ -327,10 +327,10 @@
           <div class="panel__body">
             <p class="text-soft mb-16" style="font-size:13px;">Prueba la experiencia real de un alumno sin crear datos falsos — no cuenta en ninguna estadística, y aparece marcado "(DEMO)" para que mentores y copilotos no se confundan.</p>
             <div style="display:flex; gap:10px; flex-wrap:wrap;">
-              <button type="button" class="btn btn--accent" id="btn-ver-demo-open">Ver como Alumno OPEN</button>
-              <button type="button" class="btn btn--accent" id="btn-ver-demo-begin">Ver como Alumno BEGIN</button>
-              <button type="button" class="btn btn--accent" id="btn-ver-demo-next">Ver como Alumno NEXT</button>
-              <button type="button" class="btn btn--accent" id="btn-ver-demo-exit">Ver como Alumno eXIT</button>
+              <button type="button" class="btn btn--accent btn-ver-demo" id="btn-ver-demo-open" data-programa="open">Ver como Alumno OPEN</button>
+              <button type="button" class="btn btn--accent btn-ver-demo" id="btn-ver-demo-begin" data-programa="begin">Ver como Alumno BEGIN</button>
+              <button type="button" class="btn btn--accent btn-ver-demo" id="btn-ver-demo-next" data-programa="next">Ver como Alumno NEXT</button>
+              <button type="button" class="btn btn--accent btn-ver-demo" id="btn-ver-demo-exit" data-programa="exit">Ver como Alumno eXIT</button>
             </div>
           </div>
         </div>
@@ -419,6 +419,19 @@
               <thead><tr><th>Fecha</th><th>Hora</th><th>Acceso</th><th>NPS de la sesión</th><th>Resumen</th><th>Preguntas</th><th></th><th>Estado</th></tr></thead>
               <tbody id="tabla-sesiones-begin-body"></tbody>
             </table>
+          </div>
+        </div>
+
+        <div class="panel" style="margin-top:24px;">
+          <div class="panel__header"><h3>🎭 Ver como Alumno (Demo)</h3></div>
+          <div class="panel__body">
+            <p class="text-soft mb-16" style="font-size:13px;">Mira la app como la ve un alumno, para presentarla. Es un alumno ficticio: no cuenta en ninguna estadística y <strong>nada de lo que hagas ahí lo ven los alumnos</strong>.</p>
+            <div style="display:flex; gap:10px; flex-wrap:wrap;">
+              <button type="button" class="btn btn--accent btn-ver-demo" data-programa="open">Ver como Alumno OPEN</button>
+              <button type="button" class="btn btn--accent btn-ver-demo" data-programa="begin">Ver como Alumno BEGIN</button>
+              <button type="button" class="btn btn--accent btn-ver-demo" data-programa="next">Ver como Alumno NEXT</button>
+              <button type="button" class="btn btn--accent btn-ver-demo" data-programa="exit">Ver como Alumno eXIT</button>
+            </div>
           </div>
         </div>
       </section>
@@ -1158,6 +1171,19 @@
           </div>
         </div>
 
+
+        <div class="panel" style="margin-top:24px;">
+          <div class="panel__header"><h3>🎭 Ver como Alumno (Demo)</h3></div>
+          <div class="panel__body">
+            <p class="text-soft mb-16" style="font-size:13px;">Mira la app como la ve un alumno, para presentarla. Es un alumno ficticio: no cuenta en ninguna estadística y <strong>nada de lo que hagas ahí lo ven los alumnos</strong>.</p>
+            <div style="display:flex; gap:10px; flex-wrap:wrap;">
+              <button type="button" class="btn btn--accent btn-ver-demo" data-programa="open">Ver como Alumno OPEN</button>
+              <button type="button" class="btn btn--accent btn-ver-demo" data-programa="begin">Ver como Alumno BEGIN</button>
+              <button type="button" class="btn btn--accent btn-ver-demo" data-programa="next">Ver como Alumno NEXT</button>
+              <button type="button" class="btn btn--accent btn-ver-demo" data-programa="exit">Ver como Alumno eXIT</button>
+            </div>
+          </div>
+        </div>
       </section>
 
       <!-- ======================================================
