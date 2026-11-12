@@ -521,6 +521,16 @@
 
     "puntosMarcas": {
       "$alumnoId": {
+        "clasesConcluidas": {
+          "$claseId": {
+            ".write": "auth != null && root.child('alumnoPorAuthUid').child(auth.uid).val() === $alumnoId && !data.exists() && newData.isNumber() && $claseId.length <= 150"
+          }
+        },
+        "valoraciones": {
+          "$claseId": {
+            ".write": "auth != null && root.child('alumnoPorAuthUid').child(auth.uid).val() === $alumnoId && !data.exists() && newData.isNumber() && $claseId.length <= 150"
+          }
+        },
         "entradas": {
           "$dia": {
             ".write": "auth != null && root.child('alumnoPorAuthUid').child(auth.uid).val() === $alumnoId && !data.exists() && newData.isNumber() && $dia.matches(/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/)"
