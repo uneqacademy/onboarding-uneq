@@ -28,7 +28,9 @@ const PROGRAMAS_REALES = ['open', 'begin', 'next', 'exit'];
 const excluidaDe = (c, p) => !!(c && c.excluirDe && c.excluirDe[p]);
 const etiquetaPrograma = p => p === 'comun' ? '🌐 Base común' : programaLabel(p);
 // Los módulos de la base común solo se editan desde su pestaña; en los programas se ven y ya.
-const puedeEditar = m => estado.esDirector && (estado.programa === 'comun' || !m || m._origen !== 'comun');
+// El director edita todo desde cualquier pestaña; lo de la Base común se guarda siempre en la Base (su origen).
+const puedeEditar = () => estado.esDirector;
+const origenDe = mid => (mid && estado.datos[mid] && estado.datos[mid]._origen) || estado.programa;
 const TAMANO_MAXIMO_PDF = 25 * 1024 * 1024;
 const TEXTOS_FASE = { 0: 'Desde el inicio', 1: 'Fase 1', 2: 'Fase 2', 3: 'Fase 3', 4: 'Fase 4' };
 
@@ -439,7 +441,7 @@ function vistaModulo(mid, m) {
       ${urlSegura(c.portadaUrl) ? `<img class="ct-portada ct-portada--mini" src="${escaparHtml(c.portadaUrl)}" alt="">` : ''}
       <span class="ct-fila__titulo">${escaparHtml(c.titulo || 'Lección sin título')}
         ${c.publicado === false ? '<span class="ct-etq ct-etq--borrador">Borrador</span>' : ''}
-        ${estado.programa === 'comun' && c.excluirDe && PROGRAMAS_REALES.some(p => c.excluirDe[p]) ? `<span class="ct-etq">No va en: ${PROGRAMAS_REALES.filter(p => c.excluirDe[p]).map(p => escaparHtml(programaLabel(p))).join(', ')}</span>` : ''}
+        ${m._origen === 'comun' && c.excluirDe && PROGRAMAS_REALES.some(p => c.excluirDe[p]) ? `<span class="ct-etq">No va en: ${PROGRAMAS_REALES.filter(p => c.excluirDe[p]).map(p => escaparHtml(programaLabel(p))).join(', ')}</span>` : ''}
         ${(c.materiales && Object.keys(c.materiales).length) ? '<span title="Tiene material">📎</span>' : ''}</span>
       ${Number(c.duracionMin) > 0 ? `<span class="ct-fila__dur">${ICONO_RELOJ} ${Number(c.duracionMin)} minutos</span>` : ''}
       <span class="ct-fila__estado${vista ? ' is-vista' : ''}" data-est="${cid}">${vista ? ICONO_CHECK : ICONO_PLAY}</span>
@@ -859,7 +861,8 @@ async function aplicarPortada(est, actual, rutaBase, campos) {
 function editarModulo(mid) {
   const m = mid ? estado.datos[mid] : null;
   const portadaActual = { url: m && m.portadaUrl, ruta: m && m.portadaRuta };
-  const nuevoId = mid || push(ref(db, `contenidos/${estado.programa}`)).key;
+  const prog = origenDe(mid);
+  const nuevoId = mid || push(ref(db, `contenidos/${prog}`)).key;
   const opcionesFase = Object.entries(TEXTOS_FASE).map(([k, t]) =>
     `<option value="${k}" ${(Number(m && m.desdeFase) || 0) === Number(k) ? 'selected' : ''}>${t}</option>`).join('');
   let portada;
@@ -873,9 +876,9 @@ function editarModulo(mid) {
     const titulo = val(ov, '#ct-m-titulo');
     if (!titulo) throw fallo('Escribe el título del módulo.');
     const campos = { titulo, descripcion: val(ov, '#ct-m-desc'), desdeFase: Number(ov.querySelector('#ct-m-fase').value), publicado: ov.querySelector('#ct-m-pub').checked };
-    await aplicarPortada(portada, portadaActual, `contenidos-portadas/${estado.programa}/${nuevoId}`, campos);
-    if (mid) await update(ref(db, `contenidos/${estado.programa}/${mid}`), campos);
-    else await set(ref(db, `contenidos/${estado.programa}/${nuevoId}`), { ...campos, orden: siguienteOrden(estado.datos) });
+    await aplicarPortada(portada, portadaActual, `contenidos-portadas/${prog}/${nuevoId}`, campos);
+    if (mid) await update(ref(db, `contenidos/${prog}/${mid}`), campos);
+    else await set(ref(db, `contenidos/${prog}/${nuevoId}`), { ...campos, orden: siguienteOrden(estado.datos) });
   });
   portada = activarPortada(ovM);
 }
@@ -886,7 +889,8 @@ function editarClase(mid, cid) {
   const quitados = [];
   const nuevos = [];
   const portadaActual = { url: c && c.portadaUrl, ruta: c && c.portadaRuta };
-  const claseId = cid || push(ref(db, `contenidos/${estado.programa}/${mid}/clases`)).key;
+  const prog = origenDe(mid);
+  const claseId = cid || push(ref(db, `contenidos/${prog}/${mid}/clases`)).key;
   let portada;
   const ov = modal(c ? 'Editar clase' : 'Nueva clase', `
     ${htmlCampoPortada(portadaActual)}
@@ -899,13 +903,13 @@ function editarClase(mid, cid) {
     <div class="field mb-16"><label>Materiales (PDF)</label><div id="ct-c-mats"></div>
       <button type="button" class="btn btn--ghost" id="ct-c-addmat" style="font-size:12px; margin-top:6px;">+ Agregar PDF</button>
       <input type="file" id="ct-c-file" accept="application/pdf,.pdf" class="hidden"></div>
-    ${estado.programa === 'comun' ? `<div class="field mb-16"><label>Aparece en estos programas</label><div style="display:flex; gap:14px; flex-wrap:wrap; font-size:13.5px;">${PROGRAMAS_REALES.map(p => `<label style="display:flex; gap:6px; align-items:center;"><input type="checkbox" class="ct-c-prog" data-p="${p}" ${excluidaDe(c, p) ? '' : 'checked'}> ${escaparHtml(programaLabel(p))}</label>`).join('')}</div><p class="text-soft" style="font-size:12px; margin:4px 0 0;">Desmarca un programa para sacar esta lección de ahí (el resto de la base común sigue).</p></div>` : ''}
+    ${prog === 'comun' ? `<div class="field mb-16"><label>Aparece en estos programas</label><div style="display:flex; gap:14px; flex-wrap:wrap; font-size:13.5px;">${PROGRAMAS_REALES.map(p => `<label style="display:flex; gap:6px; align-items:center;"><input type="checkbox" class="ct-c-prog" data-p="${p}" ${excluidaDe(c, p) ? '' : 'checked'}> ${escaparHtml(programaLabel(p))}</label>`).join('')}</div><p class="text-soft" style="font-size:12px; margin:4px 0 0;">Desmarca un programa para sacar esta lección de ahí (el resto de la base común sigue).</p></div>` : ''}
     <label style="display:flex; gap:8px; align-items:center; font-size:13.5px;"><input type="checkbox" id="ct-c-pub" ${!c || c.publicado !== false ? 'checked' : ''}> Publicada (visible para los alumnos)</label>`,
   async ov => {
     const titulo = val(ov, '#ct-c-titulo');
     if (!titulo) throw fallo('Escribe el título de la clase.');
     const campos = { titulo, descripcion: val(ov, '#ct-c-desc'), publicado: ov.querySelector('#ct-c-pub').checked };
-    if (estado.programa === 'comun') {
+    if (prog === 'comun') {
       const fuera = {};
       ov.querySelectorAll('.ct-c-prog').forEach(x => { if (!x.checked) fuera[x.dataset.p] = true; });
       campos.excluirDe = Object.keys(fuera).length ? fuera : null;
@@ -922,12 +926,12 @@ function editarClase(mid, cid) {
       if (!v) throw fallo('No pude leer el código de Vturb. Copia el código JS completo (con <vturb-smartplayer> y el script de converteai.net).');
       campos.vturb = v;
     }
-    const base = `contenidos/${estado.programa}/${mid}/clases/${claseId}`;
-    await aplicarPortada(portada, portadaActual, `contenidos-portadas/${estado.programa}/${claseId}`, campos);
+    const base = `contenidos/${prog}/${mid}/clases/${claseId}`;
+    await aplicarPortada(portada, portadaActual, `contenidos-portadas/${prog}/${claseId}`, campos);
     // Sube los PDF nuevos y registra los que quedan.
     for (const n of nuevos) {
       if (!materiales[n.clave]) continue;
-      const ruta = `contenidos-materiales/${estado.programa}/${claseId}/${Date.now()}_${n.archivo.name.replace(/[^\w.\-]+/g, '_')}`;
+      const ruta = `contenidos-materiales/${prog}/${claseId}/${Date.now()}_${n.archivo.name.replace(/[^\w.\-]+/g, '_')}`;
       const sref = storageRef(storage, ruta);
       await uploadBytes(sref, n.archivo, { contentType: 'application/pdf' });
       materiales[n.clave] = { nombre: n.archivo.name, url: await getDownloadURL(sref), ruta };
@@ -967,13 +971,13 @@ function editarClase(mid, cid) {
 }
 
 async function mover(tipo, mid, cid, delta) {
-  const hermanos = tipo === 'mod' ? ordenar(estado.datos).filter(([, x]) => x._origen === estado.programa) : clasesDe(estado.datos[mid]);
+  const hermanos = tipo === 'mod' ? ordenar(estado.datos).filter(([, x]) => x._origen === origenDe(mid)) : clasesDe(estado.datos[mid]);
   const idActual = tipo === 'mod' ? mid : cid;
   const i = hermanos.findIndex(([id]) => id === idActual);
   const j = i + delta;
   if (i < 0 || j < 0 || j >= hermanos.length) return;
   [hermanos[i], hermanos[j]] = [hermanos[j], hermanos[i]];
-  const base = tipo === 'mod' ? `contenidos/${estado.programa}` : `contenidos/${estado.programa}/${mid}/clases`;
+  const base = tipo === 'mod' ? `contenidos/${origenDe(mid)}` : `contenidos/${origenDe(mid)}/${mid}/clases`;
   const cambios = {};
   hermanos.forEach(([id], k) => { cambios[`${id}/orden`] = k + 1; });
   await update(ref(db, base), cambios);
@@ -1004,7 +1008,8 @@ async function borrarUno(tipo, mid, cid, conservarDatos = false) {
     try { await remove(ref(db, `comentariosClases/${id}`)); } catch (e) { /* sin comentarios */ }
     try { await remove(ref(db, `valoracionesClases/${id}`)); } catch (e) { /* sin valoraciones */ }
   }
-  await remove(ref(db, tipo === 'mod' ? `contenidos/${estado.programa}/${mid}` : `contenidos/${estado.programa}/${mid}/clases/${cid}`));
+  const prog = origenDe(mid);
+  await remove(ref(db, tipo === 'mod' ? `contenidos/${prog}/${mid}` : `contenidos/${prog}/${mid}/clases/${cid}`));
   for (const ruta of rutas) await borrarArchivoSiLibre(ruta, 0);   // después de quitarlo, por si una copia usa el mismo archivo
 }
 
@@ -1091,8 +1096,10 @@ async function enviarA(destino, tipo, mid, ids, conservarIds = false) {
 
 async function accionMasiva(a) {
   const { tipo, mid } = seleccionables();
-  const ids = [...estado.seleccion];
-  if (!ids.length) return;
+  let ids = [...estado.seleccion];
+  // Lo que ya es de la Base común no se "envía a la Base" (se borraría el original).
+  if (a === 'enviar:comun') ids = ids.filter(id => origenDe(tipo === 'mod' ? id : mid) !== 'comun');
+  if (!ids.length) { if (a === 'enviar:comun') alert('Eso ya está en la Base común.'); return; }
   const n = ids.length;
   const que = tipo === 'mod' ? (n === 1 ? 'módulo' : 'módulos') : (n === 1 ? 'lección' : 'lecciones');
   const rutaDe = id => tipo === 'mod' ? id : mid + '/clases/' + id;
@@ -1100,9 +1107,12 @@ async function accionMasiva(a) {
     if (!confirm('¿Eliminar ' + n + ' ' + que + (tipo === 'mod' ? ' con todas sus lecciones' : '') + '? No se puede deshacer.')) return;
     for (const id of ids) await borrarUno(tipo, tipo === 'mod' ? id : mid, tipo === 'mod' ? null : id);
   } else if (a === 'ocultar' || a === 'publicar') {
-    const cambios = {};
-    ids.forEach(id => { cambios[rutaDe(id) + '/publicado'] = a === 'publicar'; });
-    await update(ref(db, 'contenidos/' + estado.programa), cambios);
+    const porOrigen = {};
+    ids.forEach(id => {
+      const o = origenDe(tipo === 'mod' ? id : mid);
+      (porOrigen[o] = porOrigen[o] || {})[rutaDe(id) + '/publicado'] = a === 'publicar';
+    });
+    for (const [o, cambios] of Object.entries(porOrigen)) await update(ref(db, 'contenidos/' + o), cambios);
   } else if (a.startsWith('enviar:')) {
     const destino = a.slice(7);
     const nombreDestino = destino === 'comun' ? 'todos los programas (Base común)' : programaLabel(destino);
