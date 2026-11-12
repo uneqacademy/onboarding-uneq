@@ -87,6 +87,81 @@ function montarReproductor(cont, vturb) {
   s.async = true;
   document.head.appendChild(s);
   scriptsPlayer.push(s);
+  return player;
+}
+
+/* ---------- Duración automática (desde la lista de reproducción del video) ---------- */
+
+// Con el reproductor ya cargado, lee su configuración y suma los segmentos de la lista de
+// reproducción (.m3u8) del video: da los minutos reales sin tener que reproducirlo.
+async function minutosDesdeReproductor(p) {
+  const hostOk = h => /^[\w-]+(\.[\w-]+)*\.converteai\.net$/.test(h) || h === 'converteai.net';
+  for (let i = 0; i < 48; i++) {   // hasta ~12 s esperando a que el reproductor se configure
+    const cfg = p && p.config;
+    if (cfg && cfg.oid && cfg.video && cfg.video.id) {
+      if (!/^[\w-]+$/.test(cfg.oid) || !/^[\w-]+$/.test(cfg.video.id)) return null;
+      const base = new URL(`https://${cfg.cdn || 'cdn.converteai.net'}/${cfg.oid}/${cfg.video.id}/`);
+      if (!hostOk(base.hostname)) return null;
+      const principal = await (await fetch(new URL('main.m3u8', base))).text();
+      const variante = principal.split('\n').map(l => l.trim()).find(l => l && !l.startsWith('#'));
+      if (!variante) return null;
+      const urlVariante = new URL(variante, base);
+      if (!hostOk(urlVariante.hostname)) return null;
+      const lista = await (await fetch(urlVariante)).text();
+      const segundos = [...lista.matchAll(/#EXTINF:([\d.]+)/g)].reduce((s, m) => s + parseFloat(m[1]), 0);
+      return segundos > 0 ? Math.max(1, Math.round(segundos / 60)) : null;
+    }
+    await new Promise(r => setTimeout(r, 250));
+  }
+  return null;
+}
+
+const duracionIntentada = new Set();   // lecciones ya probadas en esta sesión (no se reintentan)
+let detectandoDuraciones = false;
+
+async function guardarDuracion(programa, mid, cid, minutos) {
+  await update(ref(db, `contenidos/${programa}/${mid}/clases/${cid}`), { duracionMin: minutos });
+  if (estado.programa === programa && estado.datos[mid] && estado.datos[mid].clases && estado.datos[mid].clases[cid]) {
+    estado.datos[mid].clases[cid].duracionMin = minutos;
+  }
+}
+
+// Solo el director: completa en segundo plano la duración de las lecciones que no la tienen,
+// cargando cada video en un reproductor oculto, de a uno.
+async function detectarDuracionesFaltantes() {
+  if (!estado.esDirector || detectandoDuraciones) return;
+  const programa = estado.programa;
+  const pendientes = [];
+  Object.entries(estado.datos).forEach(([mid, m]) => Object.entries(m.clases || {}).forEach(([cid, c]) => {
+    if (c.vturb && c.vturb.elementoId && c.vturb.scriptUrl && !(Number(c.duracionMin) > 0) && !duracionIntentada.has(cid)) pendientes.push([mid, cid, c.vturb]);
+  }));
+  if (!pendientes.length) return;
+  detectandoDuraciones = true;
+  try {
+    for (const [mid, cid, vturb] of pendientes) {
+      if (estado.programa !== programa || estado.vista === 'leccion') break;
+      duracionIntentada.add(cid);
+      // El video de la lección abierta no se oculta ni se duplica: esa se mide en pintar().
+      const caja = document.createElement('div');
+      caja.style.cssText = 'position:fixed;left:-9999px;top:0;width:320px;height:180px;overflow:hidden;visibility:hidden;';
+      const p = document.createElement('vturb-smartplayer');
+      p.id = vturb.elementoId;
+      caja.appendChild(p);
+      document.body.appendChild(caja);
+      const s = document.createElement('script');
+      s.src = vturb.scriptUrl; s.async = true;
+      document.head.appendChild(s);
+      let min = null;
+      try { min = await minutosDesdeReproductor(p); } catch (err) { console.warn('No se pudo medir el video:', err); }
+      caja.remove(); s.remove();
+      if (min) {
+        try { await guardarDuracion(programa, mid, cid, min); } catch (err) { console.warn('No se pudo guardar la duración:', err); continue; }
+        if (estado.programa === programa && estado.vista !== 'leccion') pintar();
+      }
+    }
+  } finally {
+    detectandoDuraciones = false;
+  }
 }
 
 /* ---------- Datos ---------- */
@@ -231,9 +306,24 @@ function pintar() {
 
   if (estado.vista === 'leccion') {
     const clase = actual[1].clases[estado.claseId];
-    montarReproductor(el('ct-player'), clase.vturb);
+    const jugador = montarReproductor(el('ct-player'), clase.vturb);
     escucharComentarios(estado.claseId);
     escucharValoraciones(estado.claseId);
+    // El director abre una lección sin duración: se mide con este mismo reproductor y se guarda.
+    const cid = estado.claseId, mid = actual[0], programa = estado.programa;
+    if (jugador && estado.esDirector && !(Number(clase.duracionMin) > 0) && !duracionIntentada.has(cid)) {
+      duracionIntentada.add(cid);
+      minutosDesdeReproductor(jugador).then(async min => {
+        if (!min) return;
+        await guardarDuracion(programa, mid, cid, min);
+        const titulo = document.querySelector('.ct-lec__titulo');
+        if (estado.claseId === cid && titulo && !titulo.querySelector('.ct-etq')) {
+          titulo.insertAdjacentHTML('beforeend', ` <span class="ct-etq" style="vertical-align:middle;">${ICONO_RELOJ} ${formatoDuracion(min)}</span>`);
+        }
+      }).catch(err => console.warn('No se pudo medir el video:', err));
+    }
+  } else {
+    detectarDuracionesFaltantes();
   }
 }
 function irAlTablero() { estado.vista = 'modulos'; estado.moduloId = null; estado.claseId = null; }
@@ -732,6 +822,11 @@ function editarClase(mid, cid) {
     const campos = { titulo, descripcion: val(ov, '#ct-c-desc'), publicado: ov.querySelector('#ct-c-pub').checked };
     campos.duracionMin = Number(val(ov, '#ct-c-dur')) > 0 ? Math.round(Number(val(ov, '#ct-c-dur'))) : null;
     const codigo = ov.querySelector('#ct-c-embed').value.trim();
+    // Si se cambia el video y la duración no se tocó a mano, se vuelve a medir sola.
+    if (codigo && c && Number(c.duracionMin) > 0 && campos.duracionMin === Number(c.duracionMin)) {
+      campos.duracionMin = null;
+      duracionIntentada.delete(cid);
+    }
     if (codigo) {
       const v = parsearEmbedVturb(codigo);
       if (!v) throw fallo('No pude leer el código de Vturb. Copia el código JS completo (con <vturb-smartplayer> y el script de converteai.net).');
