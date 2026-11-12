@@ -1192,7 +1192,7 @@ if (contEl) {
       else if (act === 'valorar') await valorar(c, Number(b.dataset.n));
     } catch (err) {
       console.error(err);
-      alert('No se pudo completar la acción. Intenta de nuevo.');
+      alert('No se pudo completar la acción. Intenta de nuevo.' + (err && (err.code || err.message) ? ' (' + (err.code || err.message) + ')' : ''));
     }
   });
 }
