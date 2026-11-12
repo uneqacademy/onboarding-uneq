@@ -29,6 +29,7 @@ import { abrirHitoDeEnlace } from './comunidad-uneq.js';
 import './pre-onboarding.js';
 import { iniciarNotificaciones } from './notificaciones.js';
 import './ranking.js';
+import './contenidos.js';
 import './pagos-consolidado.js';
 import './soporte-chat.js';
 import { marcarEntradaDelDia } from './puntos-marcas.js';

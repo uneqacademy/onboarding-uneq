@@ -91,6 +91,10 @@ export function applyRole(role, nombre, rolesDisponibles) {
   const navRanking = document.querySelector('.nav-item[data-nav="ranking"]');
   if (navRanking) navRanking.classList.remove('hidden');
 
+  // Contenidos (clases): el alumno las ve y avanza; el director las administra.
+  const navContenidos = document.querySelector('.nav-item[data-nav="contenidos"]');
+  if (navContenidos) navContenidos.classList.toggle('hidden', !(role === 'alumno' || role === 'director'));
+
   const navMentoriasMentor = document.querySelector('.nav-item[data-nav="mentorias-mentor"]');
   if (navMentoriasMentor) navMentoriasMentor.classList.toggle('hidden', role !== 'mentor');
 
@@ -286,6 +290,9 @@ export function setNav(section) {
   } else if (section === 'pagos') {
     showView('view-pagos');
     document.getElementById('topbar-title').textContent = 'Pagos';
+  } else if (section === 'contenidos') {
+    showView('view-contenidos');
+    document.getElementById('topbar-title').textContent = 'Contenidos';
   } else if (section === 'ranking') {
     showView('view-ranking');
     document.getElementById('topbar-title').textContent = 'Ranking';

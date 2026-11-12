@@ -1612,3 +1612,49 @@ body.tema-open .hitos-tab { color: #E9D3CD; }
   .an-barra { grid-template-columns: 110px 1fr 22px; }
   .an-portada h2 { font-size: 23px; }
 }
+
+/* ============================================
+   CONTENIDOS (clases) — alumno y director
+   ============================================ */
+.ct-tabs { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 16px; }
+.ct-tab { background: var(--color-surface); border: 1px solid var(--color-border); border-radius: 999px; padding: 7px 16px; font-size: 13px; cursor: pointer; color: var(--color-primary); }
+.ct-tab.is-active { background: var(--color-primary); color: #fff; border-color: var(--color-primary); }
+.ct-progreso { background: var(--color-surface); border-radius: var(--radius-md); padding: 14px 18px; margin-bottom: 16px; color: var(--color-ink); }
+.ct-progreso__texto { font-size: 13.5px; margin-bottom: 8px; }
+.ct-barra { height: 8px; background: var(--color-surface-alt); border-radius: 99px; overflow: hidden; }
+.ct-barra span { display: block; height: 100%; background: var(--color-accent); border-radius: 99px; transition: width .3s; }
+.ct-admin-barra { margin-bottom: 16px; }
+.ct-visor { margin-bottom: 18px; }
+.ct-visor__modulo { font-size: 12px; color: var(--color-ink-soft); margin: 0 0 2px; text-transform: uppercase; letter-spacing: .04em; }
+.ct-visor__titulo { margin: 0 0 14px; }
+.ct-player { min-height: 80px; background: #000; border-radius: var(--radius-md); overflow: hidden; }
+.ct-sin-video { color: #9CA0A8; text-align: center; padding: 40px 12px; margin: 0; }
+.ct-visor__desc { margin: 14px 0 0; line-height: 1.55; }
+.ct-materiales { margin-top: 14px; display: flex; flex-direction: column; gap: 6px; }
+.ct-materiales__t { font-weight: 600; font-size: 13px; margin: 0; }
+.ct-material { display: inline-block; padding: 8px 12px; border: 1px solid var(--color-border); border-radius: var(--radius-sm); color: var(--color-primary); text-decoration: none; font-size: 13.5px; }
+.ct-material:hover { background: var(--color-surface-alt); }
+.ct-visor__pie { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
+.ct-modulo { margin-bottom: 12px; }
+.ct-modulo__cab { display: flex; align-items: center; gap: 10px; padding: 14px 18px; cursor: pointer; list-style: none; flex-wrap: wrap; }
+.ct-modulo__cab::-webkit-details-marker { display: none; }
+.ct-modulo__num { width: 28px; height: 28px; border-radius: 50%; background: var(--color-accent-soft); color: var(--color-accent); display: inline-flex; align-items: center; justify-content: center; font-weight: 700; font-size: 13px; flex: none; }
+.ct-modulo__titulo { font-weight: 600; flex: 1; min-width: 120px; }
+.ct-modulo__cuenta { font-size: 12.5px; color: var(--color-ink-soft); }
+.ct-modulo.is-bloqueado { opacity: .75; }
+.ct-bloqueado { margin: 0; color: var(--color-ink-soft); }
+.ct-desc-mod { margin: 0 0 12px; }
+.ct-clases { list-style: none; margin: 0; padding: 0; }
+.ct-clase { display: flex; align-items: center; gap: 6px; border-top: 1px solid var(--color-border); }
+.ct-clase:first-child { border-top: 0; }
+.ct-clase__abrir { flex: 1; display: flex; align-items: center; gap: 10px; background: none; border: 0; padding: 11px 4px; text-align: left; cursor: pointer; font: inherit; color: var(--color-ink); }
+.ct-clase__abrir:hover .ct-clase__titulo { color: var(--color-accent); }
+.ct-check { width: 22px; height: 22px; border-radius: 50%; border: 2px solid var(--color-border); display: inline-flex; align-items: center; justify-content: center; font-size: 12px; color: #fff; flex: none; }
+.ct-check.is-vista { background: var(--color-accent); border-color: var(--color-accent); }
+.ct-etq { font-size: 11px; background: var(--color-surface-alt); color: var(--color-ink-soft); padding: 2px 8px; border-radius: 99px; }
+.ct-etq--borrador { background: var(--color-warning-soft); color: #8A5A10; }
+.ct-acciones { display: inline-flex; gap: 2px; margin-left: auto; }
+.ct-icono { background: none; border: 0; cursor: pointer; padding: 4px 6px; font-size: 13px; color: var(--color-ink-soft); border-radius: 4px; }
+.ct-icono:hover:not(:disabled) { background: var(--color-surface-alt); }
+.ct-icono:disabled { opacity: .3; cursor: default; }
+.ct-nueva-clase { margin-top: 10px; font-size: 12.5px; }
