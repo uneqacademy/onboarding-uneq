@@ -10,7 +10,7 @@ import { escaparHtml } from './util-html.js';
 import { ref, get } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-database.js";
 import { getCurrentRole, setNav } from './main.js';
 import { programaLabel } from './ciclos.js';
-import { tablaPuntos } from './gamificacion-puntos.js';
+import { tablaPuntos, CONTENIDOS_ABIERTO_A_ALUMNOS } from './gamificacion-puntos.js';
 
 const ZONA = 'America/Santiago';
 const MEDALLAS = { 1: '🥇', 2: '🥈', 3: '🥉' };
@@ -143,7 +143,7 @@ export async function cargarRanking() {
     html += lugares.length
       ? listaLugares(lugares, alumnoId)
       : '<div class="panel mb-16"><div class="panel__body"><p class="text-soft" style="margin:0;">Aún nadie tiene puntos este mes. ¡Sé el primero en el podio!</p></div></div>';
-    html += htmlComoSumar(tablaPuntos(cfg.puntos));
+    html += htmlComoSumar(tablaPuntos(cfg.puntos).filter(a => !a.deContenidos || CONTENIDOS_ABIERTO_A_ALUMNOS));
     if (podioSnap.exists() && podioSnap.val().actualizadoEn) {
       html += `<p class="text-soft" style="font-size:11.5px;">Se actualiza cada pocos minutos. Última actualización: ${new Date(podioSnap.val().actualizadoEn).toLocaleString('es-CL', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}</p>`;
     }

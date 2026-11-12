@@ -17,6 +17,7 @@ import { ref, get, set, push, update, remove, onValue, query, limitToLast } from
 import { ref as storageRef, uploadBytes, getDownloadURL, deleteObject } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-storage.js";
 import { getCurrentRole, getCurrentUserNombre, esModoDemo } from './main.js';
 import { marcaDemo, ocultarParaAlumno } from './demo.js';
+import { marcarClaseConcluida, marcarValoracion } from './puntos-marcas.js';
 import { programaLabel } from './ciclos.js';
 import { faseMaximaChecklist } from './hitos.js';
 
@@ -614,6 +615,7 @@ async function valorar(cid, n) {
   try {
     // Tocar otra vez la misma nota la quita.
     await set(ref(db, `valoracionesClases/${cid}/${claveValoracion()}`), mia === n ? null : n);
+    if (mia !== n) marcarValoracion(cid);   // para el ranking: cuenta solo la primera vez en cada lección
   } catch (err) {
     console.error('No se pudo guardar la valoración:', err);
     alert('No se pudo guardar tu valoración. Intenta de nuevo.');
@@ -644,7 +646,7 @@ async function alternarVista(cid, boton) {
   try {
     const nueva = estado.progreso[cid] ? null : Date.now();
     await set(ref(db, `progresoClases/${estado.clave}/${cid}`), nueva);
-    if (nueva) estado.progreso[cid] = nueva; else delete estado.progreso[cid];
+    if (nueva) { estado.progreso[cid] = nueva; marcarClaseConcluida(cid); } else delete estado.progreso[cid];
     // Se actualiza solo lo necesario para no reiniciar el video.
     boton.textContent = nueva ? '✓ Concluida' : '○ No concluida';
     boton.classList.toggle('is-on', !!nueva);

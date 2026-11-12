@@ -50,5 +50,20 @@ export async function marcarCompartido(clave) {
   recordar(recuerdo);
 }
 
+// Contenidos: la primera vez que un alumno concluye una lección. La regla solo deja escribir la marca una
+// vez, así desmarcar y volver a marcar no suma de nuevo.
+export async function marcarClaseConcluida(claseId) {
+  const alumnoId = await alumnoRealActual();
+  if (!alumnoId || !claseId) return;
+  try { await set(ref(db, `puntosMarcas/${alumnoId}/clasesConcluidas/${claseId}`), Date.now()); } catch (err) { /* ya estaba anotada */ }
+}
+
+// Contenidos: la primera vez que un alumno valora una lección (una vez por lección).
+export async function marcarValoracion(claseId) {
+  const alumnoId = await alumnoRealActual();
+  if (!alumnoId || !claseId) return;
+  try { await set(ref(db, `puntosMarcas/${alumnoId}/valoraciones/${claseId}`), Date.now()); } catch (err) { /* ya estaba anotada */ }
+}
+
 // Al cerrar sesión se olvida el alumno, por si entra otra persona en el mismo navegador.
 auth.onAuthStateChanged(() => { alumnoIdMarcas = undefined; });
