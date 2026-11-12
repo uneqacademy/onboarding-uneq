@@ -464,6 +464,22 @@
       }
     },
 
+    "contenidos": {
+      ".read": "auth != null",
+      "$programa": {
+        ".write": "auth != null && $programa.matches(/^(open|begin|next|exit)$/) && (root.child('usuarios').child(auth.uid).child('roles').child('director').val() === true || root.child('usuarios').child(auth.uid).child('rol').val() === 'director')"
+      }
+    },
+
+    "progresoClases": {
+      "$alumnoId": {
+        ".read": "auth != null && root.child('alumnoPorAuthUid').child(auth.uid).val() === $alumnoId",
+        "$claseId": {
+          ".write": "auth != null && root.child('alumnoPorAuthUid').child(auth.uid).val() === $alumnoId && (!newData.exists() || newData.isNumber())"
+        }
+      }
+    },
+
     "ranking": {
       "podio": { ".read": "auth != null" },
       "posiciones": {

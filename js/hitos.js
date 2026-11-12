@@ -133,7 +133,7 @@ function imagenFaseCiclo(ciclo) {
 
 // Hasta qué fase ve el checklist: 0 = sin fase marcada por el coach,
 // 1-4 = fase actual, 4 = egresado (ve todas).
-function faseMaximaChecklist(ciclo) {
+export function faseMaximaChecklist(ciclo) {
   if (!ciclo) return 0;
   if (ciclo.estadoAlumno === 'egresado') return 4;
   if (ciclo.faseMetodologia && /\d/.test(ciclo.faseMetodologia)) return Math.min(4, parseInt(ciclo.faseMetodologia.match(/\d/)[0], 10));
