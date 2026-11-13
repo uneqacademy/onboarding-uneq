@@ -11,8 +11,7 @@
    permitidos en su panel).
    ============================================================ */
 
-import { db, auth, storage, app } from './firebase-config.js';
-import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-functions.js";
+import { db, auth, storage } from './firebase-config.js';
 import { escaparHtml } from './util-html.js';
 import { ref, get, set, push, update, remove, onValue, query, limitToLast } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-database.js";
 import { ref as storageRef, uploadBytes, getDownloadURL, deleteObject } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-storage.js";
@@ -893,12 +892,36 @@ function editarModulo(mid) {
 
 /* ---------- Subir el video directo a Vturb (solo director) ----------
    El token de Vturb vive en el servidor: aquí solo se pide crear el video, se sube el archivo por partes
-   a las direcciones temporales que entrega Vturb y se pregunta el estado hasta que esté listo. */
-const functionsVturb = getFunctions(app);
-const vturbIniciar = httpsCallable(functionsVturb, 'vturbIniciarSubida', { timeout: 120000 });
-const vturbConfirmar = httpsCallable(functionsVturb, 'vturbConfirmarSubida', { timeout: 120000 });
-const vturbEstado = httpsCallable(functionsVturb, 'vturbEstado', { timeout: 60000 });
-const vturbConfigurar = httpsCallable(functionsVturb, 'vturbConfigurar', { timeout: 60000 });
+   a las direcciones temporales que entrega Vturb y se pregunta el estado hasta que esté listo.
+   Cada pedido se deja en vturbSolicitudes/{uid}/{id}; la función vturbProcesar lo atiende y escribe la respuesta ahí. */
+function llamarVturb(accion, datos) {
+  const u = auth.currentUser;
+  if (!u) return Promise.reject(new Error('Tu sesión se cerró. Vuelve a entrar.'));
+  const nodo = push(ref(db, `vturbSolicitudes/${u.uid}`));
+  const ruta = `vturbSolicitudes/${u.uid}/${nodo.key}`;
+  return new Promise((resolve, reject) => {
+    let cerrado = false, dejarDeEscuchar = () => {};
+    const cierre = setTimeout(() => fin(new Error('Vturb tardó demasiado en responder. Intenta de nuevo.')), 100000);
+    function fin(err, datosRespuesta) {
+      if (cerrado) return;
+      cerrado = true; clearTimeout(cierre); dejarDeEscuchar();
+      remove(ref(db, ruta)).catch(() => {});
+      if (err) reject(err); else resolve({ data: datosRespuesta });
+    }
+    set(nodo, { accion, datos: datos || {}, creada: Date.now() }).then(() => {
+      dejarDeEscuchar = onValue(ref(db, `${ruta}/respuesta`), snap => {
+        const r = snap.val();
+        if (!r) return;
+        if (r.ok) fin(null, r.datos || {}); else fin(new Error(r.mensaje || 'Vturb no pudo completar la acción.'));
+      });
+      if (cerrado) dejarDeEscuchar();
+    }).catch(err => fin(err));
+  });
+}
+const vturbIniciar = datos => llamarVturb('iniciarSubida', datos);
+const vturbConfirmar = datos => llamarVturb('confirmarSubida', datos);
+const vturbEstado = datos => llamarVturb('estado', datos);
+const vturbConfigurar = datos => llamarVturb('configurar', datos);
 
 function subirParteAVturb(url, trozo, alAvanzar) {
   return new Promise((resolve, reject) => {
