@@ -1827,6 +1827,8 @@ async function asegurarAlumnoDemo(programa) {
   return demoId;
 }
 
+let demoIdActual = null;   // id del Alumno Demo mientras se está en modo demo
+
 function mostrarBannerModoDemo(programa) {
   let banner = document.getElementById('banner-modo-demo');
   if (!banner) {
@@ -1840,9 +1842,13 @@ function mostrarBannerModoDemo(programa) {
     <label style="display:flex; align-items:center; gap:6px;">Fase que simula: <select id="select-fase-demo" style="font-size:12px; padding:2px 6px;">${['Inicio (sin fase)', 'Fase 1', 'Fase 2', 'Fase 3', 'Fase 4', 'Final (egresado)'].map((x, i) => `<option value="${i}"${i === getFaseDemo() ? ' selected' : ''}>${x}</option>`).join('')}</select></label>
     <button type="button" id="btn-salir-modo-demo" class="btn btn--ghost" style="font-size:11px; padding:3px 12px; background:#fff;">🔙 Volver a mi vista</button>`;
   document.getElementById('btn-salir-modo-demo').addEventListener('click', salirModoDemo);
-  document.getElementById('select-fase-demo').addEventListener('change', ev => {
+  document.getElementById('select-fase-demo').addEventListener('change', async ev => {
     setFaseDemo(ev.target.value);
-    // Vuelve a cargar la sección abierta para que se vea con la nueva fase.
+    // El Dashboard solo se carga al entrar al modo demo (ir a él no lo recarga): se vuelve a pintar siempre,
+    // así el astronauta y la frase de fase quedan al día aunque estés en otra sección.
+    if (demoIdActual) { try { await cargarDashboardAlumno(demoIdActual); } catch (err) { console.warn('No se pudo actualizar el Dashboard:', err); } }
+    // Vuelve a cargar la sección abierta para que se vea con la nueva fase (Mis Hitos, Contenidos, etc.).
+    document.dispatchEvent(new CustomEvent('demo-fase-cambio'));
     const activo = document.querySelector('.nav-item[data-nav].is-active');
     if (activo) activo.click();
   });
@@ -1850,6 +1856,7 @@ function mostrarBannerModoDemo(programa) {
 
 function salirModoDemo() {
   borrarSub('demo');
+  demoIdActual = null;
   const banner = document.getElementById('banner-modo-demo');
   if (banner) banner.remove();
   document.body.classList.remove('modo-demo');
@@ -1887,6 +1894,7 @@ async function verComoAlumnoDemo(programa) {
   await update(ref(db, 'alumnoPorAuthUid'), { [uid]: demoId });
   document.body.classList.add('modo-demo'); // antes de applyRole: así el menú muestra lo del demo
   applyRole('alumno', `Alumno Demo (${ETIQUETAS_DEMO[programa]})`, ['alumno']);
+  demoIdActual = demoId;
   mostrarBannerModoDemo(programa);
   document.dispatchEvent(new CustomEvent('modo-demo-alumno', { detail: { activo: true, alumnoId: demoId } }));
   await cargarDashboardAlumno(demoId);
