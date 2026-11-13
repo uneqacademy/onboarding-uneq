@@ -17,13 +17,17 @@ import { db, auth, app } from './firebase-config.js';
 import { escaparHtml } from './util-html.js';
 import { ref, get } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-database.js";
 import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-functions.js";
-import { getCurrentRole } from './main.js';
+import { getCurrentRole, esModoDemo } from './main.js';
+import { getFaseDemo } from './demo.js';
 
 const functions = getFunctions(app);
 const abrirLaboratorio = httpsCallable(functions, 'laboratorioAbrir', { timeout: 120000 });
 const pedirBorradorFicha = httpsCallable(functions, 'laboratorioBorradorFicha', { timeout: 120000 });
 const guardarFichaServidor = httpsCallable(functions, 'laboratorioGuardarFicha', { timeout: 60000 });
 const generarContenidos = httpsCallable(functions, 'laboratorioGenerar', { timeout: 175000 });
+
+// En modo demo se manda la fase que el banner dice simular; el servidor solo la acepta si la cuenta es el demo.
+const conFase = (datos) => (esModoDemo() ? { ...datos, faseDemo: getFaseDemo() } : datos);
 
 const esc = escaparHtml;
 const rootEl = () => document.getElementById('lab-contenido');
@@ -252,7 +256,7 @@ async function abrirEditorFicha(seccion, forzarBorrador) {
   } else {
     editor.innerHTML = '<div class="lab-cargando"><span class="lab-spinner"></span> Armando tu borrador con lo que ya compartiste… (puede tardar unos segundos)</div>';
     try {
-      const r = await pedirBorradorFicha({ seccion });
+      const r = await pedirBorradorFicha(conFase({ seccion }));
       respuestas = r.data.respuestas || {};
       vacias = datos.preguntas[seccion].items.filter(i => !i.opcional && !respuestas[i.id]).map(i => i.id);
     } catch (err) {
@@ -288,7 +292,7 @@ function conectarEditor(editor, seccion) {
     btnGuardar.disabled = true;
     btnGuardar.textContent = 'Guardando…';
     try {
-      await guardarFichaServidor({ seccion, respuestas });
+      await guardarFichaServidor(conFase({ seccion, respuestas }));
       await recargar();
       const aviso = document.createElement('div');
       aviso.className = 'lab-toast';
@@ -314,7 +318,7 @@ async function generarEtapa(etapaId, btn) {
   resultado.innerHTML = '<div class="lab-cargando"><span class="lab-spinner"></span> Creando tus contenidos con tu voz y tu Cliente Soñado… (puede tardar hasta un minuto)</div>';
   resultado.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   try {
-    const r = await generarContenidos({ etapa: etapaId });
+    const r = await generarContenidos(conFase({ etapa: etapaId }));
     const g = r.data;
     datos.usosHoy += 1;
     const contador = document.getElementById('lab-contador');
@@ -344,7 +348,7 @@ function conectarAlumno(el) {
 }
 
 async function recargar() {
-  const r = await abrirLaboratorio({});
+  const r = await abrirLaboratorio(conFase({}));
   datos = r.data;
   pintarAlumno();
 }
@@ -355,7 +359,7 @@ async function cargarComoAlumno() {
   try {
     const mapa = await get(ref(db, `alumnoPorAuthUid/${auth.currentUser.uid}`));
     alumnoIdActual = mapa.exists() ? String(mapa.val()) : null;
-    const r = await abrirLaboratorio({});
+    const r = await abrirLaboratorio(conFase({}));
     datos = r.data;
     pintarAlumno();
   } catch (err) {
