@@ -35,6 +35,8 @@ import './pre-onboarding.js';
 import { iniciarNotificaciones } from './notificaciones.js';
 import './ranking.js';
 import './contenidos.js';
+import './laboratorio-ia.js';
+import './laboratorio-ia-config.js';
 import './pagos-consolidado.js';
 import './soporte-chat.js';
 import { marcarEntradaDelDia } from './puntos-marcas.js';

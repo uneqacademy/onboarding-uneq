@@ -25,6 +25,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Sora:wght@600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/styles.css?v=20261015b">
 <link rel="stylesheet" href="css/telefono-pais.css?v=1">
+<link rel="stylesheet" href="css/laboratorio-ia.css?v=1">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/intl-tel-input@latest/build/css/intlTelInput.min.css">
 <script src="https://cdn.jsdelivr.net/npm/intl-tel-input@latest/build/js/intlTelInputWithUtils.min.js"></script>
 </head>
@@ -169,6 +170,7 @@
         <li class="nav-item" data-role="alumno" data-nav="preguntas-vivo">Sesiones en Vivo</li>
         <li class="nav-item hidden" data-nav="comunidad-uneq">Comunidad UNEQ</li>
         <li class="nav-item hidden" data-nav="contenidos">Contenidos</li>
+        <li class="nav-item hidden" data-nav="laboratorio-ia">Laboratorio IA</li>
         <li class="nav-item hidden" data-nav="ranking">Ranking</li>
         <li class="nav-item" data-role="alumno" data-nav="soporte-alumnos">Soporte Alumnos</li>
       </div>
@@ -1679,6 +1681,11 @@
         <div id="contenidos-contenido"></div>
       </section>
 
+      <section id="view-laboratorio-ia" class="view hidden">
+        <div class="flex-between mb-16"><h2>Laboratorio IA</h2></div>
+        <div id="lab-contenido"></div>
+      </section>
+
       <section id="view-ranking" class="view hidden">
         <div class="rk-cabecera">
           <h2 id="ranking-titulo">Ranking</h2>
@@ -2368,6 +2375,10 @@
               <div class="field"><label>Next + eXIT (grupo combinado)</label><input id="config-whatsapp-nextexit" placeholder="https://chat.whatsapp.com/..."></div>
             </div>
           </div>
+        </div>
+        <div class="panel mb-24" id="config-laboratorio-ia">
+          <div class="panel__header"><h3>Laboratorio IA</h3></div>
+          <div class="panel__body" id="labcfg-cuerpo"><p class="text-soft">Cargando…</p></div>
         </div>
         <div class="panel mb-24" id="config-gamificacion">
           <div class="panel__header"><h3>Ranking: puntos y premio del mes</h3></div>

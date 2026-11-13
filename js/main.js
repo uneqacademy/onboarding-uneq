@@ -97,6 +97,9 @@ export function applyRole(role, nombre, rolesDisponibles) {
   // El Alumno Demo (modo demo) también la ve, para poder presentarla.
   if (navContenidos) navContenidos.classList.toggle('hidden', !(['director', 'mentor', 'coach'].includes(role) || (role === 'alumno' && esModoDemo())));
 
+  const navLaboratorio = document.querySelector('.nav-item[data-nav="laboratorio-ia"]');
+  if (navLaboratorio) navLaboratorio.classList.toggle('hidden', !(['director', 'coach'].includes(role) || (role === 'alumno' && (LABORATORIO_ABIERTO_A_ALUMNOS || esModoDemo()))));
+
   const navMentoriasMentor = document.querySelector('.nav-item[data-nav="mentorias-mentor"]');
   if (navMentoriasMentor) navMentoriasMentor.classList.toggle('hidden', role !== 'mentor');
 
@@ -169,6 +172,10 @@ export function showLogin() {
 }
 
 export function getCurrentRole() { return currentRole; }
+
+// Laboratorio IA: los alumnos NO lo ven hasta que la dueña avise (cambiar a true para abrirlo).
+// Mientras tanto lo ven director y copilotos, y el Alumno Demo para poder probarlo.
+export const LABORATORIO_ABIERTO_A_ALUMNOS = false;
 // "Modo demo": director, copiloto o mentor viendo la app como Alumno Demo (lo marca alumnos.js).
 export function esModoDemo() { return document.body.classList.contains('modo-demo'); }
 export function getCurrentUserNombre() { return currentNombre; }
@@ -338,6 +345,9 @@ export function setNav(section) {
   } else if (section === 'contenidos') {
     showView('view-contenidos');
     document.getElementById('topbar-title').textContent = 'Contenidos';
+  } else if (section === 'laboratorio-ia') {
+    showView('view-laboratorio-ia');
+    document.getElementById('topbar-title').textContent = 'Laboratorio IA';
   } else if (section === 'ranking') {
     showView('view-ranking');
     document.getElementById('topbar-title').textContent = 'Ranking';
