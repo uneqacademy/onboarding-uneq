@@ -121,8 +121,7 @@ let contadorCargaHitos = 0;
 // Carpeta de imágenes de fase según nivel: BEGIN y eXIT tienen las suyas;
 // NEXT usa las de NEXT.
 function carpetaFasesPrograma(programa) {
-  // OPEN usa por ahora las imágenes de BEGIN (hasta que haya las suyas).
-  return ['begin', 'open'].includes(programa) ? 'begin' : (programa === 'exit' ? 'exit' : 'next');
+  return programa === 'open' ? 'open' : (programa === 'begin' ? 'begin' : (programa === 'exit' ? 'exit' : 'next'));
 }
 
 function imagenFaseCiclo(ciclo) {

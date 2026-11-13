@@ -266,7 +266,8 @@ export async function cargarDashboardAlumno(alumnoId) {
   if (astronautaEl) {
     // BEGIN tiene su propio set (webp con fondo transparente); NEXT y
     // eXIT tiene el suyo (webp); NEXT sigue con el de NEXT (jpg).
-    const carpetaStepper = esBeginDashboard ? 'begin' : (esExitDashboard ? 'exit' : 'next');
+    // OPEN tiene su propio set (astronautas cobre sobre fondo espacial).
+    const carpetaStepper = esOpenDashboard ? 'open' : (esBeginDashboard ? 'begin' : (esExitDashboard ? 'exit' : 'next'));
     const extensionStepper = (esBeginDashboard || esExitDashboard) ? 'webp' : 'jpg';
     let estadoAstro = 'inicio';
     if (ciclo && ciclo.estadoAlumno === 'egresado') {
