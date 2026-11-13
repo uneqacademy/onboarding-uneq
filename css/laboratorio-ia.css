@@ -139,3 +139,25 @@
   padding: 16px 18px;
 }
 #view-laboratorio-ia .lab-hero { color: #fff; }
+
+/* --- Guía del Director (Configuración > Laboratorio IA: guía para la IA) --- */
+.labg-tabs { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 14px; }
+.labg-tab { border: 1px solid var(--color-border); background: var(--color-surface); color: var(--color-ink); border-radius: 999px; padding: 7px 16px; font: inherit; font-size: 13.5px; cursor: pointer; }
+.labg-tab:hover { background: var(--color-surface-alt); }
+.labg-tab.is-activa { background: var(--color-primary); color: #fff; border-color: var(--color-primary); font-weight: 600; }
+.labg-ayuda { font-size: 12.5px; margin: 2px 0 6px; }
+.labg-archivo { border: 1px solid var(--color-border); border-radius: var(--radius-md); padding: 10px 12px; margin-bottom: 8px; background: var(--color-surface); }
+.labg-archivo__cab { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.labg-archivo__icono { font-size: 22px; }
+.labg-archivo__info { flex: 1 1 200px; min-width: 0; display: flex; flex-direction: column; }
+.labg-archivo__info .text-soft { font-size: 12px; }
+.labg-archivo__acciones { display: flex; gap: 8px; margin-top: 8px; }
+.labg-analisis { margin-top: 8px; font-size: 13px; }
+.labg-analisis summary { cursor: pointer; color: var(--color-primary); }
+.labg-analisis__texto { white-space: pre-wrap; line-height: 1.5; max-height: 260px; overflow: auto; background: var(--color-surface-alt); border-radius: var(--radius-sm); padding: 10px 12px; margin-top: 6px; }
+.labg-badge-error { background: var(--color-danger-soft); color: #a63030; }
+.labg-spin { width: 12px; height: 12px; border-width: 2px; display: inline-block; vertical-align: -2px; margin-right: 4px; }
+.labg-subir { margin-top: 10px; }
+.labg-progreso { display: flex; align-items: center; gap: 10px; margin-top: 10px; }
+.labg-progreso__barra { flex: 1; height: 8px; background: var(--color-border); border-radius: 999px; overflow: hidden; }
+#labg-progreso-relleno { height: 100%; width: 0; background: var(--color-accent); transition: width 0.2s; }
