@@ -275,7 +275,7 @@ export async function cargarDashboardAlumno(alumnoId) {
     } else if (ciclo && ciclo.faseMetodologia && /\d/.test(ciclo.faseMetodologia)) {
       estadoAstro = `fase${ciclo.faseMetodologia.match(/\d/)[0]}`;
     }
-    astronautaEl.innerHTML = `<img src="assets/stepper/${carpetaStepper}/${estadoAstro}.${extensionStepper}" alt="Tu avance en la Metodología 2E" style="width:100%; height:auto; display:block; border-radius:var(--radius-md, 10px);">`;
+    astronautaEl.innerHTML = `<img src="assets/stepper/${carpetaStepper}/${estadoAstro}.${extensionStepper}${esOpenDashboard ? "?v=2" : ""}" alt="Tu avance en la Metodología 2E" style="width:100%; height:auto; display:block; border-radius:var(--radius-md, 10px);">`;
   }
 
   // --- Aviso de atraso de pago (automático: alguna cuota vencida y no pagada) ---
