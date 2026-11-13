@@ -274,8 +274,10 @@ onAuthStateChanged(auth, async (user) => {
     // director pleno, manda el director.
     const esSub = rolesApp.includes('subdirectora') && !rolesApp.includes('director');
     marcarSubdirectora(esSub);
-    const roles = [...rolesApp.map(r => (r === 'subdirectora' ? 'director' : r)), ...(staff ? [staff.rol] : [])];
-    const rolActivo = PRIORIDAD_ROLES.map(r => (r === 'subdirectora' ? 'director' : r)).find(r => roles.includes(r));
+    // El Director siempre puede "Ver como" Sub-directora (selector "Viendo como") para revisar qué ve ella.
+    const roles = [...rolesApp, ...(rolesApp.includes('director') && !rolesApp.includes('subdirectora') ? ['subdirectora'] : []), ...(staff ? [staff.rol] : [])];
+    const rolElegido = PRIORIDAD_ROLES.find(r => roles.includes(r));
+    const rolActivo = rolElegido === 'subdirectora' ? 'director' : rolElegido; // en pantalla la Sub-directora es "director" con restricciones
     const nombre = (perfil && perfil.nombre) || (staff && staff.nombre) || user.email;
 
     // Cuenta cuya vista inicial es de agendamiento: esa vista vive en agendamiento/
