@@ -1004,21 +1004,20 @@ function recortarMiniatura(archivo) {
     img.src = url;
   });
 }
-async function huellaSha256(blob) {
-  const h = await crypto.subtle.digest('SHA-256', await blob.arrayBuffer());
-  return [...new Uint8Array(h)].map(b => b.toString(16).padStart(2, '0')).join('');
+function blobABase64(blob) {
+  return new Promise((resolve, reject) => {
+    const lector = new FileReader();
+    lector.onload = () => resolve(String(lector.result).split(',')[1] || '');
+    lector.onerror = () => reject(new Error('No pude leer la imagen.'));
+    lector.readAsDataURL(blob);
+  });
 }
+// La imagen viaja por la función (el almacenamiento de Vturb no permite subir imágenes directo desde el navegador).
 async function subirMiniaturaAVturb(archivo, videoId, nombre, msg) {
   msg('Preparando la miniatura…');
   const blob = await recortarMiniatura(archivo);
-  const ini = (await llamarVturb('miniaturaIniciar', { nombre, tipo: 'image/jpeg', tamano: blob.size, checksum: await huellaSha256(blob) })).data;
-  msg('Subiendo la miniatura…');
-  let r;
-  try { r = await fetch(ini.url, { method: 'PUT', headers: { 'Content-Type': 'image/jpeg' }, body: blob }); }
-  catch (e) { throw new Error('El navegador no pudo enviar la imagen a Vturb (permiso de seguridad CORS). Avísale a Claude.'); }
-  if (!r.ok) throw new Error(`Vturb rechazó la imagen (código ${r.status}).`);
-  msg('Asignándola al video…');
-  await llamarVturb('miniaturaConfirmar', { archivoId: ini.archivoId, videoId });
+  msg('Subiendo la miniatura a Vturb…');
+  await llamarVturb('miniatura', { imagen: await blobABase64(blob), videoId, nombre });
 }
 
 // ¿En qué clase está cada video de Vturb? (id del reproductor -> lista de lugares)

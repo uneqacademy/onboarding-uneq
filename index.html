@@ -153,13 +153,13 @@
       <div class="nav-list">
         <li class="nav-item is-active" data-nav="dashboard">Dashboard</li>
         <li class="nav-item" data-nav="alumnos">Alumnos</li>
-        <li class="nav-item" data-role="director" data-nav="pagos">Pagos</li>
+        <li class="nav-item solo-director-pleno" data-role="director" data-nav="pagos">Pagos</li>
         <li class="nav-item" data-role="director" data-nav="pre-onboarding">Pre-Onboarding</li>
         <li class="nav-item" data-role="director" data-nav="coaches">Copilotos</li>
         <li class="nav-item" data-role="director" data-nav="mentores">Mentores</li>
         <li class="nav-item hidden" data-nav="mis-datos">Mis Datos</li>
         <li class="nav-item" data-role="director" data-nav="rendimiento-ia">Rendimiento IA</li>
-        <li class="nav-item" data-role="director" data-nav="configuracion">Configuración</li>
+        <li class="nav-item solo-director-pleno" data-role="director" data-nav="configuracion">Configuración</li>
         <li class="nav-item" data-role="alumno" data-nav="ficha-alumno-propia">Mi Ficha Personal</li>
         <li class="nav-item" data-role="alumno" data-nav="bitacora-alumno">Bitácora</li>
         <li class="nav-item" data-role="alumno" data-nav="test-alumno">Test Brújula</li>
@@ -176,7 +176,7 @@
       </div>
     </nav>
 
-    <div class="nav-group" data-role="director" style="padding: 0 20px; margin-top: 4px;">
+    <div class="nav-group solo-director-pleno" data-role="director" style="padding: 0 20px; margin-top: 4px;">
       <div style="font-size:11px; text-transform:uppercase; letter-spacing:0.5px; color:rgba(255,255,255,0.45); margin-bottom:10px;">Respaldo</div>
       <button id="btn-exportar-json" class="btn btn--ghost" style="display:block; width:100%; text-align:left; color:#fff; border-color:rgba(255,255,255,0.25); background:transparent; margin-bottom:6px; padding:8px 10px; font-size:13px;">⬇ Descargar JSON</button>
       <button id="btn-importar-json" class="btn btn--ghost" style="display:block; width:100%; text-align:left; color:#fff; border-color:rgba(255,255,255,0.25); background:transparent; padding:8px 10px; font-size:13px;">⬆ Importar JSON</button>
@@ -316,7 +316,7 @@
               <thead>
                 <tr>
                   <th>Alumno</th><th>Copiloto</th><th>Programa</th><th>Estado Proceso</th>
-                  <th>Estado Alumno</th><th>Onboarding</th><th>Próx. Cuota</th><th>Monto</th><th>Estado Pago</th>
+                  <th>Estado Alumno</th><th>Onboarding</th><th class="solo-director-pleno">Próx. Cuota</th><th class="solo-director-pleno">Monto</th><th class="solo-director-pleno">Estado Pago</th>
                 </tr>
               </thead>
               <tbody id="tabla-alumnos-dashboard-director"></tbody>
@@ -511,7 +511,7 @@
             <button class="btn btn--accent" id="btn-generar-acuerdo">Generar Acuerdo y Enviar a Revisión</button>
           </div>
         </div>
-        <div class="panel mb-24 hidden" id="panel-accion-enviar-revision" data-role="director">
+        <div class="panel mb-24 hidden solo-director-pleno" id="panel-accion-enviar-revision" data-role="director">
           <div class="panel__body flex-between">
             <div>
               <strong>¿Ya enviaste el documento para firma?</strong>
@@ -520,7 +520,7 @@
             <button class="btn btn--accent" id="btn-enviar-a-revision">Documento Enviado para Firma</button>
           </div>
         </div>
-        <div class="panel mb-24 hidden" id="panel-accion-firma-procesada" data-role="director">
+        <div class="panel mb-24 hidden solo-director-pleno" id="panel-accion-firma-procesada" data-role="director">
           <div class="panel__body flex-between">
             <div>
               <strong>¿El acuerdo ya fue firmado por ambas partes?</strong>
@@ -543,7 +543,7 @@
             <button class="btn btn--primary" id="btn-marcar-egresado">Marcar Egresado</button>
           </div>
         </div>
-        <div class="panel mb-24 hidden" id="panel-nuevo-ciclo" data-role="director">
+        <div class="panel mb-24 hidden solo-director-pleno" id="panel-nuevo-ciclo" data-role="director">
           <div class="panel__body">
             <strong>Iniciar un nuevo ciclo</strong>
             <p class="text-soft" style="margin:4px 0 12px;">El ciclo anterior queda guardado en "Historial de Ciclos". El acuerdo de pago completo (descuento, cuotas) se termina de completar después, en la pestaña Acuerdo de Pago.</p>
@@ -584,7 +584,7 @@
           <div class="tab is-active" data-tab="datos">Datos Generales</div>
           <div class="tab" data-tab="ciclo">Ciclo Actual</div>
           <div class="tab" data-tab="test">Test Brújula</div>
-          <div class="tab" data-tab="pago" data-role="director">Acuerdo de Pago</div>
+          <div class="tab solo-director-pleno" data-tab="pago" data-role="director">Acuerdo de Pago</div>
           <div class="tab" data-tab="bitacora">Bitácora</div>
           <div class="tab" data-tab="historial">Historial de Ciclos</div>
         </div>
@@ -729,7 +729,7 @@
         </div>
 
         <!-- TAB: Acuerdo de Pago (SOLO DIRECTOR) -->
-        <div class="tab-panel" data-panel="pago" data-role="director">
+        <div class="tab-panel solo-director-pleno" data-panel="pago" data-role="director">
           <div class="panel">
             <div class="panel__body">
               <div class="flex-between mb-16">
@@ -948,9 +948,9 @@
               <div class="field"><label>País</label><select id="nuevo-alumno-pais"><option value="">Cargando países...</option></select></div>
               <div class="field"><label>Moneda (según el país)</label><select id="nuevo-alumno-moneda" disabled title="Chile siempre en CLP; el extranjero en USD"><option value="">—</option><option>CLP</option><option>USD</option></select></div>
               <div class="field hidden" id="campo-tipo-cambio"><label>Tipo de Cambio (CLP por USD)</label><input type="number" id="nuevo-alumno-tipo-cambio" placeholder="Ej: 950"></div>
-              <div class="field"><label id="label-nuevo-alumno-monto">Monto del Programa</label><input id="nuevo-alumno-monto" readonly placeholder="Según programa y país" title="Sale de los precios de Configuración; los ajustes van en Descuento"></div>
+              <div class="field solo-director-pleno"><label id="label-nuevo-alumno-monto">Monto del Programa</label><input id="nuevo-alumno-monto" readonly placeholder="Según programa y país" title="Sale de los precios de Configuración; los ajustes van en Descuento"></div>
             </div>
-            <div id="bloque-pago-normal">
+            <div id="bloque-pago-normal" class="solo-director-pleno">
               <div class="field-grid mb-16">
                 <div class="field"><label>Descuento (opcional)</label><input id="nuevo-alumno-descuento" placeholder="0"></div>
                 <div class="field"><label>Monto Total a Pagar</label><input id="nuevo-alumno-total" readonly placeholder="Programa − descuento"></div>
@@ -969,7 +969,7 @@
               </div>
               <p class="text-soft hidden" id="nuevo-alumno-aviso-cuotas" style="font-size:12.5px; margin:6px 0 0;"></p>
             </div>
-            <p class="text-soft hidden" id="aviso-pago-membresia" style="font-size:13px;">Este monto se cobra <strong>mes a mes</strong> — no hace falta cargar un calendario de cuotas ahora. Una vez matriculado, cada pago mensual se va agregando desde su ficha, a medida que llega.</p>
+            <p class="text-soft hidden solo-director-pleno" id="aviso-pago-membresia" style="font-size:13px;">Este monto se cobra <strong>mes a mes</strong> — no hace falta cargar un calendario de cuotas ahora. Una vez matriculado, cada pago mensual se va agregando desde su ficha, a medida que llega.</p>
           </div>
         </div>
 
@@ -2212,6 +2212,7 @@
       </section>
 
       <section id="view-configuracion" class="view hidden">
+        <div class="panel mb-24 hidden" id="panel-subdirectora"></div>
         <div class="panel mb-24" data-config-seccion="metodologia">
           <div class="panel__header flex-between">
             <h3>Metodología Base para Mentores IA</h3>
