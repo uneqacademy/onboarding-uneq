@@ -1461,12 +1461,12 @@ body.vista-ranking .content .ranking-como summary, body.vista-ranking .content .
 
 /* ============================================
    TEMA OPEN — alumnos OPEN. Se monta sobre tema-begin (OPEN es un clon
-   técnico de BEGIN) y solo cambia los colores, tomados del logo:
-   negro y cobre. Son colores PROVISORIOS hasta recibir los finales.
+   técnico de BEGIN) y solo cambia los colores: negro y cobre, tomados
+   del arte oficial de OPEN (astronautas cobre sobre fondo espacial).
    ============================================ */
 body.tema-open {
   --begin-azul: #1F1F1E;
-  --begin-celeste: #C9604F;
+  --begin-celeste: #D06050;
   --begin-verde: #1F9A4A;
   background: var(--begin-azul);
 }
@@ -1476,6 +1476,9 @@ body.tema-open .content .text-soft { color: #E9D3CD; }
 body.tema-open .panel .text-soft,
 body.tema-open .kpi-card .text-soft { color: var(--color-ink-soft); }
 body.tema-open .hitos-tab { color: #E9D3CD; }
+/* Las imágenes de OPEN llevan fondo espacial (no transparente): esquinas redondeadas */
+body.tema-open #alumno-astronauta-fase img { border-radius: 14px !important; }
+body.tema-open .hitos-hero-fase img { border-radius: 16px; }
 
 
 /* ============================================
