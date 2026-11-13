@@ -102,3 +102,40 @@
 .labcfg-acciones { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 14px; }
 .labcfg-mini { font-size: 12px; padding: 4px 10px; }
 @media (max-width: 700px) { .labcfg-fila { grid-template-columns: 1fr; } }
+
+/* ============================================================
+   Contraste en los temas de alumno (oscuro y BEGIN)
+   Esos temas ponen texto claro en toda la página y solo corrigen
+   sus propias tarjetas (.panel). Las tarjetas claras del Laboratorio
+   vuelven acá al texto oscuro normal. El id les da prioridad sobre
+   las reglas de los temas.
+   ============================================================ */
+#view-laboratorio-ia :is(.lab-bloque, .lab-ficha, .lab-etapa, .lab-pieza, .lab-historial__item, .lab-staff__lista),
+#config-laboratorio-ia :is(.labcfg-bloque) {
+  color: var(--color-ink);
+}
+#view-laboratorio-ia :is(.lab-bloque, .lab-ficha, .lab-etapa, .lab-pieza, .lab-historial__item, .lab-staff__lista) :is(h1, h2, h3, h4),
+#config-laboratorio-ia :is(.labcfg-bloque) :is(h1, h2, h3, h4) {
+  color: var(--color-primary);
+}
+#view-laboratorio-ia :is(.lab-bloque, .lab-ficha, .lab-etapa, .lab-pieza, .lab-historial__item, .lab-staff__lista) .text-soft,
+#config-laboratorio-ia :is(.labcfg-bloque) .text-soft {
+  color: var(--color-ink-soft);
+}
+#view-laboratorio-ia :is(.lab-bloque, .lab-ficha, .lab-etapa, .lab-pieza, .lab-historial__item, .lab-staff__lista) .btn--ghost {
+  color: var(--color-primary);
+  border-color: var(--color-border);
+}
+#view-laboratorio-ia :is(.lab-bloque, .lab-ficha, .lab-etapa, .lab-pieza, .lab-historial__item, .lab-staff__lista) .lab-seccion__etiqueta {
+  color: #1d6f64;
+}
+#view-laboratorio-ia :is(.lab-bloque, .lab-ficha, .lab-etapa) .lab-chip { color: #1d6f64; }
+
+/* Mensajes de carga y errores que quedan fuera de una tarjeta: tarjeta clara propia */
+#view-laboratorio-ia .lab-cargando {
+  background: var(--color-surface);
+  color: var(--color-ink-soft);
+  border-radius: var(--radius-md);
+  padding: 16px 18px;
+}
+#view-laboratorio-ia .lab-hero { color: #fff; }
