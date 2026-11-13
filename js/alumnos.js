@@ -20,7 +20,7 @@ import {
 } from './ciclos.js';
 import { getFaseDemo, setFaseDemo } from './demo.js';
 import { guardarSub, borrarSub, registrarRestauradores } from './main.js';
-import { showView, marcarNavActivo, setNav, setCandado, aplicarBloqueoCamposFicha, getCurrentRole, getCurrentUserNombre, getCurrentRolesDisponibles, applyRole, esSubdirectora } from './main.js';
+import { showView, marcarNavActivo, setNav, setCandado, aplicarBloqueoCamposFicha, getCurrentRole, getCurrentUserNombre, getCurrentRolesDisponibles, applyRole } from './main.js';
 import { cargarTestParaCiclo } from './test.js';
 import { cargarAcuerdoParaCiclo } from './pagos.js';
 import { cargarBitacoraParaCiclo } from './bitacora.js';
@@ -59,7 +59,6 @@ import { parsearMonto, formatMonto, hoyISO } from './util-pagos.js';
 import { montarSelectorTelefono, activarSelectoresTelefono } from './telefono-pais.js';
 import { conectarCascadaDireccion, prepararCamposDireccionVacios, precargarDireccionGuardada, nombrePaisDesdeCodigo, codigoPaisDesdeNombre, poblarSelectPaisesPorNombre } from './geodata.js';
 import './configuracion.js';
-import './subdirectora.js';
 import './hitos.js';
 import './mis-datos.js';
 import './informe-ia.js';
@@ -512,7 +511,7 @@ function crearFilaAlumno(alumnoId, alumno, ciclo, columnas, acuerdo, nombreOverr
   if (columnas.pago) {
     const montoTexto = acuerdo && acuerdo.montoTotal ? `${acuerdo.montoTotal} ${acuerdo.moneda || ''}`.trim() : '—';
     const estadoPago = estadoPagoDeAcuerdo(acuerdo);
-    html += `<td class="solo-director-pleno">${estadoPago.proxCuota}</td><td class="solo-director-pleno">${montoTexto}</td><td class="solo-director-pleno"><span class="badge ${estadoPago.clase}">${estadoPago.texto}</span></td>`;
+    html += `<td>${estadoPago.proxCuota}</td><td>${montoTexto}</td><td><span class="badge ${estadoPago.clase}">${estadoPago.texto}</span></td>`;
   }
   tr.innerHTML = html;
   tr.addEventListener('click', () => abrirFicha(alumnoId));
@@ -542,7 +541,7 @@ function pasaFiltrosDirector(alumno, ciclo, prefijo) {
 export async function cargarListasAlumnos() {
   const role = getCurrentRole();
   const promesas = [get(ref(db, 'alumnos')), get(ref(db, 'ciclos'))];
-  if (role === 'director' && !esSubdirectora()) promesas.push(get(ref(db, 'acuerdosPago')));
+  if (role === 'director') promesas.push(get(ref(db, 'acuerdosPago')));
 
   const [alumnosSnap, ciclosSnap, acuerdosSnap] = await Promise.all(promesas);
   const alumnos = alumnosSnap.exists() ? alumnosSnap.val() : {};
