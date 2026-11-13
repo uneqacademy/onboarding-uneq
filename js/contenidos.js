@@ -501,8 +501,8 @@ function vistaLeccion(mid, m, cid) {
         `<button type="button" class="ct-estrella" data-act="valorar" data-c="${cid}" data-n="${n}" title="${n} de 5">★</button>`).join('')}</div>
       <span class="ct-estrellas__info" id="ct-valoracion-info"></span>
       <span class="ct-lec__espacio"></span>
-      <button type="button" class="ct-btn-txt${fav ? ' is-on' : ''}" id="ct-fav" data-act="favorito" data-c="${cid}">${fav ? '♥ Favorita' : '♡ Favoritar'}</button>
-      <button type="button" class="ct-btn-txt${vista ? ' is-on' : ''}" id="ct-concluir" data-act="concluir" data-c="${cid}">${vista ? '✓ Concluida' : '○ No concluida'}</button>
+      <button type="button" class="ct-btn-txt${fav ? ' is-on' : ''}" id="ct-fav" data-act="favorito" data-c="${cid}">${fav ? '♥ FAVORITOS' : '♡ FAVORITOS'}</button>
+      <button type="button" class="ct-btn-txt${vista ? ' is-on' : ''}" id="ct-concluir" data-act="concluir" data-c="${cid}">${vista ? '✓ CONCLUIDA' : '○ MARCAR COMO CONCLUIDA'}</button>
       ${puedeEditar(m) ? `<button type="button" class="ct-btn-txt" data-act="cla-editar" data-m="${mid}" data-c="${cid}">✏️ Editar</button>` : ''}
     </div>`;
 
@@ -704,7 +704,7 @@ async function alternarFavorito(cid, boton) {
     const nueva = !estado.favoritos[cid];
     await set(ref(db, `favoritosClases/${estado.clave}/${cid}`), nueva ? true : null);
     if (nueva) estado.favoritos[cid] = true; else delete estado.favoritos[cid];
-    boton.textContent = nueva ? '♥ Favorita' : '♡ Favoritar';
+    boton.textContent = nueva ? '♥ FAVORITOS' : '♡ FAVORITOS';
     boton.classList.toggle('is-on', nueva);
   } catch (err) {
     console.error('No se pudo guardar el favorito:', err);
@@ -721,7 +721,7 @@ async function alternarVista(cid, boton) {
     await set(ref(db, `progresoClases/${estado.clave}/${cid}`), nueva);
     if (nueva) { estado.progreso[cid] = nueva; marcarClaseConcluida(cid); } else delete estado.progreso[cid];
     // Se actualiza solo lo necesario para no reiniciar el video.
-    boton.textContent = nueva ? '✓ Concluida' : '○ No concluida';
+    boton.textContent = nueva ? '✓ CONCLUIDA' : '○ MARCAR COMO CONCLUIDA';
     boton.classList.toggle('is-on', !!nueva);
     document.querySelectorAll(`[data-est="${cid}"]`).forEach(e => {
       e.innerHTML = nueva ? ICONO_CHECK : ICONO_PLAY;
