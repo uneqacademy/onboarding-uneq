@@ -173,6 +173,7 @@ async function cargarMentoresView() {
             <div style="display:flex; align-items:center; gap:16px; flex-wrap:wrap;">
               <label style="font-weight:400;"><input type="checkbox" class="chk-rol-mentor-m" ${rolesActuales.mentor ? 'checked' : ''}> Mentor</label>
               <label style="font-weight:400;"><input type="checkbox" class="chk-rol-coach-m" ${rolesActuales.coach ? 'checked' : ''}> Copiloto</label>
+              <label style="font-weight:400;" title="Ve y hace todo como el Director, salvo Pagos, contratos y Configuración"><input type="checkbox" class="chk-rol-subdirectora-m" ${rolesActuales.subdirectora ? 'checked' : ''}> Sub-directora</label>
               <span class="text-soft" style="font-size:12px;">El rol Director se asigna aparte, en Firebase Console.</span>
               <button class="btn btn--primary btn-guardar-roles-mentor" style="font-size:11px; padding:4px 10px;">Guardar</button>
             </div>
@@ -183,7 +184,8 @@ async function cargarMentoresView() {
           const nuevosRoles = {
             ...rolesActuales,
             mentor: filaRolesMentor.querySelector('.chk-rol-mentor-m').checked,
-            coach: filaRolesMentor.querySelector('.chk-rol-coach-m').checked
+            coach: filaRolesMentor.querySelector('.chk-rol-coach-m').checked,
+            subdirectora: filaRolesMentor.querySelector('.chk-rol-subdirectora-m').checked
           };
           if (!Object.values(nuevosRoles).some(Boolean)) {
             alert('Debe quedar con al menos un rol activo. Para sacarle todos los accesos, usa "Eliminar".');

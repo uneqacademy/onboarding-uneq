@@ -251,6 +251,7 @@ async function cargarCoachesView() {
             <div style="display:flex; align-items:center; gap:16px; flex-wrap:wrap;">
               <label style="font-weight:400;"><input type="checkbox" class="chk-rol-coach" ${rolesActuales.coach ? 'checked' : ''}> Copiloto</label>
               <label style="font-weight:400;"><input type="checkbox" class="chk-rol-mentor" ${rolesActuales.mentor ? 'checked' : ''}> Mentor</label>
+              <label style="font-weight:400;" title="Ve y hace todo como el Director, salvo Pagos, contratos y Configuración"><input type="checkbox" class="chk-rol-subdirectora" ${rolesActuales.subdirectora ? 'checked' : ''}> Sub-directora</label>
               <label style="font-weight:400;" title="Puede crear sesiones grupales semanales para alumnos BEGIN y OPEN">
                 <input type="checkbox" class="chk-coach-cabecera-begin" ${coach.coachCabeceraBegin ? 'checked' : ''}> Copiloto de Cabecera (BEGIN y OPEN)
               </label>
@@ -264,7 +265,8 @@ async function cargarCoachesView() {
           const nuevosRoles = {
             ...rolesActuales,
             coach: filaRoles.querySelector('.chk-rol-coach').checked,
-            mentor: filaRoles.querySelector('.chk-rol-mentor').checked
+            mentor: filaRoles.querySelector('.chk-rol-mentor').checked,
+            subdirectora: filaRoles.querySelector('.chk-rol-subdirectora').checked
           };
           if (!Object.values(nuevosRoles).some(Boolean)) {
             alert('Debe quedar con al menos un rol activo. Para sacarle todos los accesos, usa "Eliminar".');
