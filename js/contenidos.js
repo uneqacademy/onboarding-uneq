@@ -985,6 +985,42 @@ async function subirVideoAVturb(archivo, nombre, msg, vivo, opciones = {}) {
   throw new Error('Vturb tarda más de lo normal en procesar el video. Revisa el panel de Vturb.');
 }
 
+// Miniatura del video: se recorta al centro en 16:9, se sube a Vturb como archivo y se asigna al video.
+function recortarMiniatura(archivo) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    const url = URL.createObjectURL(archivo);
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      const W = 1280, H = 720;
+      const canvas = document.createElement('canvas');
+      canvas.width = W; canvas.height = H;
+      const escala = Math.max(W / img.width, H / img.height);
+      const w = img.width * escala, h = img.height * escala;
+      canvas.getContext('2d').drawImage(img, (W - w) / 2, (H - h) / 2, w, h);
+      canvas.toBlob(b => b ? resolve(b) : reject(new Error('No pude preparar la imagen.')), 'image/jpeg', 0.9);
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('No pude leer esa imagen.')); };
+    img.src = url;
+  });
+}
+async function huellaSha256(blob) {
+  const h = await crypto.subtle.digest('SHA-256', await blob.arrayBuffer());
+  return [...new Uint8Array(h)].map(b => b.toString(16).padStart(2, '0')).join('');
+}
+async function subirMiniaturaAVturb(archivo, videoId, nombre, msg) {
+  msg('Preparando la miniatura…');
+  const blob = await recortarMiniatura(archivo);
+  const ini = (await llamarVturb('miniaturaIniciar', { nombre, tipo: 'image/jpeg', tamano: blob.size, checksum: await huellaSha256(blob) })).data;
+  msg('Subiendo la miniatura…');
+  let r;
+  try { r = await fetch(ini.url, { method: 'PUT', headers: { 'Content-Type': 'image/jpeg' }, body: blob }); }
+  catch (e) { throw new Error('El navegador no pudo enviar la imagen a Vturb (permiso de seguridad CORS). Avísale a Claude.'); }
+  if (!r.ok) throw new Error(`Vturb rechazó la imagen (código ${r.status}).`);
+  msg('Asignándola al video…');
+  await llamarVturb('miniaturaConfirmar', { archivoId: ini.archivoId, videoId });
+}
+
 // ¿En qué clase está cada video de Vturb? (id del reproductor -> lista de lugares)
 async function mapaAsignaciones() {
   const mapa = {};
@@ -1136,6 +1172,10 @@ function editarClase(mid, cid) {
         <div style="display:flex; gap:6px; margin-top:6px;"><input id="ct-c-modelo" placeholder="Id del video modelo en Vturb" style="flex:1;">
           <button type="button" class="btn btn--ghost" id="ct-c-modelo-g" style="font-size:12.5px;">Guardar</button></div>
         <p id="ct-c-modelo-msg" class="text-soft" style="font-size:12px; margin:4px 0 0;">Los videos nuevos copian los controles, colores y ajustes de este video.</p></details></div>
+    <div class="field mb-16"><label>Miniatura del video (Vturb)</label>
+      <button type="button" class="btn btn--ghost" id="ct-c-mini" style="font-size:12.5px;">🖼 Elegir imagen…</button>
+      <input type="file" id="ct-c-mini-file" accept="image/jpeg,image/png,image/webp" class="hidden">
+      <p id="ct-c-mini-msg" class="text-soft" style="font-size:12.5px; margin:6px 0 0;">Se recorta sola al centro en 16:9 y se aplica de inmediato al video de esta clase en Vturb. Si no eliges una, el video usa la miniatura de tu video modelo.</p></div>
     <div class="field mb-16"><label>…o pega el código de inserción de Vturb</label>
       <textarea id="ct-c-embed" placeholder="Pega aquí el código JS del video (botón &lt;/&gt; en Vturb)" style="min-height:90px; font-family:monospace; font-size:12px;"></textarea>
       <p class="text-soft" style="font-size:12px; margin:4px 0 0;">${c && c.vturb ? '✓ Ya tiene un video. Pega un código nuevo solo si quieres cambiarlo.' : 'Debe incluir la etiqueta vturb-smartplayer y el script de converteai.net.'}</p></div>
@@ -1204,6 +1244,28 @@ function editarClase(mid, cid) {
       console.error(e);
       msgSubida(e.code === 'functions/failed-precondition' || e.code === 'functions/permission-denied' ? e.message : (e.message || 'No se pudo subir el video.'), true);
     } finally { subirBtn.disabled = false; guardarBtn.disabled = false; }
+  });
+  const miniBtn = ov.querySelector('#ct-c-mini'), miniIn = ov.querySelector('#ct-c-mini-file'), miniMsg = ov.querySelector('#ct-c-mini-msg');
+  const msgMini = (txt, error) => { miniMsg.textContent = txt; miniMsg.style.color = error ? '#C0392B' : ''; };
+  const videoDeLaClase = () => subido || (c && c.vturb);
+  miniBtn.addEventListener('click', () => {
+    const v = videoDeLaClase();
+    if (!v || !v.elementoId) return msgMini('Primero sube o elige el video de esta clase.', true);
+    miniIn.click();
+  });
+  miniIn.addEventListener('change', async () => {
+    const f = miniIn.files[0];
+    miniIn.value = '';
+    if (!f) return;
+    const v = videoDeLaClase();
+    if (!v || !v.elementoId) return msgMini('Primero sube o elige el video de esta clase.', true);
+    if (!/^image\/(jpeg|png|webp)$/.test(f.type)) return msgMini('La imagen debe ser JPG, PNG o WEBP.', true);
+    miniBtn.disabled = true;
+    try {
+      await subirMiniaturaAVturb(f, v.elementoId.replace(/^vid-/, ''), val(ov, '#ct-c-titulo') || 'Clase', msgMini);
+      msgMini('✓ Miniatura aplicada al video en Vturb. Puede tardar un momento en verse.');
+    } catch (e) { console.error(e); msgMini(e.message || 'No se pudo subir la miniatura.', true); }
+    finally { miniBtn.disabled = false; }
   });
   const modeloIn = ov.querySelector('#ct-c-modelo'), modeloMsg = ov.querySelector('#ct-c-modelo-msg');
   vturbConfigurar({ leer: true }).then(r => { if (r.data && r.data.modeloId) modeloIn.value = r.data.modeloId; }).catch(() => {});
