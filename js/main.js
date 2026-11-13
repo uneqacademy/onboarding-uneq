@@ -113,7 +113,7 @@ export function applyRole(role, nombre, rolesDisponibles) {
   if (tabPago) tabPago.classList.toggle('hidden', role !== 'director');
 
   document.getElementById('sidebar-user-info').innerHTML =
-    `Sesión: <strong style="color:#fff;">${escaparHtml(nombre)}</strong><br>Rol: ${NOMBRES_ROL[role] || role}`;
+    `Sesión: <strong style="color:#fff;">${escaparHtml(nombre)}</strong><br>Rol: ${(role === 'director' && esSubdirectora()) ? 'Sub-directora' : (NOMBRES_ROL[role] || role)}`;
 
   renderSelectorRol();
 
@@ -163,7 +163,7 @@ export function showLogin() {
   try { sessionStorage.removeItem(CLAVE_SECCION); } catch (err) { /* no pasa nada */ }
   Object.keys(CLAVES_SUB).forEach(borrarSub);
   terminarRestauracion();
-  document.body.classList.remove('tema-alumno-oscuro', 'tema-begin', 'tema-open', 'tema-exit', 'modo-demo');
+  document.body.classList.remove('tema-alumno-oscuro', 'tema-begin', 'tema-open', 'tema-exit', 'modo-demo', 'es-subdirectora');
   document.getElementById('view-splash').classList.add('hidden');
   document.getElementById('app-shell').classList.add('hidden');
   document.getElementById('view-login').classList.remove('hidden');
@@ -172,6 +172,13 @@ export function showLogin() {
 }
 
 export function getCurrentRole() { return currentRole; }
+
+// Sub-directora: en pantalla funciona como el director (rol "director"), pero sin Pagos, contratos
+// (acuerdo, firma) ni Configuración. Se marca con la clase "es-subdirectora" en <body>; el CSS
+// esconde todo lo que lleve "solo-director-pleno" y setNav no la deja entrar a esas secciones.
+const SECCIONES_SOLO_DIRECTOR_PLENO = ['pagos', 'configuracion'];
+export function esSubdirectora() { return document.body.classList.contains('es-subdirectora'); }
+export function marcarSubdirectora(si) { document.body.classList.toggle('es-subdirectora', !!si); }
 
 // Laboratorio IA: los alumnos NO lo ven hasta que la dueña avise (cambiar a true para abrirlo).
 // Mientras tanto lo ven director y copilotos, y el Alumno Demo para poder probarlo.
@@ -281,6 +288,7 @@ export function restaurarSeccionGuardada() {
 }
 
 export function setNav(section) {
+  if (esSubdirectora() && SECCIONES_SOLO_DIRECTOR_PLENO.includes(section)) section = 'dashboard';
   marcarNavActivo(section);
   document.body.classList.toggle('vista-ranking', section === 'ranking'); // fondo del espacio solo en el Ranking
   guardarSeccionActiva(section);

@@ -1824,3 +1824,7 @@ body.tema-open .hitos-hero-fase img { border-radius: 16px; }
 
 /* Al recargar la página (F5) la pantalla de carga tapa la app hasta volver a donde se estaba. */
 body.restaurando #view-splash { display: flex !important; position: fixed; inset: 0; z-index: 99999; }
+
+
+/* Sub-directora: ve todo menos Pagos, contratos (acuerdo/firma) y Configuración */
+body.es-subdirectora .solo-director-pleno { display: none !important; }
