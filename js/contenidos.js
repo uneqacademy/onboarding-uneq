@@ -11,7 +11,8 @@
    permitidos en su panel).
    ============================================================ */
 
-import { db, auth, storage } from './firebase-config.js';
+import { db, auth, storage, app } from './firebase-config.js';
+import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-functions.js";
 import { escaparHtml } from './util-html.js';
 import { ref, get, set, push, update, remove, onValue, query, limitToLast } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-database.js";
 import { ref as storageRef, uploadBytes, getDownloadURL, deleteObject } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-storage.js";
@@ -890,7 +891,70 @@ function editarModulo(mid) {
   portada = activarPortada(ovM);
 }
 
+/* ---------- Subir el video directo a Vturb (solo director) ----------
+   El token de Vturb vive en el servidor: aquí solo se pide crear el video, se sube el archivo por partes
+   a las direcciones temporales que entrega Vturb y se pregunta el estado hasta que esté listo. */
+const functionsVturb = getFunctions(app);
+const vturbIniciar = httpsCallable(functionsVturb, 'vturbIniciarSubida', { timeout: 120000 });
+const vturbConfirmar = httpsCallable(functionsVturb, 'vturbConfirmarSubida', { timeout: 120000 });
+const vturbEstado = httpsCallable(functionsVturb, 'vturbEstado', { timeout: 60000 });
+const vturbConfigurar = httpsCallable(functionsVturb, 'vturbConfigurar', { timeout: 60000 });
+
+function subirParteAVturb(url, trozo, alAvanzar) {
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open('PUT', url);
+    xhr.upload.onprogress = e => { if (e.lengthComputable) alAvanzar(e.loaded); };
+    xhr.onload = () => {
+      if (xhr.status < 200 || xhr.status >= 300) return reject(new Error(`El almacenamiento de Vturb rechazó una parte (código ${xhr.status}).`));
+      const etag = xhr.getResponseHeader('ETag');
+      if (!etag) return reject(new Error('SIN_ETAG'));
+      resolve(etag);
+    };
+    xhr.onerror = () => reject(new Error('SIN_RED'));
+    xhr.send(trozo);
+  });
+}
+
+// Devuelve { vturb: {elementoId, scriptUrl}, aviso } cuando el video queda listo, o null si se cerró la ventana.
+async function subirVideoAVturb(archivo, nombre, msg, vivo) {
+  msg('Preparando la subida…');
+  const ini = (await vturbIniciar({ nombre, tipo: archivo.type || 'video/mp4', tamano: archivo.size })).data;
+  const etags = [];
+  for (const p of ini.partes) {
+    const inicio = (p.numero - 1) * ini.tamanoParte;
+    const trozo = archivo.slice(inicio, inicio + ini.tamanoParte);
+    let etag = null;
+    for (let intento = 1; !etag; intento++) {
+      try {
+        etag = await subirParteAVturb(p.url, trozo, cargado => msg(`Subiendo el video… ${Math.min(99, Math.round((inicio + cargado) / archivo.size * 100))} %`));
+      } catch (e) {
+        if (e.message === 'SIN_ETAG') throw new Error('El navegador no pudo leer la confirmación de Vturb al subir el archivo (permiso de seguridad CORS). Hay que usar otra vía de subida: avísale a Claude.');
+        if (intento >= 3) throw new Error(e.message === 'SIN_RED' ? 'Se cortó la conexión al subir el video. Intenta de nuevo.' : e.message);
+      }
+    }
+    etags.push({ numero: p.numero, etag });
+  }
+  msg('Confirmando la subida…');
+  const conf = (await vturbConfirmar({ videoId: ini.videoId, partes: etags })).data;
+  const c = conf.configuracion || {};
+  const aviso = c.sinModelo ? 'Se subió con la configuración básica (aún no eliges un video modelo).'
+    : c.error ? 'No se pudo copiar la configuración del video modelo.'
+    : c.omitidos && c.omitidos.length ? `Configuración copiada, salvo: ${c.omitidos.join(', ')}.` : '';
+  const limite = Date.now() + 60 * 60 * 1000;
+  while (Date.now() < limite) {
+    if (!vivo()) return null;
+    const e = (await vturbEstado({ videoId: ini.videoId })).data;
+    if (e.status === 'ready' && e.vturb) return { vturb: e.vturb, aviso };
+    if (e.fallo || /fail|error/i.test(e.status)) throw new Error(`Vturb no pudo procesar el video${e.fallo ? `: ${e.fallo}` : ''}.`);
+    msg(`Procesando en Vturb… ${e.progreso || 0} %`);
+    await new Promise(r => setTimeout(r, 4000));
+  }
+  throw new Error('Vturb tarda más de lo normal en procesar el video. Revisa el panel de Vturb.');
+}
+
 function editarClase(mid, cid) {
+  let subido = null;   // reproductor del video subido directo a Vturb, si lo hubo
   const c = cid ? estado.datos[mid].clases[cid] : null;
   let materiales = { ...(c && c.materiales ? c.materiales : {}) };
   const quitados = [];
@@ -904,7 +968,15 @@ function editarClase(mid, cid) {
     <div class="field mb-16"><label>Título</label><input id="ct-c-titulo" maxlength="140" value="${escaparHtml(c ? c.titulo : '')}"></div>
     <div class="field mb-16"><label>Duración del video (minutos)</label><input id="ct-c-dur" type="number" min="0" max="600" value="${c && c.duracionMin ? Number(c.duracionMin) : ''}"></div>
     <div class="field mb-16"><label>Descripción (opcional)</label><textarea id="ct-c-desc" maxlength="2000">${escaparHtml(c ? c.descripcion || '' : '')}</textarea></div>
-    <div class="field mb-16"><label>Código de inserción de Vturb</label>
+    <div class="field mb-16"><label>Subir el video directo a Vturb</label>
+      <button type="button" class="btn btn--ghost" id="ct-c-subir" style="font-size:12.5px;">⬆ Elegir el video…</button>
+      <input type="file" id="ct-c-video" accept="video/*" class="hidden">
+      <p id="ct-c-subir-estado" class="text-soft" style="font-size:12.5px; margin:6px 0 0;">Se sube a Vturb con tu configuración y se conecta solo a esta clase. No cierres esta ventana mientras sube.</p>
+      <details style="margin-top:8px;"><summary class="text-soft" style="font-size:12.5px; cursor:pointer;">Video modelo (configuración del reproductor)</summary>
+        <div style="display:flex; gap:6px; margin-top:6px;"><input id="ct-c-modelo" placeholder="Id del video modelo en Vturb" style="flex:1;">
+          <button type="button" class="btn btn--ghost" id="ct-c-modelo-g" style="font-size:12.5px;">Guardar</button></div>
+        <p id="ct-c-modelo-msg" class="text-soft" style="font-size:12px; margin:4px 0 0;">Los videos nuevos copian los controles, colores y ajustes de este video.</p></details></div>
+    <div class="field mb-16"><label>…o pega el código de inserción de Vturb</label>
       <textarea id="ct-c-embed" placeholder="Pega aquí el código JS del video (botón &lt;/&gt; en Vturb)" style="min-height:90px; font-family:monospace; font-size:12px;"></textarea>
       <p class="text-soft" style="font-size:12px; margin:4px 0 0;">${c && c.vturb ? '✓ Ya tiene un video. Pega un código nuevo solo si quieres cambiarlo.' : 'Debe incluir la etiqueta vturb-smartplayer y el script de converteai.net.'}</p></div>
     <div class="field mb-16"><label>Materiales (PDF)</label><div id="ct-c-mats"></div>
@@ -924,7 +996,7 @@ function editarClase(mid, cid) {
     campos.duracionMin = Number(val(ov, '#ct-c-dur')) > 0 ? Math.round(Number(val(ov, '#ct-c-dur'))) : null;
     const codigo = ov.querySelector('#ct-c-embed').value.trim();
     // Si se cambia el video y la duración no se tocó a mano, se vuelve a medir sola.
-    if (codigo && c && Number(c.duracionMin) > 0 && campos.duracionMin === Number(c.duracionMin)) {
+    if ((codigo || subido) && c && Number(c.duracionMin) > 0 && campos.duracionMin === Number(c.duracionMin)) {
       campos.duracionMin = null;
       duracionIntentada.delete(cid);
     }
@@ -932,6 +1004,8 @@ function editarClase(mid, cid) {
       const v = parsearEmbedVturb(codigo);
       if (!v) throw fallo('No pude leer el código de Vturb. Copia el código JS completo (con <vturb-smartplayer> y el script de converteai.net).');
       campos.vturb = v;
+    } else if (subido) {
+      campos.vturb = subido;
     }
     const base = `contenidos/${prog}/${mid}/clases/${claseId}`;
     await aplicarPortada(portada, portadaActual, `contenidos-portadas/${prog}/${claseId}`, campos);
@@ -950,6 +1024,35 @@ function editarClase(mid, cid) {
   });
 
   portada = activarPortada(ov);
+  const subirBtn = ov.querySelector('#ct-c-subir'), inVideo = ov.querySelector('#ct-c-video'), estadoEl = ov.querySelector('#ct-c-subir-estado');
+  const msgSubida = (txt, error) => { estadoEl.textContent = txt; estadoEl.style.color = error ? '#C0392B' : ''; };
+  subirBtn.addEventListener('click', () => inVideo.click());
+  inVideo.addEventListener('change', async () => {
+    const f = inVideo.files[0];
+    inVideo.value = '';
+    if (!f) return;
+    if (!/^video\//.test(f.type)) return msgSubida('Ese archivo no es un video.', true);
+    const guardarBtn = ov.querySelector('[data-guardar]');
+    subirBtn.disabled = true; guardarBtn.disabled = true; subido = null;
+    try {
+      const r = await subirVideoAVturb(f, val(ov, '#ct-c-titulo') || f.name, msgSubida, () => ov.isConnected);
+      if (r) { subido = r.vturb; msgSubida(`✓ Video listo y conectado. Pulsa Guardar para dejarlo en la clase.${r.aviso ? ' ' + r.aviso : ''}`); }
+    } catch (e) {
+      console.error(e);
+      msgSubida(e.code === 'functions/failed-precondition' || e.code === 'functions/permission-denied' ? e.message : (e.message || 'No se pudo subir el video.'), true);
+    } finally { subirBtn.disabled = false; guardarBtn.disabled = false; }
+  });
+  const modeloIn = ov.querySelector('#ct-c-modelo'), modeloMsg = ov.querySelector('#ct-c-modelo-msg');
+  vturbConfigurar({ leer: true }).then(r => { if (r.data && r.data.modeloId) modeloIn.value = r.data.modeloId; }).catch(() => {});
+  ov.querySelector('#ct-c-modelo-g').addEventListener('click', async () => {
+    const id = modeloIn.value.trim();
+    if (!id) return;
+    modeloMsg.style.color = ''; modeloMsg.textContent = 'Comprobando…';
+    try {
+      const r = (await vturbConfigurar({ modeloId: id })).data;
+      modeloMsg.textContent = `✓ Guardado. Se copiará: ${(r.grupos || []).join(', ') || 'nada (el modelo no tiene ajustes)'}.`;
+    } catch (e) { modeloMsg.style.color = '#C0392B'; modeloMsg.textContent = e.message || 'No se pudo guardar.'; }
+  });
   const pintarMats = () => {
     ov.querySelector('#ct-c-mats').innerHTML = Object.entries(materiales).map(([k, mt]) =>
       `<div style="display:flex; justify-content:space-between; gap:8px; font-size:13px; padding:4px 0;"><span>📄 ${escaparHtml(mt.nombre || 'PDF')}</span><button type="button" class="ct-icono" data-quitar="${k}" title="Quitar">✕</button></div>`).join('')
