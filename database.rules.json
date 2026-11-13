@@ -526,22 +526,22 @@
 
     "laboratorioIA": {
       "config": {
-        ".read": "auth != null && (root.child(usuarios).child(auth.uid).child(roles).child(director).val() === true || root.child(usuarios).child(auth.uid).child(rol).val() === director)",
-        ".write": "auth != null && (root.child(usuarios).child(auth.uid).child(roles).child(director).val() === true || root.child(usuarios).child(auth.uid).child(rol).val() === director)"
+        ".read": "auth != null && (root.child('usuarios').child(auth.uid).child('roles').child('director').val() === true || root.child('usuarios').child(auth.uid).child('rol').val() === 'director')",
+        ".write": "auth != null && (root.child('usuarios').child(auth.uid).child('roles').child('director').val() === true || root.child('usuarios').child(auth.uid).child('rol').val() === 'director')"
       },
       "prompts": {
-        ".read": "auth != null && (root.child(usuarios).child(auth.uid).child(roles).child(director).val() === true || root.child(usuarios).child(auth.uid).child(rol).val() === director)",
-        ".write": "auth != null && (root.child(usuarios).child(auth.uid).child(roles).child(director).val() === true || root.child(usuarios).child(auth.uid).child(rol).val() === director)"
+        ".read": "auth != null && (root.child('usuarios').child(auth.uid).child('roles').child('director').val() === true || root.child('usuarios').child(auth.uid).child('rol').val() === 'director')",
+        ".write": "auth != null && (root.child('usuarios').child(auth.uid).child('roles').child('director').val() === true || root.child('usuarios').child(auth.uid).child('rol').val() === 'director')"
       },
       "fichas": {
         "$alumnoId": {
-          ".read": "auth != null && (root.child(alumnoPorAuthUid).child(auth.uid).val() === $alumnoId || (!root.child(alumnoPorAuthUid).child(auth.uid).exists() && (root.child(usuarios).child(auth.uid).child(roles).child().val() === true || root.child(usuarios).child(auth.uid).child(roles).child().val() === true || root.child(usuarios).child(auth.uid).child(rol).val() === director || root.child(usuarios).child(auth.uid).child(rol).val() === coach)))"
+          ".read": "auth != null && (root.child('alumnoPorAuthUid').child(auth.uid).val() === $alumnoId || (!root.child('alumnoPorAuthUid').child(auth.uid).exists() && (root.child('usuarios').child(auth.uid).child('roles').child('director').val() === true || root.child('usuarios').child(auth.uid).child('roles').child('coach').val() === true || root.child('usuarios').child(auth.uid).child('rol').val() === 'director' || root.child('usuarios').child(auth.uid).child('rol').val() === 'coach')))"
         }
       },
       "generaciones": {
         "$alumnoId": {
           ".indexOn": ["creadoEn"],
-          ".read": "auth != null && (root.child(alumnoPorAuthUid).child(auth.uid).val() === $alumnoId || (!root.child(alumnoPorAuthUid).child(auth.uid).exists() && (root.child(usuarios).child(auth.uid).child(roles).child().val() === true || root.child(usuarios).child(auth.uid).child(roles).child().val() === true || root.child(usuarios).child(auth.uid).child(rol).val() === director || root.child(usuarios).child(auth.uid).child(rol).val() === coach)))"
+          ".read": "auth != null && (root.child('alumnoPorAuthUid').child(auth.uid).val() === $alumnoId || (!root.child('alumnoPorAuthUid').child(auth.uid).exists() && (root.child('usuarios').child(auth.uid).child('roles').child('director').val() === true || root.child('usuarios').child(auth.uid).child('roles').child('coach').val() === true || root.child('usuarios').child(auth.uid).child('rol').val() === 'director' || root.child('usuarios').child(auth.uid).child('rol').val() === 'coach')))"
         }
       }
     },
