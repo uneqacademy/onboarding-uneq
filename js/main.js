@@ -20,7 +20,7 @@ document.querySelectorAll('[data-brand-mark]').forEach(el => {
 
 const NOMBRES_ROL = {
   director: 'Director/a Académico', coach: 'Copiloto', mentor: 'Mentor/a', alumno: 'Alumno/a',
-  directorComercial: 'Director/a Comercial', closer: 'Closer'
+  directorComercial: 'Director/a Comercial', closer: 'Closer', subdirectora: 'Sub-directora'
 };
 
 // Vistas que viven en el módulo de agendamiento (otra página, misma sesión).
@@ -129,6 +129,9 @@ export function applyRole(role, nombre, rolesDisponibles) {
 /* --- Si la cuenta tiene más de un rol, muestra un selector para cambiar
        de vista sin cerrar sesión. Al cambiar, dispara "rolCambiado" para
        que alumnos.js recargue los datos del rol nuevo. --- */
+// Valor del selector "Viendo como": la Sub-directora comparte el rol "director" pero es otra vista.
+function vistaSelector() { return (currentRole === 'director' && esSubdirectora()) ? 'subdirectora' : currentRole; }
+
 function renderSelectorRol() {
   const cont = document.getElementById('selector-rol-container');
   if (!cont) return;
@@ -141,7 +144,7 @@ function renderSelectorRol() {
 
   cont.classList.remove('hidden');
   const opciones = currentRolesDisponibles
-    .map(r => `<option value="${r}" style="color:#1B2A4A; background:#fff;" ${r === currentRole ? 'selected' : ''}>${NOMBRES_ROL[r] || r}</option>`)
+    .map(r => `<option value="${r}" style="color:#1B2A4A; background:#fff;" ${r === vistaSelector() ? 'selected' : ''}>${NOMBRES_ROL[r] || r}</option>`)
     .join('');
   cont.innerHTML = `
     <label style="display:block; font-size:11px; color:rgba(255,255,255,0.45); margin-bottom:4px;">Viendo como</label>
@@ -154,7 +157,10 @@ function renderSelectorRol() {
       window.location.href = RUTAS_AGENDAMIENTO[ev.target.value];
       return;
     }
-    applyRole(ev.target.value, currentNombre, currentRolesDisponibles);
+    // "Sub-directora" es el rol director con restricciones (ver esSubdirectora).
+    const esVistaSub = ev.target.value === 'subdirectora';
+    marcarSubdirectora(esVistaSub);
+    applyRole(esVistaSub ? 'director' : ev.target.value, currentNombre, currentRolesDisponibles);
     document.dispatchEvent(new CustomEvent('rolCambiado'));
   });
 }
