@@ -406,7 +406,7 @@ function vistaModulos(modulos) {
   const tabs = estado.verTodo ? `<div class="ct-tabs">${PROGRAMAS_CONTENIDO.map(p =>
     `<button type="button" class="ct-tab${p === estado.programa ? ' is-active' : ''}" data-programa="${p}">${escaparHtml(etiquetaPrograma(p))}</button>`).join('')}</div>` : '';
   const nota = (estado.programa === 'comun' ? '<p class="text-soft" style="margin:0 0 12px;">Lo que subas aquí aparece automáticamente al comienzo de los 4 programas (OPEN, BEGIN, NEXT y eXIT). Súbelo una sola vez.</p>' : '');
-  const nuevo = nota + (estado.esDirector ? `<div class="ct-admin-barra"><button type="button" class="btn btn--primary" id="ct-nuevo-modulo">+ Nuevo módulo</button> ${botonModoSeleccion()}</div>${estado.modoSeleccion ? barraMasiva() : ''}` : '');
+  const nuevo = nota + (estado.esDirector ? `<div class="ct-admin-barra"><button type="button" class="btn btn--primary" id="ct-nuevo-modulo">+ Nuevo módulo</button> ${botonModoSeleccion()} <button type="button" class="btn btn--ghost" id="ct-biblioteca">📚 Biblioteca de videos</button></div>${estado.modoSeleccion ? barraMasiva() : ''}` : '');
   const tarjetas = modulos.length
     ? `<div class="ct-grid">${modulos.map(([mid, m], i) => tarjetaModulo(mid, m, i, modulos.length)).join('')}</div>`
     : `<div class="panel"><div class="panel__body"><p class="text-soft" style="margin:0;">${estado.esDirector ? (estado.programa === 'comun' ? 'Aún no hay base común. Crea el primer módulo con “+ Nuevo módulo”.' : 'Este programa aún no tiene módulos. Crea el primero con “+ Nuevo módulo”.') : estado.verTodo ? 'Este programa aún no tiene módulos.' : 'Pronto verás aquí los contenidos de tu programa.'}</p></div></div>`;
@@ -922,6 +922,7 @@ const vturbIniciar = datos => llamarVturb('iniciarSubida', datos);
 const vturbConfirmar = datos => llamarVturb('confirmarSubida', datos);
 const vturbEstado = datos => llamarVturb('estado', datos);
 const vturbConfigurar = datos => llamarVturb('configurar', datos);
+const vturbListar = datos => llamarVturb('listar', datos);
 
 function subirParteAVturb(url, trozo, alAvanzar) {
   return new Promise((resolve, reject) => {
@@ -940,30 +941,40 @@ function subirParteAVturb(url, trozo, alAvanzar) {
 }
 
 // Devuelve { vturb: {elementoId, scriptUrl}, aviso } cuando el video queda listo, o null si se cerró la ventana.
-async function subirVideoAVturb(archivo, nombre, msg, vivo) {
+async function subirVideoAVturb(archivo, nombre, msg, vivo, opciones = {}) {
   msg('Preparando la subida…');
   const ini = (await vturbIniciar({ nombre, tipo: archivo.type || 'video/mp4', tamano: archivo.size })).data;
-  const etags = [];
-  for (const p of ini.partes) {
-    const inicio = (p.numero - 1) * ini.tamanoParte;
-    const trozo = archivo.slice(inicio, inicio + ini.tamanoParte);
-    let etag = null;
-    for (let intento = 1; !etag; intento++) {
-      try {
-        etag = await subirParteAVturb(p.url, trozo, cargado => msg(`Subiendo el video… ${Math.min(99, Math.round((inicio + cargado) / archivo.size * 100))} %`));
-      } catch (e) {
-        if (e.message === 'SIN_ETAG') throw new Error('El navegador no pudo leer la confirmación de Vturb al subir el archivo (permiso de seguridad CORS). Hay que usar otra vía de subida: avísale a Claude.');
-        if (intento >= 3) throw new Error(e.message === 'SIN_RED' ? 'Se cortó la conexión al subir el video. Intenta de nuevo.' : e.message);
+  // Varias partes a la vez: una sola conexión hacia el almacenamiento de Vturb rinde muy poco.
+  const etags = [], cargado = new Array(ini.partes.length).fill(0), cola = [...ini.partes];
+  let abortar = false;
+  const avance = () => msg(`Subiendo el video… ${Math.min(99, Math.round(cargado.reduce((a, b) => a + b, 0) / archivo.size * 100))} %`);
+  const trabajador = async () => {
+    while (cola.length && !abortar) {
+      const p = cola.shift();
+      const inicio = (p.numero - 1) * ini.tamanoParte;
+      const trozo = archivo.slice(inicio, inicio + ini.tamanoParte);
+      let etag = null;
+      for (let intento = 1; !etag; intento++) {
+        try {
+          etag = await subirParteAVturb(p.url, trozo, c => { cargado[p.numero - 1] = c; avance(); });
+        } catch (e) {
+          if (e.message === 'SIN_ETAG') { abortar = true; throw new Error('El navegador no pudo leer la confirmación de Vturb al subir el archivo (permiso de seguridad CORS). Hay que usar otra vía de subida: avísale a Claude.'); }
+          cargado[p.numero - 1] = 0;
+          if (intento >= 3) { abortar = true; throw new Error(e.message === 'SIN_RED' ? 'Se cortó la conexión al subir el video. Intenta de nuevo.' : e.message); }
+        }
       }
+      etags.push({ numero: p.numero, etag });
     }
-    etags.push({ numero: p.numero, etag });
-  }
+  };
+  await Promise.all(Array.from({ length: Math.min(4, ini.partes.length) }, trabajador));
+  etags.sort((a, b) => a.numero - b.numero);
   msg('Confirmando la subida…');
   const conf = (await vturbConfirmar({ videoId: ini.videoId, partes: etags })).data;
   const c = conf.configuracion || {};
   const aviso = c.sinModelo ? 'Se subió con la configuración básica (aún no eliges un video modelo).'
     : c.error ? 'No se pudo copiar la configuración del video modelo.'
     : c.omitidos && c.omitidos.length ? `Configuración copiada, salvo: ${c.omitidos.join(', ')}.` : '';
+  if (opciones.esperar === false) return { videoId: ini.videoId, aviso };   // subida en masa: no se espera el procesamiento
   const limite = Date.now() + 60 * 60 * 1000;
   while (Date.now() < limite) {
     if (!vivo()) return null;
@@ -974,6 +985,133 @@ async function subirVideoAVturb(archivo, nombre, msg, vivo) {
     await new Promise(r => setTimeout(r, 4000));
   }
   throw new Error('Vturb tarda más de lo normal en procesar el video. Revisa el panel de Vturb.');
+}
+
+// ¿En qué clase está cada video de Vturb? (id del reproductor -> lista de lugares)
+async function mapaAsignaciones() {
+  const mapa = {};
+  try {
+    const snap = await get(ref(db, 'contenidos'));
+    Object.entries(snap.val() || {}).forEach(([prog, mods]) => Object.values(mods || {}).forEach(m => {
+      Object.values((m && m.clases) || {}).forEach(c => {
+        if (c && c.vturb && c.vturb.elementoId) (mapa[c.vturb.elementoId] = mapa[c.vturb.elementoId] || []).push(`${etiquetaPrograma(prog)} › ${m.titulo || ''} › ${c.titulo || ''}`);
+      });
+    }));
+  } catch (err) { console.warn('No se pudo leer dónde está cada video:', err); }
+  return mapa;
+}
+
+// Biblioteca: todos los videos de Vturb, subida en masa y (si viene alElegir) selector para una clase.
+function abrirBiblioteca({ alElegir } = {}) {
+  document.getElementById('ct-bib')?.remove();
+  const ov = document.createElement('div');
+  ov.className = 'modal-overlay is-visible';
+  ov.id = 'ct-bib';
+  ov.innerHTML = `
+    <div class="modal-card" style="max-width:760px;">
+      <div class="modal-card__header"><h3 style="margin:0;">📚 Biblioteca de videos</h3>
+        <button type="button" class="btn btn--ghost" data-cerrar style="padding:8px 14px; line-height:1;">✕</button></div>
+      <div class="modal-card__body">
+        <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
+          <button type="button" class="btn btn--primary" id="bib-subir">⬆ Subir varios videos</button>
+          <input type="file" id="bib-files" accept="video/*" multiple class="hidden">
+          <input id="bib-buscar" placeholder="Buscar por nombre…" style="flex:1; min-width:160px;">
+          <label style="font-size:13px; display:flex; gap:6px; align-items:center;"><input type="checkbox" id="bib-libres"> Solo sin asignar</label>
+        </div>
+        <p class="text-soft" style="font-size:12px; margin:6px 0 0;">Se sube cada archivo con su nombre (sin la extensión): ponle un nombre claro antes de subirlo. Los videos nuevos copian la configuración de tu video modelo.</p>
+        <div id="bib-cola" style="margin-top:10px;"></div>
+        <p id="bib-msg" class="text-soft" style="font-size:13px; margin:10px 0 0;">Cargando…</p>
+        <div id="bib-lista" style="margin-top:6px; max-height:48vh; overflow:auto;"></div>
+      </div>
+    </div>`;
+  document.body.appendChild(ov);
+  ov.querySelectorAll('[data-cerrar]').forEach(b => b.addEventListener('click', () => ov.remove()));
+  const msg = (txt, error) => { const m = ov.querySelector('#bib-msg'); m.textContent = txt; m.style.color = error ? '#C0392B' : ''; };
+  let videos = [], asignado = {};
+  const subiendo = { n: 0 };
+
+  const pintarLista = () => {
+    const q = ov.querySelector('#bib-buscar').value.trim().toLowerCase();
+    const soloLibres = ov.querySelector('#bib-libres').checked;
+    const filas = videos
+      .filter(v => (!q || v.nombre.toLowerCase().includes(q)) && (!soloLibres || !asignado[`vid-${v.id}`]))
+      .sort((a, b) => String(b.creado).localeCompare(String(a.creado)));
+    if (!videos.length) return msg('Todavía no hay videos en Vturb.');
+    msg(`${filas.length} de ${videos.length} videos`);
+    ov.querySelector('#bib-lista').innerHTML = filas.map(v => {
+      const listo = v.estado === 'ready';
+      const estadoTxt = listo ? 'Listo' : /fail|error/i.test(v.estado) ? 'Con error' : `Procesando ${v.progreso || 0} %`;
+      const donde = asignado[`vid-${v.id}`];
+      return `<div style="display:flex; gap:10px; align-items:center; padding:8px 0; border-bottom:1px solid rgba(128,128,128,.25);">
+        <div style="flex:1; min-width:0;">
+          <div style="font-weight:600; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${escaparHtml(v.nombre)}">${escaparHtml(v.nombre || '(sin nombre)')}</div>
+          <div class="text-soft" style="font-size:12px;">${estadoTxt} · ${donde ? 'Asignado a: ' + escaparHtml(donde.join(' | ')) : 'Sin asignar'}</div>
+        </div>
+        ${alElegir && listo ? `<button type="button" class="btn btn--primary" data-elegir="${escaparHtml(v.id)}" style="font-size:12.5px;">Elegir</button>` : ''}
+      </div>`;
+    }).join('') || '<p class="text-soft" style="font-size:13px;">Ningún video coincide.</p>';
+  };
+
+  const cargar = async () => {
+    try {
+      const [r, a] = await Promise.all([vturbListar({}), mapaAsignaciones()]);
+      videos = (r.data && r.data.videos) || []; asignado = a;
+      pintarLista();
+    } catch (e) { console.error(e); msg(e.message || 'No se pudo leer la biblioteca de Vturb.', true); }
+  };
+  cargar();
+  // Mientras haya videos procesando, se refresca sola cada 15 s.
+  const reloj = setInterval(() => {
+    if (!ov.isConnected) return clearInterval(reloj);
+    if (videos.some(v => v.estado !== 'ready' && !/fail|error/i.test(v.estado))) cargar();
+  }, 15000);
+
+  ov.querySelector('#bib-buscar').addEventListener('input', pintarLista);
+  ov.querySelector('#bib-libres').addEventListener('change', pintarLista);
+  ov.querySelector('#bib-lista').addEventListener('click', async ev => {
+    const b = ev.target.closest('[data-elegir]');
+    if (!b) return;
+    b.disabled = true; b.textContent = 'Eligiendo…';
+    try {
+      const id = b.dataset.elegir;
+      const r = (await vturbEstado({ videoId: id })).data;
+      if (!r.vturb) throw new Error('Ese video todavía no está listo.');
+      const v = videos.find(x => x.id === id);
+      alElegir({ vturb: r.vturb, nombre: v ? v.nombre : '' });
+      ov.remove();
+    } catch (e) { b.disabled = false; b.textContent = 'Elegir'; msg(e.message || 'No se pudo elegir el video.', true); }
+  });
+
+  // Subida en masa: 2 videos a la vez (cada uno con varias partes en paralelo).
+  const inputFiles = ov.querySelector('#bib-files');
+  ov.querySelector('#bib-subir').addEventListener('click', () => inputFiles.click());
+  inputFiles.addEventListener('change', () => {
+    const archivos = [...inputFiles.files].filter(f => /^video\//.test(f.type));
+    inputFiles.value = '';
+    if (!archivos.length) return;
+    const cola = archivos.map(archivo => {
+      const fila = document.createElement('div');
+      fila.style.cssText = 'font-size:12.5px; padding:3px 0;';
+      ov.querySelector('#bib-cola').appendChild(fila);
+      const nombre = archivo.name.replace(/\.[^.]+$/, '');
+      const dice = (txt, error) => { fila.textContent = `${nombre}: ${txt}`; fila.style.color = error ? '#C0392B' : ''; };
+      dice('en espera…');
+      return { archivo, nombre, dice };
+    });
+    const trabajador = async () => {
+      while (cola.length) {
+        const it = cola.shift();
+        subiendo.n++;
+        try {
+          await subirVideoAVturb(it.archivo, it.nombre, it.dice, () => ov.isConnected, { esperar: false });
+          it.dice('✓ subido; Vturb lo está procesando');
+        } catch (e) { console.error(e); it.dice(e.message || 'no se pudo subir', true); }
+        subiendo.n--;
+        cargar();
+      }
+    };
+    trabajador(); trabajador();
+  });
 }
 
 function editarClase(mid, cid) {
@@ -992,7 +1130,8 @@ function editarClase(mid, cid) {
     <div class="field mb-16"><label>Duración del video (minutos)</label><input id="ct-c-dur" type="number" min="0" max="600" value="${c && c.duracionMin ? Number(c.duracionMin) : ''}"></div>
     <div class="field mb-16"><label>Descripción (opcional)</label><textarea id="ct-c-desc" maxlength="2000">${escaparHtml(c ? c.descripcion || '' : '')}</textarea></div>
     <div class="field mb-16"><label>Subir el video directo a Vturb</label>
-      <button type="button" class="btn btn--ghost" id="ct-c-subir" style="font-size:12.5px;">⬆ Elegir el video…</button>
+      <button type="button" class="btn btn--ghost" id="ct-c-subir" style="font-size:12.5px;">⬆ Subir un video nuevo…</button>
+      <button type="button" class="btn btn--ghost" id="ct-c-bib" style="font-size:12.5px;">📚 Elegir de la biblioteca</button>
       <input type="file" id="ct-c-video" accept="video/*" class="hidden">
       <p id="ct-c-subir-estado" class="text-soft" style="font-size:12.5px; margin:6px 0 0;">Se sube a Vturb con tu configuración y se conecta solo a esta clase. No cierres esta ventana mientras sube.</p>
       <details style="margin-top:8px;"><summary class="text-soft" style="font-size:12.5px; cursor:pointer;">Video modelo (configuración del reproductor)</summary>
@@ -1050,6 +1189,9 @@ function editarClase(mid, cid) {
   const subirBtn = ov.querySelector('#ct-c-subir'), inVideo = ov.querySelector('#ct-c-video'), estadoEl = ov.querySelector('#ct-c-subir-estado');
   const msgSubida = (txt, error) => { estadoEl.textContent = txt; estadoEl.style.color = error ? '#C0392B' : ''; };
   subirBtn.addEventListener('click', () => inVideo.click());
+  ov.querySelector('#ct-c-bib').addEventListener('click', () => abrirBiblioteca({
+    alElegir: ({ vturb, nombre }) => { subido = vturb; msgSubida(`✓ Elegiste «${nombre}». Pulsa Guardar para dejarlo en la clase.`); }
+  }));
   inVideo.addEventListener('change', async () => {
     const f = inVideo.files[0];
     inVideo.value = '';
@@ -1283,6 +1425,7 @@ if (contEl) {
     const tab = ev.target.closest('.ct-tab');
     if (tab) { estado.programa = tab.dataset.programa; irAlTablero(); await recargarDatos(); pintar(); return; }
     if (ev.target.closest('#ct-nuevo-modulo')) { editarModulo(null); return; }
+    if (ev.target.closest('#ct-biblioteca')) { abrirBiblioteca(); return; }
     const b = ev.target.closest('[data-act]');
     if (!b) return;
     ev.preventDefault();
