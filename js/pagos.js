@@ -14,7 +14,7 @@
 import { db, storage } from './firebase-config.js';
 import { ref, get, set, update, push, onValue } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-database.js";
 import { ref as storageRef, uploadBytes, getDownloadURL, deleteObject } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-storage.js";
-import { getCurrentRole } from './main.js';
+import { getCurrentRole, esSubdirectora } from './main.js';
 import { hoyISO } from './util-pagos.js';
 
 let cicloIdActual = null;
@@ -117,7 +117,7 @@ function recalcularSaldo() {
 export async function cargarAcuerdoParaCiclo(cicloId) {
   if (dejarDeEscuchar) { dejarDeEscuchar(); dejarDeEscuchar = null; }
   cicloIdActual = cicloId;
-  if (getCurrentRole() === 'director' && cicloId) {
+  if (getCurrentRole() === 'director' && !esSubdirectora() && cicloId) {
     let primera = true;
     dejarDeEscuchar = onValue(ref(db, `acuerdosPago/${cicloId}`), (snap) => {
       if (cicloIdActual !== cicloId) return;

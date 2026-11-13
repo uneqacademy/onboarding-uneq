@@ -17,7 +17,7 @@ import {
   updatePassword
 } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-auth.js";
 import { ref, get, set } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-database.js";
-import { applyRole, showLogin, restaurarEstadoGuardado, terminarRestauracion, RUTAS_AGENDAMIENTO } from './main.js';
+import { applyRole, showLogin, restaurarEstadoGuardado, terminarRestauracion, RUTAS_AGENDAMIENTO, marcarSubdirectora } from './main.js';
 
 // Un enlace a un hito (WhatsApp) manda sobre la sección recordada.
 async function abrirDestinoInicial() {
@@ -194,10 +194,10 @@ function configurarCambiarPassword(sufijo) {
 configurarCambiarPassword('');
 configurarCambiarPassword('-alumno');
 
-const ROLES_APP = ['director', 'coach', 'mentor'];
+const ROLES_APP = ['director', 'subdirectora', 'coach', 'mentor'];
 const ROLES_AGENDAMIENTO = Object.keys(RUTAS_AGENDAMIENTO);
 // Orden en que se elige la vista inicial cuando la cuenta tiene varios roles.
-const PRIORIDAD_ROLES = ['director', 'coach', 'mentor', 'directorComercial', 'closer'];
+const PRIORIDAD_ROLES = ['director', 'subdirectora', 'coach', 'mentor', 'directorComercial', 'closer'];
 
 // Closer y Director Comercial viven en agendamiento/staff/{uid}; si no hay
 // registro, está inactivo o falla la lectura, la cuenta simplemente no los tiene.
@@ -270,8 +270,12 @@ onAuthStateChanged(auth, async (user) => {
       return;
     }
 
-    const roles = [...rolesApp, ...(staff ? [staff.rol] : [])];
-    const rolActivo = PRIORIDAD_ROLES.find(r => roles.includes(r));
+    // Sub-directora: en pantalla es "director" con restricciones (ver main.js). Si la cuenta es además
+    // director pleno, manda el director.
+    const esSub = rolesApp.includes('subdirectora') && !rolesApp.includes('director');
+    marcarSubdirectora(esSub);
+    const roles = [...rolesApp.map(r => (r === 'subdirectora' ? 'director' : r)), ...(staff ? [staff.rol] : [])];
+    const rolActivo = PRIORIDAD_ROLES.map(r => (r === 'subdirectora' ? 'director' : r)).find(r => roles.includes(r));
     const nombre = (perfil && perfil.nombre) || (staff && staff.nombre) || user.email;
 
     // Cuenta cuya vista inicial es de agendamiento: esa vista vive en agendamiento/
