@@ -971,9 +971,7 @@ async function subirVideoAVturb(archivo, nombre, msg, vivo, opciones = {}) {
   msg('Confirmando la subida…');
   const conf = (await vturbConfirmar({ videoId: ini.videoId, partes: etags })).data;
   const c = conf.configuracion || {};
-  const aviso = c.sinModelo ? 'Se subió con la configuración básica (aún no eliges un video modelo).'
-    : c.error ? 'No se pudo copiar la configuración del video modelo.'
-    : c.omitidos && c.omitidos.length ? `Configuración copiada, salvo: ${c.omitidos.join(', ')}.` : '';
+  const aviso = c.sinModelo ? 'Aún no eliges un video modelo: queda con la configuración básica de Vturb.' : '';
   if (opciones.esperar === false) return { videoId: ini.videoId, aviso };   // subida en masa: no se espera el procesamiento
   const limite = Date.now() + 60 * 60 * 1000;
   while (Date.now() < limite) {
