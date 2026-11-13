@@ -38,10 +38,11 @@ async function pintar() {
         ${subs.length ? subs.map(([uid, u]) => `
           <div class="flex-between" style="padding:8px 0; border-bottom:1px solid #EEF0F4; gap:8px; flex-wrap:wrap;">
             <div><strong>${escaparHtml(u.nombre || '—')}</strong> <span class="text-soft">· ${escaparHtml(u.email || '')}</span>
+              ${Object.keys(u.roles).filter(r => r !== 'subdirectora' && u.roles[r]).map(r => `<span class="badge" style="margin-left:6px;">${escaparHtml({ coach: 'Copiloto', mentor: 'Mentor/a', director: 'Director/a' }[r] || r)}</span>`).join('')}
               ${u.activo === false ? '<span class="badge" style="margin-left:6px;">Desactivada</span>' : ''}</div>
             <div style="display:flex; gap:6px;">
               <button class="btn btn--ghost subdir-reset" data-email="${escaparHtml(u.email || '')}" style="font-size:12px; padding:4px 10px;">Enviar correo de contraseña</button>
-              <button class="btn btn--ghost subdir-activo" data-uid="${escaparHtml(uid)}" data-activo="${u.activo === false ? '1' : '0'}" style="font-size:12px; padding:4px 10px;">${u.activo === false ? 'Reactivar' : 'Desactivar'}</button>
+              <button class="btn btn--ghost subdir-quitar" data-uid="${escaparHtml(uid)}" style="font-size:12px; padding:4px 10px;">Quitar rol</button>
             </div>
           </div>`).join('') : '<p class="text-soft" style="margin:0 0 12px;">Todavía no hay una Sub-directora.</p>'}
       </div>
@@ -58,8 +59,16 @@ async function pintar() {
     try { await sendPasswordResetEmail(auth, b.dataset.email); alert(`Listo: se envió a ${b.dataset.email} un correo para elegir su contraseña.`); }
     catch (err) { alert('No se pudo enviar el correo. Revisa que el correo esté bien escrito.'); }
   }));
-  cont.querySelectorAll('.subdir-activo').forEach(b => b.addEventListener('click', async () => {
-    await update(ref(db, `usuarios/${b.dataset.uid}`), { activo: b.dataset.activo === '1' });
+  cont.querySelectorAll('.subdir-quitar').forEach(b => b.addEventListener('click', async () => {
+    const u = usuarios[b.dataset.uid] || {};
+    const otros = Object.keys(u.roles || {}).filter(r => r !== 'subdirectora' && u.roles[r]);
+    const aviso = otros.length
+      ? `¿Quitarle el rol de Sub-directora a ${u.nombre || u.email}? Conserva sus otros roles.`
+      : `¿Quitarle el rol de Sub-directora a ${u.nombre || u.email}? No tiene otros roles, así que su cuenta quedará desactivada.`;
+    if (!confirm(aviso)) return;
+    const cambios = { [`usuarios/${b.dataset.uid}/roles/subdirectora`]: null };
+    if (!otros.length) cambios[`usuarios/${b.dataset.uid}/activo`] = false;
+    await update(ref(db), cambios);
     pintar();
   }));
   cont.querySelector('#subdir-crear').addEventListener('click', crear);
