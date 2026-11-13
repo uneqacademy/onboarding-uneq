@@ -37,6 +37,7 @@ import './ranking.js';
 import './contenidos.js';
 import './laboratorio-ia.js';
 import './laboratorio-ia-config.js';
+import './laboratorio-ia-guia.js';
 import './pagos-consolidado.js';
 import './soporte-chat.js';
 import { marcarEntradaDelDia } from './puntos-marcas.js';

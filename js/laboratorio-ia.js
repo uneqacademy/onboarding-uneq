@@ -65,7 +65,7 @@ async function copiarAlPortapapeles(texto) {
   }
 }
 
-function htmlPiezas(piezas, nombresFormato) {
+export function htmlPiezas(piezas, nombresFormato) {
   const porFormato = {};
   (piezas || []).forEach((p, i) => { (porFormato[p.formato] = porFormato[p.formato] || []).push({ p, i }); });
   return Object.keys(porFormato).map(f => `
@@ -86,7 +86,7 @@ function htmlPiezas(piezas, nombresFormato) {
     </div>`).join('');
 }
 
-function conectarCopiar(contenedor, piezas) {
+export function conectarCopiar(contenedor, piezas) {
   contenedor.querySelectorAll('[data-copiar]').forEach(btn => {
     btn.addEventListener('click', async () => {
       const ok = await copiarAlPortapapeles(textoParaCopiar(piezas[Number(btn.dataset.copiar)]));

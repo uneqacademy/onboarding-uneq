@@ -47,6 +47,13 @@ service firebase.storage {
       allow create, update: if autenticado() && tamanoOk() && request.resource.contentType == 'application/pdf';
       allow delete: if autenticado();
     }
+    // Guía del Laboratorio IA (videos, audios, PDF, Word, imágenes y textos de ejemplo; los sube el Director desde
+    // Configuración y una función los lee con IA). Hasta 200 MB por archivo; el tipo lo valida la función por extensión.
+    match /laboratorio-guia/{scope}/{archivo} {
+      allow read: if autenticado();
+      allow create, update: if autenticado() && request.resource.size < 200 * 1024 * 1024;
+      allow delete: if autenticado();
+    }
     match /resumenes-mentorias/{mentorId}/{mentoriaId} {
       allow read: if autenticado();
       allow create, update: if esDe(mentorId) && tamanoOk();
