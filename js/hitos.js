@@ -185,7 +185,7 @@ export async function cargarMisHitos() {
     const mostrarHero = !!programaPropio;
     heroFaseEl.classList.toggle('hidden', !mostrarHero);
     heroFaseEl.innerHTML = mostrarHero
-      ? `<img src="assets/fases/${carpetaFasesPrograma(programaPropio)}/${imagenFaseCiclo(cicloPropio)}.webp" alt="Tu fase actual">`
+      ? `<img src="assets/fases/${carpetaFasesPrograma(programaPropio)}/${imagenFaseCiclo(cicloPropio)}.webp?v=2" alt="Tu fase actual">`
       : '';
   }
   const contenidosEl = document.getElementById('hitos-contenidos-hotmart');
