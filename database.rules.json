@@ -478,6 +478,21 @@
       }
     },
 
+    "vturbSolicitudes": {
+      "$uid": {
+        ".read": "auth != null && auth.uid === $uid && (root.child('usuarios').child(auth.uid).child('roles').child('director').val() === true || root.child('usuarios').child(auth.uid).child('rol').val() === 'director')",
+        "$solicitudId": {
+          ".write": "auth != null && auth.uid === $uid && (root.child('usuarios').child(auth.uid).child('roles').child('director').val() === true || root.child('usuarios').child(auth.uid).child('rol').val() === 'director')",
+          ".validate": "newData.hasChild('accion')",
+          "accion": { ".validate": "newData.isString() && newData.val().length <= 30" },
+          "datos": { ".validate": true },
+          "creada": { ".validate": "newData.isNumber()" },
+          "respuesta": { ".validate": false },
+          "$otro": { ".validate": false }
+        }
+      }
+    },
+
     "contenidos": {
       ".read": "auth != null",
       "$programa": {
