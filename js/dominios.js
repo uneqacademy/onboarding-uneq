@@ -15,7 +15,7 @@ export const URL_ALUMNOS = `https://${DOMINIO_ALUMNOS}/`;
 // Interruptor de seguridad: mientras app.somosuneq.com y alumnos.somosuneq.com no estén publicados (DNS,
 // hosting y dominios autorizados en Firebase Authentication), debe seguir en false para que todos sigan
 // entrando por app.uneqacademy.com. Pasarlo a true solo cuando ambos dominios nuevos ya abran la app.
-export const SEPARAR_ALUMNOS_ACTIVO = false;
+export const SEPARAR_ALUMNOS_ACTIVO = true;
 
 // Entrada de alumnos: el dominio de alumnos o, para probar en otros lugares (localhost, vista previa),
 // ?entrada=alumnos en la dirección. En app.uneqacademy.com nunca aplica.
