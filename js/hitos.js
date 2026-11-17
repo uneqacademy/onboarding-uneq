@@ -441,7 +441,7 @@ function etiquetaProgramaHito(p) {
 function renderMiniaturasReacciones(hitoId, reacciones) {
   const lista = Object.values(sinDemo(reacciones) || {});
   if (!lista.length) return '';
-  const PLACEHOLDER = 'https://app.uneqacademy.com/assets/logos/isotipo-uneq.png';
+  const PLACEHOLDER = 'https://app.somosuneq.com/assets/logos/isotipo-uneq.png';
   const primeras5 = lista.slice(0, 5);
   return `
     <div style="display:flex; align-items:center; margin-top:8px;">
@@ -846,7 +846,7 @@ function activarInteraccionFeed(feedEl, recargarFn) {
       const hitoId = btnVerTodasReacciones.dataset.hitoId;
       const snap = await get(ref(db, `hitos/${hitoId}/reacciones`));
       const lista = Object.values(sinDemo(snap.exists() ? snap.val() : {}) || {});
-      const PLACEHOLDER = 'https://app.uneqacademy.com/assets/logos/isotipo-uneq.png';
+      const PLACEHOLDER = 'https://app.somosuneq.com/assets/logos/isotipo-uneq.png';
       const modal = document.getElementById('hito-modal-reacciones');
       const listaEl = document.getElementById('hito-modal-reacciones-lista');
       if (modal && listaEl) {

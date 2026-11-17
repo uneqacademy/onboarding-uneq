@@ -92,7 +92,7 @@ function calcularStatsCoach(entradasObj) {
 }
 
 function construirLinkNps(uid, nombre, momento) {
-  const url = new URL('nps.html', 'https://app.uneqacademy.com/');
+  const url = new URL('nps.html', 'https://alumnos.somosuneq.com/');
   url.searchParams.set('coach', uid);
   url.searchParams.set('nombre', nombre);
   url.searchParams.set('momento', momento);
