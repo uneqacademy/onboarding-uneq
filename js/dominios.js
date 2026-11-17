@@ -1,18 +1,20 @@
 /* ============================================================
    dominios.js — dos entradas a la misma app:
-   · app.uneqacademy.com      → equipo (director, sub-directora, copiloto, mentor, agendamiento)
-   · alumnos.uneqacademy.com  → alumnos
-   Cada una solo deja pasar a su público; la otra gente recibe un aviso con el enlace correcto.
+   · app.somosuneq.com        → equipo (director, sub-directora, copiloto, mentor, agendamiento)
+   · alumnos.somosuneq.com    → alumnos
+   · app.uneqacademy.com      → dirección antigua: manda a app.somosuneq.com conservando ruta y enlace
+   Cada entrada solo deja pasar a su público; la otra gente recibe un aviso con el enlace correcto.
    ============================================================ */
 
-export const DOMINIO_STAFF = 'app.uneqacademy.com';
-export const DOMINIO_ALUMNOS = 'alumnos.uneqacademy.com';
+export const DOMINIO_STAFF = 'app.somosuneq.com';
+export const DOMINIO_ALUMNOS = 'alumnos.somosuneq.com';
+export const DOMINIO_ANTIGUO = 'app.uneqacademy.com';
 export const URL_STAFF = `https://${DOMINIO_STAFF}/`;
 export const URL_ALUMNOS = `https://${DOMINIO_ALUMNOS}/`;
 
-// Interruptor de seguridad: mientras alumnos.uneqacademy.com no esté publicado (DNS, hosting y dominio
-// autorizado en Firebase Authentication), debe seguir en false para que los alumnos sigan entrando
-// por app.uneqacademy.com. Pasarlo a true solo cuando el dominio de alumnos ya abra la app.
+// Interruptor de seguridad: mientras app.somosuneq.com y alumnos.somosuneq.com no estén publicados (DNS,
+// hosting y dominios autorizados en Firebase Authentication), debe seguir en false para que todos sigan
+// entrando por app.uneqacademy.com. Pasarlo a true solo cuando ambos dominios nuevos ya abran la app.
 export const SEPARAR_ALUMNOS_ACTIVO = false;
 
 // Entrada de alumnos: el dominio de alumnos o, para probar en otros lugares (localhost, vista previa),
@@ -20,14 +22,27 @@ export const SEPARAR_ALUMNOS_ACTIVO = false;
 export function esEntradaAlumnos() {
   const host = window.location.hostname;
   if (host === DOMINIO_ALUMNOS) return true;
-  if (host === DOMINIO_STAFF) return false;
+  if (host === DOMINIO_STAFF || host === DOMINIO_ANTIGUO) return false;
   return new URLSearchParams(window.location.search).get('entrada') === 'alumnos';
 }
 
 // Un alumno real entró por la puerta del equipo: hay que mandarlo a la suya (solo con el dominio ya activo).
 export function debeIrAlDominioAlumnos() {
-  return SEPARAR_ALUMNOS_ACTIVO && window.location.hostname === DOMINIO_STAFF;
+  const host = window.location.hostname;
+  return SEPARAR_ALUMNOS_ACTIVO && (host === DOMINIO_STAFF || host === DOMINIO_ANTIGUO);
 }
+
+// Dirección antigua (app.uneqacademy.com): con el cambio activo, pasa a la del equipo sin perder
+// la ruta ni el enlace a un hito (#hito-ID) de los mensajes ya enviados.
+export function redirigirDominioAntiguo() {
+  if (SEPARAR_ALUMNOS_ACTIVO && window.location.hostname === DOMINIO_ANTIGUO) {
+    window.location.replace(URL_STAFF.slice(0, -1) + window.location.pathname + window.location.search + window.location.hash);
+    return true;
+  }
+  return false;
+}
+
+const esDominioDelEquipo = () => [DOMINIO_STAFF, DOMINIO_ANTIGUO].includes(window.location.hostname);
 
 // Textos y enlaces de la pantalla de ingreso según la entrada.
 export function personalizarLogin() {
@@ -42,7 +57,7 @@ export function personalizarLogin() {
 
   const otro = document.getElementById('login-otro-acceso');
   if (otro) {
-    if (!SEPARAR_ALUMNOS_ACTIVO && window.location.hostname === DOMINIO_STAFF) {
+    if (!SEPARAR_ALUMNOS_ACTIVO && esDominioDelEquipo()) {
       otro.classList.add('hidden');
     } else {
       otro.classList.remove('hidden');

@@ -41,8 +41,9 @@ import './laboratorio-ia-guia.js';
 import './pagos-consolidado.js';
 import './soporte-chat.js';
 import { marcarEntradaDelDia } from './puntos-marcas.js';
-import { esEntradaAlumnos, debeIrAlDominioAlumnos, personalizarLogin, URL_ALUMNOS, DOMINIO_STAFF } from './dominios.js';
+import { esEntradaAlumnos, debeIrAlDominioAlumnos, personalizarLogin, redirigirDominioAntiguo, URL_ALUMNOS, DOMINIO_STAFF } from './dominios.js';
 
+redirigirDominioAntiguo();
 personalizarLogin();
 
 const inputEmail = document.getElementById('login-email');
