@@ -469,9 +469,8 @@ textarea { width: 100%; max-width: 100%; box-sizing: border-box; resize: vertica
   display: flex;
   align-items: center;
   justify-content: center;
-  background: var(--color-primary);
-  background-image: radial-gradient(circle at 20% 20%, rgba(47,158,143,0.25), transparent 45%),
-                     radial-gradient(circle at 80% 80%, rgba(47,158,143,0.15), transparent 45%);
+  /* Fondo estrellado de UNEQ (sin el logo); el color de respaldo se ve mientras carga la imagen. */
+  background: #050E24 url('../assets/fondos/login.webp?v=1') center / cover no-repeat;
 }
 .login-card {
   background: var(--color-surface);
