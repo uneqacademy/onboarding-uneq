@@ -1,0 +1,23 @@
+{
+  "hosting": {
+    "site": "uneq-app",
+    "public": ".",
+    "cleanUrls": false,
+    "ignore": [
+      "firebase.json",
+      ".firebaserc",
+      "**/.*",
+      "**/node_modules/**",
+      "CLAUDE.md",
+      "CNAME",
+      "docs/**",
+      "database.rules.json",
+      "storage.rules"
+    ],
+    "headers": [
+      { "source": "/version.json", "headers": [{ "key": "Cache-Control", "value": "no-store" }] },
+      { "source": "/index.html", "headers": [{ "key": "Cache-Control", "value": "no-cache" }] },
+      { "source": "**/*.@(js|css|webp|png|jpg|svg)", "headers": [{ "key": "Cache-Control", "value": "public, max-age=600" }] }
+    ]
+  }
+}
