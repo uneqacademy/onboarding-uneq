@@ -22,7 +22,7 @@ import { marcaDemo, ocultarParaAlumno, sinDemo } from './demo.js';
 
 const VENTANA_EDICION_MS = 24 * 60 * 60 * 1000;
 const TAMANO_MAXIMO_FOTO = 10 * 1024 * 1024;
-const PLACEHOLDER_FOTO = 'https://app.uneqacademy.com/assets/logos/isotipo-uneq.png';
+const PLACEHOLDER_FOTO = 'https://app.somosuneq.com/assets/logos/isotipo-uneq.png';
 function dentroDeVentana(createdAt) { return (Date.now() - createdAt) < VENTANA_EDICION_MS; }
 
 // --- Foto de un alumno, leída una por una (mismo patrón que ya usa
@@ -262,7 +262,7 @@ export async function irAHitoDesdeNotificacion(hitoId, omitirCandado = true) {
   }
 }
 
-// Enlace compartido por WhatsApp: llega como ...app.uneqacademy.com/#hito-ID (ver previewHito
+// Enlace compartido por WhatsApp: llega como ...alumnos.somosuneq.com/#hito-ID (ver previewHito
 // en las funciones). Se llama al terminar de entrar a la app —con la sesión ya iniciada, pida
 // o no contraseña— y lleva directo a esa publicación. Devuelve true si había un enlace.
 export async function abrirHitoDeEnlace() {
@@ -663,7 +663,7 @@ async function subirFotos(storagePrefix, id, archivos) {
    responde con los mismos comentarios, ❤️ y "Responder" que el resto. El
    director puede fijar hasta 3 arriba y moderar. Se comparte por WhatsApp.
    ============================================================ */
-const URL_APP_ENLACES = 'https://app.uneqacademy.com/';
+const URL_APP_ENLACES = 'https://alumnos.somosuneq.com/';
 // Con true, el enlace pasa por hitos.uneqacademy.com/?pregunta=ID para mostrar la tarjeta con el título en WhatsApp.
 // previewHito (repo de funciones) ya entiende "?pregunta=" desde el 23-oct-2026; con false se comparte el enlace directo a la app.
 const USAR_TARJETA_PREVIEW_PREGUNTAS = true;

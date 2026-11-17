@@ -38,7 +38,7 @@ function mostrarResultado(texto, esError) {
 
 onAuthStateChanged(auth, async (usuario) => {
   if (!usuario) {
-    estadoSesionEl.textContent = 'No hay una sesión iniciada. Abre la app normal (app.uneqacademy.com), inicia sesión como Director, y vuelve a abrir esta página en la misma pestaña o navegador.';
+    estadoSesionEl.textContent = 'No hay una sesión iniciada. Abre la app normal (app.somosuneq.com), inicia sesión como Director, y vuelve a abrir esta página en la misma pestaña o navegador.';
     return;
   }
   const snap = await get(ref(db, `usuarios/${usuario.uid}`));

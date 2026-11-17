@@ -1,6 +1,6 @@
 # UNEQ APP (onboarding-uneq)
 
-Web estática publicada en GitHub Pages (`app.uneqacademy.com`, ver `CNAME`). PWA con Firebase.
+Web estática publicada en dos dominios: el equipo entra por `app.somosuneq.com` y los alumnos por `alumnos.somosuneq.com` (Firebase Hosting, sitio `uneq-app`, ver `firebase.json`); `app.uneqacademy.com` (GitHub Pages, `CNAME`) solo redirige. Cada cambio de la web se publica en GitHub Pages al mergear y en Hosting con `firebase deploy --only hosting --project onboarding-uneq` (ver `js/dominios.js`). PWA con Firebase.
 **Sin npm ni build**: HTML + módulos ES + CSS. El SDK de Firebase (12.17.1) se carga desde gstatic.
 
 ## Estructura
