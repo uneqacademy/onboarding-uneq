@@ -41,6 +41,10 @@ import './laboratorio-ia-guia.js';
 import './pagos-consolidado.js';
 import './soporte-chat.js';
 import { marcarEntradaDelDia } from './puntos-marcas.js';
+import { esEntradaAlumnos, debeIrAlDominioAlumnos, personalizarLogin, redirigirDominioAntiguo, URL_ALUMNOS, DOMINIO_STAFF } from './dominios.js';
+
+redirigirDominioAntiguo();
+personalizarLogin();
 
 const inputEmail = document.getElementById('login-email');
 const inputPass = document.getElementById('login-pass');
@@ -234,6 +238,13 @@ onAuthStateChanged(auth, async (user) => {
           await signOut(auth);
           return;
         }
+        // Un alumno que entró por la puerta del equipo (app.) pasa a la suya (alumnos.), con su enlace de hito si traía uno.
+        if (debeIrAlDominioAlumnos()) {
+          const destino = URL_ALUMNOS + '?aviso=alumno' + window.location.hash;
+          await signOut(auth);
+          window.location.replace(destino);
+          return;
+        }
         const datosAlumno = alumnoSnap.val();
         limpiarError();
         inputEmail.value = '';
@@ -248,6 +259,13 @@ onAuthStateChanged(auth, async (user) => {
       }
 
       mostrarError('Esta cuenta no tiene un perfil asignado. Contacta al director/a.');
+      await signOut(auth);
+      return;
+    }
+
+    // La puerta de alumnos no es para el equipo.
+    if (esEntradaAlumnos()) {
+      mostrarError('Esta es la entrada de alumnos. El equipo UNEQ ingresa en ' + DOMINIO_STAFF + '.');
       await signOut(auth);
       return;
     }
