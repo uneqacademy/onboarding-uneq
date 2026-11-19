@@ -17,7 +17,7 @@ import {
   updatePassword
 } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-auth.js";
 import { ref, get, set } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-database.js";
-import { applyRole, showLogin, restaurarEstadoGuardado, terminarRestauracion, RUTAS_AGENDAMIENTO, marcarSubdirectora } from './main.js';
+import { applyRole, showLogin, restaurarEstadoGuardado, terminarRestauracion, RUTAS_AGENDAMIENTO, marcarSubdirectora, mostrarPausaAlumno } from './main.js';
 
 // Un enlace a un hito (WhatsApp) manda sobre la sección recordada.
 async function abrirDestinoInicial() {
@@ -100,6 +100,9 @@ btnLogin.addEventListener('click', async () => {
     }
   });
 });
+
+const btnLogoutPausa = document.getElementById('btn-logout-pausa');
+if (btnLogoutPausa) btnLogoutPausa.addEventListener('click', () => signOut(auth));
 
 btnLogout.addEventListener('click', async () => {
   // Resguardo: si esta cuenta es de staff (director/coach/mentor) pero
@@ -246,6 +249,21 @@ onAuthStateChanged(auth, async (user) => {
           return;
         }
         const datosAlumno = alumnoSnap.val();
+        // Programa congelado: no ve ningún contenido hasta que lo reactiven.
+        try {
+          const cicloSnap = datosAlumno.cicloActualId ? await get(ref(db, `ciclos/${datosAlumno.cicloActualId}`)) : null;
+          const cicloAlumno = cicloSnap && cicloSnap.exists() ? cicloSnap.val() : null;
+          if (cicloAlumno && cicloAlumno.estadoAlumno === 'pausado') {
+            const pausa = (cicloAlumno.congelamientos && cicloAlumno.congelamientoActualId && cicloAlumno.congelamientos[cicloAlumno.congelamientoActualId]) || {};
+            limpiarError();
+            inputEmail.value = '';
+            inputPass.value = '';
+            mostrarPausaAlumno({ desde: pausa.desde, hasta: pausa.hasta });
+            return;
+          }
+        } catch (err) {
+          console.error('No se pudo revisar si el programa está en pausa:', err);
+        }
         limpiarError();
         inputEmail.value = '';
         inputPass.value = '';

@@ -1030,6 +1030,7 @@ async function abrirFicha(alumnoId) {
   document.getElementById('ficha-stepper').innerHTML = renderStepper(estadoProceso);
 
   document.getElementById('panel-marcar-egresado').classList.toggle('hidden', !(role === 'director' && estadoAlumnoActual === 'activo'));
+  actualizarPanelCongelar(ciclo, role);
   document.getElementById('panel-nuevo-ciclo').classList.toggle('hidden', !(role === 'director' && estadoAlumnoActual === 'egresado'));
   if (role === 'director' && estadoAlumnoActual === 'egresado') {
     poblarSelectCoaches(document.getElementById('nuevo-ciclo-coach'), null);
@@ -1623,6 +1624,148 @@ if (btnEliminarAlumno) {
       setNav('alumnos');
     } finally {
       btnEliminarAlumno.disabled = false;
+    }
+  });
+}
+
+/* --- Congelar / reactivar (director y Sub-directora). El contrato da un congelamiento de hasta 3 meses
+       y la fecha de término se corre por los días congelados. Datos en el ciclo: estadoAlumno 'pausado',
+       congelamientoActualId y congelamientos/{id} = { desde, hasta, motivo, reactivadoEn, dias }. --- */
+let cicloCongelarActual = null;
+
+function sumarDiasFecha(fechaStr, dias) {
+  const f = new Date(fechaStr + 'T00:00:00');
+  f.setDate(f.getDate() + dias);
+  return `${f.getFullYear()}-${String(f.getMonth() + 1).padStart(2, '0')}-${String(f.getDate()).padStart(2, '0')}`;
+}
+function sumarMesesFecha(fechaStr, meses) {
+  const f = new Date(fechaStr + 'T00:00:00');
+  f.setMonth(f.getMonth() + meses);
+  return `${f.getFullYear()}-${String(f.getMonth() + 1).padStart(2, '0')}-${String(f.getDate()).padStart(2, '0')}`;
+}
+function diasEntreFechas(desdeStr, hastaStr) {
+  return Math.max(0, Math.round((new Date(hastaStr + 'T00:00:00') - new Date(desdeStr + 'T00:00:00')) / 86400000));
+}
+
+function actualizarPanelCongelar(ciclo, role) {
+  cicloCongelarActual = ciclo || null;
+  const panel = document.getElementById('panel-congelar');
+  if (!panel) return;
+  const estado = ciclo ? ciclo.estadoAlumno : null;
+  const visible = role === 'director' && (estado === 'activo' || estado === 'pausado');
+  panel.classList.toggle('hidden', !visible);
+  if (!visible) return;
+
+  const form = document.getElementById('congelar-form');
+  const activo = document.getElementById('congelar-activo');
+  const congelamientos = (ciclo && ciclo.congelamientos) || {};
+  const lista = Object.values(congelamientos);
+
+  if (estado === 'pausado') {
+    form.classList.add('hidden');
+    activo.classList.remove('hidden');
+    const actual = congelamientos[ciclo.congelamientoActualId] || {};
+    document.getElementById('congelar-resumen').textContent =
+      `En pausa desde ${formatFecha(actual.desde)}${actual.hasta ? ` · retorno previsto ${formatFecha(actual.hasta)}` : ''}${actual.motivo ? ` · ${actual.motivo}` : ''}. El alumno no ve ningún contenido hasta que lo reactives.`;
+    document.getElementById('congelar-reactivar-fecha').value = hoyISO();
+    document.getElementById('congelar-error-activo').classList.add('hidden');
+    return;
+  }
+
+  activo.classList.add('hidden');
+  form.classList.remove('hidden');
+  const hoy = hoyISO();
+  document.getElementById('congelar-desde').value = hoy;
+  document.getElementById('congelar-hasta').value = sumarMesesFecha(hoy, 3);
+  document.getElementById('congelar-motivo').value = '';
+  document.getElementById('congelar-error').classList.add('hidden');
+  const hist = document.getElementById('congelar-historial');
+  if (lista.length) {
+    hist.textContent = 'Congelamientos anteriores: ' + lista.map(c => `${formatFecha(c.desde)} → ${c.reactivadoEn ? formatFecha(c.reactivadoEn) : '—'}${typeof c.dias === 'number' ? ` (${c.dias} días)` : ''}`).join(' · ') + '. El contrato da solo un congelamiento.';
+    hist.classList.remove('hidden');
+  } else {
+    hist.classList.add('hidden');
+  }
+}
+
+const btnCongelar = document.getElementById('btn-congelar');
+if (btnCongelar) {
+  btnCongelar.addEventListener('click', async () => {
+    if (!currentCicloId || !cicloCongelarActual) return;
+    const errorEl = document.getElementById('congelar-error');
+    errorEl.classList.add('hidden');
+    const desde = document.getElementById('congelar-desde').value;
+    const hasta = document.getElementById('congelar-hasta').value;
+    const motivo = document.getElementById('congelar-motivo').value.trim();
+    let problema = '';
+    if (!desde || !hasta) problema = 'Completa la fecha de inicio y la de retorno previsto.';
+    else if (hasta <= desde) problema = 'El retorno debe ser posterior al inicio.';
+    else if (hasta > sumarMesesFecha(desde, 3)) problema = 'El contrato permite un máximo de 3 meses de congelamiento.';
+    if (problema) { errorEl.textContent = problema; errorEl.classList.remove('hidden'); return; }
+    const previos = Object.keys(cicloCongelarActual.congelamientos || {}).length;
+    const mensaje = previos
+      ? 'Este alumno ya usó el congelamiento que da el contrato. ¿Congelarlo de todos modos? No verá ningún contenido hasta que lo reactives.'
+      : '¿Congelar a este alumno? No verá ningún contenido hasta que lo reactives.';
+    if (!confirm(mensaje)) return;
+    btnCongelar.disabled = true;
+    try {
+      const id = String(Date.now());
+      const datos = { desde, hasta, creadoEn: Date.now() };
+      if (motivo) datos.motivo = motivo;
+      await update(ref(db, `ciclos/${currentCicloId}`), {
+        estadoAlumno: 'pausado',
+        congelamientoActualId: id,
+        [`congelamientos/${id}`]: datos
+      });
+      await abrirFicha(currentAlumnoId);
+      await cargarListasAlumnos();
+    } catch (err) {
+      console.error('No se pudo congelar al alumno:', err);
+      errorEl.textContent = 'No se pudo congelar. Intenta de nuevo.';
+      errorEl.classList.remove('hidden');
+    } finally {
+      btnCongelar.disabled = false;
+    }
+  });
+}
+
+const btnReactivar = document.getElementById('btn-reactivar');
+if (btnReactivar) {
+  btnReactivar.addEventListener('click', async () => {
+    if (!currentCicloId || !cicloCongelarActual) return;
+    const errorEl = document.getElementById('congelar-error-activo');
+    errorEl.classList.add('hidden');
+    const actualId = cicloCongelarActual.congelamientoActualId;
+    const actual = (cicloCongelarActual.congelamientos || {})[actualId];
+    const fecha = document.getElementById('congelar-reactivar-fecha').value;
+    if (!actual || !fecha) { errorEl.textContent = 'Indica la fecha de reactivación.'; errorEl.classList.remove('hidden'); return; }
+    if (fecha < actual.desde) { errorEl.textContent = 'La reactivación no puede ser anterior al inicio del congelamiento.'; errorEl.classList.remove('hidden'); return; }
+    const dias = diasEntreFechas(actual.desde, fecha);
+    const corre = cicloCongelarActual.modalidadPago !== 'membresia' && cicloCongelarActual.fechaEgreso;
+    const nuevoEgreso = corre ? sumarDiasFecha(cicloCongelarActual.fechaEgreso, dias) : null;
+    const mensaje = `¿Reactivar a este alumno? Estuvo ${dias} días congelado${corre ? ` y su fecha de término pasa de ${formatFecha(cicloCongelarActual.fechaEgreso)} a ${formatFecha(nuevoEgreso)}` : ''}. Vuelve a ver todos los contenidos.`;
+    if (!confirm(mensaje)) return;
+    btnReactivar.disabled = true;
+    try {
+      const cambios = {
+        estadoAlumno: 'activo',
+        congelamientoActualId: null,
+        [`congelamientos/${actualId}/reactivadoEn`]: fecha,
+        [`congelamientos/${actualId}/dias`]: dias
+      };
+      if (corre) {
+        cambios.fechaEgreso = nuevoEgreso;
+        cambios[`congelamientos/${actualId}/fechaEgresoAnterior`] = cicloCongelarActual.fechaEgreso;
+      }
+      await update(ref(db, `ciclos/${currentCicloId}`), cambios);
+      await abrirFicha(currentAlumnoId);
+      await cargarListasAlumnos();
+    } catch (err) {
+      console.error('No se pudo reactivar al alumno:', err);
+      errorEl.textContent = 'No se pudo reactivar. Intenta de nuevo.';
+      errorEl.classList.remove('hidden');
+    } finally {
+      btnReactivar.disabled = false;
     }
   });
 }

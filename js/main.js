@@ -121,9 +121,24 @@ export function applyRole(role, nombre, rolesDisponibles) {
 
   document.getElementById('view-splash').classList.add('hidden');
   document.getElementById('view-login').classList.add('hidden');
+  const vistaPausa = document.getElementById('view-pausa');
+  if (vistaPausa) vistaPausa.classList.add('hidden');
   document.getElementById('app-shell').classList.remove('hidden');
 
   setNav('dashboard');
+}
+
+// Alumno con el programa congelado: pantalla de pausa en vez de la app (no ve ningún contenido).
+export function mostrarPausaAlumno({ desde = null, hasta = null } = {}) {
+  const fecha = (f) => (f ? new Intl.DateTimeFormat('es-CL', { day: 'numeric', month: 'long', year: 'numeric' }).format(new Date(f + 'T00:00:00')) : '');
+  const msg = document.getElementById('pausa-mensaje');
+  const ret = document.getElementById('pausa-retorno');
+  if (msg) msg.textContent = (desde ? `Tu programa está congelado desde el ${fecha(desde)}. ` : '') + 'Mientras esté en pausa no puedes ver los contenidos. Cuando tu copiloto lo reactive, vuelves a tener acceso a todo.';
+  if (ret) ret.textContent = hasta ? `Retorno previsto: ${fecha(hasta)}.` : '';
+  document.getElementById('view-splash').classList.add('hidden');
+  document.getElementById('view-login').classList.add('hidden');
+  document.getElementById('app-shell').classList.add('hidden');
+  document.getElementById('view-pausa').classList.remove('hidden');
 }
 
 /* --- Si la cuenta tiene más de un rol, muestra un selector para cambiar
@@ -172,6 +187,8 @@ export function showLogin() {
   document.body.classList.remove('tema-alumno-oscuro', 'tema-begin', 'tema-open', 'tema-exit', 'modo-demo', 'es-subdirectora');
   document.getElementById('view-splash').classList.add('hidden');
   document.getElementById('app-shell').classList.add('hidden');
+  const vistaPausaLogin = document.getElementById('view-pausa');
+  if (vistaPausaLogin) vistaPausaLogin.classList.add('hidden');
   document.getElementById('view-login').classList.remove('hidden');
   currentRole = null;
   currentNombre = '';
