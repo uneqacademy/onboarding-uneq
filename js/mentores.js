@@ -492,10 +492,17 @@ export async function cargarDashboardMentor() {
   const alumnos = alumnosSnap.exists() ? alumnosSnap.val() : {};
   const ciclos = ciclosSnap.exists() ? ciclosSnap.val() : {};
 
+  // Mismas reglas que el Dashboard del director: sin el Alumno Demo y un solo conteo por proyecto
+  // (dos socias que comparten ciclo cuentan 1), para que todos vean los mismos números.
   let open = 0, begin = 0, next = 0, exit = 0;
-  Object.values(alumnos).forEach(alumno => {
+  const proyectosContados = new Set();
+  Object.entries(alumnos).forEach(([alumnoId, alumno]) => {
+    if (alumno.esDemo) return;
     const ciclo = alumno.cicloActualId ? ciclos[alumno.cicloActualId] : null;
     if (!ciclo || ciclo.estadoAlumno !== 'activo') return;
+    const claveProyecto = alumno.cicloActualId || alumnoId;
+    if (proyectosContados.has(claveProyecto)) return;
+    proyectosContados.add(claveProyecto);
     if (ciclo.programa === 'open') open++;
     else if (ciclo.programa === 'begin') begin++;
     else if (ciclo.programa === 'next') next++;
@@ -590,6 +597,7 @@ export async function cargarAlumnosMentor() {
   const gruposVistos = new Set();
   alumnosMentorCache = Object.entries(alumnos)
     .map(([alumnoId, alumno]) => {
+      if (alumno.esDemo) return null; // el Alumno Demo nunca cuenta ni aparece (igual que en el director)
       const ciclo = alumno.cicloActualId ? ciclos[alumno.cicloActualId] : null;
       if (!ciclo || ciclo.estadoAlumno !== 'activo') return null;
       const claveGrupo = alumno.cicloActualId || alumnoId;
