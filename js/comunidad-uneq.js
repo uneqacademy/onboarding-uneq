@@ -664,10 +664,10 @@ async function subirFotos(storagePrefix, id, archivos) {
    director puede fijar hasta 3 arriba y moderar. Se comparte por WhatsApp.
    ============================================================ */
 const URL_APP_ENLACES = 'https://alumnos.somosuneq.com/';
-// Con true, el enlace pasa por hitos.uneqacademy.com/?pregunta=ID para mostrar la tarjeta con el título en WhatsApp.
+// Con true, el enlace pasa por hitos.somosuneq.com/?pregunta=ID para mostrar la tarjeta con el título en WhatsApp.
 // previewHito (repo de funciones) ya entiende "?pregunta=" desde el 23-oct-2026; con false se comparte el enlace directo a la app.
 const USAR_TARJETA_PREVIEW_PREGUNTAS = true;
-const DOMINIO_PREVIEW_PREGUNTAS = 'https://hitos.uneqacademy.com';
+const DOMINIO_PREVIEW_PREGUNTAS = 'https://hitos.somosuneq.com';
 
 let preguntasLibresActuales = [];
 let interaccionPreguntasActiva = false;
