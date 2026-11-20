@@ -2,6 +2,16 @@
   "rules": {
     ".read": "auth != null && ((root.child('usuarios').child(auth.uid).child('roles').child('director').val() === true || root.child('usuarios').child(auth.uid).child('rol').val() === 'director' || root.child('usuarios').child(auth.uid).child('roles').child('subdirectora').val() === true))",
 
+    "recuperacionSolicitudes": {
+      ".read": false,
+      "$solicitudId": {
+        ".write": "!data.exists() && newData.hasChildren(['email', 'motivo'])",
+        "email": { ".validate": "newData.isString() && newData.val().length <= 200 && newData.val().matches(/^[^ @]+@[^ @]+\\.[^ @]+$/)" },
+        "motivo": { ".validate": "newData.isString() && (newData.val() === 'recuperar' || newData.val() === 'acceso')" },
+        "$otro": { ".validate": false }
+      }
+    },
+
     "agendamiento": {
       "config": {
         "general": {
