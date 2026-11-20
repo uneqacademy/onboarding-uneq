@@ -763,7 +763,7 @@ async function enviarComentario(hitoId, texto, recargarFn) {
 // WhatsApp con la foto/título de CADA hito, y de ahí manda a la app
 // real. Si cambias el subdominio elegido, solo hay que actualizar
 // esta línea.
-const DOMINIO_PREVIEW_HITOS = 'https://hitos.uneqacademy.com';
+const DOMINIO_PREVIEW_HITOS = 'https://hitos.somosuneq.com';
 
 function compartirHitoWhatsapp(hitoId, titulo) {
   const url = `${DOMINIO_PREVIEW_HITOS}/?id=${hitoId}`;
