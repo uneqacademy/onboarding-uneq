@@ -4,7 +4,8 @@
    contratos (acuerdo de pago y firma) y Configuración. La restricción visual vive en main.js
    (clase es-subdirectora) y las reglas de Firebase impiden que escriba pagos y configuración.
    ============================================================ */
-import { db, auth, firebaseConfig } from './firebase-config.js';
+import { db, auth, firebaseConfig, app } from './firebase-config.js';
+import { solicitarRecuperacion } from './recuperar-clave.js';
 import { escaparHtml } from './util-html.js';
 import { getCurrentRole, esSubdirectora } from './main.js';
 import { ref, get, set, update } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-database.js";
@@ -56,7 +57,7 @@ async function pintar() {
     </div>`;
 
   cont.querySelectorAll('.subdir-reset').forEach(b => b.addEventListener('click', async () => {
-    try { await sendPasswordResetEmail(auth, b.dataset.email); alert(`Listo: se envió a ${b.dataset.email} un correo para elegir su contraseña.`); }
+    try { await solicitarRecuperacion(app, b.dataset.email); alert(`Listo: se envió a ${b.dataset.email} un correo para elegir su contraseña.`); }
     catch (err) { alert('No se pudo enviar el correo. Revisa que el correo esté bien escrito.'); }
   }));
   cont.querySelectorAll('.subdir-quitar').forEach(b => b.addEventListener('click', async () => {

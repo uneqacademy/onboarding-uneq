@@ -10,7 +10,8 @@
    leyendo /nps/{coachId} cada vez, para no duplicar datos.
    ============================================================ */
 
-import { db, auth, firebaseConfig } from './firebase-config.js';
+import { db, auth, firebaseConfig, app } from './firebase-config.js';
+import { solicitarRecuperacion } from './recuperar-clave.js';
 import { escaparHtml } from './util-html.js';
 import { ref, get, set, update } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-database.js";
 import { initializeApp, deleteApp } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-app.js";
@@ -313,8 +314,8 @@ async function enviarResetPassword(email, boton) {
   boton.disabled = true;
   boton.textContent = 'Enviando...';
   try {
-    await sendPasswordResetEmail(auth, email);
-    alert(`Listo — Firebase le mandó un correo a ${email} con un link para que elija su nueva contraseña.`);
+    await solicitarRecuperacion(app, email);
+    alert(`Listo — le mandamos un correo a ${email} con un enlace para que elija su nueva contraseña.`);
   } catch (err) {
     alert('No se pudo enviar el correo. Revisa que el email esté bien escrito.');
   } finally {

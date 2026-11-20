@@ -5,7 +5,8 @@
    agendamiento/config, agendamiento/staff, agendamiento/citas).
    ============================================================ */
 
-import { db } from './firebase-config.js';
+import { db, app } from './firebase-config.js';
+import { solicitarRecuperacion } from '../../js/recuperar-clave.js';
 import { ref, get, set, update, push, onValue } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-database.js";
 import { getAuth, sendPasswordResetEmail, EmailAuthProvider, reauthenticateWithCredential, updateEmail, updatePassword } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-auth.js";
 import { getStorage, ref as sref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-storage.js";
@@ -258,7 +259,7 @@ function renderClosers() {
       if (!confirm(`¿Enviar correo de restablecer contraseña a ${c.nombre} (${c.correo})?`)) return;
       btn.disabled = true;
       try {
-        await sendPasswordResetEmail(authInstance, c.correo);
+        await solicitarRecuperacion(app, c.correo);
         mostrarToast(`✅ Le llegó un correo a ${c.correo} para restablecer su contraseña`);
       } catch (err) {
         mostrarToast('⚠️ No se pudo enviar el correo: ' + (err.code || err.message));

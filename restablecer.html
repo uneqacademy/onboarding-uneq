@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<meta name="theme-color" content="#1B2A4A">
+<link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
+<title>Crear contraseña — Universo UNEQ</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/styles.css?v=20261015b">
+<style>
+  .restablecer-card { text-align: center; }
+  .restablecer-card h1 { font-size: 20px; margin: 4px 0 8px; }
+  .restablecer-card .campo-clave { text-align: left; }
+  .restablecer-marca { display: flex; align-items: center; justify-content: center; gap: 10px; margin-bottom: 14px; }
+  .restablecer-marca img { width: 38px; height: 38px; object-fit: contain; }
+  .restablecer-marca span { font-family: 'Sora', sans-serif; font-weight: 700; color: #1B2A4A; font-size: 18px; }
+  .restablecer-error { color: #C0392B; font-size: 13px; margin: 8px 0 0; text-align: left; }
+  .restablecer-mostrar { display: flex; align-items: center; gap: 6px; font-size: 13px; margin: 2px 0 14px; text-align: left; }
+  .restablecer-mostrar input { width: auto; }
+  .restablecer-btn { width: 100%; display: inline-block; text-decoration: none; box-sizing: border-box; text-align: center; }
+</style>
+</head>
+<body>
+<div class="login-view">
+  <div class="login-card restablecer-card">
+    <div class="restablecer-marca"><img src="assets/logos/isotipo-uneq.png" alt="UNEQ"><span>Universo UNEQ</span></div>
+
+    <div id="estado-cargando">
+      <p class="text-soft">Verificando tu enlace…</p>
+    </div>
+
+    <div id="estado-formulario" class="hidden">
+      <h1>Crea tu contraseña</h1>
+      <p class="text-soft" style="margin:0 0 16px;">Para la cuenta <strong id="restablecer-email"></strong></p>
+      <div class="field campo-clave">
+        <label for="clave-nueva">Contraseña nueva</label>
+        <input type="password" id="clave-nueva" autocomplete="new-password" placeholder="Mínimo 8 caracteres">
+      </div>
+      <div class="field campo-clave">
+        <label for="clave-repetir">Repite la contraseña</label>
+        <input type="password" id="clave-repetir" autocomplete="new-password">
+      </div>
+      <label class="restablecer-mostrar"><input type="checkbox" id="clave-mostrar"> Mostrar contraseñas</label>
+      <button class="btn btn--primary restablecer-btn" id="btn-guardar-clave">Guardar contraseña</button>
+      <p class="restablecer-error hidden" id="restablecer-error"></p>
+    </div>
+
+    <div id="estado-exito" class="hidden">
+      <h1>¡Listo!</h1>
+      <p class="text-soft" style="margin:0 0 18px;">Tu contraseña quedó guardada. Ya puedes iniciar sesión con tu correo y tu contraseña nueva.</p>
+      <a class="btn btn--primary restablecer-btn" href="./">Ir a iniciar sesión</a>
+    </div>
+
+    <div id="estado-error" class="hidden">
+      <h1>Este enlace ya no sirve</h1>
+      <p class="text-soft" id="error-detalle" style="margin:0 0 18px;"></p>
+      <a class="btn btn--primary restablecer-btn" href="./">Ir a iniciar sesión</a>
+      <p class="text-soft" style="margin:12px 0 0; font-size:13px;">Ahí pulsa «¿Olvidaste tu contraseña?» para recibir un enlace nuevo.</p>
+    </div>
+  </div>
+</div>
+<script type="module" src="js/restablecer.js?v=1"></script>
+</body>
+</html>

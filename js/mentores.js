@@ -9,7 +9,8 @@
    a la UI, para no reprocesar todo de nuevo después.
    ============================================================ */
 
-import { db, auth, storage, firebaseConfig } from './firebase-config.js';
+import { db, auth, storage, firebaseConfig, app } from './firebase-config.js';
+import { solicitarRecuperacion } from './recuperar-clave.js';
 import { escaparHtml, sanearHtml, textoAlumnoAHtml } from './util-html.js';
 import { renderAdjuntosMentor } from './adjuntos.js';
 import { botonAsistenciaHtml, abrirAsistenciaVivo, textoAsistentes } from './asistencia-vivo.js';
@@ -440,8 +441,8 @@ async function enviarResetPasswordMentor(email, boton) {
   boton.disabled = true;
   boton.textContent = 'Enviando...';
   try {
-    await sendPasswordResetEmail(auth, email);
-    alert(`Listo — Firebase le mandó un correo a ${email} con un link para que elija su nueva contraseña.`);
+    await solicitarRecuperacion(app, email);
+    alert(`Listo — le mandamos un correo a ${email} con un enlace para que elija su nueva contraseña.`);
   } catch (err) {
     alert('No se pudo enviar el correo. Revisa que el email esté bien escrito.');
   } finally {
