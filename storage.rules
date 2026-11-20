@@ -2,11 +2,23 @@ rules_version = '2';
 service firebase.storage {
   match /b/{bucket}/o {
 
-    function autenticado() {
-      return request.auth != null;
+    // Etiquetas de rol que pone el servidor en la sesión (functions/claims-perfil.js). Storage no puede
+    // leer la Realtime Database, así que no hay otra forma de distinguir equipo, alumno y desconocido:
+    //   equipo    → perfil activo del equipo (director, sub-directora, copiloto, mentor, closer, director comercial)
+    //   alumno    → alumno con cuenta de acceso
+    //   direccion → director o sub-directora
+    // Una cuenta creada por un desconocido no tiene ninguna etiqueta, así que no lee ni escribe nada.
+    function perfil() {
+      return request.auth != null && (request.auth.token.equipo == true || request.auth.token.alumno == true);
+    }
+    function equipo() {
+      return request.auth != null && request.auth.token.equipo == true;
+    }
+    function direccion() {
+      return request.auth != null && request.auth.token.direccion == true;
     }
     function esDe(uid) {
-      return request.auth != null && request.auth.uid == uid;
+      return perfil() && request.auth.uid == uid;
     }
     // Tope por archivo: evita subidas enormes (costo en plan Blaze).
     function tamanoOk() {
@@ -19,123 +31,125 @@ service firebase.storage {
 
     // --- Carpetas con dueño: solo el propio usuario sube/borra ---
     match /fotos-perfil/{uid} {
-      allow read: if autenticado();
+      allow read: if perfil();
       allow create, update: if esDe(uid) && fotoOk();
       allow delete: if esDe(uid);
     }
     match /fotos-perfil-ia/{mentorId} {
       // 'director-ia' es la foto del director y 'soporte-ia' la del chat de soporte (configuracion.js).
-      allow read: if autenticado();
-      allow create, update: if (esDe(mentorId) || mentorId == 'director-ia' || mentorId == 'soporte-ia') && fotoOk();
-      allow delete: if esDe(mentorId) || mentorId == 'director-ia' || mentorId == 'soporte-ia';
-    }
-    // Foto del premio del mes del ranking (la sube el director desde Configuración).
-    match /premio-ranking/{archivo} {
-      allow read: if autenticado();
-      allow create, update: if autenticado() && fotoOk();
-      allow delete: if autenticado();
-    }
-    // Portadas (16:9) de módulos y clases de Contenidos.
-    match /contenidos-portadas/{programa}/{archivo} {
-      allow read: if autenticado();
-      allow create, update: if autenticado() && fotoOk();
-      allow delete: if autenticado();
-    }
-    // PDF de las clases (los sube el director desde Contenidos).
-    match /contenidos-materiales/{programa}/{claseId}/{archivo} {
-      allow read: if autenticado();
-      allow create, update: if autenticado() && tamanoOk() && request.resource.contentType == 'application/pdf';
-      allow delete: if autenticado();
-    }
-    // Guía del Laboratorio IA (videos, audios, PDF, Word, imágenes y textos de ejemplo; los sube el Director desde
-    // Configuración y una función los lee con IA). Hasta 200 MB por archivo; el tipo lo valida la función por extensión.
-    // Imágenes genéricas de las vistas previas del Laboratorio IA (las sube el Director desde Configuración).
-    match /laboratorio-vista/{archivo} {
-      allow read: if autenticado();
-      allow create, update: if autenticado() && fotoOk();
-      allow delete: if autenticado();
-    }
-    match /laboratorio-guia/{scope}/{archivo} {
-      allow read: if autenticado();
-      allow create, update: if autenticado() && request.resource.size < 200 * 1024 * 1024;
-      allow delete: if autenticado();
+      allow read: if perfil();
+      allow create, update: if (esDe(mentorId) || ((mentorId == 'director-ia' || mentorId == 'soporte-ia') && direccion())) && fotoOk();
+      allow delete: if esDe(mentorId) || ((mentorId == 'director-ia' || mentorId == 'soporte-ia') && direccion());
     }
     match /resumenes-mentorias/{mentorId}/{mentoriaId} {
-      allow read: if autenticado();
+      allow read: if perfil();
       allow create, update: if esDe(mentorId) && tamanoOk();
       allow delete: if esDe(mentorId);
     }
     match /conocimiento-mentor/{mentorId}/{archivoId} {
-      allow read: if autenticado();
+      allow read: if perfil();
       allow create, update: if esDe(mentorId) && tamanoOk();
       allow delete: if esDe(mentorId);
     }
     match /resumenes-sesiones-begin/{coachId}/{sesionId} {
-      allow read: if autenticado();
+      allow read: if perfil();
       allow create, update: if esDe(coachId) && tamanoOk();
       allow delete: if esDe(coachId);
     }
 
-    // --- Fotos de alumnos: las suben el propio alumno o el staff ---
-    match /fotos-alumnos/{alumnoId} {
-      allow read: if autenticado();
-      allow create, update: if autenticado() && fotoOk();
-      allow delete: if autenticado();
+    // --- Carpetas que administra la dirección (director o sub-directora) ---
+    // Foto del premio del mes del ranking (se sube desde Configuración).
+    match /premio-ranking/{archivo} {
+      allow read: if perfil();
+      allow create, update: if direccion() && fotoOk();
+      allow delete: if direccion();
+    }
+    // Portadas (16:9) de módulos y clases de Contenidos.
+    match /contenidos-portadas/{programa}/{archivo} {
+      allow read: if perfil();
+      allow create, update: if direccion() && fotoOk();
+      allow delete: if direccion();
+    }
+    // PDF de las clases (se suben desde Contenidos).
+    match /contenidos-materiales/{programa}/{claseId}/{archivo} {
+      allow read: if perfil();
+      allow create, update: if direccion() && tamanoOk() && request.resource.contentType == 'application/pdf';
+      allow delete: if direccion();
+    }
+    // Imágenes genéricas de las vistas previas del Laboratorio IA (se suben desde Configuración).
+    match /laboratorio-vista/{archivo} {
+      allow read: if perfil();
+      allow create, update: if direccion() && fotoOk();
+      allow delete: if direccion();
+    }
+    // Guía del Laboratorio IA (videos, audios, PDF, Word, imágenes y textos de ejemplo; se suben desde
+    // Configuración y una función los lee con IA). Hasta 200 MB por archivo; el tipo lo valida la función por extensión.
+    match /laboratorio-guia/{scope}/{archivo} {
+      allow read: if perfil();
+      allow create, update: if direccion() && request.resource.size < 200 * 1024 * 1024;
+      allow delete: if direccion();
+    }
+    // Textos de la metodología (se suben desde Configuración).
+    match /metodologia-base/{archivo} {
+      allow read: if equipo();
+      allow create, update: if direccion() && tamanoOk();
+      allow delete: if direccion();
     }
 
-    // --- Resto: requieren sesion y tienen tope de tamano ---
-    // Limitacion conocida: Storage no puede leer roles de Realtime Database,
-    // asi que aqui no se distingue alumno de staff. Para restringir contratos
-    // (acuerdos, acuerdos-firmados) solo a staff hace falta usar custom claims.
+    // --- Contratos: solo el equipo ---
     match /acuerdos/{cicloId} {
-      allow read: if autenticado();
-      allow create, update: if autenticado() && tamanoOk();
-      allow delete: if autenticado();
+      allow read: if equipo();
+      allow create, update: if equipo() && tamanoOk();
+      allow delete: if equipo();
     }
     match /acuerdos-firmados/{cicloId} {
-      allow read: if autenticado();
-      allow create, update: if autenticado() && tamanoOk();
-      allow delete: if autenticado();
+      allow read: if equipo();
+      allow create, update: if equipo() && tamanoOk();
+      allow delete: if equipo();
     }
+
+    // --- Fotos de alumnos: las suben el propio alumno o el equipo ---
+    match /fotos-alumnos/{alumnoId} {
+      allow read: if perfil();
+      allow create, update: if perfil() && fotoOk();
+      allow delete: if perfil();
+    }
+
+    // --- Lo que suben alumnos y equipo (preguntas, respuestas, hitos, comunidad): con perfil y tope de tamaño ---
     match /box-respuestas/{mentorId}/{preguntaId} {
-      allow read: if autenticado();
-      allow create, update: if autenticado() && tamanoOk();
-      allow delete: if autenticado();
+      allow read: if perfil();
+      allow create, update: if perfil() && tamanoOk();
+      allow delete: if perfil();
     }
     match /box-begin/{preguntaId}/{archivo} {
-      allow read: if autenticado();
-      allow create, update: if autenticado() && tamanoOk();
-      allow delete: if autenticado();
+      allow read: if perfil();
+      allow create, update: if perfil() && tamanoOk();
+      allow delete: if perfil();
     }
     match /box-preguntas/{mentorId}/{preguntaId}/{archivo} {
-      allow read: if autenticado();
-      allow create, update: if autenticado() && tamanoOk();
-      allow delete: if autenticado();
+      allow read: if perfil();
+      allow create, update: if perfil() && tamanoOk();
+      allow delete: if perfil();
     }
     match /preguntas-vivo/{mentorId}/{mentoriaId}/{preguntaId}/{archivo} {
-      allow read: if autenticado();
-      allow create, update: if autenticado() && tamanoOk();
-      allow delete: if autenticado();
+      allow read: if perfil();
+      allow create, update: if perfil() && tamanoOk();
+      allow delete: if perfil();
     }
     match /hitos/{hitoId}/{archivo} {
-      allow read: if autenticado();
-      allow create, update: if autenticado() && tamanoOk();
-      allow delete: if autenticado();
+      allow read: if perfil();
+      allow create, update: if perfil() && tamanoOk();
+      allow delete: if perfil();
     }
     match /comunidad-presentaciones/{alumnoId}/{archivo} {
-      allow read: if autenticado();
-      allow create, update: if autenticado() && tamanoOk();
-      allow delete: if autenticado();
+      allow read: if perfil();
+      allow create, update: if perfil() && tamanoOk();
+      allow delete: if perfil();
     }
     match /comunidad-historias/{historiaId}/{archivo} {
-      allow read: if autenticado();
-      allow create, update: if autenticado() && tamanoOk();
-      allow delete: if autenticado();
-    }
-    match /metodologia-base/{archivo} {
-      allow read: if autenticado();
-      allow create, update: if autenticado() && tamanoOk();
-      allow delete: if autenticado();
+      allow read: if perfil();
+      allow create, update: if perfil() && tamanoOk();
+      allow delete: if perfil();
     }
   }
 }
