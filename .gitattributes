@@ -1,0 +1,2 @@
+# Los flujos de GitHub Actions siempre con saltos de línea de Linux (un script con CRLF puede fallar).
+.github/workflows/*.yml text eol=lf
