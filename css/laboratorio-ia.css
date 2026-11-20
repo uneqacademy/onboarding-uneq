@@ -161,3 +161,95 @@
 .labg-progreso { display: flex; align-items: center; gap: 10px; margin-top: 10px; }
 .labg-progreso__barra { flex: 1; height: 8px; background: var(--color-border); border-radius: 999px; overflow: hidden; }
 #labg-progreso-relleno { height: 100%; width: 0; background: var(--color-accent); transition: width 0.2s; }
+
+/* ============================================================
+   Vistas previas: post de Instagram, Reel, chats (laboratorio-ia-vista.js)
+   Colores explícitos en cada pieza: así se leen igual en todos los temas.
+   ============================================================ */
+.lab-formato__lista { display: grid; gap: 22px; align-items: start; grid-template-columns: repeat(auto-fill, minmax(min(100%, 340px), 1fr)); }
+.lab-formato__lista--reel { grid-template-columns: repeat(auto-fill, minmax(min(100%, 520px), 1fr)); }
+.lab-propuesta { min-width: 0; }
+.lab-propuesta__titulo { font-size: 12.5px; font-weight: 600; color: var(--color-ink-soft); margin: 0 0 6px 2px; }
+
+.lab-avatar { width: 34px; height: 34px; border-radius: 50%; object-fit: cover; background: #e4e7ec; color: #555; display: inline-flex; align-items: center; justify-content: center; font-weight: 700; font-size: 13px; flex-shrink: 0; }
+.lab-avatar--chico { width: 26px; height: 26px; font-size: 11px; }
+
+/* Post de Instagram */
+.lab-ig { background: #fff; color: #262626; border: 1px solid #dbdbdb; border-radius: 10px; overflow: hidden; max-width: 440px; font-family: -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; box-shadow: var(--shadow-sm); }
+.lab-ig__cab { display: flex; align-items: center; gap: 10px; padding: 10px 12px; }
+.lab-ig__quien { display: flex; flex-direction: column; line-height: 1.2; flex: 1; min-width: 0; }
+.lab-ig__quien strong { font-size: 14px; font-weight: 600; color: #262626; }
+.lab-ig__quien span { font-size: 12px; color: #8e8e8e; }
+.lab-ig__mas { color: #262626; letter-spacing: 1px; font-weight: 700; }
+.lab-ig__media { position: relative; aspect-ratio: 4 / 5; background: #222; }
+.lab-ig__slides { display: flex; height: 100%; overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none; }
+.lab-ig__slides::-webkit-scrollbar { display: none; }
+.lab-ig__slide { flex: 0 0 100%; scroll-snap-align: center; position: relative; background-size: cover; background-position: center; display: flex; align-items: center; justify-content: center; padding: 30px; box-sizing: border-box; }
+.lab-ig__slide::before { content: ''; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(0, 0, 0, 0.22), rgba(0, 0, 0, 0.58)); }
+.lab-ig__slide-texto { position: relative; color: #fff; font-weight: 800; font-size: clamp(19px, 5.4vw, 27px); line-height: 1.18; text-align: center; text-shadow: 0 2px 12px rgba(0, 0, 0, 0.45); overflow-wrap: anywhere; }
+.lab-ig__flecha { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); width: 28px; height: 28px; border-radius: 50%; background: rgba(0, 0, 0, 0.55); border: 0; cursor: pointer; display: flex; align-items: center; justify-content: center; padding: 0; }
+.lab-ig__puntos { display: flex; justify-content: center; gap: 4px; padding: 10px 0 0; }
+.lab-ig__punto { width: 6px; height: 6px; border-radius: 50%; background: #c7c7c7; }
+.lab-ig__punto.is-activo { background: #0095f6; }
+.lab-ig__acciones { display: flex; align-items: center; gap: 14px; padding: 8px 12px 2px; color: #262626; }
+.lab-ig__guardar { margin-left: auto; display: flex; }
+.lab-ig__caption { padding: 4px 12px 12px; font-size: 14px; line-height: 1.45; white-space: pre-wrap; overflow-wrap: anywhere; color: #262626; }
+.lab-ig__caption strong { font-weight: 600; }
+.lab-ig__caption--suelta { padding: 0; }
+.lab-ig__hash { color: #3b4fd8; }
+.lab-copiar-fila { display: flex; gap: 8px; flex-wrap: wrap; padding: 10px 12px 12px; background: #fafafa; border-top: 1px solid #efefef; }
+
+/* Reel */
+.lab-reelcard { display: flex; gap: 18px; flex-wrap: wrap; align-items: flex-start; background: #fff; color: #262626; border: 1px solid #dbdbdb; border-radius: 12px; padding: 16px; box-shadow: var(--shadow-sm); }
+.lab-reel { width: 210px; flex-shrink: 0; border: 6px solid #1b1b1b; border-radius: 28px; overflow: hidden; background: #1b1b1b; box-shadow: 0 8px 22px rgba(0, 0, 0, 0.2); }
+.lab-reel__media { position: relative; aspect-ratio: 9 / 16; background-size: cover; background-position: center; border-radius: 20px; overflow: hidden; }
+.lab-reel__media::before { content: ''; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(0, 0, 0, 0.15) 0%, rgba(0, 0, 0, 0.1) 45%, rgba(0, 0, 0, 0.65) 100%); }
+.lab-reel__play { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 58px; height: 58px; border-radius: 50%; background: rgba(0, 0, 0, 0.45); border: 2px solid rgba(255, 255, 255, 0.9); display: flex; align-items: center; justify-content: center; padding-left: 3px; box-sizing: border-box; }
+.lab-reel__pantalla { position: absolute; top: 14%; left: 10px; right: 10px; color: #fff; font-weight: 800; font-size: 19px; line-height: 1.15; text-align: center; text-shadow: 0 2px 10px rgba(0, 0, 0, 0.55); z-index: 1; overflow-wrap: anywhere; }
+.lab-reel__pie { position: absolute; left: 10px; right: 10px; bottom: 10px; display: flex; align-items: center; gap: 7px; color: #fff; font-size: 12.5px; z-index: 1; }
+.lab-reel__pie strong { font-weight: 600; }
+.lab-reelcard__texto { flex: 1 1 240px; min-width: 0; display: flex; flex-direction: column; gap: 16px; }
+.lab-reelcard__bloque { display: flex; flex-direction: column; gap: 6px; align-items: flex-start; }
+.lab-reelcard__etiqueta { font-size: 11.5px; font-weight: 700; letter-spacing: 0.3px; text-transform: uppercase; color: #6b7280; }
+.lab-reelcard__guion { white-space: pre-wrap; line-height: 1.55; font-size: 14.5px; color: #262626; background: #f6f7f8; border-radius: 8px; padding: 10px 12px; width: 100%; box-sizing: border-box; overflow-wrap: anywhere; }
+
+/* Chats: WhatsApp y DM de Instagram */
+.lab-chat { max-width: 440px; border-radius: 12px; overflow: hidden; box-shadow: var(--shadow-sm); font-family: -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; }
+.lab-chat__cab { display: flex; align-items: center; gap: 10px; padding: 10px 12px; }
+.lab-chat__quien { display: flex; flex-direction: column; line-height: 1.2; }
+.lab-chat__quien strong { font-size: 14.5px; font-weight: 600; }
+.lab-chat__quien span { font-size: 12px; }
+.lab-avatar--cliente { background: #dfe5e7; color: #54656f; font-size: 14px; }
+.lab-chat__cuerpo { padding: 14px 12px 12px; display: flex; flex-direction: column; gap: 6px; }
+.lab-chat__fila { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; }
+.lab-chat__contexto { align-self: center; font-size: 12px; padding: 3px 10px; border-radius: 8px; margin: 6px 0 2px; }
+.lab-burbuja { max-width: 88%; padding: 7px 10px 5px; font-size: 14.2px; line-height: 1.38; white-space: pre-wrap; overflow-wrap: anywhere; }
+.lab-burbuja__hora { display: block; text-align: right; font-size: 11px; margin-top: 2px; }
+.lab-chat .lab-btn-copiar { font-size: 11.5px; padding: 3px 10px; }
+
+.lab-chat--wa { background: #efeae2; border: 1px solid #d1d7db; color: #111b21; }
+.lab-chat--wa .lab-chat__cab { background: #008069; color: #fff; }
+.lab-chat--wa .lab-chat__quien span { color: rgba(255, 255, 255, 0.8); }
+.lab-chat--wa .lab-chat__contexto { background: #fff; color: #54656f; box-shadow: 0 1px 0.5px rgba(11, 20, 26, 0.13); }
+.lab-chat--wa .lab-burbuja { background: #d9fdd3; color: #111b21; border-radius: 8px 0 8px 8px; box-shadow: 0 1px 0.5px rgba(11, 20, 26, 0.13); }
+.lab-chat--wa .lab-burbuja__hora { color: #667781; }
+.lab-burbuja__ticks { color: #53bdeb; }
+
+.lab-chat--ig { background: #fff; border: 1px solid #dbdbdb; color: #262626; }
+.lab-chat--ig .lab-chat__cab { border-bottom: 1px solid #efefef; }
+.lab-chat--ig .lab-chat__quien span { color: #8e8e8e; }
+.lab-chat--ig .lab-chat__contexto { background: #f1f1f1; color: #737373; }
+.lab-chat--ig .lab-burbuja { background: #3797f0; color: #fff; border-radius: 20px 20px 4px 20px; }
+.lab-chat--ig .lab-burbuja__hora { display: none; }
+
+/* Botones dentro de las vistas: se leen igual en los temas oscuro y BEGIN */
+#view-laboratorio-ia :is(.lab-ig, .lab-reelcard, .lab-chat) .btn--ghost { color: var(--color-primary); border-color: var(--color-border); background: #fff; }
+#config-laboratorio-guia :is(.lab-ig, .lab-reelcard, .lab-chat) .btn--ghost { color: var(--color-primary); border-color: var(--color-border); background: #fff; }
+#view-laboratorio-ia :is(.lab-ig, .lab-reelcard, .lab-chat) { color: #262626; }
+#view-laboratorio-ia .lab-chat--wa { color: #111b21; }
+
+/* Imágenes genéricas de vista previa (Configuración, solo Director) */
+.labv-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 10px; margin: 8px 0 12px; }
+.labv-item { position: relative; border-radius: var(--radius-md); overflow: hidden; border: 1px solid var(--color-border); background: var(--color-surface); }
+.labv-item img { display: block; width: 100%; aspect-ratio: 4 / 5; object-fit: cover; }
+.labv-item button { position: absolute; top: 6px; right: 6px; border: 0; border-radius: 999px; background: rgba(0, 0, 0, 0.6); color: #fff; width: 24px; height: 24px; cursor: pointer; line-height: 1; }
