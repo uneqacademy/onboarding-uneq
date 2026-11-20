@@ -78,6 +78,22 @@
 </div>
 
 <!-- ============================================================
+     VISTA: PROGRAMA EN PAUSA (alumno congelado: no ve contenidos hasta que lo reactiven)
+     ============================================================ -->
+<div id="view-pausa" class="login-view hidden">
+  <div class="login-card" style="text-align:center;">
+    <div class="brand" style="justify-content:center;">
+      <div class="brand__mark" style="color:#1B2A4A; width:38px; height:38px;" data-brand-mark></div>
+      <div><div class="brand__name">Universo UNEQ</div></div>
+    </div>
+    <h2 style="margin:6px 0 10px; font-size:20px;">Tu programa está en pausa</h2>
+    <p class="text-soft" id="pausa-mensaje" style="margin:0 0 14px;"></p>
+    <p class="text-soft" id="pausa-retorno" style="margin:0 0 14px;"></p>
+    <button class="btn btn--primary" id="btn-logout-pausa">Cerrar sesión</button>
+  </div>
+</div>
+
+<!-- ============================================================
      APP SHELL (Dashboard + Ficha) — visible tras login
      ============================================================ -->
 <div id="app-shell" class="app-shell hidden">
@@ -542,6 +558,34 @@
               <p class="text-soft" style="margin:4px 0 0;">Al marcarlo egresado, puedes iniciarle un ciclo nuevo después (ej. de Begin a Next) sin perder nada de lo anterior.</p>
             </div>
             <button class="btn btn--primary" id="btn-marcar-egresado">Marcar Egresado</button>
+          </div>
+        </div>
+
+        <!-- Congelamiento: el alumno queda "Pausado" y no ve contenidos hasta que se reactive -->
+        <div class="panel mb-24 hidden" id="panel-congelar" data-role="director">
+          <div class="panel__body">
+            <div id="congelar-form">
+              <strong>Congelar el programa</strong>
+              <p class="text-soft" style="margin:4px 0 12px;">Según el contrato: un (1) congelamiento de hasta 3 meses. Mientras esté pausado, el alumno no ve ningún contenido. Al reactivarlo, su fecha de término se corre por los días que estuvo congelado.</p>
+              <div class="field-grid mb-16">
+                <div class="field"><label>Congelado desde</label><input type="date" id="congelar-desde"></div>
+                <div class="field"><label>Retorno previsto (máx. 3 meses)</label><input type="date" id="congelar-hasta"></div>
+                <div class="field"><label>Motivo (opcional)</label><input id="congelar-motivo" placeholder="Ej. viaje, salud"></div>
+              </div>
+              <p id="congelar-historial" class="text-soft hidden" style="margin:0 0 12px;"></p>
+              <p id="congelar-error" class="hidden" style="color:#C0392B; font-size:13px; margin:0 0 10px;"></p>
+              <button class="btn btn--primary" id="btn-congelar">Congelar alumno</button>
+            </div>
+            <div id="congelar-activo" class="hidden">
+              <strong>Alumno en pausa</strong>
+              <p class="text-soft" id="congelar-resumen" style="margin:4px 0 12px;"></p>
+              <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+                <label for="congelar-reactivar-fecha" style="font-size:13px;">Reactivar con fecha</label>
+                <input type="date" id="congelar-reactivar-fecha">
+                <button class="btn btn--primary" id="btn-reactivar">Reactivar alumno</button>
+              </div>
+              <p id="congelar-error-activo" class="hidden" style="color:#C0392B; font-size:13px; margin:10px 0 0;"></p>
+            </div>
           </div>
         </div>
         <div class="panel mb-24 hidden solo-director-pleno" id="panel-nuevo-ciclo" data-role="director">
