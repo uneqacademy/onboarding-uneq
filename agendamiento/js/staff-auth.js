@@ -34,6 +34,8 @@ export function iniciarSesionStaff(rolEsperado, onListo) {
 
   onAuthStateChanged(auth, async (usuario) => {
     if (!usuario) { overlay.classList.remove('hidden'); shell.classList.add('hidden'); return; }
+    // Etiqueta de rol que pone el servidor (la usan las reglas de Storage): si falta, se renueva el acceso una vez.
+    try { const t = await usuario.getIdTokenResult(); if (!t.claims.equipo && !t.claims.alumno) await usuario.getIdToken(true); } catch (err) { console.error('No se pudo renovar la sesión:', err); }
     const snap = await get(ref(db, `agendamiento/staff/${usuario.uid}`));
     const datos = snap.exists() ? snap.val() : null;
     if (!datos || datos.rol !== rolEsperado || datos.activo === false) {

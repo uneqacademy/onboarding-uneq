@@ -220,11 +220,23 @@ async function leerRolAgendamiento(uid) {
   }
 }
 
+// Etiquetas de rol (equipo / alumno / direccion) que pone el servidor en la sesión (functions/claims-perfil.js).
+// Las reglas de Storage las exigen. Si la sesión todavía no las trae (cuenta recién etiquetada), se renueva el acceso una vez.
+async function asegurarEtiquetasDeRol(user) {
+  try {
+    const resultado = await user.getIdTokenResult();
+    if (!resultado.claims.equipo && !resultado.claims.alumno) await user.getIdToken(true);
+  } catch (err) {
+    console.error('No se pudo renovar la sesión para las etiquetas de rol:', err);
+  }
+}
+
 onAuthStateChanged(auth, async (user) => {
   if (!user) {
     showLogin();
     return;
   }
+  await asegurarEtiquetasDeRol(user);
 
   try {
     const [snap, staff] = await Promise.all([
