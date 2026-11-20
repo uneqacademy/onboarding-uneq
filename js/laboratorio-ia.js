@@ -137,6 +137,62 @@ function textoEstadoEtapa(id) {
   return 'Primero aprueba tu ficha.';
 }
 
+/* --- Nivel de emojis (barra deslizable: se arrastra con el dedo o con el mouse) --- */
+
+const NIVELES_EMOJIS = [
+  { nombre: 'Sin emojis', muestra: '' },
+  { nombre: 'Pocos', muestra: '🙂' },
+  { nombre: 'Algunos', muestra: '🙂✨' },
+  { nombre: 'Bastantes', muestra: '😊✨💛🙌' },
+  { nombre: 'Todos los que quieras', muestra: '😍🔥✨💛🙌🚀💪' }
+];
+const NIVEL_EMOJIS_INICIAL = 2;
+const claveEmojis = () => `uneq_lab_emojis_${alumnoIdActual || 'x'}`;
+
+function nivelEmojisGuardado() {
+  try {
+    const n = parseInt(localStorage.getItem(claveEmojis()), 10);
+    if (n >= 0 && n < NIVELES_EMOJIS.length) return n;
+  } catch (e) { /* sin almacenamiento: se usa el nivel inicial */ }
+  return NIVEL_EMOJIS_INICIAL;
+}
+function nivelEmojisActual() {
+  const inp = document.getElementById('lab-emojis-rango');
+  const n = inp ? parseInt(inp.value, 10) : NaN;
+  return n >= 0 && n < NIVELES_EMOJIS.length ? n : nivelEmojisGuardado();
+}
+
+function htmlBarraEmojis() {
+  const n = nivelEmojisGuardado();
+  return `
+    <div class="lab-emojis">
+      <div class="lab-emojis__cab">
+        <label for="lab-emojis-rango"><strong>Nivel de emojis</strong></label>
+        <span class="lab-emojis__valor"><span id="lab-emojis-nombre">${esc(NIVELES_EMOJIS[n].nombre)}</span> <span id="lab-emojis-muestra" aria-hidden="true">${NIVELES_EMOJIS[n].muestra}</span></span>
+      </div>
+      <input type="range" id="lab-emojis-rango" class="lab-emojis__rango" min="0" max="${NIVELES_EMOJIS.length - 1}" step="1" value="${n}"
+        aria-label="Nivel de emojis" aria-valuetext="${esc(NIVELES_EMOJIS[n].nombre)}" style="--lab-pos:${(n / (NIVELES_EMOJIS.length - 1)) * 100}%">
+      <div class="lab-emojis__extremos"><span>Sin emojis</span><span>Todos los que quieras</span></div>
+      <p class="text-soft lab-emojis__nota">Los guiones de los videos nunca llevan emojis: se leen en voz alta.</p>
+    </div>`;
+}
+
+function conectarBarraEmojis(el) {
+  const inp = el.querySelector('#lab-emojis-rango');
+  if (!inp) return;
+  const mostrar = () => {
+    const n = parseInt(inp.value, 10);
+    const nivel = NIVELES_EMOJIS[n] || NIVELES_EMOJIS[NIVEL_EMOJIS_INICIAL];
+    document.getElementById('lab-emojis-nombre').textContent = nivel.nombre;
+    document.getElementById('lab-emojis-muestra').textContent = nivel.muestra;
+    inp.setAttribute('aria-valuetext', nivel.nombre);
+    inp.style.setProperty('--lab-pos', `${(n / (NIVELES_EMOJIS.length - 1)) * 100}%`);
+  };
+  inp.addEventListener('input', mostrar);
+  inp.addEventListener('change', () => { try { localStorage.setItem(claveEmojis(), String(nivelEmojisActual())); } catch (e) { /* opcional */ } });
+  mostrar();
+}
+
 function htmlEtapas() {
   if (!datos.seccionesAbiertas.length) return '';
   const orden = Object.keys(datos.etapas);
@@ -147,6 +203,7 @@ function htmlEtapas() {
         <span class="text-soft" id="lab-contador">Generaciones de hoy: ${datos.usosHoy}/${datos.limiteDia}</span>
       </div>
       <p class="text-soft lab-bloque__sub">Un clic por etapa y recibes propuestas listas para editar con tu voz.</p>
+      ${htmlBarraEmojis()}
       <div class="lab-etapas">
         ${orden.map((id, n) => {
           const e = datos.etapas[id];
@@ -290,7 +347,7 @@ async function generarEtapa(etapaId, btn) {
   resultado.innerHTML = '<div class="lab-cargando"><span class="lab-spinner"></span> Creando tus contenidos con tu voz y tu Cliente Soñado… (puede tardar hasta un minuto)</div>';
   resultado.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   try {
-    const r = await generarContenidos(conFase({ etapa: etapaId }));
+    const r = await generarContenidos(conFase({ etapa: etapaId, emojis: nivelEmojisActual() }));
     const g = r.data;
     datos.usosHoy += 1;
     const contador = document.getElementById('lab-contador');
@@ -318,6 +375,7 @@ async function generarEtapa(etapaId, btn) {
 }
 
 function conectarAlumno(el) {
+  conectarBarraEmojis(el);
   el.querySelectorAll('[data-abrir-ficha]').forEach(b => b.addEventListener('click', () => {
     const editor = el.querySelector(`[data-editor="${b.dataset.abrirFicha}"]`);
     if (editor && !editor.classList.contains('hidden')) { editor.classList.add('hidden'); editor.innerHTML = ''; return; }

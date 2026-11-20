@@ -283,3 +283,25 @@
 #view-laboratorio-ia .lab-propuesta .btn--ghost { color: var(--color-primary); border-color: var(--color-border); background: #fff; }
 #view-laboratorio-ia .lab-propuesta .lab-error { color: #C0392B; }
 #view-laboratorio-ia .lab-acordeon__sub { color: var(--color-ink-soft); }
+
+/* ============================================================
+   Barra de nivel de emojis (se arrastra con el dedo o con el mouse)
+   ============================================================ */
+.lab-emojis { background: #fff; border: 1px solid var(--color-border); border-radius: 12px; padding: 14px 16px 10px; margin: 0 0 16px; max-width: 520px; }
+.lab-emojis__cab { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; flex-wrap: wrap; margin-bottom: 10px; }
+.lab-emojis__valor { font-weight: 700; color: var(--color-accent); font-size: 15px; }
+.lab-emojis__rango { -webkit-appearance: none; appearance: none; display: block; width: 100%; height: 34px; margin: 0; padding: 0; background: transparent; cursor: grab; touch-action: pan-y; }
+.lab-emojis__rango:active { cursor: grabbing; }
+.lab-emojis__rango:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; border-radius: 8px; }
+.lab-emojis__rango::-webkit-slider-runnable-track { height: 8px; border-radius: 999px; background: linear-gradient(to right, var(--color-accent) 0, var(--color-accent) var(--lab-pos, 40%), #d8dde3 var(--lab-pos, 40%), #d8dde3 100%); }
+.lab-emojis__rango::-moz-range-track { height: 8px; border-radius: 999px; background: #d8dde3; }
+.lab-emojis__rango::-moz-range-progress { height: 8px; border-radius: 999px; background: var(--color-accent); }
+.lab-emojis__rango::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 28px; height: 28px; margin-top: -10px; border-radius: 50%; background: #fff; border: 3px solid var(--color-accent); box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25); }
+.lab-emojis__rango::-moz-range-thumb { width: 22px; height: 22px; border-radius: 50%; background: #fff; border: 3px solid var(--color-accent); box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25); }
+.lab-emojis__extremos { display: flex; justify-content: space-between; gap: 10px; font-size: 12px; color: #6b7280; margin-top: 2px; }
+.lab-emojis__nota { margin: 8px 0 0; font-size: 12px; }
+
+/* Se lee igual en los temas oscuro y BEGIN */
+#view-laboratorio-ia .lab-emojis { color: #262626; }
+#view-laboratorio-ia .lab-emojis__cab label { color: #262626; }
+#view-laboratorio-ia .lab-emojis__nota { color: #6b7280; }
