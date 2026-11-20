@@ -19,7 +19,7 @@ import { ref, get, update } from "https://www.gstatic.com/firebasejs/12.17.1/fir
 import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-functions.js";
 import { getCurrentRole, esModoDemo } from './main.js';
 import { getFaseDemo } from './demo.js';
-import { htmlPiezas, conectarPiezas, fijarContextoVista, fijarImagenesVista } from './laboratorio-ia-vista.js';
+import { htmlPiezas, conectarPiezas, fijarContextoVista, fijarImagenesVista, enlazarAcordeon, cerrarOtrasPeticiones, hayEdicionesSinGuardar, descartarEdiciones } from './laboratorio-ia-vista.js';
 
 const functions = getFunctions(app);
 const abrirLaboratorio = httpsCallable(functions, 'laboratorioAbrir', { timeout: 120000 });
@@ -75,7 +75,7 @@ async function cargarHistorial(alumnoId, contenedor, nombresFormato, editable) {
   lista = lista.slice(0, 20);
   if (!lista.length) { contenedor.innerHTML = '<p class="text-soft">Aún no hay contenidos generados.</p>'; return; }
   contenedor.innerHTML = lista.map((g, n) => `
-    <details class="lab-historial__item">
+    <details class="lab-historial__item lab-acordeon">
       <summary><strong>${esc(g.etapaNombre || g.etapa || '')}</strong> · ${esc(fechaLegible(g.creadoEn))} · ${(g.piezas || []).length} propuestas</summary>
       <div class="lab-historial__cuerpo" data-g="${n}">${htmlPiezas(g.piezas, nombresFormato, { editable })}</div>
     </details>`).join('');
@@ -83,6 +83,7 @@ async function cargarHistorial(alumnoId, contenedor, nombresFormato, editable) {
     const gen = lista[Number(div.dataset.g)];
     conectarPiezas(div, gen.piezas || [], { editable, guardar: (i, cambios) => guardarEdicion(alumnoId, gen.id, i, cambios) });
   });
+  enlazarAcordeon(rootEl());
 }
 
 /* ============================================================
@@ -277,6 +278,11 @@ function conectarEditor(editor, seccion) {
 /* --- Generar --- */
 
 async function generarEtapa(etapaId, btn) {
+  const raiz = rootEl();
+  if (hayEdicionesSinGuardar(raiz)) {
+    if (!confirm('Tienes cambios sin guardar en una propuesta. Si generas ahora se perderán. ¿Continuar?')) return;
+    descartarEdiciones(raiz);
+  }
   const resultado = document.getElementById('lab-resultado');
   document.querySelectorAll('[data-generar]').forEach(b => { b.disabled = true; });
   const textoOriginal = btn.textContent;
@@ -290,10 +296,17 @@ async function generarEtapa(etapaId, btn) {
     const contador = document.getElementById('lab-contador');
     if (contador) contador.textContent = `Generaciones de hoy: ${datos.usosHoy}/${datos.limiteDia}`;
     resultado.innerHTML = `
-      <div class="lab-resultado__cab"><h3>${esc(g.etapaNombre)}: tus propuestas</h3><span class="text-soft">Edítalas con tu estilo o llévalas a tus mentores para pulirlas.</span></div>
-      ${g.incompleta ? '<p class="lab-aviso">Uno de los formatos no se pudo generar esta vez. Puedes volver a intentarlo.</p>' : ''}
-      ${htmlPiezas(g.piezas, datos.formatos, { editable: true })}`;
+      <details class="lab-historial__item lab-acordeon lab-acordeon--nuevo" open>
+        <summary><strong>${esc(g.etapaNombre)}: tus propuestas</strong><span class="lab-acordeon__nuevo">Nuevo</span></summary>
+        <div class="lab-historial__cuerpo">
+          <p class="lab-acordeon__sub">Edítalas con tu estilo o llévalas a tus mentores para pulirlas.</p>
+          ${g.incompleta ? '<p class="lab-aviso">Uno de los formatos no se pudo generar esta vez. Puedes volver a intentarlo.</p>' : ''}
+          ${htmlPiezas(g.piezas, datos.formatos, { editable: true })}
+        </div>
+      </details>`;
     conectarPiezas(resultado, g.piezas, { editable: true, guardar: (i, cambios) => guardarEdicion(alumnoIdActual, g.id, i, cambios) });
+    enlazarAcordeon(raiz);
+    cerrarOtrasPeticiones(raiz, resultado.querySelector('details'));   // el nuevo queda abierto y los demás se cierran
     const hist = document.getElementById('lab-historial');
     if (hist && alumnoIdActual) cargarHistorial(alumnoIdActual, hist, datos.formatos, true);
   } catch (err) {

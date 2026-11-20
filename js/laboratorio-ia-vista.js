@@ -192,7 +192,7 @@ function htmlAntigua(p, i) {
     </article>`;
 }
 
-/* ---------------- Cada propuesta: acordeón + edición ---------------- */
+/* ---------------- Cada propuesta: se ve completa y se puede editar ---------------- */
 
 // Solo se pueden editar las propuestas con el formato nuevo (las antiguas, con secciones, no).
 const esEditable = (p) => !!p && (p.tipo === 'reel' || p.tipo === 'carrusel' || p.tipo === 'chat');
@@ -212,17 +212,13 @@ function htmlCuerpoVista(p, i, op) {
 }
 
 function htmlPieza(p, i, op) {
-  return `
-    <div class="lab-propuesta" data-i="${i}">
-      <button type="button" class="lab-propuesta__cabecera" data-abrir aria-expanded="false">
-        <span class="lab-propuesta__nombre">${esc(p.titulo)}${p.editadoEn ? ' <span class="lab-propuesta__editado">Editado</span>' : ''}</span>
-        <span class="lab-propuesta__flecha" aria-hidden="true">▾</span>
-      </button>
-      <div class="lab-propuesta__cuerpo" hidden>${htmlCuerpoVista(p, i, op)}</div>
-    </div>`;
+  const titulo = p.tipo
+    ? `<div class="lab-propuesta__titulo">${esc(p.titulo)}${p.editadoEn ? ' <span class="lab-propuesta__editado">Editado</span>' : ''}</div>`
+    : '';
+  return `<div class="lab-propuesta" data-i="${i}">${titulo}<div class="lab-propuesta__cuerpo">${htmlCuerpoVista(p, i, op)}</div></div>`;
 }
 
-/** Todas las propuestas, agrupadas por formato (cada una cerrada, se abre una a la vez).
+/** Todas las propuestas, agrupadas por formato y a la vista, como siempre.
  *  `nombresFormato`: { reel: { nombre }, ... }. `op.editable`: muestra el botón Editar. */
 export function htmlPiezas(piezas, nombresFormato, op) {
   const porFormato = {};
@@ -312,17 +308,14 @@ function enlazarVista(cuerpo, piezas) {
   });
 }
 
-/** Enlaza el acordeón, la edición y los botones dentro de `contenedor`.
- *  Solo hay UNA propuesta abierta a la vez en toda la vista (al abrir una, la otra se cierra).
+/** Enlaza los botones Copiar, las láminas deslizables y la edición de cada propuesta dentro de `contenedor`.
  *  `op.editable` + `op.guardar(i, cambios)` (promesa que escribe en la base): activan Editar,
  *  Guardar cambios y Cancelar. Guardar solo existe mientras se edita. */
 export function conectarPiezas(contenedor, piezas, op) {
   const opciones = op || {};
-  const vista = () => contenedor.closest('.view') || document;
 
   contenedor.querySelectorAll('.lab-propuesta').forEach(card => {
     const i = Number(card.dataset.i);
-    const cabecera = card.querySelector('[data-abrir]');
     const cuerpo = card.querySelector('.lab-propuesta__cuerpo');
     let foto = null;   // textos al entrar a editar; null = no se está editando
 
@@ -365,8 +358,8 @@ export function conectarPiezas(contenedor, piezas, op) {
           aviso.textContent = 'Cambios guardados ✓';
           cuerpo.prepend(aviso);
           setTimeout(() => aviso.remove(), 2500);
-          const nombre = cabecera.querySelector('.lab-propuesta__nombre');
-          if (nombre && !nombre.querySelector('.lab-propuesta__editado')) nombre.insertAdjacentHTML('beforeend', ' <span class="lab-propuesta__editado">Editado</span>');
+          const titulo = card.querySelector('.lab-propuesta__titulo');
+          if (titulo && !titulo.querySelector('.lab-propuesta__editado')) titulo.insertAdjacentHTML('beforeend', ' <span class="lab-propuesta__editado">Editado</span>');
         } catch (err) {
           console.error('No se pudieron guardar los cambios:', err);
           estado.classList.add('hidden');
@@ -379,33 +372,45 @@ export function conectarPiezas(contenedor, piezas, op) {
       if (primero) primero.focus();
     }
 
-    function cerrar() {
-      if (foto !== null) pintarVista();   // si estaba editando, vuelve a la vista normal
-      card.classList.remove('is-abierta');
-      cuerpo.hidden = true;
-      cabecera.setAttribute('aria-expanded', 'false');
-    }
-
-    function abrir() {
-      const otras = [...vista().querySelectorAll('.lab-propuesta.is-abierta')].filter(o => o !== card);
-      if (otras.some(o => o._hayCambios && o._hayCambios())
-        && !confirm('Tienes cambios sin guardar en otra propuesta. ¿Descartarlos y abrir esta?')) return;
-      otras.forEach(o => { if (o._cerrar) o._cerrar(); });   // nunca dos abiertas
-      card.classList.add('is-abierta');
-      cuerpo.hidden = false;
-      cabecera.setAttribute('aria-expanded', 'true');
-    }
-
-    card._cerrar = cerrar;
     card._hayCambios = hayCambios;
-    cabecera.addEventListener('click', () => {
-      if (!card.classList.contains('is-abierta')) return abrir();
-      if (hayCambios() && !confirm('Tienes cambios sin guardar. ¿Descartarlos y cerrar?')) return;
-      cerrar();
-    });
+    card._descartar = () => { if (foto !== null) pintarVista(); };   // si estaba editando, vuelve a la vista normal
 
     enlazarVista(cuerpo, piezas);
     const editar = cuerpo.querySelector('[data-editar]');
     if (editar) editar.addEventListener('click', entrarEdicion);
+  });
+}
+
+/* ---------------- Acordeón de peticiones: solo una abierta a la vez ---------------- */
+// Cada petición (el resultado recién creado y cada una del historial) es un <details class="lab-acordeon">.
+// Al abrir una, la que estaba abierta se cierra. Dentro de cada una, las propuestas se ven todas, como siempre.
+
+const confirmarDescartar = () => confirm('Tienes cambios sin guardar en una propuesta. ¿Descartarlos?');
+
+export const hayEdicionesSinGuardar = (raiz) => [...raiz.querySelectorAll('.lab-propuesta')].some(c => c._hayCambios && c._hayCambios());
+export function descartarEdiciones(raiz) { raiz.querySelectorAll('.lab-propuesta').forEach(c => { if (c._descartar) c._descartar(); }); }
+
+/** Cierra todas las peticiones abiertas de `raiz` menos `salvo`. Devuelve false si el usuario prefirió no descartar cambios. */
+export function cerrarOtrasPeticiones(raiz, salvo) {
+  const otras = [...raiz.querySelectorAll('details.lab-acordeon[open]')].filter(d => d !== salvo);
+  if (otras.some(hayEdicionesSinGuardar) && !confirmarDescartar()) return false;
+  otras.forEach(d => { descartarEdiciones(d); d.open = false; });
+  return true;
+}
+
+/** Enlaza el comportamiento de acordeón (una sola abierta) a las peticiones dentro de `raiz`. */
+export function enlazarAcordeon(raiz) {
+  raiz.querySelectorAll('details.lab-acordeon > summary').forEach(sum => {
+    if (sum.dataset.acordeonListo) return;
+    sum.dataset.acordeonListo = '1';
+    sum.addEventListener('click', (ev) => {
+      const det = sum.parentElement;
+      if (!det.open) {                       // se va a abrir: se cierran las demás
+        if (!cerrarOtrasPeticiones(raiz, det)) ev.preventDefault();
+      } else if (hayEdicionesSinGuardar(det)) {   // se va a cerrar con cambios sin guardar
+        if (!confirmarDescartar()) ev.preventDefault();
+        else descartarEdiciones(det);
+      }
+    });
   });
 }
