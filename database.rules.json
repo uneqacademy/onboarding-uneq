@@ -565,7 +565,30 @@
       "generaciones": {
         "$alumnoId": {
           ".indexOn": ["creadoEn"],
-          ".read": "auth != null && (root.child('alumnoPorAuthUid').child(auth.uid).val() === $alumnoId || (!root.child('alumnoPorAuthUid').child(auth.uid).exists() && (root.child('usuarios').child(auth.uid).child('roles').child('director').val() === true || root.child('usuarios').child(auth.uid).child('roles').child('coach').val() === true || root.child('usuarios').child(auth.uid).child('rol').val() === 'director' || root.child('usuarios').child(auth.uid).child('rol').val() === 'coach')))"
+          ".read": "auth != null && (root.child('alumnoPorAuthUid').child(auth.uid).val() === $alumnoId || (!root.child('alumnoPorAuthUid').child(auth.uid).exists() && (root.child('usuarios').child(auth.uid).child('roles').child('director').val() === true || root.child('usuarios').child(auth.uid).child('roles').child('coach').val() === true || root.child('usuarios').child(auth.uid).child('rol').val() === 'director' || root.child('usuarios').child(auth.uid).child('rol').val() === 'coach')))",
+          "$genId": {
+            "piezas": {
+              "$i": {
+                "guion": { ".write": "auth != null && root.child('alumnoPorAuthUid').child(auth.uid).val() === $alumnoId", ".validate": "newData.isString() && newData.val().length <= 3500" },
+                "textoPantalla": { ".write": "auth != null && root.child('alumnoPorAuthUid').child(auth.uid).val() === $alumnoId", ".validate": "newData.isString() && newData.val().length <= 200" },
+                "descripcion": { ".write": "auth != null && root.child('alumnoPorAuthUid').child(auth.uid).val() === $alumnoId", ".validate": "newData.isString() && newData.val().length <= 2500" },
+                "editadoEn": { ".write": "auth != null && root.child('alumnoPorAuthUid').child(auth.uid).val() === $alumnoId", ".validate": "newData.isNumber()" },
+                "laminas": {
+                  ".write": "auth != null && root.child('alumnoPorAuthUid').child(auth.uid).val() === $alumnoId",
+                  "$n": { ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 500 && $n.matches(/^([0-9]|1[01])$/)" }
+                },
+                "mensajes": {
+                  ".write": "auth != null && root.child('alumnoPorAuthUid').child(auth.uid).val() === $alumnoId",
+                  "$m": {
+                    ".validate": "newData.hasChildren(['texto']) && $m.matches(/^[0-5]$/)",
+                    "texto": { ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 1500" },
+                    "contexto": { ".validate": "newData.isString() && newData.val().length <= 80" },
+                    "$otro": { ".validate": false }
+                  }
+                }
+              }
+            }
+          }
         }
       }
     },

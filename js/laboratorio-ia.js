@@ -15,7 +15,7 @@
 
 import { db, auth, app } from './firebase-config.js';
 import { escaparHtml } from './util-html.js';
-import { ref, get } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-database.js";
+import { ref, get, update } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-database.js";
 import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-functions.js";
 import { getCurrentRole, esModoDemo } from './main.js';
 import { getFaseDemo } from './demo.js';
@@ -56,7 +56,12 @@ async function cargarImagenesVista() {
 
 /* ---------------- Historial (alumno y staff) ---------------- */
 
-async function cargarHistorial(alumnoId, contenedor, nombresFormato) {
+// Guarda en la base los textos editados de UNA propuesta (las reglas solo dejan tocar los textos, no el formato ni el título).
+function guardarEdicion(alumnoId, genId, i, cambios) {
+  return update(ref(db, `laboratorioIA/generaciones/${alumnoId}/${genId}/piezas/${i}`), { ...cambios, editadoEn: Date.now() });
+}
+
+async function cargarHistorial(alumnoId, contenedor, nombresFormato, editable) {
   contenedor.innerHTML = '<p class="text-soft">Cargando…</p>';
   let lista = [];
   try {
@@ -72,9 +77,12 @@ async function cargarHistorial(alumnoId, contenedor, nombresFormato) {
   contenedor.innerHTML = lista.map((g, n) => `
     <details class="lab-historial__item">
       <summary><strong>${esc(g.etapaNombre || g.etapa || '')}</strong> · ${esc(fechaLegible(g.creadoEn))} · ${(g.piezas || []).length} propuestas</summary>
-      <div class="lab-historial__cuerpo" data-g="${n}">${htmlPiezas(g.piezas, nombresFormato)}</div>
+      <div class="lab-historial__cuerpo" data-g="${n}">${htmlPiezas(g.piezas, nombresFormato, { editable })}</div>
     </details>`).join('');
-  contenedor.querySelectorAll('[data-g]').forEach(div => conectarPiezas(div, lista[Number(div.dataset.g)].piezas || []));
+  contenedor.querySelectorAll('[data-g]').forEach(div => {
+    const gen = lista[Number(div.dataset.g)];
+    conectarPiezas(div, gen.piezas || [], { editable, guardar: (i, cambios) => guardarEdicion(alumnoId, gen.id, i, cambios) });
+  });
 }
 
 /* ============================================================
@@ -177,7 +185,7 @@ function pintarAlumno() {
   el.innerHTML = htmlCabeceraAlumno() + (datos.seccionesAbiertas.length ? htmlFichas() + htmlEtapas() : htmlBloqueado());
   conectarAlumno(el);
   const hist = document.getElementById('lab-historial');
-  if (hist && alumnoIdActual) cargarHistorial(alumnoIdActual, hist, datos.formatos);
+  if (hist && alumnoIdActual) cargarHistorial(alumnoIdActual, hist, datos.formatos, true);
 }
 
 /* --- Editor de la ficha --- */
@@ -284,10 +292,10 @@ async function generarEtapa(etapaId, btn) {
     resultado.innerHTML = `
       <div class="lab-resultado__cab"><h3>${esc(g.etapaNombre)}: tus propuestas</h3><span class="text-soft">Edítalas con tu estilo o llévalas a tus mentores para pulirlas.</span></div>
       ${g.incompleta ? '<p class="lab-aviso">Uno de los formatos no se pudo generar esta vez. Puedes volver a intentarlo.</p>' : ''}
-      ${htmlPiezas(g.piezas, datos.formatos)}`;
-    conectarPiezas(resultado, g.piezas);
+      ${htmlPiezas(g.piezas, datos.formatos, { editable: true })}`;
+    conectarPiezas(resultado, g.piezas, { editable: true, guardar: (i, cambios) => guardarEdicion(alumnoIdActual, g.id, i, cambios) });
     const hist = document.getElementById('lab-historial');
-    if (hist && alumnoIdActual) cargarHistorial(alumnoIdActual, hist, datos.formatos);
+    if (hist && alumnoIdActual) cargarHistorial(alumnoIdActual, hist, datos.formatos, true);
   } catch (err) {
     resultado.innerHTML = `<p class="lab-error">${esc(mensajeError(err, 'No se pudieron generar los contenidos. Intenta de nuevo.'))}</p>`;
   } finally {
