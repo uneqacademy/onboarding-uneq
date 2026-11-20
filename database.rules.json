@@ -127,18 +127,18 @@
 
     "alumnoPorAuthUid": {
       "$uid": {
-        ".read": "auth != null",
+        ".read": "auth != null && (auth.uid === $uid || root.child('usuarios').child(auth.uid).exists())",
         ".write": "auth != null && (((root.child('usuarios').child(auth.uid).child('roles').child('director').val() === true || root.child('usuarios').child(auth.uid).child('rol').val() === 'director' || root.child('usuarios').child(auth.uid).child('roles').child('subdirectora').val() === true)) || ((root.child('usuarios').child(auth.uid).child('roles').child('coach').val() === true || root.child('usuarios').child(auth.uid).child('rol').val() === 'coach') && !data.exists()) || (auth.uid === $uid && !newData.exists() && root.child('usuarios').child(auth.uid).exists()) || ((root.child('usuarios').child(auth.uid).child('roles').child('mentor').val() === true || root.child('usuarios').child(auth.uid).child('rol').val() === 'mentor') && auth.uid === $uid && !data.exists() && newData.isString() && newData.val().matches(/^demo-(open|begin|next|exit)$/)))"
       }
     },
 
     "alumnos": {
-      ".read": "auth != null && !root.child('alumnoPorAuthUid').child(auth.uid).exists()",
+      ".read": "auth != null && root.child('usuarios').child(auth.uid).exists() && !root.child('alumnoPorAuthUid').child(auth.uid).exists()",
       ".write": "auth != null && !root.child('alumnoPorAuthUid').child(auth.uid).exists() && (((root.child('usuarios').child(auth.uid).child('roles').child('director').val() === true || root.child('usuarios').child(auth.uid).child('rol').val() === 'director' || root.child('usuarios').child(auth.uid).child('roles').child('subdirectora').val() === true)) || (root.child('usuarios').child(auth.uid).child('roles').child('coach').val() === true || root.child('usuarios').child(auth.uid).child('rol').val() === 'coach'))",
       "$alumnoId": {
         ".read": "auth != null && (root.child('alumnoPorAuthUid').child(auth.uid).val() === $alumnoId || (root.child('alumnos').child(root.child('alumnoPorAuthUid').child(auth.uid).val()).child('cicloActualId').val() != null && root.child('alumnos').child(root.child('alumnoPorAuthUid').child(auth.uid).val()).child('cicloActualId').val() === data.child('cicloActualId').val()))",
         "fotoUrl": {
-          ".read": "auth != null",
+          ".read": "auth != null && (root.child('usuarios').child(auth.uid).exists() || root.child('alumnoPorAuthUid').child(auth.uid).exists())",
           ".write": "auth != null && root.child('alumnoPorAuthUid').child(auth.uid).val() === $alumnoId"
         },
         "rut": {
@@ -169,16 +169,16 @@
     },
 
     "ciclos": {
-      ".read": "auth != null && !root.child('alumnoPorAuthUid').child(auth.uid).exists()",
+      ".read": "auth != null && root.child('usuarios').child(auth.uid).exists() && !root.child('alumnoPorAuthUid').child(auth.uid).exists()",
       ".write": "auth != null && !root.child('alumnoPorAuthUid').child(auth.uid).exists() && (((root.child('usuarios').child(auth.uid).child('roles').child('director').val() === true || root.child('usuarios').child(auth.uid).child('rol').val() === 'director' || root.child('usuarios').child(auth.uid).child('roles').child('subdirectora').val() === true)) || (root.child('usuarios').child(auth.uid).child('roles').child('coach').val() === true || root.child('usuarios').child(auth.uid).child('rol').val() === 'coach'))",
       "$cicloId": {
         ".read": "auth != null && root.child('alumnos').child(root.child('alumnoPorAuthUid').child(auth.uid).val()).child('cicloActualId').val() === $cicloId",
-        "alumnoIds": { ".read": "auth != null" }
+        "alumnoIds": { ".read": "auth != null && (root.child('usuarios').child(auth.uid).exists() || root.child('alumnoPorAuthUid').child(auth.uid).exists())" }
       }
     },
 
     "acuerdosPago": {
-      ".read": "auth != null && !root.child('alumnoPorAuthUid').child(auth.uid).exists()",
+      ".read": "auth != null && root.child('usuarios').child(auth.uid).exists() && !root.child('alumnoPorAuthUid').child(auth.uid).exists()",
       ".write": "auth != null && !root.child('alumnoPorAuthUid').child(auth.uid).exists() && ((root.child('usuarios').child(auth.uid).child('roles').child('director').val() === true || root.child('usuarios').child(auth.uid).child('rol').val() === 'director') || (root.child('usuarios').child(auth.uid).child('roles').child('coach').val() === true || root.child('usuarios').child(auth.uid).child('rol').val() === 'coach'))",
       "$cicloId": {
         ".read": "auth != null && root.child('alumnos').child(root.child('alumnoPorAuthUid').child(auth.uid).val()).child('cicloActualId').val() === $cicloId",
@@ -187,7 +187,7 @@
     },
 
     "bitacora": {
-      ".read": "auth != null && !root.child('alumnoPorAuthUid').child(auth.uid).exists()",
+      ".read": "auth != null && root.child('usuarios').child(auth.uid).exists() && !root.child('alumnoPorAuthUid').child(auth.uid).exists()",
       ".write": "auth != null && !root.child('alumnoPorAuthUid').child(auth.uid).exists() && (((root.child('usuarios').child(auth.uid).child('roles').child('director').val() === true || root.child('usuarios').child(auth.uid).child('rol').val() === 'director' || root.child('usuarios').child(auth.uid).child('roles').child('subdirectora').val() === true)) || (root.child('usuarios').child(auth.uid).child('roles').child('coach').val() === true || root.child('usuarios').child(auth.uid).child('rol').val() === 'coach'))",
       "$cicloId": {
         ".read": "auth != null && root.child('alumnos').child(root.child('alumnoPorAuthUid').child(auth.uid).val()).child('cicloActualId').val() === $cicloId"
@@ -259,7 +259,7 @@
       }
     },
     "configuracion": {
-      ".read": "auth != null",
+      ".read": "auth != null && (root.child('usuarios').child(auth.uid).exists() || root.child('alumnoPorAuthUid').child(auth.uid).exists())",
       ".write": "auth != null && (root.child('usuarios').child(auth.uid).child('roles').child('director').val() === true || root.child('usuarios').child(auth.uid).child('rol').val() === 'director')"
     },
 
@@ -375,9 +375,9 @@
 
     "comunidad": {
       "presentaciones": {
-        ".read": "auth != null",
+        ".read": "auth != null && (root.child('usuarios').child(auth.uid).exists() || root.child('alumnoPorAuthUid').child(auth.uid).exists())",
         "$alumnoId": {
-          ".read": "auth != null",
+          ".read": "auth != null && (root.child('usuarios').child(auth.uid).exists() || root.child('alumnoPorAuthUid').child(auth.uid).exists())",
           ".write": "auth != null && ((root.child('alumnoPorAuthUid').child(auth.uid).val() === $alumnoId && ((!data.exists() && newData.hasChildren(['texto', 'createdAt']) && newData.child('estado').val() === 'pendiente') || (data.exists() && newData.exists() && (now - data.child('createdAt').val()) < 86400000 && newData.child('createdAt').val() === data.child('createdAt').val()) || (data.exists() && !newData.exists() && (now - data.child('createdAt').val()) < 86400000))) || (data.exists() && ((root.child('usuarios').child(auth.uid).child('roles').child('director').val() === true || root.child('usuarios').child(auth.uid).child('rol').val() === 'director' || root.child('usuarios').child(auth.uid).child('roles').child('subdirectora').val() === true))))",
           "fijadaEn": {
             ".validate": "!newData.exists() || newData.val() === data.val() || ((root.child('usuarios').child(auth.uid).child('roles').child('director').val() === true || root.child('usuarios').child(auth.uid).child('rol').val() === 'director' || root.child('usuarios').child(auth.uid).child('roles').child('subdirectora').val() === true))"
@@ -408,7 +408,7 @@
         }
       },
       "preguntasLibres": {
-        ".read": "auth != null",
+        ".read": "auth != null && (root.child('usuarios').child(auth.uid).exists() || root.child('alumnoPorAuthUid').child(auth.uid).exists())",
         "$preguntaId": {
           ".write": "auth != null && ((!data.exists() && newData.child('autorId').val() === auth.uid) || (data.exists() && !newData.exists() && (data.child('autorId').val() === auth.uid && (now - data.child('createdAt').val()) < 86400000)) || (data.exists() && newData.exists() && data.child('autorId').val() === auth.uid && (now - data.child('createdAt').val()) < 86400000 && newData.child('createdAt').val() === data.child('createdAt').val() && newData.child('autorId').val() === data.child('autorId').val()) || (data.exists() && ((root.child('usuarios').child(auth.uid).child('roles').child('director').val() === true || root.child('usuarios').child(auth.uid).child('rol').val() === 'director' || root.child('usuarios').child(auth.uid).child('roles').child('subdirectora').val() === true))))",
           "titulo": {
@@ -446,7 +446,7 @@
         }
       },
       "historiasReales": {
-        ".read": "auth != null",
+        ".read": "auth != null && (root.child('usuarios').child(auth.uid).exists() || root.child('alumnoPorAuthUid').child(auth.uid).exists())",
         "$historiaId": {
           ".write": "auth != null && ((!data.exists() && newData.child('autorId').val() === auth.uid) || (data.exists() && !newData.exists() && (data.child('autorId').val() === auth.uid && (now - data.child('createdAt').val()) < 86400000)) || (data.exists() && newData.exists() && data.child('autorId').val() === auth.uid && (now - data.child('createdAt').val()) < 86400000 && newData.child('createdAt').val() === data.child('createdAt').val() && newData.child('autorId').val() === data.child('autorId').val()) || (data.exists() && ((root.child('usuarios').child(auth.uid).child('roles').child('director').val() === true || root.child('usuarios').child(auth.uid).child('rol').val() === 'director' || root.child('usuarios').child(auth.uid).child('roles').child('subdirectora').val() === true))))",
           "fijadaEn": {
@@ -495,7 +495,7 @@
     },
 
     "contenidos": {
-      ".read": "auth != null",
+      ".read": "auth != null && (root.child('usuarios').child(auth.uid).exists() || root.child('alumnoPorAuthUid').child(auth.uid).exists())",
       "$programa": {
         ".write": "auth != null && $programa.matches(/^(comun|open|begin|next|exit)$/) && ((root.child('usuarios').child(auth.uid).child('roles').child('director').val() === true || root.child('usuarios').child(auth.uid).child('rol').val() === 'director' || root.child('usuarios').child(auth.uid).child('roles').child('subdirectora').val() === true))"
       }
@@ -520,7 +520,7 @@
     },
 
     "valoracionesClases": {
-      ".read": "auth != null",
+      ".read": "auth != null && (root.child('usuarios').child(auth.uid).exists() || root.child('alumnoPorAuthUid').child(auth.uid).exists())",
       "$claseId": {
         ".write": "auth != null && ((root.child('usuarios').child(auth.uid).child('roles').child('director').val() === true || root.child('usuarios').child(auth.uid).child('rol').val() === 'director' || root.child('usuarios').child(auth.uid).child('roles').child('subdirectora').val() === true))",
         "$uid": {
@@ -530,11 +530,11 @@
     },
 
     "comentariosClases": {
-      ".read": "auth != null",
+      ".read": "auth != null && (root.child('usuarios').child(auth.uid).exists() || root.child('alumnoPorAuthUid').child(auth.uid).exists())",
       "$claseId": {
         ".write": "auth != null && ((root.child('usuarios').child(auth.uid).child('roles').child('director').val() === true || root.child('usuarios').child(auth.uid).child('rol').val() === 'director' || root.child('usuarios').child(auth.uid).child('roles').child('subdirectora').val() === true))",
         "$comentarioId": {
-          ".write": "auth != null && ((!data.exists() && newData.child('autorId').val() === auth.uid) || (data.exists() && !newData.exists() && data.child('autorId').val() === auth.uid))",
+          ".write": "auth != null && (root.child('usuarios').child(auth.uid).exists() || root.child('alumnoPorAuthUid').child(auth.uid).exists()) && ((!data.exists() && newData.child('autorId').val() === auth.uid) || (data.exists() && !newData.exists() && data.child('autorId').val() === auth.uid))",
           ".validate": "!newData.exists() || (newData.hasChildren(['autorId', 'nombre', 'texto', 'fecha']) && newData.child('texto').isString() && newData.child('texto').val().length > 0 && newData.child('texto').val().length <= 1000 && newData.child('nombre').isString() && newData.child('nombre').val().length <= 120 && newData.child('fecha').isNumber() && (!newData.child('fotoUrl').exists() || (newData.child('fotoUrl').isString() && newData.child('fotoUrl').val().length <= 600)) && (!newData.child('padreId').exists() || (newData.child('padreId').isString() && newData.child('padreId').val().length <= 60)))"
         }
       }
@@ -550,7 +550,7 @@
         ".write": "auth != null && ((root.child('usuarios').child(auth.uid).child('roles').child('director').val() === true || root.child('usuarios').child(auth.uid).child('rol').val() === 'director' || root.child('usuarios').child(auth.uid).child('roles').child('subdirectora').val() === true))"
       },
       "vistaPrevia": {
-        ".read": "auth != null",
+        ".read": "auth != null && (root.child('usuarios').child(auth.uid).exists() || root.child('alumnoPorAuthUid').child(auth.uid).exists())",
         ".write": "auth != null && (root.child('usuarios').child(auth.uid).child('roles').child('director').val() === true || root.child('usuarios').child(auth.uid).child('rol').val() === 'director')"
       },
       "guia": {
@@ -571,7 +571,7 @@
     },
 
     "ranking": {
-      "podio": { ".read": "auth != null" },
+      "podio": { ".read": "auth != null && (root.child('usuarios').child(auth.uid).exists() || root.child('alumnoPorAuthUid').child(auth.uid).exists())" },
       "posiciones": {
         "$alumnoId": {
           ".read": "auth != null && (root.child('alumnoPorAuthUid').child(auth.uid).val() === $alumnoId || ((root.child('usuarios').child(auth.uid).child('roles').child('director').val() === true || root.child('usuarios').child(auth.uid).child('rol').val() === 'director' || root.child('usuarios').child(auth.uid).child('roles').child('subdirectora').val() === true)))"
@@ -624,7 +624,7 @@
 
     "hitos": {
       ".indexOn": ["proyectoId"],
-      ".read": "auth != null",
+      ".read": "auth != null && (root.child('usuarios').child(auth.uid).exists() || root.child('alumnoPorAuthUid').child(auth.uid).exists())",
       "$hitoId": {
         ".write": "auth != null && ((!data.exists() && newData.child('alumnoIdPublicador').val() === root.child('alumnoPorAuthUid').child(auth.uid).val()) || (data.exists() && !newData.exists() && (data.child('alumnoIdPublicador').val() === root.child('alumnoPorAuthUid').child(auth.uid).val() && (now - data.child('createdAt').val()) < 86400000)) || (data.exists() && newData.exists() && data.child('alumnoIdPublicador').val() === root.child('alumnoPorAuthUid').child(auth.uid).val() && (now - data.child('createdAt').val()) < 86400000 && newData.child('createdAt').val() === data.child('createdAt').val() && newData.child('alumnoIdPublicador').val() === data.child('alumnoIdPublicador').val()) || (data.exists() && ((root.child('usuarios').child(auth.uid).child('roles').child('director').val() === true || root.child('usuarios').child(auth.uid).child('rol').val() === 'director' || root.child('usuarios').child(auth.uid).child('roles').child('subdirectora').val() === true))))",
         "fijadaEn": {
