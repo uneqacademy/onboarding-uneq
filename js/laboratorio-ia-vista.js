@@ -40,10 +40,21 @@ const DEGRADADOS = [
   'linear-gradient(160deg,#134e5e 0%,#71b280 100%)',
   'linear-gradient(160deg,#3a1c71 0%,#d76d77 100%)'
 ];
-function fondo(semilla, desplazamiento) {
+function valorFondo(semilla, desplazamiento) {
   const n = hash(semilla) + (desplazamiento || 0);
-  if (imagenes.length) return `background-image:url('${esc(imagenes[n % imagenes.length])}');`;
-  return `background-image:${DEGRADADOS[n % DEGRADADOS.length]};`;
+  if (imagenes.length) return `url('${esc(imagenes[n % imagenes.length])}')`;
+  return DEGRADADOS[n % DEGRADADOS.length];
+}
+function fondo(semilla, desplazamiento) {
+  return `background-image:${valorFondo(semilla, desplazamiento)};`;
+}
+
+// Fondo del reel: la foto de la persona, como si su video estuviera en pausa. Si no hay foto
+// (o no carga), se ve el fondo genérico de siempre debajo.
+const fotoValida = () => !!ctx.fotoUrl && /^https:\/\/[^\s"'()<>]+$/.test(ctx.fotoUrl);
+function fondoReel(semilla) {
+  if (!fotoValida()) return { clase: '', estilo: fondo(semilla, 0) };
+  return { clase: ' lab-reel__media--foto', estilo: `background-image:url('${esc(ctx.fotoUrl)}'),${valorFondo(semilla, 0)};` };
 }
 
 function iniciales(nombre) {
@@ -127,10 +138,11 @@ function htmlCarrusel(p, i) {
 }
 
 function htmlReel(p, i) {
+  const fr = fondoReel(p.titulo);
   return `
     <article class="lab-reelcard" data-pieza="${i}">
       <div class="lab-reel">
-        <div class="lab-reel__media" style="${fondo(p.titulo, 0)}">
+        <div class="lab-reel__media${fr.clase}" style="${fr.estilo}">
           ${p.textoPantalla ? `<div class="lab-reel__pantalla">${esc(p.textoPantalla)}</div>` : ''}
           <div class="lab-reel__play">${ICONO.play}</div>
           <div class="lab-reel__pie">${avatar('lab-avatar--chico')}<strong>${esc(nombreVista())}</strong></div>

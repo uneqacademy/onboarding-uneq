@@ -204,6 +204,8 @@
 .lab-reel { width: 210px; flex-shrink: 0; border: 6px solid #1b1b1b; border-radius: 28px; overflow: hidden; background: #1b1b1b; box-shadow: 0 8px 22px rgba(0, 0, 0, 0.2); }
 .lab-reel__media { position: relative; aspect-ratio: 9 / 16; background-size: cover; background-position: center; border-radius: 20px; overflow: hidden; }
 .lab-reel__media::before { content: ''; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(0, 0, 0, 0.15) 0%, rgba(0, 0, 0, 0.1) 45%, rgba(0, 0, 0, 0.65) 100%); }
+.lab-reel__media--foto { background-size: cover, cover; background-position: center 22%, center; background-repeat: no-repeat; }
+.lab-reel__media--foto::before { background: linear-gradient(180deg, rgba(0, 0, 0, 0.28) 0%, rgba(0, 0, 0, 0.05) 30%, rgba(0, 0, 0, 0.12) 55%, rgba(0, 0, 0, 0.78) 100%); }
 .lab-reel__play { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 58px; height: 58px; border-radius: 50%; background: rgba(0, 0, 0, 0.45); border: 2px solid rgba(255, 255, 255, 0.9); display: flex; align-items: center; justify-content: center; padding-left: 3px; box-sizing: border-box; }
 .lab-reel__pantalla { position: absolute; top: 14%; left: 10px; right: 10px; color: #fff; font-weight: 800; font-size: 19px; line-height: 1.15; text-align: center; text-shadow: 0 2px 10px rgba(0, 0, 0, 0.55); z-index: 1; overflow-wrap: anywhere; }
 .lab-reel__pie { position: absolute; left: 10px; right: 10px; bottom: 10px; display: flex; align-items: center; gap: 7px; color: #fff; font-size: 12.5px; z-index: 1; }
