@@ -10,6 +10,7 @@
    ============================================================ */
 
 import { db, auth, storage, firebaseConfig, app } from './firebase-config.js';
+import { solicitarRecuperacion } from './recuperar-clave.js';
 import { escaparHtml, linkificarSeguro, notaAHtml, sanearHtml } from './util-html.js';
 import { conectarCascadaDireccion, precargarDireccionGuardada, nombrePaisDesdeCodigo } from './geodata.js';
 import { GENEROS, OCUPACIONES, OCUPACIONES_CON_ESPECIALIDAD, validarFichaAlumno } from './util-ficha.js';
@@ -183,7 +184,7 @@ if (btnRestablecerPasswordAlumno) {
     const textoOriginal = btnRestablecerPasswordAlumno.textContent;
     btnRestablecerPasswordAlumno.textContent = 'Enviando...';
     try {
-      await sendPasswordResetEmail(auth, email);
+      await solicitarRecuperacion(app, email);
       alert(`Listo — le mandamos un correo a ${email} con un link para elegir una nueva contraseña.`);
     } catch (err) {
       alert('No se pudo enviar el correo. Revisa que el email esté bien escrito.');

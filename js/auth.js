@@ -6,7 +6,8 @@
    sesión, o el perfil no es válido, vuelve al login.
    ============================================================ */
 
-import { auth, db } from './firebase-config.js';
+import { auth, db, app } from './firebase-config.js';
+import { solicitarRecuperacion } from './recuperar-clave.js';
 import {
   signInWithEmailAndPassword,
   signOut,
@@ -138,8 +139,8 @@ if (linkOlvidePassword) {
       return;
     }
     try {
-      await sendPasswordResetEmail(auth, email);
-      alert(`Te mandamos un correo a ${email} con un link para elegir una nueva contraseña.`);
+      await solicitarRecuperacion(app, email);
+      alert(`Si ${email} tiene una cuenta, le llegará un correo con un enlace para elegir una nueva contraseña. Revisa también la carpeta de spam.`);
     } catch (err) {
       mostrarError('No se pudo enviar el correo. Verifica que esté bien escrito.');
     }
