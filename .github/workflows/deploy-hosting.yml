@@ -2,10 +2,12 @@
 # cada vez que se mergea a main. También se puede lanzar a mano desde la pestaña
 # Actions > "Deploy a Firebase Hosting" > Run workflow.
 #
-# Necesita UN secreto en el repositorio: FIREBASE_SERVICE_ACCOUNT (el JSON de la
-# cuenta de servicio). Si falta, este flujo avisa y se salta el despliegue sin dar error.
-# Solo se despliega el sitio "uneq-app" (lo define firebase.json); el sitio de hitos no se toca.
+# SIN CLAVES: GitHub se identifica ante Google con "federación de identidades"
+# (Workload Identity Federation). No hay ningún secreto guardado en el repositorio.
+# Solo el repo uneqacademy/onboarding-uneq, desde la rama main, puede actuar como la
+# cuenta de servicio github-hosting-deploy (eso se define en Google Cloud).
 #
+# Solo se despliega el sitio "uneq-app" (lo define firebase.json); el sitio de hitos no se toca.
 # Las funciones y las reglas de Firebase NO se publican aquí: siguen siendo manuales.
 
 name: Deploy a Firebase Hosting
@@ -17,6 +19,7 @@ on:
 
 permissions:
   contents: read
+  id-token: write   # necesario para que GitHub pueda identificarse ante Google
 
 # Un despliegue a la vez; si se mergean dos cambios seguidos, el segundo espera al primero.
 concurrency:
@@ -27,27 +30,25 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    env:
-      HAY_CLAVE: ${{ secrets.FIREBASE_SERVICE_ACCOUNT != '' }}
     steps:
-      - name: Aviso si falta la clave de Firebase
-        if: env.HAY_CLAVE != 'true'
-        run: echo "::warning::Falta el secreto FIREBASE_SERVICE_ACCOUNT. No se desplegó a Hosting. Agrégalo en Settings > Secrets and variables > Actions."
-
       - name: Descargar el código
-        if: env.HAY_CLAVE == 'true'
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - name: Desplegar a Firebase Hosting
-        if: env.HAY_CLAVE == 'true'
-        uses: FirebaseExtended/action-hosting-deploy@500ac625ca2dd40cbd15f7659af953801858032a # v0.11.0
+      - name: Entrar a Google Cloud (sin claves)
+        uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3.0.0
         with:
-          firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
-          channelId: live
-          projectId: onboarding-uneq
+          workload_identity_provider: projects/165589582297/locations/global/workloadIdentityPools/github/providers/uneq-repos
+          service_account: github-hosting-deploy@onboarding-uneq.iam.gserviceaccount.com
+
+      - name: Preparar Node
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 22
+
+      - name: Desplegar a Firebase Hosting
+        run: npx --yes firebase-tools@15.34.0 deploy --only hosting --project onboarding-uneq --non-interactive
 
       - name: Comprobar que la versión publicada es la nueva
-        if: env.HAY_CLAVE == 'true'
         run: |
           esperada=$(tr -d ' \r\n' < version.json)
           for intento in 1 2 3 4 5 6; do
