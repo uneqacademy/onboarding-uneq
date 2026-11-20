@@ -19,6 +19,7 @@ import { ref, get } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-da
 import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-functions.js";
 import { getCurrentRole, esModoDemo } from './main.js';
 import { getFaseDemo } from './demo.js';
+import { htmlPiezas, conectarPiezas, fijarContextoVista, fijarImagenesVista } from './laboratorio-ia-vista.js';
 
 const functions = getFunctions(app);
 const abrirLaboratorio = httpsCallable(functions, 'laboratorioAbrir', { timeout: 120000 });
@@ -42,58 +43,15 @@ function fechaLegible(ts) {
   return new Intl.DateTimeFormat('es-CL', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }).format(new Date(ts));
 }
 
-/* ---------------- Piezas de contenido (compartido alumno / staff) ---------------- */
+/* ---------------- Imágenes genéricas de las vistas previas (las sube el Director) ---------------- */
 
-function textoParaCopiar(pieza) {
-  return [pieza.titulo, ...(pieza.secciones || []).map(s => `${s.etiqueta ? s.etiqueta + ':\n' : ''}${s.texto}`)].join('\n\n');
-}
-
-async function copiarAlPortapapeles(texto) {
+async function cargarImagenesVista() {
   try {
-    await navigator.clipboard.writeText(texto);
-    return true;
+    const snap = await get(ref(db, 'laboratorioIA/vistaPrevia/imagenes'));
+    fijarImagenesVista(snap.exists() ? Object.values(snap.val()).map(x => x && x.url) : []);
   } catch (err) {
-    const ta = document.createElement('textarea');
-    ta.value = texto;
-    ta.style.cssText = 'position:fixed; opacity:0;';
-    document.body.appendChild(ta);
-    ta.select();
-    let ok = false;
-    try { ok = document.execCommand('copy'); } catch (e) { /* sin permiso */ }
-    ta.remove();
-    return ok;
+    fijarImagenesVista([]); // sin imágenes se usa un fondo de color
   }
-}
-
-export function htmlPiezas(piezas, nombresFormato) {
-  const porFormato = {};
-  (piezas || []).forEach((p, i) => { (porFormato[p.formato] = porFormato[p.formato] || []).push({ p, i }); });
-  return Object.keys(porFormato).map(f => `
-    <div class="lab-formato">
-      <h4 class="lab-formato__titulo">${esc((nombresFormato && nombresFormato[f] && nombresFormato[f].nombre) || f)}</h4>
-      ${porFormato[f].map(({ p, i }) => `
-        <article class="lab-pieza" data-pieza="${i}">
-          <div class="lab-pieza__cab">
-            <strong>${esc(p.titulo)}</strong>
-            <button type="button" class="btn btn--ghost lab-btn-copiar" data-copiar="${i}">Copiar</button>
-          </div>
-          ${(p.secciones || []).map(s => `
-            <div class="lab-seccion">
-              ${s.etiqueta ? `<div class="lab-seccion__etiqueta">${esc(s.etiqueta)}</div>` : ''}
-              <div class="lab-seccion__texto">${esc(s.texto)}</div>
-            </div>`).join('')}
-        </article>`).join('')}
-    </div>`).join('');
-}
-
-export function conectarCopiar(contenedor, piezas) {
-  contenedor.querySelectorAll('[data-copiar]').forEach(btn => {
-    btn.addEventListener('click', async () => {
-      const ok = await copiarAlPortapapeles(textoParaCopiar(piezas[Number(btn.dataset.copiar)]));
-      btn.textContent = ok ? 'Copiado ✓' : 'No se pudo copiar';
-      setTimeout(() => { btn.textContent = 'Copiar'; }, 1800);
-    });
-  });
 }
 
 /* ---------------- Historial (alumno y staff) ---------------- */
@@ -116,7 +74,7 @@ async function cargarHistorial(alumnoId, contenedor, nombresFormato) {
       <summary><strong>${esc(g.etapaNombre || g.etapa || '')}</strong> · ${esc(fechaLegible(g.creadoEn))} · ${(g.piezas || []).length} propuestas</summary>
       <div class="lab-historial__cuerpo" data-g="${n}">${htmlPiezas(g.piezas, nombresFormato)}</div>
     </details>`).join('');
-  contenedor.querySelectorAll('[data-g]').forEach(div => conectarCopiar(div, lista[Number(div.dataset.g)].piezas || []));
+  contenedor.querySelectorAll('[data-g]').forEach(div => conectarPiezas(div, lista[Number(div.dataset.g)].piezas || []));
 }
 
 /* ============================================================
@@ -327,7 +285,7 @@ async function generarEtapa(etapaId, btn) {
       <div class="lab-resultado__cab"><h3>${esc(g.etapaNombre)}: tus propuestas</h3><span class="text-soft">Edítalas con tu estilo o llévalas a tus mentores para pulirlas.</span></div>
       ${g.incompleta ? '<p class="lab-aviso">Uno de los formatos no se pudo generar esta vez. Puedes volver a intentarlo.</p>' : ''}
       ${htmlPiezas(g.piezas, datos.formatos)}`;
-    conectarCopiar(resultado, g.piezas);
+    conectarPiezas(resultado, g.piezas);
     const hist = document.getElementById('lab-historial');
     if (hist && alumnoIdActual) cargarHistorial(alumnoIdActual, hist, datos.formatos);
   } catch (err) {
@@ -361,6 +319,9 @@ async function cargarComoAlumno() {
     alumnoIdActual = mapa.exists() ? String(mapa.val()) : null;
     const r = await abrirLaboratorio(conFase({}));
     datos = r.data;
+    const perfil = datos.perfil || {};
+    fijarContextoVista({ nombre: perfil.nombre || datos.primerNombre || '', fotoUrl: perfil.fotoUrl || '' });
+    await cargarImagenesVista();
     pintarAlumno();
   } catch (err) {
     el.innerHTML = `<div class="panel"><p class="lab-error">${esc(mensajeError(err, 'No se pudo abrir el Laboratorio. Intenta de nuevo.'))}</p></div>`;
@@ -458,6 +419,13 @@ async function verAlumno(alumnoId) {
       <h4>Contenidos generados</h4>
       <div id="lab-historial-staff"></div>
     </section>`;
+  let fotoUrl = '';
+  try {
+    const f = await get(ref(db, `alumnos/${alumnoId}/fotoUrl`));
+    fotoUrl = f.exists() ? f.val() : '';
+  } catch (err) { /* sin foto: se muestran las iniciales */ }
+  await cargarImagenesVista();
+  fijarContextoVista({ nombre: a ? a.nombre : '', fotoUrl });
   cargarHistorial(alumnoId, document.getElementById('lab-historial-staff'), FORMATOS_STAFF);
 }
 

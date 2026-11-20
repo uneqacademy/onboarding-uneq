@@ -18,7 +18,7 @@ import { ref, get, set, update, push, remove } from "https://www.gstatic.com/fir
 import { ref as storageRef, uploadBytesResumable, getDownloadURL, deleteObject } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-storage.js";
 import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-functions.js";
 import { getCurrentRole } from './main.js';
-import { htmlPiezas, conectarCopiar } from './laboratorio-ia.js';
+import { htmlPiezas, conectarPiezas, fijarContextoVista, fijarImagenesVista } from './laboratorio-ia-vista.js';
 
 const functions = getFunctions(app);
 const probarEtapa = httpsCallable(functions, 'laboratorioProbarEtapa', { timeout: 175000 });
@@ -30,7 +30,8 @@ const SCOPES = [
   { id: 'atraccion', nombre: 'Atracción' },
   { id: 'conexion', nombre: 'Conexión' },
   { id: 'encuentro', nombre: 'Encuentro' },
-  { id: 'venta', nombre: 'Venta' }
+  { id: 'venta', nombre: 'Venta' },
+  { id: 'vista', nombre: 'Imágenes de vista previa' }
 ];
 const FORMATOS = [['todos', 'Todos los formatos'], ['reel', 'Reels'], ['carrusel', 'Carruseles'], ['dm', 'DMs'], ['whatsapp', 'WhatsApp']];
 const EXT_ACEPTADAS = '.mp4,.mov,.webm,.avi,.mpeg,.mpg,.wmv,.m4v,.3gp,.mp3,.wav,.m4a,.aac,.ogg,.flac,.pdf,.docx,.png,.jpg,.jpeg,.webp,.txt,.md,.csv';
@@ -40,6 +41,7 @@ const MAX_DOC_MB = 30;
 
 let scopeActual = 'general';
 let datos = {};          // laboratorioIA/guia completo
+let vistaImagenes = {};  // laboratorioIA/vistaPrevia/imagenes (imágenes genéricas de las vistas previas)
 let temporizador = null;
 
 const extension = (n) => String(n || '').toLowerCase().split('.').pop();
@@ -91,6 +93,7 @@ function htmlArchivo(a) {
 function pintar() {
   const el = cuerpo();
   if (!el) return;
+  if (scopeActual === 'vista') return pintarVista();
   const s = scopeActual;
   const g = datos[s] || {};
   const esGeneral = s === 'general';
@@ -136,6 +139,86 @@ function pintar() {
     <div id="labg-prueba"></div>`;
   conectar();
   programarRefresco();
+}
+
+/* ----- Imágenes genéricas de las vistas previas ----- */
+
+const MAX_IMAGENES_VISTA = 8;
+const MAX_IMAGEN_VISTA_MB = 5;
+const imagenesVista = () => Object.entries(vistaImagenes).map(([id, v]) => ({ id, ...v })).sort((a, b) => (a.creadoEn || 0) - (b.creadoEn || 0));
+
+function htmlTabs() {
+  return `<div class="labg-tabs">${SCOPES.map(x => `<button type="button" class="labg-tab ${x.id === scopeActual ? 'is-activa' : ''}" data-scope="${x.id}">${esc(x.nombre)}</button>`).join('')}</div>`;
+}
+
+function pintarVista() {
+  const el = cuerpo();
+  const lista = imagenesVista();
+  el.innerHTML = `
+    <p class="text-soft mb-16" style="font-size:13px;">Aquí le enseñas a la IA cómo entregar los mejores resultados: el contexto del funnel, la teoría de cada etapa, la estructura técnica y ejemplos reales. Mientras más claro y completo, mejores propuestas recibirán los alumnos. Los archivos los lee la IA una sola vez.</p>
+    ${htmlTabs()}
+    <div class="labcfg-bloque">
+      <div class="labcfg-sub" style="margin-top:0;">Imágenes genéricas para las vistas previas</div>
+      <p class="text-soft labg-ayuda">Los alumnos ven sus Reels, carruseles y publicaciones como se verían en Instagram. Estas imágenes se usan de fondo, solo para que se vea real; no son parte del contenido. Sube de 3 a ${MAX_IMAGENES_VISTA} fotos genéricas (verticales se ven mejor, hasta ${MAX_IMAGEN_VISTA_MB} MB cada una). Sin imágenes se usa un fondo de color.</p>
+      <div class="labv-grid">${lista.map(im => `<div class="labv-item" data-id="${esc(im.id)}"><img src="${esc(im.url)}" alt=""><button type="button" data-quitar-imagen title="Quitar">✕</button></div>`).join('') || '<p class="text-soft">Todavía no hay imágenes: se usa un fondo de color.</p>'}</div>
+      <input type="file" id="labv-archivo" accept="image/png,image/jpeg,image/webp" class="hidden" multiple>
+      <button type="button" class="btn btn--ghost" id="labv-elegir" ${lista.length >= MAX_IMAGENES_VISTA ? 'disabled' : ''}>+ Subir imágenes</button>
+      <p id="labv-estado" class="text-soft labg-ayuda"></p>
+    </div>`;
+  el.querySelectorAll('[data-scope]').forEach(b => b.addEventListener('click', () => { scopeActual = b.dataset.scope; pintar(); }));
+  document.getElementById('labv-elegir').addEventListener('click', () => document.getElementById('labv-archivo').click());
+  document.getElementById('labv-archivo').addEventListener('change', subirImagenesVista);
+  el.querySelectorAll('[data-quitar-imagen]').forEach(b => b.addEventListener('click', async () => {
+    const id = b.closest('.labv-item').dataset.id;
+    const im = imagenesVista().find(x => x.id === id);
+    if (!im || !confirm('¿Quitar esta imagen de las vistas previas?')) return;
+    b.disabled = true;
+    try {
+      await remove(ref(db, `laboratorioIA/vistaPrevia/imagenes/${id}`));
+      if (im.storagePath) { try { await deleteObject(storageRef(storage, im.storagePath)); } catch (e) { /* ya no estaba */ } }
+      delete vistaImagenes[id];
+      pintarVista();
+    } catch (err) {
+      console.error('No se pudo quitar la imagen:', err);
+      b.disabled = false;
+      alert('No se pudo quitar. Intenta de nuevo.');
+    }
+  }));
+}
+
+async function subirImagenesVista(ev) {
+  const input = ev.currentTarget;
+  const archivos = [...input.files];
+  input.value = '';
+  if (!archivos.length) return;
+  const estado = document.getElementById('labv-estado');
+  const btn = document.getElementById('labv-elegir');
+  btn.disabled = true;
+  let subidas = 0;
+  try {
+    for (const archivo of archivos) {
+      if (imagenesVista().length >= MAX_IMAGENES_VISTA) { estado.textContent = `Máximo ${MAX_IMAGENES_VISTA} imágenes.`; break; }
+      if (!/^image\/(png|jpe?g|webp)$/.test(archivo.type)) { estado.textContent = `«${archivo.name}» no es una imagen PNG, JPG o WebP.`; continue; }
+      if (archivo.size > MAX_IMAGEN_VISTA_MB * 1024 * 1024) { estado.textContent = `«${archivo.name}» pesa más de ${MAX_IMAGEN_VISTA_MB} MB.`; continue; }
+      estado.textContent = `Subiendo ${archivo.name}…`;
+      const nuevoRef = push(ref(db, 'laboratorioIA/vistaPrevia/imagenes'));
+      const nombreSeguro = archivo.name.replace(/[^\w.\-() ]+/g, '_');
+      const storagePath = `laboratorio-vista/${nuevoRef.key}_${nombreSeguro}`;
+      const archivoRef = storageRef(storage, storagePath);
+      await uploadBytesResumable(archivoRef, archivo);
+      const url = await getDownloadURL(archivoRef);
+      const registro = { url, storagePath, creadoEn: Date.now() };
+      await set(nuevoRef, registro);
+      vistaImagenes[nuevoRef.key] = registro;
+      subidas++;
+    }
+    pintarVista();
+    if (subidas) document.getElementById('labv-estado').textContent = `Listo: ${subidas} imagen${subidas === 1 ? '' : 'es'} subida${subidas === 1 ? '' : 's'}.`;
+  } catch (err) {
+    console.error('No se pudo subir la imagen:', err);
+    estado.textContent = 'No se pudo subir. Revisa que las reglas de Storage estén publicadas e intenta de nuevo.';
+    btn.disabled = false;
+  }
 }
 
 function mostrarError(texto) {
@@ -201,11 +284,13 @@ function conectar() {
       await update(ref(db, `laboratorioIA/guia/${scopeActual}`), { teoria: g.teoria || '', estructura: g.estructura || '', evitar: g.evitar || '' });
       const r = await probarEtapa({ etapa: scopeActual });
       const res = r.data;
+      fijarContextoVista({ nombre: 'Ana (ejemplo)', fotoUrl: '' });
+      fijarImagenesVista(imagenesVista().map(x => x.url));
       destino.innerHTML = `
         <div class="labcfg-sub">Prueba de ${esc(res.etapaNombre)} (persona de ejemplo; no se guarda)</div>
         ${res.incompleta ? '<p class="lab-aviso">Uno de los formatos no se pudo generar esta vez.</p>' : ''}
         ${htmlPiezas(res.piezas, { reel: { nombre: 'Reels' }, carrusel: { nombre: 'Carruseles' }, dm: { nombre: 'DMs' }, whatsapp: { nombre: 'WhatsApp' } })}`;
-      conectarCopiar(destino, res.piezas);
+      conectarPiezas(destino, res.piezas);
     } catch (err) {
       destino.innerHTML = `<p class="lab-error">${esc((err && err.message) || 'No se pudo generar la prueba.')}</p>`;
     } finally {
@@ -305,6 +390,10 @@ export async function cargarGuiaLaboratorio() {
   try {
     const snap = await get(ref(db, 'laboratorioIA/guia'));
     datos = snap.exists() ? snap.val() : {};
+    try {
+      const v = await get(ref(db, 'laboratorioIA/vistaPrevia/imagenes'));
+      vistaImagenes = v.exists() ? v.val() : {};
+    } catch (err) { vistaImagenes = {}; }
     pintar();
   } catch (err) {
     console.error('No se pudo cargar la guía del Laboratorio:', err);
