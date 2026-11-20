@@ -192,28 +192,100 @@ function htmlAntigua(p, i) {
     </article>`;
 }
 
-function htmlPieza(p, i) {
-  const vista = p.tipo === 'carrusel' ? htmlCarrusel(p, i)
+/* ---------------- Cada propuesta: acordeón + edición ---------------- */
+
+// Solo se pueden editar las propuestas con el formato nuevo (las antiguas, con secciones, no).
+const esEditable = (p) => !!p && (p.tipo === 'reel' || p.tipo === 'carrusel' || p.tipo === 'chat');
+
+function htmlVista(p, i) {
+  return p.tipo === 'carrusel' ? htmlCarrusel(p, i)
     : p.tipo === 'reel' ? htmlReel(p, i)
     : p.tipo === 'chat' ? htmlChat(p, i)
     : htmlAntigua(p, i);
-  return `<div class="lab-propuesta">${p.tipo ? `<div class="lab-propuesta__titulo">${esc(p.titulo)}</div>` : ''}${vista}</div>`;
 }
 
-/** Todas las propuestas, agrupadas por formato. `nombresFormato`: { reel: { nombre }, ... } */
-export function htmlPiezas(piezas, nombresFormato) {
+function htmlCuerpoVista(p, i, op) {
+  const acciones = (op && op.editable && esEditable(p))
+    ? '<div class="lab-acciones-pieza"><button type="button" class="btn btn--ghost lab-btn-editar" data-editar>Editar</button></div>'
+    : '';
+  return htmlVista(p, i) + acciones;
+}
+
+function htmlPieza(p, i, op) {
+  return `
+    <div class="lab-propuesta" data-i="${i}">
+      <button type="button" class="lab-propuesta__cabecera" data-abrir aria-expanded="false">
+        <span class="lab-propuesta__nombre">${esc(p.titulo)}${p.editadoEn ? ' <span class="lab-propuesta__editado">Editado</span>' : ''}</span>
+        <span class="lab-propuesta__flecha" aria-hidden="true">▾</span>
+      </button>
+      <div class="lab-propuesta__cuerpo" hidden>${htmlCuerpoVista(p, i, op)}</div>
+    </div>`;
+}
+
+/** Todas las propuestas, agrupadas por formato (cada una cerrada, se abre una a la vez).
+ *  `nombresFormato`: { reel: { nombre }, ... }. `op.editable`: muestra el botón Editar. */
+export function htmlPiezas(piezas, nombresFormato, op) {
   const porFormato = {};
   (piezas || []).forEach((p, i) => { (porFormato[p.formato] = porFormato[p.formato] || []).push({ p, i }); });
   return Object.keys(porFormato).map(f => `
     <div class="lab-formato">
       <h4 class="lab-formato__titulo">${esc((nombresFormato && nombresFormato[f] && nombresFormato[f].nombre) || f)}</h4>
-      <div class="lab-formato__lista lab-formato__lista--${esc(f)}">${porFormato[f].map(({ p, i }) => htmlPieza(p, i)).join('')}</div>
+      <div class="lab-formato__lista lab-formato__lista--${esc(f)}">${porFormato[f].map(({ p, i }) => htmlPieza(p, i, op)).join('')}</div>
     </div>`).join('');
 }
 
-/** Enlaza los botones Copiar y las láminas deslizables dentro de `contenedor`. */
-export function conectarPiezas(contenedor, piezas) {
-  contenedor.querySelectorAll('[data-copiar]').forEach(btn => {
+/* --- Formulario de edición: solo los textos; el formato y el título no cambian --- */
+
+const campoTexto = (etiqueta, clave, valor, filas, max) =>
+  `<label class="lab-edicion__campo"><span>${esc(etiqueta)}</span><textarea data-campo="${esc(clave)}" rows="${filas}" maxlength="${max}">${esc(valor || '')}</textarea></label>`;
+const campoLinea = (etiqueta, clave, valor, max) =>
+  `<label class="lab-edicion__campo"><span>${esc(etiqueta)}</span><input type="text" data-campo="${esc(clave)}" maxlength="${max}" value="${esc(valor || '')}"></label>`;
+
+function htmlEdicion(p) {
+  let campos = '';
+  if (p.tipo === 'reel') {
+    campos = campoTexto('Lo que dices en el video', 'guion', p.guion, 8, 3500)
+      + campoLinea('Texto en pantalla', 'textoPantalla', p.textoPantalla, 200)
+      + campoTexto('Descripción para publicar', 'descripcion', p.descripcion, 6, 2500);
+  } else if (p.tipo === 'carrusel') {
+    campos = (p.laminas || []).map((t, n) => campoTexto(`Lámina ${n + 1}`, `lamina:${n}`, t, 3, 500)).join('')
+      + campoTexto('Descripción para publicar', 'descripcion', p.descripcion, 6, 2500);
+  } else if (p.tipo === 'chat') {
+    campos = (p.mensajes || []).map((m, n) =>
+      ((n > 0 || m.contexto) ? campoLinea('Cuándo se envía', `contexto:${n}`, m.contexto, 80) : '')
+      + campoTexto(`Mensaje ${n + 1}`, `texto:${n}`, m.texto, 4, 1500)).join('');
+  }
+  return `
+    <div class="lab-edicion" data-edicion>
+      ${campos}
+      <p class="lab-error hidden" data-error></p>
+      <div class="lab-acciones-pieza" data-acciones>
+        <button type="button" class="btn btn--primary" data-guardar>Guardar cambios</button>
+        <button type="button" class="btn btn--ghost" data-cancelar>Cancelar</button>
+      </div>
+      <p class="lab-edicion__estado hidden" data-estado>Guardando…</p>
+    </div>`;
+}
+
+// Lee lo que hay escrito en el formulario, con la misma forma que la propuesta.
+export function leerEdicion(p, form) {
+  const val = (k) => ((form.querySelector(`[data-campo="${k}"]`) || {}).value || '').trim();
+  if (p.tipo === 'reel') return { guion: val('guion'), textoPantalla: val('textoPantalla'), descripcion: val('descripcion') };
+  if (p.tipo === 'carrusel') return { laminas: (p.laminas || []).map((_, n) => val(`lamina:${n}`)), descripcion: val('descripcion') };
+  return { mensajes: (p.mensajes || []).map((m, n) => ({ contexto: form.querySelector(`[data-campo="contexto:${n}"]`) ? val(`contexto:${n}`) : (m.contexto || ''), texto: val(`texto:${n}`) })) };
+}
+
+export function validarEdicion(p, c) {
+  if (p.tipo === 'reel' && !c.guion && !c.descripcion) return 'Escribe el guion o la descripción.';
+  if (p.tipo === 'carrusel' && c.laminas.some(t => !t)) return 'Ninguna lámina puede quedar vacía.';
+  if (p.tipo === 'chat' && c.mensajes.some(m => !m.texto)) return 'Ningún mensaje puede quedar vacío.';
+  return '';
+}
+
+/* --- Botones Copiar y láminas deslizables dentro de un cuerpo ya dibujado --- */
+
+function enlazarVista(cuerpo, piezas) {
+  cuerpo.querySelectorAll('[data-copiar]').forEach(btn => {
     btn.addEventListener('click', async () => {
       const original = btn.textContent;
       const texto = textoACopiar(piezas[Number(btn.dataset.pieza)], btn.dataset.copiar, btn.dataset.m);
@@ -222,7 +294,7 @@ export function conectarPiezas(contenedor, piezas) {
       setTimeout(() => { btn.textContent = original; }, 1800);
     });
   });
-  contenedor.querySelectorAll('.lab-ig__media').forEach(media => {
+  cuerpo.querySelectorAll('.lab-ig__media').forEach(media => {
     const slides = media.querySelector('[data-slides]');
     const puntos = media.parentElement.querySelectorAll('.lab-ig__punto');
     if (!slides) return;
@@ -237,5 +309,103 @@ export function conectarPiezas(contenedor, piezas) {
       const n = Math.round(slides.scrollLeft / Math.max(slides.clientWidth, 1));
       slides.scrollTo({ left: ((n + 1) % total) * slides.clientWidth, behavior: 'smooth' });
     });
+  });
+}
+
+/** Enlaza el acordeón, la edición y los botones dentro de `contenedor`.
+ *  Solo hay UNA propuesta abierta a la vez en toda la vista (al abrir una, la otra se cierra).
+ *  `op.editable` + `op.guardar(i, cambios)` (promesa que escribe en la base): activan Editar,
+ *  Guardar cambios y Cancelar. Guardar solo existe mientras se edita. */
+export function conectarPiezas(contenedor, piezas, op) {
+  const opciones = op || {};
+  const vista = () => contenedor.closest('.view') || document;
+
+  contenedor.querySelectorAll('.lab-propuesta').forEach(card => {
+    const i = Number(card.dataset.i);
+    const cabecera = card.querySelector('[data-abrir]');
+    const cuerpo = card.querySelector('.lab-propuesta__cuerpo');
+    let foto = null;   // textos al entrar a editar; null = no se está editando
+
+    const hayCambios = () => {
+      const form = cuerpo.querySelector('[data-edicion]');
+      return !!form && foto !== null && foto !== JSON.stringify(leerEdicion(piezas[i], form));
+    };
+
+    function pintarVista() {
+      foto = null;
+      cuerpo.innerHTML = htmlCuerpoVista(piezas[i], i, opciones);
+      enlazarVista(cuerpo, piezas);
+      const editar = cuerpo.querySelector('[data-editar]');
+      if (editar) editar.addEventListener('click', entrarEdicion);
+    }
+
+    function entrarEdicion() {
+      const p = piezas[i];
+      cuerpo.innerHTML = htmlEdicion(p);
+      const form = cuerpo.querySelector('[data-edicion]');
+      foto = JSON.stringify(leerEdicion(p, form));
+      form.querySelector('[data-cancelar]').addEventListener('click', pintarVista);
+      form.querySelector('[data-guardar]').addEventListener('click', async () => {
+        const error = form.querySelector('[data-error]');
+        const acciones = form.querySelector('[data-acciones]');
+        const estado = form.querySelector('[data-estado]');
+        error.classList.add('hidden');
+        const cambios = leerEdicion(p, form);
+        const problema = validarEdicion(p, cambios);
+        if (problema) { error.textContent = problema; error.classList.remove('hidden'); return; }
+        // Los botones desaparecen al guardar; solo se muestran de nuevo si algo falla.
+        acciones.classList.add('hidden');
+        estado.classList.remove('hidden');
+        try {
+          await opciones.guardar(i, cambios);
+          Object.assign(p, cambios, { editadoEn: Date.now() });
+          pintarVista();
+          const aviso = document.createElement('p');
+          aviso.className = 'lab-edicion__ok';
+          aviso.textContent = 'Cambios guardados ✓';
+          cuerpo.prepend(aviso);
+          setTimeout(() => aviso.remove(), 2500);
+          const nombre = cabecera.querySelector('.lab-propuesta__nombre');
+          if (nombre && !nombre.querySelector('.lab-propuesta__editado')) nombre.insertAdjacentHTML('beforeend', ' <span class="lab-propuesta__editado">Editado</span>');
+        } catch (err) {
+          console.error('No se pudieron guardar los cambios:', err);
+          estado.classList.add('hidden');
+          acciones.classList.remove('hidden');
+          error.textContent = 'No se pudieron guardar los cambios. Intenta de nuevo.';
+          error.classList.remove('hidden');
+        }
+      });
+      const primero = form.querySelector('[data-campo]');
+      if (primero) primero.focus();
+    }
+
+    function cerrar() {
+      if (foto !== null) pintarVista();   // si estaba editando, vuelve a la vista normal
+      card.classList.remove('is-abierta');
+      cuerpo.hidden = true;
+      cabecera.setAttribute('aria-expanded', 'false');
+    }
+
+    function abrir() {
+      const otras = [...vista().querySelectorAll('.lab-propuesta.is-abierta')].filter(o => o !== card);
+      if (otras.some(o => o._hayCambios && o._hayCambios())
+        && !confirm('Tienes cambios sin guardar en otra propuesta. ¿Descartarlos y abrir esta?')) return;
+      otras.forEach(o => { if (o._cerrar) o._cerrar(); });   // nunca dos abiertas
+      card.classList.add('is-abierta');
+      cuerpo.hidden = false;
+      cabecera.setAttribute('aria-expanded', 'true');
+    }
+
+    card._cerrar = cerrar;
+    card._hayCambios = hayCambios;
+    cabecera.addEventListener('click', () => {
+      if (!card.classList.contains('is-abierta')) return abrir();
+      if (hayCambios() && !confirm('Tienes cambios sin guardar. ¿Descartarlos y cerrar?')) return;
+      cerrar();
+    });
+
+    enlazarVista(cuerpo, piezas);
+    const editar = cuerpo.querySelector('[data-editar]');
+    if (editar) editar.addEventListener('click', entrarEdicion);
   });
 }
