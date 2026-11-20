@@ -255,35 +255,31 @@
 .labv-item button { position: absolute; top: 6px; right: 6px; border: 0; border-radius: 999px; background: rgba(0, 0, 0, 0.6); color: #fff; width: 24px; height: 24px; cursor: pointer; line-height: 1; }
 
 /* ============================================================
-   Propuestas como acordeón (una abierta a la vez) y edición en la app
+   Edición de propuestas en la app y acordeón de peticiones
+   (las propuestas se ven completas, como siempre; el acordeón es por petición)
    ============================================================ */
-.lab-formato__lista,
-.lab-formato__lista--reel { grid-template-columns: 1fr; max-width: 780px; gap: 12px; }
-
-.lab-propuesta { background: #fff; color: #262626; border: 1px solid #dbdbdb; border-radius: 12px; overflow: hidden; box-shadow: var(--shadow-sm); }
-.lab-propuesta.is-abierta { border-color: var(--color-accent); box-shadow: 0 0 0 1px var(--color-accent), var(--shadow-sm); }
-.lab-propuesta__cabecera { all: unset; box-sizing: border-box; display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%; padding: 13px 16px; cursor: pointer; background: #fff; color: #262626; font-family: inherit; font-size: 14.5px; font-weight: 600; line-height: 1.3; }
-.lab-propuesta__cabecera:hover { background: #f7f8f9; }
-.lab-propuesta__cabecera:focus-visible { outline: 2px solid var(--color-accent); outline-offset: -2px; }
-.lab-propuesta__flecha { flex-shrink: 0; color: #6b7280; transition: transform 0.2s; }
-.lab-propuesta.is-abierta .lab-propuesta__flecha { transform: rotate(180deg); }
+.lab-propuesta__titulo .lab-propuesta__editado,
 .lab-propuesta__editado { display: inline-block; vertical-align: 1px; font-size: 11px; font-weight: 600; background: #e3f3f1; color: #1d6f64; border-radius: 999px; padding: 2px 8px; margin-left: 6px; }
-.lab-propuesta__cuerpo { padding: 14px 16px 16px; background: #fafafa; border-top: 1px solid #efefef; }
-.lab-propuesta__cuerpo[hidden] { display: none; }
-.lab-propuesta__cuerpo .lab-reelcard { box-shadow: none; }
 .lab-acciones-pieza { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
 
 /* Edición */
-.lab-edicion { display: flex; flex-direction: column; gap: 12px; }
+.lab-edicion { display: flex; flex-direction: column; gap: 12px; background: #fff; color: #262626; border: 1px solid #dbdbdb; border-radius: 12px; padding: 16px; box-shadow: var(--shadow-sm); max-width: 640px; }
 .lab-edicion__campo { display: flex; flex-direction: column; gap: 4px; }
 .lab-edicion__campo span { font-size: 11.5px; font-weight: 700; letter-spacing: 0.3px; text-transform: uppercase; color: #6b7280; }
 .lab-edicion__campo textarea, .lab-edicion__campo input { width: 100%; box-sizing: border-box; font: inherit; font-size: 14.5px; line-height: 1.5; color: #262626; background: #fff; border: 1px solid #cfd4da; border-radius: 8px; padding: 9px 11px; }
 .lab-edicion__campo textarea { resize: vertical; }
 .lab-edicion__campo textarea:focus, .lab-edicion__campo input:focus { outline: 2px solid var(--color-accent); outline-offset: 0; border-color: var(--color-accent); }
 .lab-edicion__estado { margin: 0; font-size: 13px; color: #6b7280; }
-.lab-edicion__ok { margin: 0 0 10px; padding: 8px 12px; border-radius: 8px; background: #e3f3f1; color: #1d6f64; font-weight: 600; font-size: 13.5px; }
+.lab-edicion__ok { margin: 0 0 10px; padding: 8px 12px; border-radius: 8px; background: #e3f3f1; color: #1d6f64; font-weight: 600; font-size: 13.5px; max-width: 440px; }
 .lab-edicion .hidden, .lab-propuesta__cuerpo .hidden { display: none; }
+
+/* Acordeón de peticiones: el resultado nuevo y cada una del historial */
+.lab-acordeon > summary { cursor: pointer; }
+.lab-acordeon--nuevo { border-color: var(--color-accent); box-shadow: 0 0 0 1px var(--color-accent); }
+.lab-acordeon__nuevo { display: inline-block; font-size: 11px; font-weight: 600; background: var(--color-accent); color: #fff; border-radius: 999px; padding: 2px 8px; margin-left: 6px; vertical-align: 1px; }
+.lab-acordeon__sub { margin: 0 0 8px; font-size: 13px; }
 
 /* Se leen igual en los temas oscuro y BEGIN */
 #view-laboratorio-ia .lab-propuesta .btn--ghost { color: var(--color-primary); border-color: var(--color-border); background: #fff; }
 #view-laboratorio-ia .lab-propuesta .lab-error { color: #C0392B; }
+#view-laboratorio-ia .lab-acordeon__sub { color: var(--color-ink-soft); }
