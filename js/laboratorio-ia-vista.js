@@ -86,6 +86,10 @@ const botonCopiar = (tipo, i, texto, extra) =>
 
 /* ---------------- Qué se copia ---------------- */
 
+// Lo que lleva escrita la imagen, en orden: Gancho, Bajada, Título de la sesión con fecha y hora, CTA.
+// (Gancho = titular, Bajada = apoyo, CTA = boton; así siguen siendo válidas las imágenes ya creadas.)
+const textoImagen = (p) => [p.titular, p.apoyo, p.sesion, p.boton].filter(Boolean).join('\n\n');
+
 export function textoACopiar(pieza, tipo, m) {
   if (!pieza) return '';
   if (tipo === 'descripcion') return pieza.descripcion || '';
@@ -93,7 +97,7 @@ export function textoACopiar(pieza, tipo, m) {
   if (tipo === 'laminas') return (pieza.laminas || []).join('\n\n');
   if (tipo === 'mensaje') return ((pieza.mensajes || [])[Number(m)] || {}).texto || '';
   if (tipo === 'anuncio') return pieza.anuncio || '';
-  if (tipo === 'imagen') return [pieza.titular, pieza.apoyo, pieza.boton ? `Botón: ${pieza.boton}` : ''].filter(Boolean).join('\n\n');
+  if (tipo === 'imagen') return textoImagen(pieza);
   // Propuestas antiguas (con secciones)
   return [pieza.titulo, ...(pieza.secciones || []).map(s => `${s.etiqueta ? s.etiqueta + ':\n' : ''}${s.texto}`)].join('\n\n');
 }
@@ -176,6 +180,7 @@ function htmlImagen(p, i) {
           <div class="lab-imagen__texto">
             ${p.titular ? `<div class="lab-imagen__titular">${esc(p.titular)}</div>` : ''}
             ${p.apoyo ? `<div class="lab-imagen__apoyo">${esc(p.apoyo)}</div>` : ''}
+            ${p.sesion ? `<div class="lab-imagen__sesion">${esc(p.sesion)}</div>` : ''}
           </div>
           ${p.boton ? `<div class="lab-imagen__boton">${esc(p.boton)}</div>` : ''}
         </div>
@@ -190,7 +195,7 @@ function htmlImagen(p, i) {
         </div>` : ''}
         <div class="lab-reelcard__bloque">
           <div class="lab-reelcard__etiqueta">Texto de la imagen</div>
-          <div class="lab-reelcard__guion">${esc([p.titular, p.apoyo].filter(Boolean).join('\n\n'))}${p.boton ? `\n\nBotón: ${esc(p.boton)}` : ''}</div>
+          <div class="lab-reelcard__guion">${esc(textoImagen(p))}</div>
           ${botonCopiar('imagen', i, 'Copiar texto de la imagen')}
         </div>
         ${p.ideaVisual ? `
@@ -297,9 +302,10 @@ function htmlEdicion(p) {
     campos = (p.laminas || []).map((t, n) => campoTexto(`Lámina ${n + 1}`, `lamina:${n}`, t, 3, 500)).join('')
       + campoTexto('Descripción para publicar', 'descripcion', p.descripcion, 6, 2500);
   } else if (p.tipo === 'imagen') {
-    campos = campoLinea('Titular de la imagen', 'titular', p.titular, 200)
-      + campoLinea('Texto de apoyo', 'apoyo', p.apoyo, 300)
-      + campoLinea('Texto del botón', 'boton', p.boton, 40)
+    campos = campoLinea('Gancho', 'titular', p.titular, 200)
+      + campoLinea('Bajada', 'apoyo', p.apoyo, 300)
+      + campoLinea('Título de la sesión con fecha y hora', 'sesion', p.sesion, 200)
+      + campoLinea('CTA (texto del botón)', 'boton', p.boton, 40)
       + campoTexto('Texto del anuncio', 'anuncio', p.anuncio, 6, 2500)
       + campoTexto('Idea visual', 'ideaVisual', p.ideaVisual, 3, 500);
   } else if (p.tipo === 'chat') {
@@ -324,7 +330,7 @@ export function leerEdicion(p, form) {
   const val = (k) => ((form.querySelector(`[data-campo="${k}"]`) || {}).value || '').trim();
   if (p.tipo === 'reel') return { guion: val('guion'), textoPantalla: val('textoPantalla'), descripcion: val('descripcion') };
   if (p.tipo === 'carrusel') return { laminas: (p.laminas || []).map((_, n) => val(`lamina:${n}`)), descripcion: val('descripcion') };
-  if (p.tipo === 'imagen') return { titular: val('titular'), apoyo: val('apoyo'), boton: val('boton'), anuncio: val('anuncio'), ideaVisual: val('ideaVisual') };
+  if (p.tipo === 'imagen') return { titular: val('titular'), apoyo: val('apoyo'), sesion: val('sesion'), boton: val('boton'), anuncio: val('anuncio'), ideaVisual: val('ideaVisual') };
   return { mensajes: (p.mensajes || []).map((m, n) => ({ contexto: form.querySelector(`[data-campo="contexto:${n}"]`) ? val(`contexto:${n}`) : (m.contexto || ''), texto: val(`texto:${n}`) })) };
 }
 
