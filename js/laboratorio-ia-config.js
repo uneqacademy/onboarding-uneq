@@ -27,6 +27,8 @@ const NOMBRES_PROMPT = {
   bienvenida: ['Frase de bienvenida', 'Cómo debe ser la frase cálida que ve el alumno arriba al entrar al Laboratorio.'],
   fichaBorrador: ['Borrador de la ficha', 'Cómo debe redactar la IA el borrador de las respuestas de la ficha a partir de los hitos y notas del copiloto.'],
   generacion: ['Generación de contenidos', 'Instrucción general al crear Reels, carruseles, DMs y WhatsApp. El objetivo de cada etapa y la estructura de cada formato se editan más arriba.'],
+  pagado: ['Reglas del contenido pagado (anuncios)', 'Cómo se escriben los anuncios: el llamado a la acción es el botón de la publicación. Puedes usar {destino} (página de registro, página puente o grupo) y {fecha}.'],
+  angulos: ['Creación de ángulos comunicacionales', 'Cómo debe pensar la IA los ángulos (enfoques para conectar con el Cliente Soñado) que el alumno revisa y aprueba antes de generar contenido pagado.'],
   estrategia: ['Reglas de CTA de Encuentro (estrategia)', 'Cómo se escriben los llamados a la acción en Encuentro. Puedes usar {palabra}, {link} y {fecha}: la app los reemplaza con lo que cada alumno definió en su estrategia.'],
   formatoTexto: ['Formato de los textos (párrafos y hashtags)', 'Cómo deben escribirse los textos para que queden como se publicarían: párrafos separados por una línea en blanco y hashtags al final. Además, la app ordena el texto sola al guardarlo.'],
   emoji0: ['Nivel de emojis: «Sin emojis»', 'Instrucción cuando la barra del alumno está en el extremo izquierdo. Además la app quita cualquier emoji que se cuele.'],
@@ -118,6 +120,25 @@ function pintar() {
       </div>`;
     }).join('')}
 
+    <div class="labcfg-sub">Recetas de Encuentro (qué se genera según el contenido que elige el alumno)</div>
+    ${Object.entries(cfg.recetas || {}).map(([id, r]) => `
+      <div class="labcfg-bloque" data-re="${id}">
+        <div class="labcfg-fila">
+          <div class="field" style="margin:0;"><label>Nombre (lo ve el alumno)</label><input type="text" data-f="nombre" value="${esc(r.nombre)}" maxlength="60"></div>
+          <div class="field" style="margin:0;"><label>Tipo</label><input type="text" value="${esc(r.tipo === 'pagado' ? 'Pagado' : 'Orgánico')}" disabled></div>
+          <label style="font-size:13px; display:flex; gap:5px; align-items:center; margin-top:22px;"><input type="checkbox" data-f="activa" ${r.activa ? 'checked' : ''}> Activa</label>
+        </div>
+        <div class="field"><label>Descripción (la ve el alumno)</label><input type="text" data-f="descripcion" value="${esc(r.descripcion)}" maxlength="200"></div>
+        <label style="font-size:12.5px; font-weight:600;">Qué se genera (formato y cantidad en total; se reparte entre los ángulos que elija el alumno)</label>
+        ${r.piezas.map((p, n) => `
+          <div class="labcfg-fila" data-p="${n}">
+            <select data-f="formato">${base.formatos.map(fo => `<option value="${fo}" ${p.formato === fo ? 'selected' : ''}>${esc(cfg.formatos[fo].nombre)}</option>`).join('')}</select>
+            <input type="number" min="1" max="12" data-f="cantidad" value="${esc(p.cantidad)}">
+            <span><button type="button" class="btn btn--ghost labcfg-mini" data-act="re-del" data-re="${id}" data-n="${n}" title="Quitar">✕</button></span>
+          </div>`).join('')}
+        <button type="button" class="btn btn--ghost labcfg-mini" data-act="re-add" data-re="${id}">+ Agregar formato</button>
+      </div>`).join('')}
+
     <div class="labcfg-sub">Instrucciones internas de la IA (prompts)</div>
     ${Object.keys(NOMBRES_PROMPT).map(k => `
       <div class="labcfg-bloque">
@@ -169,6 +190,18 @@ function leer() {
     f.estructura = bloque.querySelector('[data-f="estructura"]').value.trim();
     f.instruccion = bloque.querySelector('[data-f="instruccion"]').value.trim();
   });
+  el.querySelectorAll('[data-re]').forEach(bloque => {
+    if (!bloque.matches('.labcfg-bloque')) return;
+    const r = (cfg.recetas || {})[bloque.dataset.re];
+    if (!r) return;
+    r.nombre = bloque.querySelector('[data-f="nombre"]').value.trim();
+    r.descripcion = bloque.querySelector('[data-f="descripcion"]').value.trim();
+    r.activa = bloque.querySelector('[data-f="activa"]').checked;
+    r.piezas = [...bloque.querySelectorAll('.labcfg-fila[data-p]')].map(fila => ({
+      formato: fila.querySelector('[data-f="formato"]').value,
+      cantidad: Math.round(Number(fila.querySelector('[data-f="cantidad"]').value)) || 1
+    }));
+  });
   el.querySelectorAll('[data-prompt]').forEach(t => { cfg.prompts[t.dataset.prompt] = t.value; });
 }
 
@@ -194,6 +227,11 @@ function validar() {
     if (!f.nombre || !f.estructura) return 'Cada formato necesita nombre y estructura.';
     if (!(f.cantidad >= 1 && f.cantidad <= 6)) return `Las propuestas de «${f.nombre}» deben ser entre 1 y 6.`;
   }
+  for (const r of Object.values(cfg.recetas || {})) {
+    if (!r.nombre) return 'Cada receta necesita un nombre.';
+    if (!r.piezas.length) return `La receta «${r.nombre}» necesita al menos un formato.`;
+    if (r.piezas.some(p => !(p.cantidad >= 1 && p.cantidad <= 12))) return `Las cantidades de la receta «${r.nombre}» deben ser entre 1 y 12.`;
+  }
   if (!(cfg.limiteDia >= 1 && cfg.limiteDia <= 100)) return 'El tope diario debe estar entre 1 y 100.';
   if (!cfg.prompts.sistema.trim()) return 'La personalidad general de la IA no puede quedar vacía (usa «Restaurar el original»).';
   return '';
@@ -217,6 +255,15 @@ async function alHacerClic(ev) {
     if (act === 'restaurar-prompt') {
       leer();
       cfg.prompts[b.dataset.k] = porDefecto.prompts[b.dataset.k];
+      pintar();
+      return;
+    }
+    if (act === 're-add' || act === 're-del') {
+      leer();
+      const r = (cfg.recetas || {})[b.dataset.re];
+      if (!r) return;
+      if (act === 're-add') r.piezas.push({ formato: cfg.base.formatos[0], cantidad: 1 });
+      else if (r.piezas.length > 1) r.piezas.splice(Number(b.dataset.n), 1);
       pintar();
       return;
     }
@@ -256,7 +303,8 @@ function conectarBotones() {
         limiteDia: cfg.limiteDia,
         preguntas: cfg.preguntas,
         etapas: cfg.etapas,
-        formatos: cfg.formatos
+        formatos: cfg.formatos,
+        recetas: cfg.recetas || {}
       };
       const prompts = {};
       Object.keys(NOMBRES_PROMPT).forEach(k => { if (cfg.prompts[k].trim() !== porDefecto.prompts[k].trim()) prompts[k] = cfg.prompts[k].trim(); });

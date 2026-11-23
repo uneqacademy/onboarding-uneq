@@ -33,7 +33,7 @@ const SCOPES = [
   { id: 'venta', nombre: 'Venta' },
   { id: 'vista', nombre: 'Imágenes de vista previa' }
 ];
-const FORMATOS = [['todos', 'Todos los formatos'], ['reel', 'Reels'], ['carrusel', 'Carruseles'], ['dm', 'DMs'], ['whatsapp', 'WhatsApp']];
+const FORMATOS = [['todos', 'Todos los formatos'], ['reel', 'Reels'], ['carrusel', 'Carruseles'], ['dm', 'DMs'], ['whatsapp', 'WhatsApp'], ['imagen', 'Imágenes estáticas']];
 const EXT_ACEPTADAS = '.mp4,.mov,.webm,.avi,.mpeg,.mpg,.wmv,.m4v,.3gp,.mp3,.wav,.m4a,.aac,.ogg,.flac,.pdf,.docx,.png,.jpg,.jpeg,.webp,.txt,.md,.csv';
 const EXT_MEDIA = ['mp4', 'mov', 'webm', 'avi', 'mpeg', 'mpg', 'wmv', 'm4v', '3gp', 'mp3', 'wav', 'm4a', 'aac', 'ogg', 'flac'];
 const MAX_MEDIA_MB = 200;

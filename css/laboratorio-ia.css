@@ -337,3 +337,39 @@
 #view-laboratorio-ia .lab-estrategia .text-soft, #view-laboratorio-ia .lab-estrategia small { color: #6b7280; }
 #view-laboratorio-ia .lab-estrategia .btn--ghost { color: var(--color-primary); border-color: var(--color-border); background: #fff; }
 #view-laboratorio-ia .lab-estrategia .lab-error { color: #C0392B; }
+
+/* ============================================================
+   Contenido pagado: ángulos y imágenes estáticas (formato 4:5 = 1080x1350)
+   ============================================================ */
+.lab-propuesta__angulo { display: inline-block; vertical-align: 1px; font-size: 11px; font-weight: 600; background: #eceafc; color: #4b3fb8; border-radius: 999px; padding: 2px 8px; margin-left: 6px; }
+
+.lab-imgcard { display: flex; gap: 18px; flex-wrap: wrap; align-items: flex-start; background: #fff; color: #262626; border: 1px solid #dbdbdb; border-radius: 12px; padding: 16px; box-shadow: var(--shadow-sm); }
+.lab-imagen { width: 240px; flex-shrink: 0; }
+.lab-imagen__marco { position: relative; aspect-ratio: 4 / 5; border-radius: 8px; overflow: hidden; background-size: cover; background-position: center; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 18px 16px 56px; box-sizing: border-box; box-shadow: 0 6px 18px rgba(0, 0, 0, 0.18); }
+.lab-imagen__marco::before { content: ''; position: absolute; inset: 0; background: rgba(10, 20, 40, 0.5); }
+.lab-imagen__texto { position: relative; z-index: 1; text-align: center; color: #fff; display: flex; flex-direction: column; gap: 10px; }
+.lab-imagen__titular { font-weight: 800; font-size: 21px; line-height: 1.15; text-shadow: 0 2px 8px rgba(0, 0, 0, 0.45); overflow-wrap: anywhere; }
+.lab-imagen__apoyo { font-size: 13px; line-height: 1.35; opacity: 0.95; overflow-wrap: anywhere; }
+.lab-imagen__boton { position: absolute; z-index: 1; left: 16px; right: 16px; bottom: 14px; text-align: center; background: #fff; color: #1b2a4a; font-weight: 700; font-size: 13px; border-radius: 8px; padding: 9px 10px; }
+.lab-imagen__medida { margin-top: 6px; font-size: 11.5px; color: #6b7280; text-align: center; }
+
+.lab-pagado { max-width: 720px; }
+.lab-pagado h5 { margin: 6px 0 0; font-size: 13px; color: var(--color-primary); }
+.lab-pagado__nota { font-size: 12.5px; margin: 0; }
+.lab-angulo { border: 1px solid #dbdbdb; border-radius: 10px; padding: 12px 14px; background: #fff; display: flex; flex-direction: column; gap: 6px; }
+.lab-angulo--ok { border-color: #2F9E8F; box-shadow: 0 0 0 1px #2F9E8F; }
+.lab-angulo--edicion { background: #f6f7f8; }
+.lab-angulo__cab { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.lab-angulo__num { font-size: 12px; font-weight: 700; letter-spacing: 0.3px; text-transform: uppercase; color: #4b3fb8; }
+.lab-angulo__ok { font-size: 11px; font-weight: 600; background: #e3f3f1; color: #1d6f64; border-radius: 999px; padding: 2px 8px; }
+.lab-angulo__pend { font-size: 11px; font-weight: 600; background: #f1f1f4; color: #6b7280; border-radius: 999px; padding: 2px 8px; }
+.lab-angulo__titulo { font-weight: 700; font-size: 15px; color: #262626; }
+.lab-angulo__desc { margin: 0; font-size: 13.5px; line-height: 1.45; color: #4b5563; }
+#lab-pagado-opciones { display: flex; flex-direction: column; gap: 8px; }
+#lab-pagado-opciones .btn { align-self: flex-start; }
+
+/* Se leen igual en los temas oscuro y BEGIN */
+#view-laboratorio-ia :is(.lab-imgcard, .lab-angulo) { color: #262626; }
+#view-laboratorio-ia .lab-imgcard .btn--ghost, #view-laboratorio-ia .lab-angulo .btn--ghost { color: var(--color-primary); border-color: var(--color-border); background: #fff; }
+#view-laboratorio-ia .lab-pagado h5 { color: var(--color-primary); }
+#view-laboratorio-ia .lab-pagado .text-soft { color: #6b7280; }

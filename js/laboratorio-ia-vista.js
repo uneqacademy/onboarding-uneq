@@ -92,6 +92,8 @@ export function textoACopiar(pieza, tipo, m) {
   if (tipo === 'guion') return pieza.guion || '';
   if (tipo === 'laminas') return (pieza.laminas || []).join('\n\n');
   if (tipo === 'mensaje') return ((pieza.mensajes || [])[Number(m)] || {}).texto || '';
+  if (tipo === 'anuncio') return pieza.anuncio || '';
+  if (tipo === 'imagen') return [pieza.titular, pieza.apoyo, pieza.boton ? `Botón: ${pieza.boton}` : ''].filter(Boolean).join('\n\n');
   // Propuestas antiguas (con secciones)
   return [pieza.titulo, ...(pieza.secciones || []).map(s => `${s.etiqueta ? s.etiqueta + ':\n' : ''}${s.texto}`)].join('\n\n');
 }
@@ -165,6 +167,41 @@ function htmlReel(p, i) {
     </article>`;
 }
 
+// Imagen estática de un anuncio: marco 4:5 (1080x1350) con el titular, el apoyo y el botón; a un lado, el texto del anuncio.
+function htmlImagen(p, i) {
+  return `
+    <article class="lab-imgcard" data-pieza="${i}">
+      <div class="lab-imagen">
+        <div class="lab-imagen__marco" style="${fondo(p.titulo, 0)}">
+          <div class="lab-imagen__texto">
+            ${p.titular ? `<div class="lab-imagen__titular">${esc(p.titular)}</div>` : ''}
+            ${p.apoyo ? `<div class="lab-imagen__apoyo">${esc(p.apoyo)}</div>` : ''}
+          </div>
+          ${p.boton ? `<div class="lab-imagen__boton">${esc(p.boton)}</div>` : ''}
+        </div>
+        <div class="lab-imagen__medida">Formato 1080 × 1350</div>
+      </div>
+      <div class="lab-reelcard__texto">
+        ${p.anuncio ? `
+        <div class="lab-reelcard__bloque">
+          <div class="lab-reelcard__etiqueta">Texto del anuncio</div>
+          <div class="lab-ig__caption lab-ig__caption--suelta">${esc(p.anuncio)}</div>
+          ${botonCopiar('anuncio', i, 'Copiar texto del anuncio')}
+        </div>` : ''}
+        <div class="lab-reelcard__bloque">
+          <div class="lab-reelcard__etiqueta">Texto de la imagen</div>
+          <div class="lab-reelcard__guion">${esc([p.titular, p.apoyo].filter(Boolean).join('\n\n'))}${p.boton ? `\n\nBotón: ${esc(p.boton)}` : ''}</div>
+          ${botonCopiar('imagen', i, 'Copiar texto de la imagen')}
+        </div>
+        ${p.ideaVisual ? `
+        <div class="lab-reelcard__bloque">
+          <div class="lab-reelcard__etiqueta">Idea visual</div>
+          <div class="lab-reelcard__guion">${esc(p.ideaVisual)}</div>
+        </div>` : ''}
+      </div>
+    </article>`;
+}
+
 function horaActual() {
   const d = new Date();
   return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
@@ -207,10 +244,11 @@ function htmlAntigua(p, i) {
 /* ---------------- Cada propuesta: se ve completa y se puede editar ---------------- */
 
 // Solo se pueden editar las propuestas con el formato nuevo (las antiguas, con secciones, no).
-const esEditable = (p) => !!p && (p.tipo === 'reel' || p.tipo === 'carrusel' || p.tipo === 'chat');
+const esEditable = (p) => !!p && (p.tipo === 'reel' || p.tipo === 'carrusel' || p.tipo === 'chat' || p.tipo === 'imagen');
 
 function htmlVista(p, i) {
   return p.tipo === 'carrusel' ? htmlCarrusel(p, i)
+    : p.tipo === 'imagen' ? htmlImagen(p, i)
     : p.tipo === 'reel' ? htmlReel(p, i)
     : p.tipo === 'chat' ? htmlChat(p, i)
     : htmlAntigua(p, i);
@@ -225,7 +263,7 @@ function htmlCuerpoVista(p, i, op) {
 
 function htmlPieza(p, i, op) {
   const titulo = p.tipo
-    ? `<div class="lab-propuesta__titulo">${esc(p.titulo)}${p.editadoEn ? ' <span class="lab-propuesta__editado">Editado</span>' : ''}</div>`
+    ? `<div class="lab-propuesta__titulo">${esc(p.titulo)}${p.angulo ? ` <span class="lab-propuesta__angulo">Ángulo ${esc(p.angulo)}</span>` : ''}${p.editadoEn ? ' <span class="lab-propuesta__editado">Editado</span>' : ''}</div>`
     : '';
   return `<div class="lab-propuesta" data-i="${i}">${titulo}<div class="lab-propuesta__cuerpo">${htmlCuerpoVista(p, i, op)}</div></div>`;
 }
@@ -258,6 +296,12 @@ function htmlEdicion(p) {
   } else if (p.tipo === 'carrusel') {
     campos = (p.laminas || []).map((t, n) => campoTexto(`Lámina ${n + 1}`, `lamina:${n}`, t, 3, 500)).join('')
       + campoTexto('Descripción para publicar', 'descripcion', p.descripcion, 6, 2500);
+  } else if (p.tipo === 'imagen') {
+    campos = campoLinea('Titular de la imagen', 'titular', p.titular, 200)
+      + campoLinea('Texto de apoyo', 'apoyo', p.apoyo, 300)
+      + campoLinea('Texto del botón', 'boton', p.boton, 40)
+      + campoTexto('Texto del anuncio', 'anuncio', p.anuncio, 6, 2500)
+      + campoTexto('Idea visual', 'ideaVisual', p.ideaVisual, 3, 500);
   } else if (p.tipo === 'chat') {
     campos = (p.mensajes || []).map((m, n) =>
       ((n > 0 || m.contexto) ? campoLinea('Cuándo se envía', `contexto:${n}`, m.contexto, 80) : '')
@@ -280,12 +324,14 @@ export function leerEdicion(p, form) {
   const val = (k) => ((form.querySelector(`[data-campo="${k}"]`) || {}).value || '').trim();
   if (p.tipo === 'reel') return { guion: val('guion'), textoPantalla: val('textoPantalla'), descripcion: val('descripcion') };
   if (p.tipo === 'carrusel') return { laminas: (p.laminas || []).map((_, n) => val(`lamina:${n}`)), descripcion: val('descripcion') };
+  if (p.tipo === 'imagen') return { titular: val('titular'), apoyo: val('apoyo'), boton: val('boton'), anuncio: val('anuncio'), ideaVisual: val('ideaVisual') };
   return { mensajes: (p.mensajes || []).map((m, n) => ({ contexto: form.querySelector(`[data-campo="contexto:${n}"]`) ? val(`contexto:${n}`) : (m.contexto || ''), texto: val(`texto:${n}`) })) };
 }
 
 export function validarEdicion(p, c) {
   if (p.tipo === 'reel' && !c.guion && !c.descripcion) return 'Escribe el guion o la descripción.';
   if (p.tipo === 'carrusel' && c.laminas.some(t => !t)) return 'Ninguna lámina puede quedar vacía.';
+  if (p.tipo === 'imagen' && !c.titular && !c.anuncio) return 'Escribe el titular o el texto del anuncio.';
   if (p.tipo === 'chat' && c.mensajes.some(m => !m.texto)) return 'Ningún mensaje puede quedar vacío.';
   return '';
 }
