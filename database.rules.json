@@ -589,6 +589,7 @@
                 "textoPantalla": { ".write": "auth != null && root.child('alumnoPorAuthUid').child(auth.uid).val() === $alumnoId", ".validate": "newData.isString() && newData.val().length <= 200" },
                 "descripcion": { ".write": "auth != null && root.child('alumnoPorAuthUid').child(auth.uid).val() === $alumnoId", ".validate": "newData.isString() && newData.val().length <= 2500" },
                 "titular": { ".write": "auth != null && root.child('alumnoPorAuthUid').child(auth.uid).val() === $alumnoId", ".validate": "newData.isString() && newData.val().length <= 200" },
+                "sesion": { ".write": "auth != null && root.child('alumnoPorAuthUid').child(auth.uid).val() === $alumnoId", ".validate": "newData.isString() && newData.val().length <= 200" },
                 "apoyo": { ".write": "auth != null && root.child('alumnoPorAuthUid').child(auth.uid).val() === $alumnoId", ".validate": "newData.isString() && newData.val().length <= 300" },
                 "boton": { ".write": "auth != null && root.child('alumnoPorAuthUid').child(auth.uid).val() === $alumnoId", ".validate": "newData.isString() && newData.val().length <= 40" },
                 "anuncio": { ".write": "auth != null && root.child('alumnoPorAuthUid').child(auth.uid).val() === $alumnoId", ".validate": "newData.isString() && newData.val().length <= 2500" },
