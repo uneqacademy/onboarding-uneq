@@ -740,3 +740,19 @@
 #view-laboratorio-ia .lab-etapa[data-etapa="conexion"] .btn--primary { background: linear-gradient(135deg, #2f76ff, #5a5bff); }
 #view-laboratorio-ia .lab-etapa[data-etapa="encuentro"] .btn--primary { background: linear-gradient(135deg, #8e0da4, #c030d8); }
 #view-laboratorio-ia .lab-etapa[data-etapa="venta"] .btn--primary { background: linear-gradient(135deg, #ff5a3c, #ff2f7a); }
+
+/* Aire entre los ángulos generados (PC y celular) */
+#lab-angulos-lista { display: flex; flex-direction: column; gap: 18px; margin: 14px 0 18px; }
+#lab-angulos-lista > .lab-angulo { margin: 0; padding: 16px 18px; gap: 8px; }
+@media (max-width: 600px) {
+  #lab-angulos-lista { gap: 16px; }
+  #lab-angulos-lista > .lab-angulo { padding: 14px 14px; }
+}
+
+/* Cajas parejas: en cada fila todas miden lo del texto más largo */
+#view-laboratorio-ia .lab-formato__lista { align-items: stretch; }
+#view-laboratorio-ia .lab-formato__lista > .lab-propuesta { display: flex; flex-direction: column; }
+#view-laboratorio-ia .lab-formato__lista > .lab-propuesta > .lab-propuesta__cuerpo { flex: 1 1 auto; display: flex; flex-direction: column; }
+#view-laboratorio-ia .lab-propuesta__cuerpo > :is(.lab-imgcard, .lab-histcard, .lab-emailcard, .lab-reelcard, .lab-edicion) { flex: 1 1 auto; }
+#view-laboratorio-ia .lab-propuesta__cuerpo > .lab-acciones-pieza { flex: 0 0 auto; }
+#view-laboratorio-ia .lab-propuesta__cuerpo > :is(.lab-imgcard, .lab-histcard, .lab-reelcard) { align-content: flex-start; }
