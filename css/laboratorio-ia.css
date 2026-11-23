@@ -374,3 +374,36 @@
 #view-laboratorio-ia .lab-imgcard .btn--ghost, #view-laboratorio-ia .lab-angulo .btn--ghost { color: var(--color-primary); border-color: var(--color-border); background: #fff; }
 #view-laboratorio-ia .lab-pagado h5 { color: var(--color-primary); }
 #view-laboratorio-ia .lab-pagado .text-soft { color: #6b7280; }
+
+/* ============================================================
+   Contenido orgánico: historias de Instagram y emails
+   ============================================================ */
+.lab-histcard, .lab-emailcard { background: #fff; color: #262626; border: 1px solid #dbdbdb; border-radius: 12px; padding: 16px; box-shadow: var(--shadow-sm); }
+.lab-histcard { display: flex; gap: 18px; flex-wrap: wrap; align-items: flex-start; }
+.lab-historia { width: 220px; flex-shrink: 0; max-width: 100%; }
+.lab-historia__marco { position: relative; aspect-ratio: 9 / 16; border-radius: 16px; overflow: hidden; background-size: cover; background-position: center; box-shadow: 0 8px 22px rgba(0, 0, 0, 0.22); display: flex; align-items: center; justify-content: center; padding: 64px 18px 40px; box-sizing: border-box; }
+.lab-historia__marco::before { content: ''; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(0, 0, 0, 0.35) 0%, rgba(0, 0, 0, 0.3) 50%, rgba(0, 0, 0, 0.55) 100%); }
+.lab-historia__barras { position: absolute; z-index: 2; top: 10px; left: 10px; right: 10px; display: flex; gap: 4px; }
+.lab-historia__barra { flex: 1; height: 3px; border-radius: 3px; background: rgba(255, 255, 255, 0.4); }
+.lab-historia__barra.is-activa { background: #fff; }
+.lab-historia__cab { position: absolute; z-index: 2; top: 22px; left: 12px; right: 12px; display: flex; align-items: center; gap: 7px; color: #fff; font-size: 12.5px; }
+.lab-historia__cab span { opacity: 0.8; }
+.lab-historia__texto { position: relative; z-index: 1; color: #fff; text-align: center; font-weight: 800; font-size: 20px; line-height: 1.2; text-shadow: 0 2px 10px rgba(0, 0, 0, 0.5); overflow-wrap: anywhere; }
+.lab-historia__zona { position: absolute; z-index: 3; top: 56px; bottom: 0; width: 50%; background: transparent; border: 0; padding: 0; cursor: pointer; }
+.lab-historia__zona--izq { left: 0; }
+.lab-historia__zona--der { right: 0; }
+
+.lab-email { border: 1px solid #dbdbdb; border-radius: 10px; overflow: hidden; background: #fff; max-width: 640px; }
+.lab-email__fila { padding: 9px 14px; border-bottom: 1px solid #ececec; font-size: 13.5px; color: #262626; background: #f8f9fa; overflow-wrap: anywhere; }
+.lab-email__fila span { display: inline-block; min-width: 54px; color: #6b7280; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.3px; }
+.lab-email__cuerpo { padding: 14px; white-space: pre-wrap; line-height: 1.55; font-size: 14.5px; color: #262626; overflow-wrap: anywhere; }
+.lab-emailcard .lab-copiar-fila { margin-top: 12px; }
+
+#lab-org-wsp { display: flex; flex-direction: column; gap: 6px; }
+#lab-org-wsp.hidden { display: none; }
+.labcfg-pieza { border-left: 3px solid var(--color-border); padding-left: 8px; margin-bottom: 8px; }
+
+/* Se leen igual en los temas oscuro y BEGIN */
+#view-laboratorio-ia :is(.lab-histcard, .lab-emailcard) { color: #262626; }
+#view-laboratorio-ia :is(.lab-histcard, .lab-emailcard) .btn--ghost { color: var(--color-primary); border-color: var(--color-border); background: #fff; }
+#view-laboratorio-ia .lab-estrategia .hidden { display: none; }

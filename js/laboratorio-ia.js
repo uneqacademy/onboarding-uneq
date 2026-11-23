@@ -386,6 +386,48 @@ async function abrirPagado() {
   pintarAngulos();
 }
 
+/* --- Contenido orgánico: elegir la opción (receta) y, si corresponde, si WhatsApp es grupo o privado --- */
+
+let recetaOrganicaElegida = '';
+let wspElegido = '';
+
+function abrirOrganico() {
+  const cont = document.getElementById('lab-pagado');
+  if (!cont) return;
+  const recetas = Object.entries(datos.recetas || {}).filter(([, r]) => r.tipo === 'organico');
+  if (!recetas.some(([id]) => id === recetaOrganicaElegida)) recetaOrganicaElegida = (recetas[0] || [])[0] || '';
+  cont.innerHTML = `
+    <div class="lab-estrategia lab-pagado">
+      <h4>Contenido orgánico: ¿qué quieres crear?</h4>
+      <p class="text-soft">Elige una opción. Todos los contenidos usan tu estrategia: tu técnica, tu palabra clave, tu link y la fecha de tu SDV.</p>
+      ${recetas.map(([id, r]) => `<label class="lab-estrategia__opcion"><input type="radio" name="lab-receta-org" value="${esc(id)}" ${id === recetaOrganicaElegida ? 'checked' : ''}> <span><strong>${esc(r.nombre)}</strong>${r.descripcion ? `<br><span class="text-soft">${esc(r.descripcion)}</span>` : ''}</span></label>`).join('') || '<p class="text-soft">No hay opciones activas por ahora.</p>'}
+      <div id="lab-org-wsp" class="hidden">
+        <h5>¿Tu WhatsApp es para grupos o es un mensaje privado?</h5>
+        <label class="lab-estrategia__opcion"><input type="radio" name="lab-wsp" value="grupo" ${wspElegido === 'grupo' ? 'checked' : ''}> Para grupos</label>
+        <label class="lab-estrategia__opcion"><input type="radio" name="lab-wsp" value="privado" ${wspElegido === 'privado' ? 'checked' : ''}> Mensaje privado</label>
+      </div>
+      <p class="lab-error hidden" id="lab-org-error"></p>
+      <div class="lab-acciones-pieza"><button type="button" class="btn btn--primary" id="lab-org-generar" data-generar-pagado ${recetas.length ? '' : 'disabled'}>Generar contenidos</button></div>
+    </div>`;
+  cont.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  const actualizar = () => {
+    recetaOrganicaElegida = (cont.querySelector('input[name="lab-receta-org"]:checked') || {}).value || '';
+    const r = (datos.recetas || {})[recetaOrganicaElegida];
+    cont.querySelector('#lab-org-wsp').classList.toggle('hidden', !(r && r.preguntaWsp));
+  };
+  cont.querySelectorAll('input[name="lab-receta-org"]').forEach(x => x.addEventListener('change', actualizar));
+  cont.querySelectorAll('input[name="lab-wsp"]').forEach(x => x.addEventListener('change', () => { wspElegido = x.value; }));
+  actualizar();
+  cont.querySelector('#lab-org-generar').addEventListener('click', (ev) => {
+    const r = (datos.recetas || {})[recetaOrganicaElegida];
+    const err = cont.querySelector('#lab-org-error');
+    err.classList.add('hidden');
+    if (!r) return;
+    if (r.preguntaWsp && !wspElegido) { err.textContent = 'Elige si tu WhatsApp es para grupos o es un mensaje privado.'; err.classList.remove('hidden'); return; }
+    generarEtapa('encuentro', ev.currentTarget, { receta: recetaOrganicaElegida, wsp: r.preguntaWsp ? wspElegido : '' });
+  });
+}
+
 // Solo el Alumno Demo: simular que publicó el hito H2F4 para probar Encuentro.
 function htmlDemoH2F4() {
   if (!datos.esDemo) return '';
@@ -521,7 +563,9 @@ function htmlEtapas() {
                 ? `<p class="lab-etapa__estado">Primero define tu estrategia.</p><button type="button" class="btn btn--primary" data-estrategia>Definir mi estrategia</button>`
                 : `${e.hitoActivador ? `${resumenEstrategia(datos.estrategia)}<button type="button" class="btn btn--ghost" data-estrategia>Editar estrategia</button>` : ''}${e.hitoActivador && datos.estrategia.tipo === 'pagado'
                   ? '<button type="button" class="btn btn--primary" data-pagado>Mis ángulos y contenidos</button>'
-                  : `<button type="button" class="btn btn--primary" data-generar="${id}">Generar contenidos</button>`}`}
+                  : e.hitoActivador
+                    ? '<button type="button" class="btn btn--primary" data-organico>Elegir y generar contenidos</button>'
+                    : `<button type="button" class="btn btn--primary" data-generar="${id}">Generar contenidos</button>`}`}
           </div>`;
         }).join('')}
       </div>
@@ -692,6 +736,7 @@ function conectarAlumno(el) {
   el.querySelectorAll('[data-generar]').forEach(b => b.addEventListener('click', () => generarEtapa(b.dataset.generar, b)));
   el.querySelectorAll('[data-estrategia]').forEach(b => b.addEventListener('click', () => abrirEstrategia()));
   el.querySelectorAll('[data-pagado]').forEach(b => b.addEventListener('click', () => abrirPagado()));
+  el.querySelectorAll('[data-organico]').forEach(b => b.addEventListener('click', () => abrirOrganico()));
 }
 
 async function recargar() {
@@ -722,7 +767,7 @@ async function cargarComoAlumno() {
    ============================================================ */
 
 let listaStaff = [];
-const FORMATOS_STAFF = { reel: { nombre: 'Reels' }, carrusel: { nombre: 'Carruseles' }, dm: { nombre: 'DMs' }, whatsapp: { nombre: 'WhatsApp' }, imagen: { nombre: 'Imágenes estáticas' } };
+const FORMATOS_STAFF = { reel: { nombre: 'Reels' }, carrusel: { nombre: 'Carruseles' }, dm: { nombre: 'DMs' }, whatsapp: { nombre: 'WhatsApp' }, imagen: { nombre: 'Imágenes estáticas' }, historia: { nombre: 'Historias' }, email: { nombre: 'Emails' } };
 
 function faseDe(ciclo) {
   if (!ciclo) return 0;

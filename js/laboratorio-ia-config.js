@@ -129,12 +129,20 @@ function pintar() {
           <label style="font-size:13px; display:flex; gap:5px; align-items:center; margin-top:22px;"><input type="checkbox" data-f="activa" ${r.activa ? 'checked' : ''}> Activa</label>
         </div>
         <div class="field"><label>Descripción (la ve el alumno)</label><input type="text" data-f="descripcion" value="${esc(r.descripcion)}" maxlength="200"></div>
+        <label style="font-size:13px; display:flex; gap:5px; align-items:center;"><input type="checkbox" data-f="preguntaWsp" ${r.preguntaWsp ? 'checked' : ''}> Antes de generar, preguntar si el WhatsApp es para grupos o privado</label>
         <label style="font-size:12.5px; font-weight:600;">Qué se genera (formato y cantidad en total; se reparte entre los ángulos que elija el alumno)</label>
         ${r.piezas.map((p, n) => `
-          <div class="labcfg-fila" data-p="${n}">
-            <select data-f="formato">${base.formatos.map(fo => `<option value="${fo}" ${p.formato === fo ? 'selected' : ''}>${esc(cfg.formatos[fo].nombre)}</option>`).join('')}</select>
-            <input type="number" min="1" max="12" data-f="cantidad" value="${esc(p.cantidad)}">
-            <span><button type="button" class="btn btn--ghost labcfg-mini" data-act="re-del" data-re="${id}" data-n="${n}" title="Quitar">✕</button></span>
+          <div class="labcfg-pieza" data-p="${n}">
+            <div class="labcfg-fila">
+              <select data-f="formato">${base.formatos.map(fo => `<option value="${fo}" ${p.formato === fo ? 'selected' : ''}>${esc(cfg.formatos[fo].nombre)}</option>`).join('')}</select>
+              <input type="number" min="1" max="12" data-f="cantidad" value="${esc(p.cantidad)}">
+              <span><button type="button" class="btn btn--ghost labcfg-mini" data-act="re-del" data-re="${id}" data-n="${n}" title="Quitar">✕</button></span>
+            </div>
+            <div class="labcfg-fila">
+              <input type="text" data-f="etiqueta" placeholder="A quién va (opcional), ej: A toda tu lista" value="${esc(p.etiqueta || '')}" maxlength="80">
+              <input type="text" data-f="nota" placeholder="Instrucción extra para la IA (opcional). Admite {palabra}, {link} y {fecha}" value="${esc(p.nota || '')}" maxlength="600">
+              <label style="font-size:12px; display:flex; gap:3px; align-items:center; white-space:nowrap;"><input type="checkbox" data-f="secuencia" ${p.secuencia ? 'checked' : ''}> en secuencia</label>
+            </div>
           </div>`).join('')}
         <button type="button" class="btn btn--ghost labcfg-mini" data-act="re-add" data-re="${id}">+ Agregar formato</button>
       </div>`).join('')}
@@ -197,10 +205,18 @@ function leer() {
     r.nombre = bloque.querySelector('[data-f="nombre"]').value.trim();
     r.descripcion = bloque.querySelector('[data-f="descripcion"]').value.trim();
     r.activa = bloque.querySelector('[data-f="activa"]').checked;
-    r.piezas = [...bloque.querySelectorAll('.labcfg-fila[data-p]')].map(fila => ({
-      formato: fila.querySelector('[data-f="formato"]').value,
-      cantidad: Math.round(Number(fila.querySelector('[data-f="cantidad"]').value)) || 1
-    }));
+    r.preguntaWsp = bloque.querySelector('[data-f="preguntaWsp"]').checked;
+    r.piezas = [...bloque.querySelectorAll('.labcfg-pieza[data-p]')].map(fila => {
+      const etiqueta = fila.querySelector('[data-f="etiqueta"]').value.trim();
+      const nota = fila.querySelector('[data-f="nota"]').value.trim();
+      return {
+        formato: fila.querySelector('[data-f="formato"]').value,
+        cantidad: Math.round(Number(fila.querySelector('[data-f="cantidad"]').value)) || 1,
+        ...(etiqueta ? { etiqueta } : {}),
+        ...(nota ? { nota } : {}),
+        ...(fila.querySelector('[data-f="secuencia"]').checked ? { secuencia: true } : {})
+      };
+    });
   });
   el.querySelectorAll('[data-prompt]').forEach(t => { cfg.prompts[t.dataset.prompt] = t.value; });
 }
