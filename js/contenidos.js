@@ -431,6 +431,7 @@ function pintar() {
     const clase = actual[1].clases[estado.claseId];
     pararSeguimiento();
     const jugador = montarReproductor(el('ct-player'), clase.vturb);
+    ajustarDescripcion();
     escucharComentarios(estado.claseId);
     escucharValoraciones(estado.claseId);
     if (jugador) {
@@ -450,8 +451,8 @@ function pintar() {
         if (!seg) return;
         await guardarDuracion(programa, mid, cid, seg);
         const titulo = document.querySelector('.ct-lec__titulo');
-        if (estado.claseId === cid && titulo && !titulo.querySelector('.ct-etq')) {
-          titulo.insertAdjacentHTML('beforeend', ` <span class="ct-etq" style="vertical-align:middle;">${ICONO_RELOJ} ${formatoTiempo(seg)}</span>`);
+        if (estado.claseId === cid && titulo && !titulo.querySelector('.ct-lec__dur')) {
+          titulo.insertAdjacentHTML('beforeend', `<span class="ct-lec__dur">${ICONO_RELOJ} ${formatoTiempo(seg)}</span>`);
         }
       }).catch(err => console.warn('No se pudo medir el video:', err));
     }
@@ -506,11 +507,11 @@ function vistaModulo(mid, m) {
     <div${arrastrable()} class="ct-fila${estado.seleccion.has(cid) ? ' is-sel' : ''}" data-act="abrir" data-m="${mid}" data-c="${cid}">
       <span class="ct-fila__num">${j + 1}</span>
       ${urlSegura(c.portadaUrl) ? `<img class="ct-portada ct-portada--mini" src="${escaparHtml(c.portadaUrl)}" alt="">` : ''}
-      <span class="ct-fila__titulo">${escaparHtml(c.titulo || 'Lección sin título')}
+      <span class="ct-fila__col"><span class="ct-fila__titulo">${escaparHtml(c.titulo || 'Lección sin título')}
         ${c.publicado === false ? '<span class="ct-etq ct-etq--borrador">Borrador</span>' : ''}
         ${estado.verTodo && m._origen === 'comun' && c.excluirDe && PROGRAMAS_REALES.some(p => c.excluirDe[p]) ? `<span class="ct-etq">No va en: ${PROGRAMAS_REALES.filter(p => c.excluirDe[p]).map(p => escaparHtml(programaLabel(p))).join(', ')}</span>` : ''}
         ${(c.materiales && Object.keys(c.materiales).length) ? '<span title="Tiene material">📎</span>' : ''}</span>
-      ${segundosDe(c) > 0 ? `<span class="ct-fila__dur">${ICONO_RELOJ} ${formatoTiempo(segundosDe(c))}</span>` : ''}
+      ${segundosDe(c) > 0 ? `<span class="ct-fila__dur">${ICONO_RELOJ} ${formatoTiempo(segundosDe(c))}</span>` : ''}</span>
       <span class="ct-fila__estado${vista ? ' is-vista' : ''}" data-est="${cid}">${vista ? ICONO_CHECK : ICONO_PLAY}</span>
       ${puedeEditar(m) ? (estado.modoSeleccion ? `<label class="ct-sel ct-sel--fila"><input type="checkbox" ${estado.seleccion.has(cid) ? 'checked' : ''} tabindex="-1"></label>` : botonesAdmin('cla', mid, cid, j, clases.length)) : ''}
     </div>`;
@@ -578,7 +579,7 @@ function vistaLeccion(mid, m, cid) {
     <div class="ct-lec">
       <div class="ct-lec__main">
         <div class="ct-lec__cab">
-          <h3 class="ct-lec__titulo">${idx + 1} | ${escaparHtml(clase.titulo || '')}${dur ? ` <span class="ct-etq" style="vertical-align:middle;">⏱ ${dur}</span>` : ''}</h3>
+          <h3 class="ct-lec__titulo">${idx + 1} | ${escaparHtml(clase.titulo || '')}${dur ? `<span class="ct-lec__dur">${ICONO_RELOJ} ${dur}</span>` : ''}</h3>
           <div class="ct-lec__nav">
             <button type="button" class="ct-link" data-act="abrir" data-m="${mid}" data-c="${ant || ''}" ${ant ? '' : 'disabled'}>‹ Anterior</button>
             <button type="button" class="ct-link" data-act="abrir" data-m="${mid}" data-c="${sig || ''}" ${sig ? '' : 'disabled'}>Próxima ›</button>
@@ -586,7 +587,7 @@ function vistaLeccion(mid, m, cid) {
         </div>
         <div class="ct-player" id="ct-player"></div>
         <div class="panel ct-lec__panel"><div class="panel__body">
-          ${clase.descripcion ? `<p class="ct-materiales__t">Descripción de la lección</p><p class="ct-visor__desc" style="margin:6px 0 0;">${textoMultilinea(clase.descripcion)}</p>` : ''}
+          ${clase.descripcion ? `<div class="ct-desc"><p class="ct-materiales__t">Descripción de la lección</p><p class="ct-visor__desc ct-desc__txt" style="margin:6px 0 0;">${textoMultilinea(clase.descripcion)}</p><button type="button" class="ct-link ct-desc__mas" data-act="desc-mas">Ver más</button></div>` : ''}
           ${acciones}
           ${clase.vturb ? '<p class="ct-visto" id="ct-visto"></p>' : ''}
           <div class="ct-com-nuevo">
@@ -614,6 +615,16 @@ function vistaLeccion(mid, m, cid) {
         </div>
       </aside>
     </div>`;
+}
+
+// En el celular la descripción se ve en 2 líneas: solo se ofrece "Ver más" si de verdad hay más texto.
+function ajustarDescripcion() {
+  const d = document.querySelector('.ct-desc');
+  if (!d) return;
+  requestAnimationFrame(() => {
+    const t = d.querySelector('.ct-desc__txt');
+    d.classList.toggle('tiene-mas', d.classList.contains('is-abierta') || (!!t && t.scrollHeight > t.clientHeight + 2));
+  });
 }
 
 /* ---------- Comentarios de la clase (con respuestas) ---------- */
@@ -1594,6 +1605,10 @@ if (contEl) {
         if (f) { f.classList.toggle('hidden'); if (!f.classList.contains('hidden')) f.querySelector('textarea').focus(); }
       }
       else if (act === 'com-resp-enviar') await enviarComentario(c, b.closest('.ct-com__form').querySelector('textarea'), b, b.dataset.k);
+      else if (act === 'desc-mas') {
+        const d = b.closest('.ct-desc');
+        if (d) { d.classList.toggle('is-abierta'); b.textContent = d.classList.contains('is-abierta') ? 'Ver menos' : 'Ver más'; }
+      }
       else if (act === 'favorito') await alternarFavorito(c, b);
       else if (act === 'valorar') await valorar(c, Number(b.dataset.n));
     } catch (err) {
