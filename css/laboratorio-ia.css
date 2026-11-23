@@ -312,3 +312,28 @@
 #view-laboratorio-ia .lab-emojis { color: #262626; }
 #view-laboratorio-ia .lab-emojis__cab label { color: #262626; }
 #view-laboratorio-ia .lab-emojis__nota { color: #6b7280; }
+
+/* ============================================================
+   Estrategia de Encuentro y simulador de H2F4 (Alumno Demo)
+   ============================================================ */
+.lab-estrategia { background: #fff; color: #262626; border: 1px solid #dbdbdb; border-radius: 12px; padding: 16px; margin: 16px 0; max-width: 640px; box-shadow: var(--shadow-sm); display: flex; flex-direction: column; gap: 12px; }
+.lab-estrategia h4 { margin: 0; color: var(--color-primary); }
+.lab-estrategia p { margin: 0; }
+.lab-estrategia__campo { display: flex; flex-direction: column; gap: 4px; border: 0; padding: 0; margin: 0; min-width: 0; }
+.lab-estrategia__campo > span, .lab-estrategia__campo > legend { font-size: 12px; font-weight: 700; letter-spacing: 0.3px; text-transform: uppercase; color: #6b7280; padding: 0; margin-bottom: 4px; }
+.lab-estrategia__campo input[type="text"], .lab-estrategia__campo input[type="url"], .lab-estrategia__campo textarea { width: 100%; box-sizing: border-box; font: inherit; font-size: 14.5px; line-height: 1.5; color: #262626; background: #fff; border: 1px solid #cfd4da; border-radius: 8px; padding: 9px 11px; }
+.lab-estrategia__campo small { font-size: 12px; }
+.lab-estrategia__opcion { display: flex; align-items: flex-start; gap: 8px; font-size: 14px; line-height: 1.4; padding: 3px 0; cursor: pointer; }
+.lab-estrategia__opcion input { margin-top: 3px; flex-shrink: 0; }
+.lab-estrategia__estado { display: flex; align-items: center; gap: 8px; font-size: 13px; }
+.lab-estrategia .hidden, .lab-demoh2f4 .hidden { display: none; }
+.lab-estrategia__resumen { font-size: 12.5px; line-height: 1.45; display: flex; flex-direction: column; gap: 2px; margin: 4px 0 8px; overflow-wrap: anywhere; }
+.lab-demoh2f4 { border-style: dashed; }
+.lab-demoh2f4 .lab-estrategia__campo { margin-top: 10px; }
+
+/* Se leen igual en los temas oscuro y BEGIN */
+#view-laboratorio-ia .lab-estrategia { color: #262626; }
+#view-laboratorio-ia .lab-estrategia h4 { color: var(--color-primary); }
+#view-laboratorio-ia .lab-estrategia .text-soft, #view-laboratorio-ia .lab-estrategia small { color: #6b7280; }
+#view-laboratorio-ia .lab-estrategia .btn--ghost { color: var(--color-primary); border-color: var(--color-border); background: #fff; }
+#view-laboratorio-ia .lab-estrategia .lab-error { color: #C0392B; }

@@ -26,9 +26,29 @@ const abrirLaboratorio = httpsCallable(functions, 'laboratorioAbrir', { timeout:
 const pedirBorradorFicha = httpsCallable(functions, 'laboratorioBorradorFicha', { timeout: 120000 });
 const guardarFichaServidor = httpsCallable(functions, 'laboratorioGuardarFicha', { timeout: 60000 });
 const generarContenidos = httpsCallable(functions, 'laboratorioGenerar', { timeout: 175000 });
+const estrategiaServidor = httpsCallable(functions, 'laboratorioEstrategia', { timeout: 120000 });
 
-// En modo demo se manda la fase que el banner dice simular; el servidor solo la acepta si la cuenta es el demo.
-const conFase = (datos) => (esModoDemo() ? { ...datos, faseDemo: getFaseDemo() } : datos);
+/* ---------------- Alumno Demo: simular que publicó el hito H2F4 (abre Encuentro) ---------------- */
+
+const CLAVE_H2F4_DEMO = 'uneq_lab_h2f4_demo';
+const TEXTO_H2F4_DEMO = 'Mi SDV está lista. Será el jueves 5 de diciembre a las 20:00 hrs (hora de Chile). Mi promesa: que las terapeutas ordenen sus precios y su tiempo en 8 semanas. Nombre: Agenda Ordenada. Incluye una sesión grupal semanal y acompañamiento por WhatsApp.';
+function h2f4DemoGuardado() {
+  try {
+    const v = JSON.parse(localStorage.getItem(CLAVE_H2F4_DEMO) || 'null');
+    if (v && typeof v === 'object') return { activo: v.activo === true, texto: typeof v.texto === 'string' && v.texto.trim() ? v.texto : TEXTO_H2F4_DEMO };
+  } catch (e) { /* sin almacenamiento: queda apagado */ }
+  return { activo: false, texto: TEXTO_H2F4_DEMO };
+}
+function guardarH2F4Demo(v) {
+  try { localStorage.setItem(CLAVE_H2F4_DEMO, JSON.stringify(v)); } catch (e) { /* opcional */ }
+}
+
+// En modo demo se manda la fase que el banner dice simular y, si lo activó, el H2F4 de prueba; el servidor solo lo acepta si la cuenta es el demo.
+const conFase = (datos) => {
+  if (!esModoDemo()) return datos;
+  const h = h2f4DemoGuardado();
+  return { ...datos, faseDemo: getFaseDemo(), ...(h.activo ? { h2f4Demo: h.texto } : {}) };
+};
 
 const esc = escaparHtml;
 const rootEl = () => document.getElementById('lab-contenido');
@@ -134,7 +154,129 @@ function textoEstadoEtapa(id) {
   if (e.abierta) return '';
   if (e.motivo === 'desactivada') return 'Disponible pronto.';
   if (e.motivo === 'fase') return `Se activa en la Fase ${info.desdeFase}.`;
+  if (e.motivo === 'hito') return `Se activa cuando compartas tu hito ${info.hitoActivador || ''}.`.replace(' .', '.');
   return 'Primero aprueba tu ficha.';
+}
+
+/* --- Estrategia de Encuentro (técnica de la SDV, tipo de contenido, palabra clave, link y fecha) --- */
+
+const resumenEstrategia = (e) => {
+  const t = (datos.tecnicas[e.tecnica] || {}).nombre || e.tecnica;
+  return `
+    <div class="lab-estrategia__resumen">
+      <div><strong>Fecha y horario de tu SDV:</strong> ${esc(e.fecha)}</div>
+      <div><strong>Técnica:</strong> ${esc(t)}</div>
+      <div><strong>Contenido:</strong> ${esc((datos.tipos || {})[e.tipo] || e.tipo)}</div>
+      <div><strong>Palabra clave:</strong> ${esc(e.palabra)}</div>
+      <div><strong>Link:</strong> ${e.link ? esc(e.link) : '<span class="text-soft">sin link (los textos llevarán [TU LINK])</span>'}</div>
+    </div>`;
+};
+
+function htmlEstrategiaPanel(e) {
+  const tec = e ? e.tecnica : '';
+  const tipo = e ? e.tipo : '';
+  return `
+    <div class="lab-estrategia" id="lab-estrategia-panel">
+      <h4>Tu estrategia de Encuentro</h4>
+      <p class="text-soft">Esto le da contexto a tus contenidos y define cómo se escriben los llamados a la acción. Puedes cambiarlo cuando quieras.</p>
+      <p class="lab-estrategia__estado text-soft ${e ? 'hidden' : ''}" id="lab-estrategia-estado"><span class="lab-spinner"></span> Leyendo tu hito ${esc(((datos.etapas.encuentro || {}).hitoActivador) || 'H2F4')} para proponerte la fecha y una palabra clave…</p>
+      <label class="lab-estrategia__campo"><span>Fecha y horario de tu SDV</span>
+        <input type="text" id="lab-est-fecha" maxlength="200" value="${esc(e ? e.fecha : '')}" placeholder="Ej: jueves 5 de diciembre a las 20:00 hrs (hora de Chile)">
+        <small class="text-soft">La tomamos de tu hito. Revísala: los contenidos usarán exactamente esto.</small></label>
+      <fieldset class="lab-estrategia__campo"><legend>¿Qué técnica usarás?</legend>
+        ${Object.entries(datos.tecnicas).map(([k, t]) => `<label class="lab-estrategia__opcion"><input type="radio" name="lab-est-tecnica" value="${esc(k)}" ${tec === k ? 'checked' : ''}> ${esc(t.nombre)}</label>`).join('')}
+      </fieldset>
+      <fieldset class="lab-estrategia__campo"><legend>¿Tu contenido es orgánico o pagado?</legend>
+        ${Object.entries(datos.tipos).map(([k, n]) => `<label class="lab-estrategia__opcion"><input type="radio" name="lab-est-tipo" value="${esc(k)}" ${tipo === k ? 'checked' : ''}> ${esc(n)}</label>`).join('')}
+      </fieldset>
+      <label class="lab-estrategia__campo"><span>Palabra clave para comentar</span>
+        <input type="text" id="lab-est-palabra" maxlength="30" value="${esc(e ? e.palabra : '')}" placeholder="Ej: VALIDA">
+        <small class="text-soft">Quien comente esta palabra en tus reels y carruseles recibirá tu invitación por DM. Es una sola para toda tu estrategia.</small></label>
+      <label class="lab-estrategia__campo"><span id="lab-est-link-etiqueta">Link</span>
+        <input type="url" id="lab-est-link" maxlength="500" value="${esc(e ? e.link : '')}" placeholder="https://…">
+        <small class="text-soft">Opcional. Si lo dejas vacío, los textos llevarán [TU LINK] para que lo completes.</small></label>
+      <p class="lab-error hidden" id="lab-est-error"></p>
+      <div class="lab-acciones-pieza">
+        <button type="button" class="btn btn--primary" id="lab-est-guardar">Guardar estrategia</button>
+        <button type="button" class="btn btn--ghost" id="lab-est-cancelar">Cancelar</button>
+      </div>
+    </div>`;
+}
+
+async function abrirEstrategia() {
+  const cont = document.getElementById('lab-estrategia');
+  if (!cont) return;
+  const e = datos.estrategia || null;
+  cont.innerHTML = htmlEstrategiaPanel(e);
+  cont.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  const q = (id) => document.getElementById(id);
+  const actualizarEtiquetaLink = () => {
+    const sel = cont.querySelector('input[name="lab-est-tecnica"]:checked');
+    const destino = sel ? (datos.tecnicas[sel.value] || {}).destino : '';
+    q('lab-est-link-etiqueta').textContent = destino ? `Link de tu ${destino}` : 'Link';
+  };
+  cont.querySelectorAll('input[name="lab-est-tecnica"]').forEach(r => r.addEventListener('change', actualizarEtiquetaLink));
+  actualizarEtiquetaLink();
+  q('lab-est-cancelar').addEventListener('click', () => { cont.innerHTML = ''; });
+  q('lab-est-guardar').addEventListener('click', async () => {
+    const err = q('lab-est-error');
+    err.classList.add('hidden');
+    const tecnica = (cont.querySelector('input[name="lab-est-tecnica"]:checked') || {}).value || '';
+    const tipo = (cont.querySelector('input[name="lab-est-tipo"]:checked') || {}).value || '';
+    const btn = q('lab-est-guardar');
+    btn.disabled = true;
+    btn.textContent = 'Guardando…';
+    try {
+      const r = await estrategiaServidor(conFase({ accion: 'guardar', tecnica, tipo, fecha: q('lab-est-fecha').value, palabra: q('lab-est-palabra').value, link: q('lab-est-link').value }));
+      datos.estrategia = r.data.estrategia;
+      pintarAlumno();
+    } catch (ex) {
+      err.textContent = mensajeError(ex, 'No se pudo guardar tu estrategia. Intenta de nuevo.');
+      err.classList.remove('hidden');
+      btn.disabled = false;
+      btn.textContent = 'Guardar estrategia';
+    }
+  });
+  // Primera vez: la IA propone la fecha (leída del hito) y una palabra clave. Solo rellena lo que siga vacío.
+  if (!e) {
+    try {
+      const r = await estrategiaServidor(conFase({ accion: 'proponer' }));
+      if (!document.getElementById('lab-est-fecha')) return;
+      if (!q('lab-est-fecha').value.trim() && r.data.fecha) q('lab-est-fecha').value = r.data.fecha;
+      if (!q('lab-est-palabra').value.trim() && r.data.palabra) q('lab-est-palabra').value = r.data.palabra;
+      if (!r.data.fecha) q('lab-est-fecha').focus();
+    } catch (ex) { /* la propuesta es un extra: puede completarlo a mano */ }
+    const est = document.getElementById('lab-estrategia-estado');
+    if (est) est.classList.add('hidden');
+  }
+}
+
+// Solo el Alumno Demo: simular que publicó el hito H2F4 para probar Encuentro.
+function htmlDemoH2F4() {
+  if (!datos.esDemo) return '';
+  const h = h2f4DemoGuardado();
+  return `
+    <section class="lab-bloque lab-demoh2f4">
+      <label class="lab-estrategia__opcion"><input type="checkbox" id="lab-demo-h2f4" ${h.activo ? 'checked' : ''}> <strong>Demo:</strong> simular que publiqué mi hito H2F4 (abre Encuentro)</label>
+      <div id="lab-demo-h2f4-texto-caja" class="${h.activo ? '' : 'hidden'}">
+        <label class="lab-estrategia__campo"><span>Texto de mi hito H2F4 (de aquí se lee la fecha y el horario)</span>
+          <textarea id="lab-demo-h2f4-texto" rows="3" maxlength="1500">${esc(h.texto)}</textarea></label>
+        <button type="button" class="btn btn--ghost" id="lab-demo-h2f4-aplicar">Aplicar texto</button>
+      </div>
+    </section>`;
+}
+
+function conectarDemoH2F4(el) {
+  const chk = el.querySelector('#lab-demo-h2f4');
+  if (!chk) return;
+  const aplicar = async () => {
+    const txt = el.querySelector('#lab-demo-h2f4-texto');
+    guardarH2F4Demo({ activo: chk.checked, texto: txt ? txt.value : TEXTO_H2F4_DEMO });
+    try { await recargar(); } catch (err) { /* se queda como estaba */ }
+  };
+  chk.addEventListener('change', aplicar);
+  const btn = el.querySelector('#lab-demo-h2f4-aplicar');
+  if (btn) btn.addEventListener('click', aplicar);
 }
 
 /* --- Nivel de emojis (barra deslizable: se arrastra con el dedo o con el mouse) --- */
@@ -238,12 +380,15 @@ function htmlEtapas() {
             <strong>${esc(e.nombre)}</strong>
             <p class="text-soft">${esc(e.descripcion)}</p>
             <div class="lab-chips">${e.formatos.map(f => `<span class="lab-chip">${esc((datos.formatos[f] || {}).nombre || f)}</span>`).join('')}</div>
-            ${abierta
-              ? `<button type="button" class="btn btn--primary" data-generar="${id}">Generar contenidos</button>`
-              : `<p class="lab-etapa__estado">🔒 ${esc(textoEstadoEtapa(id))}</p>`}
+            ${!abierta
+              ? `<p class="lab-etapa__estado">🔒 ${esc(textoEstadoEtapa(id))}</p>`
+              : e.hitoActivador && !datos.estrategia
+                ? `<p class="lab-etapa__estado">Primero define tu estrategia.</p><button type="button" class="btn btn--primary" data-estrategia>Definir mi estrategia</button>`
+                : `${e.hitoActivador ? `${resumenEstrategia(datos.estrategia)}<button type="button" class="btn btn--ghost" data-estrategia>Editar estrategia</button>` : ''}<button type="button" class="btn btn--primary" data-generar="${id}">Generar contenidos</button>`}
           </div>`;
         }).join('')}
       </div>
+      <div id="lab-estrategia"></div>
       <div id="lab-resultado"></div>
     </section>
     <section class="lab-bloque">
@@ -264,8 +409,9 @@ function htmlBloqueado() {
 
 function pintarAlumno() {
   const el = rootEl();
-  el.innerHTML = htmlCabeceraAlumno() + (datos.seccionesAbiertas.length ? htmlFichas() + htmlEtapas() : htmlBloqueado());
+  el.innerHTML = htmlCabeceraAlumno() + htmlDemoH2F4() + (datos.seccionesAbiertas.length ? htmlFichas() + htmlEtapas() : htmlBloqueado());
   conectarAlumno(el);
+  conectarDemoH2F4(el);
   const hist = document.getElementById('lab-historial');
   if (hist && alumnoIdActual) cargarHistorial(alumnoIdActual, hist, datos.formatos, true);
 }
@@ -406,6 +552,7 @@ function conectarAlumno(el) {
     abrirEditorFicha(b.dataset.abrirFicha, false);
   }));
   el.querySelectorAll('[data-generar]').forEach(b => b.addEventListener('click', () => generarEtapa(b.dataset.generar, b)));
+  el.querySelectorAll('[data-estrategia]').forEach(b => b.addEventListener('click', () => abrirEstrategia()));
 }
 
 async function recargar() {
