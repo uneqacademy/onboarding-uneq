@@ -162,6 +162,16 @@ function nivelEmojisActual() {
   return n >= 0 && n < NIVELES_EMOJIS.length ? n : nivelEmojisGuardado();
 }
 
+/* --- Emojis favoritos: la persona escribe (o elige) los emojis que ella usa; la IA los usa de preferencia --- */
+const claveEmojisFavoritos = () => `uneq_lab_emojis_fav_${alumnoIdActual || 'x'}`;
+function emojisFavoritosGuardados() {
+  try { return localStorage.getItem(claveEmojisFavoritos()) || ''; } catch (e) { return ''; }
+}
+function emojisFavoritosActual() {
+  const campo = document.getElementById('lab-emojis-favoritos');
+  return (campo ? campo.value : emojisFavoritosGuardados()).trim().slice(0, 60);
+}
+
 function htmlBarraEmojis() {
   const n = nivelEmojisGuardado();
   return `
@@ -173,6 +183,14 @@ function htmlBarraEmojis() {
       <input type="range" id="lab-emojis-rango" class="lab-emojis__rango" min="0" max="${NIVELES_EMOJIS.length - 1}" step="1" value="${n}"
         aria-label="Nivel de emojis" aria-valuetext="${esc(NIVELES_EMOJIS[n].nombre)}" style="--lab-pos:${(n / (NIVELES_EMOJIS.length - 1)) * 100}%">
       <div class="lab-emojis__extremos"><span>Sin emojis</span><span>Todos los que quieras</span></div>
+      <div class="lab-emojis__favoritos">
+        <label for="lab-emojis-favoritos"><strong>Tus emojis favoritos</strong> <span class="text-soft">(opcional)</span></label>
+        <div class="lab-emojis__fila">
+          <input type="text" id="lab-emojis-favoritos" maxlength="60" autocomplete="off" placeholder="Ej. 🔥 💛 🚀 ✨" value="${esc(emojisFavoritosGuardados())}" aria-describedby="lab-emojis-favoritos-nota">
+          <button type="button" class="btn btn--ghost btn-emoji-picker" data-target="lab-emojis-favoritos">😊 Elegir</button>
+        </div>
+        <p class="text-soft lab-emojis__nota" id="lab-emojis-favoritos-nota">Escribe o elige los emojis que tú usas. La IA los usará de preferencia, respetando el nivel de arriba.</p>
+      </div>
       <p class="text-soft lab-emojis__nota">Los guiones de los videos nunca llevan emojis: se leen en voz alta.</p>
     </div>`;
 }
@@ -188,6 +206,12 @@ function conectarBarraEmojis(el) {
     inp.setAttribute('aria-valuetext', nivel.nombre);
     inp.style.setProperty('--lab-pos', `${(n / (NIVELES_EMOJIS.length - 1)) * 100}%`);
   };
+  const campoFavoritos = el.querySelector('#lab-emojis-favoritos');
+  if (campoFavoritos) {
+    const guardarFavoritos = () => { try { localStorage.setItem(claveEmojisFavoritos(), emojisFavoritosActual()); } catch (e) { /* opcional */ } };
+    campoFavoritos.addEventListener('input', guardarFavoritos);
+    campoFavoritos.addEventListener('change', guardarFavoritos);
+  }
   inp.addEventListener('input', mostrar);
   inp.addEventListener('change', () => { try { localStorage.setItem(claveEmojis(), String(nivelEmojisActual())); } catch (e) { /* opcional */ } });
   mostrar();
@@ -347,7 +371,7 @@ async function generarEtapa(etapaId, btn) {
   resultado.innerHTML = '<div class="lab-cargando"><span class="lab-spinner"></span> Creando tus contenidos con tu voz y tu Cliente Soñado… (puede tardar hasta un minuto)</div>';
   resultado.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   try {
-    const r = await generarContenidos(conFase({ etapa: etapaId, emojis: nivelEmojisActual() }));
+    const r = await generarContenidos(conFase({ etapa: etapaId, emojis: nivelEmojisActual(), emojisFavoritos: emojisFavoritosActual() }));
     const g = r.data;
     datos.usosHoy += 1;
     const contador = document.getElementById('lab-contador');

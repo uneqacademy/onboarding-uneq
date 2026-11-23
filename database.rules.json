@@ -245,6 +245,12 @@
       "corregirCorreo": {
         ".read": "auth != null && ((root.child('usuarios').child(auth.uid).child('roles').child('director').val() === true || root.child('usuarios').child(auth.uid).child('rol').val() === 'director' || root.child('usuarios').child(auth.uid).child('roles').child('subdirectora').val() === true))",
         ".write": "auth != null && ((root.child('usuarios').child(auth.uid).child('roles').child('director').val() === true || root.child('usuarios').child(auth.uid).child('rol').val() === 'director' || root.child('usuarios').child(auth.uid).child('roles').child('subdirectora').val() === true))"
+      },
+      "reiniciarDemo": {
+        ".read": "auth != null && ((root.child('usuarios').child(auth.uid).child('roles').child('director').val() === true || root.child('usuarios').child(auth.uid).child('rol').val() === 'director' || root.child('usuarios').child(auth.uid).child('roles').child('subdirectora').val() === true))",
+        "$solicitudId": {
+          ".write": "auth != null && ((root.child('usuarios').child(auth.uid).child('roles').child('director').val() === true || root.child('usuarios').child(auth.uid).child('rol').val() === 'director' || root.child('usuarios').child(auth.uid).child('roles').child('subdirectora').val() === true))"
+        }
       }
     },
     "asistenteHistorial": {
