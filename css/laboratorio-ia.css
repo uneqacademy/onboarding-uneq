@@ -748,3 +748,10 @@
   #lab-angulos-lista { gap: 16px; }
   #lab-angulos-lista > .lab-angulo { padding: 14px 14px; }
 }
+
+/* Cajas parejas: en cada fila todas miden lo del texto más largo */
+#view-laboratorio-ia .lab-formato__lista { align-items: stretch; }
+#view-laboratorio-ia .lab-formato__lista > .lab-propuesta { display: flex; flex-direction: column; }
+#view-laboratorio-ia .lab-formato__lista > .lab-propuesta > .lab-propuesta__cuerpo { flex: 1 1 auto; display: flex; flex-direction: column; }
+#view-laboratorio-ia .lab-propuesta__cuerpo > :is(.lab-imgcard, .lab-histcard, .lab-emailcard, .lab-reelcard, .lab-edicion) { flex: 1 1 auto; }
+#view-laboratorio-ia .lab-propuesta__cuerpo > .lab-acciones-pieza { flex: 0 0 auto; }
