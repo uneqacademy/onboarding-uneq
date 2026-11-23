@@ -552,7 +552,7 @@ function htmlEtapas() {
           const e = datos.etapas[id];
           const abierta = datos.estadoEtapas[id].abierta;
           return `
-          <div class="lab-etapa ${abierta ? '' : 'lab-etapa--bloqueada'}">
+          <div class="lab-etapa ${abierta ? '' : 'lab-etapa--bloqueada'}" data-etapa="${id}">
             <div class="lab-etapa__num">${n + 1}</div>
             <strong>${esc(e.nombre)}</strong>
             <p class="text-soft">${esc(e.descripcion)}</p>
