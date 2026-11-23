@@ -167,7 +167,7 @@ const resumenEstrategia = (e) => {
       <div><strong>Fecha y horario de tu SDV:</strong> ${esc(e.fecha)}</div>
       <div><strong>Técnica:</strong> ${esc(t)}</div>
       <div><strong>Contenido:</strong> ${esc((datos.tipos || {})[e.tipo] || e.tipo)}</div>
-      <div><strong>Palabra clave:</strong> ${esc(e.palabra)}</div>
+      ${e.tipo === 'pagado' ? '' : `<div><strong>Palabra clave:</strong> ${esc(e.palabra)}</div>`}
       <div><strong>Link:</strong> ${e.link ? esc(e.link) : '<span class="text-soft">sin link (los textos llevarán [TU LINK])</span>'}</div>
     </div>`;
 };
@@ -249,6 +249,141 @@ async function abrirEstrategia() {
     const est = document.getElementById('lab-estrategia-estado');
     if (est) est.classList.add('hidden');
   }
+}
+
+/* --- Contenido pagado: ángulos comunicacionales (de 3 en 3) y creación de los contenidos --- */
+
+let angulos = [];                 // lista actual de ángulos del alumno
+const angulosElegidos = new Set(); // ids de los ángulos marcados para crear contenidos
+
+const llamarAngulos = async (accion, extra) => {
+  const r = await estrategiaServidor(conFase({ accion, ...(extra || {}) }));
+  angulos = (r.data && r.data.angulos) || [];
+  [...angulosElegidos].forEach(id => { const a = angulos.find(x => x.id === id); if (!a || !a.aprobado) angulosElegidos.delete(id); });
+};
+
+function htmlAngulo(a, editando) {
+  if (editando) {
+    return `
+      <div class="lab-angulo lab-angulo--edicion" data-id="${esc(a.id)}">
+        <div class="lab-angulo__cab"><span class="lab-angulo__num">Ángulo ${esc(a.numero)}</span></div>
+        <label class="lab-estrategia__campo"><span>Título</span><input type="text" data-ang="titulo" maxlength="120" value="${esc(a.titulo)}"></label>
+        <label class="lab-estrategia__campo"><span>Explicación</span><textarea data-ang="descripcion" rows="3" maxlength="600">${esc(a.descripcion)}</textarea></label>
+        <p class="lab-error hidden" data-ang-error></p>
+        <div class="lab-acciones-pieza">
+          <button type="button" class="btn btn--primary" data-ang-act="guardar">Guardar cambios</button>
+          <button type="button" class="btn btn--ghost" data-ang-act="cancelar">Cancelar</button>
+        </div>
+      </div>`;
+  }
+  return `
+    <div class="lab-angulo ${a.aprobado ? 'lab-angulo--ok' : ''}" data-id="${esc(a.id)}">
+      <div class="lab-angulo__cab"><span class="lab-angulo__num">Ángulo ${esc(a.numero)}</span>${a.aprobado ? '<span class="lab-angulo__ok">Aprobado ✓</span>' : '<span class="lab-angulo__pend">Por aprobar</span>'}</div>
+      <div class="lab-angulo__titulo">${esc(a.titulo)}</div>
+      ${a.descripcion ? `<p class="lab-angulo__desc">${esc(a.descripcion)}</p>` : ''}
+      <div class="lab-acciones-pieza">
+        <button type="button" class="btn ${a.aprobado ? 'btn--ghost' : 'btn--primary'}" data-ang-act="aprobar">${a.aprobado ? 'Quitar aprobación' : 'Aprobar'}</button>
+        <button type="button" class="btn btn--ghost" data-ang-act="editar">Editar</button>
+        <button type="button" class="btn btn--ghost" data-ang-act="borrar">Borrar</button>
+      </div>
+    </div>`;
+}
+
+function pintarAngulos(editandoId) {
+  const lista = document.getElementById('lab-angulos-lista');
+  if (!lista) return;
+  lista.innerHTML = angulos.length
+    ? angulos.map(a => htmlAngulo(a, a.id === editandoId)).join('')
+    : '<p class="text-soft">Aún no tienes ángulos. Crea los primeros 3 y revísalos: puedes editarlos, borrarlos y aprobarlos antes de generar contenidos.</p>';
+  pintarOpcionesPagado();
+}
+
+function pintarOpcionesPagado() {
+  const cont = document.getElementById('lab-pagado-opciones');
+  if (!cont) return;
+  const recetas = Object.entries(datos.recetas || {}).filter(([, r]) => r.tipo === 'pagado');
+  const aprobados = angulos.filter(a => a.aprobado);
+  const recetaPrevia = (cont.querySelector('input[name="lab-receta"]:checked') || {}).value || (recetas[0] || [])[0];
+  cont.innerHTML = `
+    <h5>¿Qué quieres crear?</h5>
+    ${recetas.map(([id, r]) => `<label class="lab-estrategia__opcion"><input type="radio" name="lab-receta" value="${esc(id)}" ${id === recetaPrevia ? 'checked' : ''}> <span><strong>${esc(r.nombre)}</strong>${r.descripcion ? ` <span class="text-soft">· ${esc(r.descripcion)}</span>` : ''}</span></label>`).join('') || '<p class="text-soft">No hay opciones activas por ahora.</p>'}
+    <h5>¿Con qué ángulos?</h5>
+    ${aprobados.length
+      ? aprobados.map(a => `<label class="lab-estrategia__opcion"><input type="checkbox" data-ang-sel value="${esc(a.id)}" ${angulosElegidos.has(a.id) ? 'checked' : ''}> <span><strong>Ángulo ${esc(a.numero)}:</strong> ${esc(a.titulo)}</span></label>`).join('')
+      : '<p class="text-soft">Aprueba al menos un ángulo para poder elegirlo aquí.</p>'}
+    <p class="text-soft lab-pagado__nota">Si eliges más de un ángulo, los contenidos se reparten lo más parejo posible entre ellos.</p>
+    <button type="button" class="btn btn--primary" id="lab-pagado-generar" data-generar-pagado ${recetas.length && aprobados.length ? '' : 'disabled'}>Generar contenidos</button>`;
+  cont.querySelectorAll('[data-ang-sel]').forEach(c => c.addEventListener('change', () => { if (c.checked) angulosElegidos.add(c.value); else angulosElegidos.delete(c.value); }));
+  const btn = cont.querySelector('#lab-pagado-generar');
+  btn.addEventListener('click', () => {
+    const receta = (cont.querySelector('input[name="lab-receta"]:checked') || {}).value || '';
+    if (!angulosElegidos.size) { alert('Elige al menos un ángulo aprobado.'); return; }
+    generarEtapa('encuentro', btn, { receta, angulos: [...angulosElegidos] });
+  });
+}
+
+async function abrirPagado() {
+  const cont = document.getElementById('lab-pagado');
+  if (!cont) return;
+  cont.innerHTML = `
+    <div class="lab-estrategia lab-pagado">
+      <h4>Contenido pagado: tus ángulos</h4>
+      <p class="text-soft">Un ángulo es un enfoque comunicacional para conectar con tu Cliente Soñado. La IA los crea de a 3 con lo que compartiste sobre él, y se numeran seguidos. Revísalos, edítalos o bórralos, y aprueba los que quieras usar.</p>
+      <div id="lab-angulos-lista"><p class="text-soft"><span class="lab-spinner"></span> Cargando tus ángulos…</p></div>
+      <p class="lab-error hidden" id="lab-ang-error"></p>
+      <div class="lab-acciones-pieza"><button type="button" class="btn btn--primary" id="lab-ang-generar">Crear 3 ángulos nuevos</button></div>
+      <div id="lab-pagado-opciones"></div>
+    </div>`;
+  cont.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  const errorEl = () => document.getElementById('lab-ang-error');
+  const mostrarError = (ex, msg) => { const e = errorEl(); if (e) { e.textContent = mensajeError(ex, msg); e.classList.remove('hidden'); } };
+  const limpiarError = () => { const e = errorEl(); if (e) e.classList.add('hidden'); };
+
+  document.getElementById('lab-ang-generar').addEventListener('click', async (ev) => {
+    const btn = ev.currentTarget;
+    limpiarError();
+    btn.disabled = true;
+    const original = btn.textContent;
+    btn.textContent = 'Creando ángulos…';
+    try { await llamarAngulos('angulosGenerar'); pintarAngulos(); } catch (ex) { mostrarError(ex, 'No se pudieron crear los ángulos. Intenta de nuevo.'); }
+    btn.disabled = false;
+    btn.textContent = original;
+  });
+
+  document.getElementById('lab-angulos-lista').addEventListener('click', async (ev) => {
+    const b = ev.target.closest('[data-ang-act]');
+    if (!b) return;
+    const card = b.closest('.lab-angulo');
+    const id = card.dataset.id;
+    const act = b.dataset.angAct;
+    limpiarError();
+    try {
+      if (act === 'editar') { pintarAngulos(id); return; }
+      if (act === 'cancelar') { pintarAngulos(); return; }
+      b.disabled = true;
+      if (act === 'aprobar') {
+        const a = angulos.find(x => x.id === id);
+        const aprobando = !(a && a.aprobado);
+        await llamarAngulos('anguloAprobar', { id, aprobado: aprobando });
+        if (aprobando) angulosElegidos.add(id);
+      } else if (act === 'borrar') {
+        if (!confirm('¿Borrar este ángulo? Los demás conservan su número.')) { b.disabled = false; return; }
+        await llamarAngulos('anguloBorrar', { id });
+      } else if (act === 'guardar') {
+        const titulo = card.querySelector('[data-ang="titulo"]').value.trim();
+        const descripcion = card.querySelector('[data-ang="descripcion"]').value.trim();
+        if (!titulo) { const e = card.querySelector('[data-ang-error]'); e.textContent = 'El ángulo necesita un título.'; e.classList.remove('hidden'); b.disabled = false; return; }
+        await llamarAngulos('anguloEditar', { id, titulo, descripcion });
+      }
+      pintarAngulos();
+    } catch (ex) {
+      b.disabled = false;
+      mostrarError(ex, 'No se pudo completar la acción. Intenta de nuevo.');
+    }
+  });
+
+  try { await llamarAngulos('angulosListar'); } catch (ex) { angulos = []; mostrarError(ex, 'No se pudieron cargar tus ángulos.'); }
+  pintarAngulos();
 }
 
 // Solo el Alumno Demo: simular que publicó el hito H2F4 para probar Encuentro.
@@ -384,11 +519,14 @@ function htmlEtapas() {
               ? `<p class="lab-etapa__estado">🔒 ${esc(textoEstadoEtapa(id))}</p>`
               : e.hitoActivador && !datos.estrategia
                 ? `<p class="lab-etapa__estado">Primero define tu estrategia.</p><button type="button" class="btn btn--primary" data-estrategia>Definir mi estrategia</button>`
-                : `${e.hitoActivador ? `${resumenEstrategia(datos.estrategia)}<button type="button" class="btn btn--ghost" data-estrategia>Editar estrategia</button>` : ''}<button type="button" class="btn btn--primary" data-generar="${id}">Generar contenidos</button>`}
+                : `${e.hitoActivador ? `${resumenEstrategia(datos.estrategia)}<button type="button" class="btn btn--ghost" data-estrategia>Editar estrategia</button>` : ''}${e.hitoActivador && datos.estrategia.tipo === 'pagado'
+                  ? '<button type="button" class="btn btn--primary" data-pagado>Mis ángulos y contenidos</button>'
+                  : `<button type="button" class="btn btn--primary" data-generar="${id}">Generar contenidos</button>`}`}
           </div>`;
         }).join('')}
       </div>
       <div id="lab-estrategia"></div>
+      <div id="lab-pagado"></div>
       <div id="lab-resultado"></div>
     </section>
     <section class="lab-bloque">
@@ -504,20 +642,20 @@ function conectarEditor(editor, seccion) {
 
 /* --- Generar --- */
 
-async function generarEtapa(etapaId, btn) {
+async function generarEtapa(etapaId, btn, extra) {
   const raiz = rootEl();
   if (hayEdicionesSinGuardar(raiz)) {
     if (!confirm('Tienes cambios sin guardar en una propuesta. Si generas ahora se perderán. ¿Continuar?')) return;
     descartarEdiciones(raiz);
   }
   const resultado = document.getElementById('lab-resultado');
-  document.querySelectorAll('[data-generar]').forEach(b => { b.disabled = true; });
+  document.querySelectorAll('[data-generar], [data-generar-pagado]').forEach(b => { b.disabled = true; });
   const textoOriginal = btn.textContent;
   btn.textContent = 'Creando…';
   resultado.innerHTML = '<div class="lab-cargando"><span class="lab-spinner"></span> Creando tus contenidos con tu voz y tu Cliente Soñado… (puede tardar hasta un minuto)</div>';
   resultado.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   try {
-    const r = await generarContenidos(conFase({ etapa: etapaId, emojis: nivelEmojisActual(), emojisFavoritos: emojisFavoritosActual() }));
+    const r = await generarContenidos(conFase({ etapa: etapaId, emojis: nivelEmojisActual(), emojisFavoritos: emojisFavoritosActual(), ...(extra || {}) }));
     const g = r.data;
     datos.usosHoy += 1;
     const contador = document.getElementById('lab-contador');
@@ -539,7 +677,7 @@ async function generarEtapa(etapaId, btn) {
   } catch (err) {
     resultado.innerHTML = `<p class="lab-error">${esc(mensajeError(err, 'No se pudieron generar los contenidos. Intenta de nuevo.'))}</p>`;
   } finally {
-    document.querySelectorAll('[data-generar]').forEach(b => { b.disabled = false; });
+    document.querySelectorAll('[data-generar], [data-generar-pagado]').forEach(b => { b.disabled = false; });
     btn.textContent = textoOriginal;
   }
 }
@@ -553,6 +691,7 @@ function conectarAlumno(el) {
   }));
   el.querySelectorAll('[data-generar]').forEach(b => b.addEventListener('click', () => generarEtapa(b.dataset.generar, b)));
   el.querySelectorAll('[data-estrategia]').forEach(b => b.addEventListener('click', () => abrirEstrategia()));
+  el.querySelectorAll('[data-pagado]').forEach(b => b.addEventListener('click', () => abrirPagado()));
 }
 
 async function recargar() {
@@ -583,7 +722,7 @@ async function cargarComoAlumno() {
    ============================================================ */
 
 let listaStaff = [];
-const FORMATOS_STAFF = { reel: { nombre: 'Reels' }, carrusel: { nombre: 'Carruseles' }, dm: { nombre: 'DMs' }, whatsapp: { nombre: 'WhatsApp' } };
+const FORMATOS_STAFF = { reel: { nombre: 'Reels' }, carrusel: { nombre: 'Carruseles' }, dm: { nombre: 'DMs' }, whatsapp: { nombre: 'WhatsApp' }, imagen: { nombre: 'Imágenes estáticas' } };
 
 function faseDe(ciclo) {
   if (!ciclo) return 0;

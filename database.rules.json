@@ -588,6 +588,11 @@
                 "guion": { ".write": "auth != null && root.child('alumnoPorAuthUid').child(auth.uid).val() === $alumnoId", ".validate": "newData.isString() && newData.val().length <= 3500" },
                 "textoPantalla": { ".write": "auth != null && root.child('alumnoPorAuthUid').child(auth.uid).val() === $alumnoId", ".validate": "newData.isString() && newData.val().length <= 200" },
                 "descripcion": { ".write": "auth != null && root.child('alumnoPorAuthUid').child(auth.uid).val() === $alumnoId", ".validate": "newData.isString() && newData.val().length <= 2500" },
+                "titular": { ".write": "auth != null && root.child('alumnoPorAuthUid').child(auth.uid).val() === $alumnoId", ".validate": "newData.isString() && newData.val().length <= 200" },
+                "apoyo": { ".write": "auth != null && root.child('alumnoPorAuthUid').child(auth.uid).val() === $alumnoId", ".validate": "newData.isString() && newData.val().length <= 300" },
+                "boton": { ".write": "auth != null && root.child('alumnoPorAuthUid').child(auth.uid).val() === $alumnoId", ".validate": "newData.isString() && newData.val().length <= 40" },
+                "anuncio": { ".write": "auth != null && root.child('alumnoPorAuthUid').child(auth.uid).val() === $alumnoId", ".validate": "newData.isString() && newData.val().length <= 2500" },
+                "ideaVisual": { ".write": "auth != null && root.child('alumnoPorAuthUid').child(auth.uid).val() === $alumnoId", ".validate": "newData.isString() && newData.val().length <= 500" },
                 "editadoEn": { ".write": "auth != null && root.child('alumnoPorAuthUid').child(auth.uid).val() === $alumnoId", ".validate": "newData.isNumber()" },
                 "laminas": {
                   ".write": "auth != null && root.child('alumnoPorAuthUid').child(auth.uid).val() === $alumnoId",
