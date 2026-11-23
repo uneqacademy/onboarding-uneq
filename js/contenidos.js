@@ -128,8 +128,8 @@ function montarReproductor(cont, vturb) {
 /* ---------- Duración automática (desde la lista de reproducción del video) ---------- */
 
 // Con el reproductor ya cargado, lee su configuración y suma los segmentos de la lista de
-// reproducción (.m3u8) del video: da los minutos reales sin tener que reproducirlo.
-async function minutosDesdeReproductor(p) {
+// reproducción (.m3u8) del video: da la duración real (en segundos) sin tener que reproducirlo.
+async function segundosDesdeReproductor(p) {
   const hostOk = h => /^[\w-]+(\.[\w-]+)*\.converteai\.net$/.test(h) || h === 'converteai.net';
   for (let i = 0; i < 48; i++) {   // hasta ~12 s esperando a que el reproductor se configure
     const cfg = p && p.config;
@@ -144,7 +144,7 @@ async function minutosDesdeReproductor(p) {
       if (!hostOk(urlVariante.hostname)) return null;
       const lista = await (await fetch(urlVariante)).text();
       const segundos = [...lista.matchAll(/#EXTINF:([\d.]+)/g)].reduce((s, m) => s + parseFloat(m[1]), 0);
-      return segundos > 0 ? Math.max(1, Math.round(segundos / 60)) : null;
+      return segundos > 0 ? Math.max(1, Math.round(segundos)) : null;
     }
     await new Promise(r => setTimeout(r, 250));
   }
@@ -154,12 +154,38 @@ async function minutosDesdeReproductor(p) {
 const duracionIntentada = new Set();   // lecciones ya probadas en esta sesión (no se reintentan)
 let detectandoDuraciones = false;
 
-async function guardarDuracion(programa, mid, cid, minutos) {
+async function guardarDuracion(programa, mid, cid, segundos) {
   if (estado.datos[mid] && estado.datos[mid]._origen === 'comun') programa = 'comun';
-  await update(ref(db, `contenidos/${programa}/${mid}/clases/${cid}`), { duracionMin: minutos });
+  const minutos = Math.max(1, Math.round(segundos / 60));
+  await update(ref(db, `contenidos/${programa}/${mid}/clases/${cid}`), { duracionSeg: segundos, duracionMin: minutos });
   if (estado.datos[mid] && estado.datos[mid].clases && estado.datos[mid].clases[cid]) {
+    estado.datos[mid].clases[cid].duracionSeg = segundos;
     estado.datos[mid].clases[cid].duracionMin = minutos;
   }
+}
+
+// Duración de una clase en segundos: la exacta si la hay; si no, los minutos que ya tenía.
+const segundosDe = c => Number(c && c.duracionSeg) > 0 ? Number(c.duracionSeg) : (Number(c && c.duracionMin) || 0) * 60;
+// 252 -> "4 min 12 s"; 240 -> "4 min"; 45 -> "45 s"; 3903 -> "1 h 5 min 3 s".
+function formatoTiempo(seg) {
+  seg = Math.round(Number(seg) || 0);
+  if (seg <= 0) return '';
+  const h = Math.floor(seg / 3600), m = Math.floor(seg % 3600 / 60), s = seg % 60;
+  return [h ? `${h} h` : '', m ? `${m} min` : '', s ? `${s} s` : ''].filter(Boolean).join(' ');
+}
+// Duración del archivo de video elegido (en segundos), leída en el navegador antes de subirlo; 0 si no se puede leer.
+function duracionDeArchivo(archivo) {
+  return new Promise(resolve => {
+    const v = document.createElement('video');
+    const url = URL.createObjectURL(archivo);
+    let listo = false;
+    const fin = seg => { if (listo) return; listo = true; URL.revokeObjectURL(url); v.removeAttribute('src'); v.load(); resolve(seg); };
+    v.preload = 'metadata';
+    v.onloadedmetadata = () => fin(isFinite(v.duration) && v.duration > 0 ? Math.round(v.duration) : 0);
+    v.onerror = () => fin(0);
+    setTimeout(() => fin(0), 15000);
+    v.src = url;
+  });
 }
 
 // Solo el director: completa en segundo plano la duración de las lecciones que no la tienen,
@@ -169,7 +195,7 @@ async function detectarDuracionesFaltantes() {
   const programa = estado.programa;
   const pendientes = [];
   Object.entries(estado.datos).forEach(([mid, m]) => Object.entries(m.clases || {}).forEach(([cid, c]) => {
-    if (c.vturb && c.vturb.elementoId && c.vturb.scriptUrl && !(Number(c.duracionMin) > 0) && !duracionIntentada.has(cid)) pendientes.push([mid, cid, c.vturb]);
+    if (c.vturb && c.vturb.elementoId && c.vturb.scriptUrl && !(Number(c.duracionSeg) > 0) && !duracionIntentada.has(cid)) pendientes.push([mid, cid, c.vturb]);
   }));
   if (!pendientes.length) return;
   detectandoDuraciones = true;
@@ -187,11 +213,11 @@ async function detectarDuracionesFaltantes() {
       const s = document.createElement('script');
       s.src = vturb.scriptUrl; s.async = true;
       document.head.appendChild(s);
-      let min = null;
-      try { min = await minutosDesdeReproductor(p); } catch (err) { console.warn('No se pudo medir el video:', err); }
+      let seg = null;
+      try { seg = await segundosDesdeReproductor(p); } catch (err) { console.warn('No se pudo medir el video:', err); }
       caja.remove(); s.remove();
-      if (min) {
-        try { await guardarDuracion(programa, mid, cid, min); } catch (err) { console.warn('No se pudo guardar la duración:', err); continue; }
+      if (seg) {
+        try { await guardarDuracion(programa, mid, cid, seg); } catch (err) { console.warn('No se pudo guardar la duración:', err); continue; }
         if (estado.programa === programa && estado.vista !== 'leccion') pintar();
       }
     }
@@ -335,7 +361,7 @@ function irA(vista, moduloId = null, claseId = null) {
 function progresoDeModulo(m) {
   const cl = clasesDe(m);
   const vistas = cl.filter(([cid]) => estado.progreso[cid]).length;
-  const minutos = cl.reduce((s, [, c]) => s + (Number(c.duracionMin) || 0), 0);
+  const minutos = Math.round(cl.reduce((s, [, c]) => s + segundosDe(c), 0) / 60);
   return { total: cl.length, vistas, minutos, pct: cl.length ? Math.round(vistas * 100 / cl.length) : 0 };
 }
 
@@ -376,7 +402,7 @@ function pintar() {
     if (jugador) {
       const miToken = ++tokenSeguimiento;
       const claseSeg = estado.claseId;
-      iniciarSeguimiento(jugador, claseSeg, (Number(clase.duracionMin) || 0) * 60, mostrarVisto).then(detener => {
+      iniciarSeguimiento(jugador, claseSeg, segundosDe(clase), mostrarVisto).then(detener => {
         // Si mientras tanto cambió la lección, se cancela esta medición.
         if (miToken !== tokenSeguimiento || estado.vista !== 'leccion' || estado.claseId !== claseSeg) { if (detener) detener(); }
         else detenerSeguimiento = detener;
@@ -384,14 +410,14 @@ function pintar() {
     }
     // El director abre una lección sin duración: se mide con este mismo reproductor y se guarda.
     const cid = estado.claseId, mid = actual[0], programa = estado.programa;
-    if (jugador && estado.esDirector && !(Number(clase.duracionMin) > 0) && !duracionIntentada.has(cid)) {
+    if (jugador && estado.esDirector && !(Number(clase.duracionSeg) > 0) && !duracionIntentada.has(cid)) {
       duracionIntentada.add(cid);
-      minutosDesdeReproductor(jugador).then(async min => {
-        if (!min) return;
-        await guardarDuracion(programa, mid, cid, min);
+      segundosDesdeReproductor(jugador).then(async seg => {
+        if (!seg) return;
+        await guardarDuracion(programa, mid, cid, seg);
         const titulo = document.querySelector('.ct-lec__titulo');
         if (estado.claseId === cid && titulo && !titulo.querySelector('.ct-etq')) {
-          titulo.insertAdjacentHTML('beforeend', ` <span class="ct-etq" style="vertical-align:middle;">${ICONO_RELOJ} ${formatoDuracion(min)}</span>`);
+          titulo.insertAdjacentHTML('beforeend', ` <span class="ct-etq" style="vertical-align:middle;">${ICONO_RELOJ} ${formatoTiempo(seg)}</span>`);
         }
       }).catch(err => console.warn('No se pudo medir el video:', err));
     }
@@ -450,7 +476,7 @@ function vistaModulo(mid, m) {
         ${c.publicado === false ? '<span class="ct-etq ct-etq--borrador">Borrador</span>' : ''}
         ${estado.verTodo && m._origen === 'comun' && c.excluirDe && PROGRAMAS_REALES.some(p => c.excluirDe[p]) ? `<span class="ct-etq">No va en: ${PROGRAMAS_REALES.filter(p => c.excluirDe[p]).map(p => escaparHtml(programaLabel(p))).join(', ')}</span>` : ''}
         ${(c.materiales && Object.keys(c.materiales).length) ? '<span title="Tiene material">📎</span>' : ''}</span>
-      ${Number(c.duracionMin) > 0 ? `<span class="ct-fila__dur">${ICONO_RELOJ} ${Number(c.duracionMin)} minutos</span>` : ''}
+      ${segundosDe(c) > 0 ? `<span class="ct-fila__dur">${ICONO_RELOJ} ${formatoTiempo(segundosDe(c))}</span>` : ''}
       <span class="ct-fila__estado${vista ? ' is-vista' : ''}" data-est="${cid}">${vista ? ICONO_CHECK : ICONO_PLAY}</span>
       ${puedeEditar(m) ? (estado.modoSeleccion ? `<label class="ct-sel ct-sel--fila"><input type="checkbox" ${estado.seleccion.has(cid) ? 'checked' : ''} tabindex="-1"></label>` : botonesAdmin('cla', mid, cid, j, clases.length)) : ''}
     </div>`;
@@ -493,7 +519,7 @@ function vistaLeccion(mid, m, cid) {
   const materiales = Object.values(clase.materiales || {}).filter(mt => mt && urlSegura(mt.url));
   const vista = !!estado.progreso[cid];
   const fav = !!estado.favoritos[cid];
-  const dur = formatoDuracion(clase.duracionMin);
+  const dur = formatoTiempo(segundosDe(clase));
 
   const acciones = `
     <div class="ct-lec__acciones">
@@ -509,7 +535,7 @@ function vistaLeccion(mid, m, cid) {
   const lista = clases.map(([id, c], j) => `
     <div class="ct-lado__item${id === cid ? ' is-actual' : ''}" data-act="abrir" data-m="${mid}" data-c="${id}">
       <span class="ct-lado__num">${j + 1}</span>
-      <span class="ct-lado__txt">${escaparHtml(c.titulo || 'Lección sin título')}${Number(c.duracionMin) > 0 ? `<small class="ct-lado__dur">${ICONO_RELOJ} ${formatoDuracion(c.duracionMin)}</small>` : ''}</span>
+      <span class="ct-lado__txt">${escaparHtml(c.titulo || 'Lección sin título')}${segundosDe(c) > 0 ? `<small class="ct-lado__dur">${ICONO_RELOJ} ${formatoTiempo(segundosDe(c))}</small>` : ''}</span>
       <span class="ct-lado__est${estado.progreso[id] ? ' is-vista' : ''}" data-est="${id}">${estado.progreso[id] ? ICONO_CHECK : ICONO_PLAY}</span>
     </div>`).join('');
 
@@ -1149,6 +1175,7 @@ function abrirBiblioteca({ alElegir } = {}) {
 
 function editarClase(mid, cid) {
   let subido = null;   // reproductor del video subido directo a Vturb, si lo hubo
+  let subidoSeg = 0;   // duración (s) del archivo que se subió, leída en el navegador
   const c = cid ? estado.datos[mid].clases[cid] : null;
   let materiales = { ...(c && c.materiales ? c.materiales : {}) };
   const quitados = [];
@@ -1160,7 +1187,7 @@ function editarClase(mid, cid) {
   const ov = modal(c ? 'Editar clase' : 'Nueva clase', `
     ${htmlCampoPortada(portadaActual)}
     <div class="field mb-16"><label>Título</label><input id="ct-c-titulo" maxlength="140" value="${escaparHtml(c ? c.titulo : '')}"></div>
-    <div class="field mb-16"><label>Duración del video (minutos)</label><input id="ct-c-dur" type="number" min="0" max="600" value="${c && c.duracionMin ? Number(c.duracionMin) : ''}"></div>
+    <div class="field mb-16"><label>Duración del video (minutos; se completa sola al subirlo)</label><input id="ct-c-dur" type="number" min="0" max="600" value="${c && c.duracionMin ? Number(c.duracionMin) : ''}"></div>
     <div class="field mb-16"><label>Descripción (opcional)</label><textarea id="ct-c-desc" maxlength="2000">${escaparHtml(c ? c.descripcion || '' : '')}</textarea></div>
     <div class="field mb-16"><label>Subir el video directo a Vturb</label>
       <button type="button" class="btn btn--ghost" id="ct-c-subir" style="font-size:12.5px;">⬆ Subir un video nuevo…</button>
@@ -1192,11 +1219,17 @@ function editarClase(mid, cid) {
       ov.querySelectorAll('.ct-c-prog').forEach(x => { if (!x.checked) fuera[x.dataset.p] = true; });
       campos.excluirDe = Object.keys(fuera).length ? fuera : null;
     }
-    campos.duracionMin = Number(val(ov, '#ct-c-dur')) > 0 ? Math.round(Number(val(ov, '#ct-c-dur'))) : null;
     const codigo = ov.querySelector('#ct-c-embed').value.trim();
-    // Si se cambia el video y la duración no se tocó a mano, se vuelve a medir sola.
-    if ((codigo || subido) && c && Number(c.duracionMin) > 0 && campos.duracionMin === Number(c.duracionMin)) {
-      campos.duracionMin = null;
+    const durManual = Number(val(ov, '#ct-c-dur')) > 0 ? Math.round(Number(val(ov, '#ct-c-dur'))) : null;
+    const durAntes = c && Number(c.duracionMin) > 0 ? Number(c.duracionMin) : null;
+    if (durManual !== durAntes) {
+      // La directora escribió los minutos a mano: se respeta.
+      campos.duracionMin = durManual;
+      campos.duracionSeg = durManual ? durManual * 60 : null;
+    } else if (codigo || subido) {
+      // Video nuevo y la duración no se tocó: la del archivo subido, o se vuelve a medir sola.
+      campos.duracionSeg = subidoSeg > 0 ? subidoSeg : null;
+      campos.duracionMin = subidoSeg > 0 ? Math.max(1, Math.round(subidoSeg / 60)) : null;
       duracionIntentada.delete(cid);
     }
     if (codigo) {
@@ -1227,7 +1260,7 @@ function editarClase(mid, cid) {
   const msgSubida = (txt, error) => { estadoEl.textContent = txt; estadoEl.style.color = error ? '#C0392B' : ''; };
   subirBtn.addEventListener('click', () => inVideo.click());
   ov.querySelector('#ct-c-bib').addEventListener('click', () => abrirBiblioteca({
-    alElegir: ({ vturb, nombre }) => { subido = vturb; msgSubida(`✓ Elegiste «${nombre}». Pulsa Guardar para dejarlo en la clase.`); }
+    alElegir: ({ vturb, nombre }) => { subido = vturb; subidoSeg = 0; msgSubida(`✓ Elegiste «${nombre}». Pulsa Guardar para dejarlo en la clase.`); }
   }));
   inVideo.addEventListener('change', async () => {
     const f = inVideo.files[0];
@@ -1235,10 +1268,14 @@ function editarClase(mid, cid) {
     if (!f) return;
     if (!/^video\//.test(f.type)) return msgSubida('Ese archivo no es un video.', true);
     const guardarBtn = ov.querySelector('[data-guardar]');
-    subirBtn.disabled = true; guardarBtn.disabled = true; subido = null;
+    subirBtn.disabled = true; guardarBtn.disabled = true; subido = null; subidoSeg = 0;
+    const segArchivo = duracionDeArchivo(f);   // se lee en paralelo mientras sube
     try {
       const r = await subirVideoAVturb(f, val(ov, '#ct-c-titulo') || f.name, msgSubida, () => ov.isConnected);
-      if (r) { subido = r.vturb; msgSubida(`✓ Video listo y conectado. Pulsa Guardar para dejarlo en la clase.${r.aviso ? ' ' + r.aviso : ''}`); }
+      if (r) {
+        subido = r.vturb; subidoSeg = await segArchivo;
+        msgSubida(`✓ Video listo y conectado${subidoSeg ? ` (dura ${formatoTiempo(subidoSeg)})` : ''}. Pulsa Guardar para dejarlo en la clase.${r.aviso ? ' ' + r.aviso : ''}`);
+      }
     } catch (e) {
       console.error(e);
       msgSubida(e.code === 'functions/failed-precondition' || e.code === 'functions/permission-denied' ? e.message : (e.message || 'No se pudo subir el video.'), true);
