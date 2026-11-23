@@ -1982,10 +1982,15 @@ function mostrarBannerModoDemo(programa) {
     const mainCol = document.querySelector('.main');
     if (mainCol) mainCol.prepend(banner);
   }
+  // Reiniciar demo: solo Director y Sub-directora (el copiloto y el mentor no pueden recrear los alumnos demo).
+  const puedeReiniciarDemo = !!(estadoDirectorAntesDeDemo && estadoDirectorAntesDeDemo.rol === 'director');
   banner.innerHTML = `👁️ Viendo como Alumno Demo (${ETIQUETAS_DEMO[programa]}) — esto no es un alumno real, nada de lo que hagas acá cuenta en el sistema ni lo ven los alumnos.
     <label style="display:flex; align-items:center; gap:6px;">Fase que simula: <select id="select-fase-demo" style="font-size:12px; padding:2px 6px;">${['Inicio (sin fase)', 'Fase 1', 'Fase 2', 'Fase 3', 'Fase 4', 'Final (egresado)'].map((x, i) => `<option value="${i}"${i === getFaseDemo() ? ' selected' : ''}>${x}</option>`).join('')}</select></label>
+    ${puedeReiniciarDemo ? '<button type="button" id="btn-reiniciar-demo" class="btn btn--ghost" title="Borra todo lo que el Alumno Demo hizo, en todas las secciones" style="font-size:11px; padding:3px 12px; background:#fff;">🗑️ Reiniciar demo</button>' : ''}
     <button type="button" id="btn-salir-modo-demo" class="btn btn--ghost" style="font-size:11px; padding:3px 12px; background:#fff;">🔙 Volver a mi vista</button>`;
   document.getElementById('btn-salir-modo-demo').addEventListener('click', salirModoDemo);
+  const btnReiniciarDemo = document.getElementById('btn-reiniciar-demo');
+  if (btnReiniciarDemo) btnReiniciarDemo.addEventListener('click', reiniciarAlumnoDemo);
   document.getElementById('select-fase-demo').addEventListener('change', async ev => {
     setFaseDemo(ev.target.value);
     // El Dashboard solo se carga al entrar al modo demo (ir a él no lo recarga): se vuelve a pintar siempre,
@@ -2020,6 +2025,65 @@ function salirModoDemo() {
     document.dispatchEvent(new CustomEvent('rolCambiado'));
   };
   restaurar();
+}
+
+/* --- Reiniciar demo: borra TODO lo que generó el Alumno Demo (los 4 programas) y lo deja como recién creado ---
+   Solo Director y Sub-directora. El barrido lo hace una función del servidor (reiniciar-demo.js): la web le deja una
+   solicitud en mantenimiento/reiniciarDemo/{id} y espera el resultado. */
+const TEXTO_CONFIRMAR_REINICIO_DEMO = [
+  '¿Reiniciar el Alumno Demo?',
+  '',
+  'Se va a BORRAR todo lo que el Alumno Demo (OPEN, BEGIN, NEXT y eXIT) hizo en la app:',
+  '• sus publicaciones, comentarios, respuestas y reacciones (Hitos y Comunidad)',
+  '• sus preguntas al BOX y en las sesiones en vivo',
+  '• su avance, valoraciones y comentarios en Contenidos',
+  '• lo que generó en el Laboratorio IA y su ficha',
+  '• sus notificaciones, puntos, test Brújula y datos de perfil',
+  '• las fotos y archivos que subió',
+  '',
+  'Quedará como recién creado, para ver todo desde cero.',
+  'No afecta a ningún alumno real.',
+  'Esta acción NO se puede deshacer.'
+].join('\n');
+
+async function reiniciarAlumnoDemo() {
+  const boton = document.getElementById('btn-reiniciar-demo');
+  const uid = auth.currentUser ? auth.currentUser.uid : null;
+  if (!boton || !uid || !confirm(TEXTO_CONFIRMAR_REINICIO_DEMO)) return;
+  const textoOriginal = boton.textContent;
+  boton.disabled = true;
+  boton.textContent = '⏳ Reiniciando…';
+  const refSolicitud = push(ref(db, 'mantenimiento/reiniciarDemo'));
+  try {
+    await set(refSolicitud, { uid, creadoEn: Date.now() });
+    // La función del servidor responde en unos segundos (más si hay muchos archivos): se espera hasta ~3 minutos.
+    let resultado = null;
+    for (let i = 0; i < 90 && !resultado; i++) {
+      await new Promise(resolver => setTimeout(resolver, 2000));
+      const snap = await get(ref(db, `mantenimiento/reiniciarDemo/${refSolicitud.key}/resultado`));
+      if (snap.exists()) resultado = snap.val();
+    }
+    if (!resultado) throw new Error('El servidor no respondió a tiempo.');
+    if (resultado.error) throw new Error(resultado.error === 'sin-permiso' ? 'Tu cuenta no tiene permiso para reiniciar el demo.' : 'El servidor no pudo terminar el reinicio.');
+    try { await set(refSolicitud, null); } catch (err) { /* la solicitud ya cumplió su función */ }
+
+    // Mientras se está "como alumno", las reglas no dejan al staff escribir alumnos ni ciclos: se suelta el vínculo,
+    // se vuelven a crear los 4 Alumnos Demo limpios (los mentores necesitan que existan) y al recargar se vuelve a entrar al demo.
+    await set(ref(db, `alumnoPorAuthUid/${uid}`), null);
+    for (const programa of Object.keys(ETIQUETAS_DEMO)) {
+      try { await asegurarAlumnoDemo(programa); } catch (err) { console.warn('No se pudo recrear el demo', programa, err); }
+    }
+    // Preferencias que el navegador guardó para los alumnos demo (nivel y emojis del Laboratorio IA, etc.).
+    try { Object.keys(localStorage).filter(k => k.includes('demo-')).forEach(k => localStorage.removeItem(k)); } catch (err) { /* sin almacenamiento */ }
+
+    alert(`Listo: el Alumno Demo quedó en cero (${resultado.total} elementos borrados${resultado.archivos ? ` y ${resultado.archivos} archivos` : ''}). Se va a recargar la página.`);
+    window.location.reload();
+  } catch (err) {
+    console.error('No se pudo reiniciar el Alumno Demo:', err);
+    alert(`No se pudo reiniciar el Alumno Demo. ${err && err.message ? err.message : ''}\nRecarga la página e intenta de nuevo.`);
+    boton.disabled = false;
+    boton.textContent = textoOriginal;
+  }
 }
 
 async function verComoAlumnoDemo(programa) {
