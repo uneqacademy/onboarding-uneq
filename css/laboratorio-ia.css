@@ -756,3 +756,32 @@
 #view-laboratorio-ia .lab-propuesta__cuerpo > :is(.lab-imgcard, .lab-histcard, .lab-emailcard, .lab-reelcard, .lab-edicion) { flex: 1 1 auto; }
 #view-laboratorio-ia .lab-propuesta__cuerpo > .lab-acciones-pieza { flex: 0 0 auto; }
 #view-laboratorio-ia .lab-propuesta__cuerpo > :is(.lab-imgcard, .lab-histcard, .lab-reelcard) { align-content: flex-start; }
+
+/* ============================================================
+   Emojis favoritos: Guardar / Editar y selector con todos los emojis (solo PC)
+   ============================================================ */
+#view-laboratorio-ia .lab-emojis__fila input:focus::placeholder { color: transparent; }
+#view-laboratorio-ia .lab-emojis__fila input::placeholder { color: var(--lab-suave); opacity: 0.8; }
+#view-laboratorio-ia .lab-emojis__fila input:focus { outline: none; border-color: var(--lab-cian); box-shadow: 0 0 0 3px rgba(34, 211, 238, 0.22); }
+#view-laboratorio-ia .lab-emojis__fila input[readonly] { border-style: dashed; background: rgba(34, 211, 238, 0.06); cursor: default; }
+#view-laboratorio-ia .lab-emojis__fila .hidden { display: none !important; }
+#view-laboratorio-ia .lab-emojis__fila .btn:disabled { opacity: 0.45; box-shadow: none; transform: none; }
+#view-laboratorio-ia .lab-emojis__favoritos.is-guardado .lab-emojis__nota { color: #7be8ff; }
+
+.lab-emoji-panel { margin-top: 10px; border: 1px solid rgba(160, 190, 255, 0.28); border-radius: 14px; background: rgba(5, 10, 28, 0.85); overflow: hidden; box-shadow: 0 10px 30px rgba(2, 6, 20, 0.5); }
+.lab-emoji-panel.hidden { display: none; }
+.lab-emoji-panel__tabs { display: flex; gap: 4px; padding: 8px; overflow-x: auto; border-bottom: 1px solid rgba(160, 190, 255, 0.18); scrollbar-width: thin; }
+.lab-emoji-panel__tab { flex: 0 0 auto; border: 0; background: transparent; color: #9fb2e0; font: inherit; font-size: 12.5px; padding: 6px 11px; border-radius: 999px; cursor: pointer; white-space: nowrap; }
+.lab-emoji-panel__tab:hover { background: rgba(47, 118, 255, 0.18); color: #fff; }
+.lab-emoji-panel__tab.is-activa { background: linear-gradient(135deg, #2f76ff, #8e0da4); color: #fff; font-weight: 600; }
+.lab-emoji-panel__grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(40px, 1fr)); gap: 2px; padding: 10px; max-height: 240px; overflow-y: auto; }
+.lab-emoji-panel__emoji { border: 0; background: transparent; font-size: 24px; line-height: 1; padding: 6px 0; border-radius: 8px; cursor: pointer; transition: transform 0.1s ease, background 0.1s ease; }
+.lab-emoji-panel__emoji:hover { background: rgba(47, 118, 255, 0.28); transform: scale(1.25); }
+
+/* En celular no hay botón Elegir ni selector: se usa el teclado de emojis del teléfono */
+@media (max-width: 768px), (pointer: coarse) {
+  #view-laboratorio-ia .lab-emoji-elegir, #view-laboratorio-ia .lab-emoji-panel { display: none !important; }
+}
+#view-laboratorio-ia .lab-emojis .btn--ghost { background: rgba(47, 118, 255, 0.10); color: #cfe0ff; border: 1px solid rgba(140, 175, 255, 0.4); }
+#view-laboratorio-ia .lab-emojis .btn--ghost:not(:disabled):hover { background: rgba(47, 118, 255, 0.24); border-color: var(--lab-cian); color: #fff; }
+.lab-emoji-panel, .lab-emoji-panel__grid, .lab-emoji-panel__tabs { color-scheme: dark; }

@@ -17,6 +17,7 @@ import { db, auth, app } from './firebase-config.js';
 import { escaparHtml } from './util-html.js';
 import { ref, get, update } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-database.js";
 import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-functions.js";
+import { EMOJIS_POR_CATEGORIA } from './emojis-todos.js';
 import { getCurrentRole, esModoDemo } from './main.js';
 import { getFaseDemo } from './demo.js';
 import { htmlPiezas, conectarPiezas, fijarContextoVista, fijarImagenesVista, enlazarAcordeon, cerrarOtrasPeticiones, hayEdicionesSinGuardar, descartarEdiciones } from './laboratorio-ia-vista.js';
@@ -486,9 +487,9 @@ const claveEmojisFavoritos = () => `uneq_lab_emojis_fav_${alumnoIdActual || 'x'}
 function emojisFavoritosGuardados() {
   try { return localStorage.getItem(claveEmojisFavoritos()) || ''; } catch (e) { return ''; }
 }
+// Solo cuenta lo que la persona GUARDÓ (botón Guardar); lo que está a medio escribir no se usa.
 function emojisFavoritosActual() {
-  const campo = document.getElementById('lab-emojis-favoritos');
-  return (campo ? campo.value : emojisFavoritosGuardados()).trim().slice(0, 60);
+  return emojisFavoritosGuardados().trim().slice(0, 60);
 }
 
 function htmlBarraEmojis() {
@@ -506,12 +507,98 @@ function htmlBarraEmojis() {
         <label for="lab-emojis-favoritos"><strong>Tus emojis favoritos</strong> <span class="text-soft">(opcional)</span></label>
         <div class="lab-emojis__fila">
           <input type="text" id="lab-emojis-favoritos" maxlength="60" autocomplete="off" placeholder="Ej. 🔥 💛 🚀 ✨" value="${esc(emojisFavoritosGuardados())}" aria-describedby="lab-emojis-favoritos-nota">
-          <button type="button" class="btn btn--ghost btn-emoji-picker" data-target="lab-emojis-favoritos">😊 Elegir</button>
+          <button type="button" class="btn btn--primary" id="lab-emojis-guardar">Guardar</button>
+          <button type="button" class="btn btn--ghost" id="lab-emojis-editar">Editar</button>
+          <button type="button" class="btn btn--ghost lab-emoji-elegir" id="lab-emojis-elegir" aria-expanded="false" aria-controls="lab-emojis-panel">😊 Elegir</button>
         </div>
-        <p class="text-soft lab-emojis__nota" id="lab-emojis-favoritos-nota">Escribe o elige los emojis que tú usas. La IA los usará de preferencia, respetando el nivel de arriba.</p>
+        <div class="lab-emoji-panel hidden" id="lab-emojis-panel"></div>
+        <p class="text-soft lab-emojis__nota" id="lab-emojis-favoritos-nota"></p>
       </div>
       <p class="text-soft lab-emojis__nota">Los guiones de los videos nunca llevan emojis: se leen en voz alta.</p>
     </div>`;
+}
+
+// Campo de emojis favoritos: escribir → Guardar (queda bloqueado) → Editar para cambiarlo.
+// «Elegir» (selector con todos los emojis) solo aparece en PC; en celular se usa el teclado.
+function conectarEmojisFavoritos(el) {
+  const campo = el.querySelector('#lab-emojis-favoritos');
+  if (!campo) return;
+  const btnGuardar = el.querySelector('#lab-emojis-guardar');
+  const btnEditar = el.querySelector('#lab-emojis-editar');
+  const btnElegir = el.querySelector('#lab-emojis-elegir');
+  const panel = el.querySelector('#lab-emojis-panel');
+  const nota = el.querySelector('#lab-emojis-favoritos-nota');
+  const NOTA_EDITAR = 'Escribe los emojis que tú usas y presiona Guardar. La IA los usará de preferencia, respetando el nivel de arriba.';
+  const NOTA_GUARDADO = 'Guardado ✓ La IA usará estos emojis en tus próximos contenidos. Presiona Editar si quieres cambiarlos.';
+  let guardado = !!emojisFavoritosGuardados().trim();
+
+  const cerrarPanel = () => { panel.classList.add('hidden'); btnElegir.setAttribute('aria-expanded', 'false'); };
+  const pintar = () => {
+    const hayTexto = !!campo.value.trim();
+    campo.readOnly = guardado;
+    el.querySelector('.lab-emojis__favoritos').classList.toggle('is-guardado', guardado);
+    btnGuardar.classList.toggle('hidden', guardado);
+    btnGuardar.disabled = !hayTexto;
+    btnEditar.classList.toggle('hidden', !guardado);
+    btnElegir.classList.toggle('hidden', guardado);
+    nota.textContent = guardado ? NOTA_GUARDADO : NOTA_EDITAR;
+    if (guardado) cerrarPanel();
+  };
+  campo.addEventListener('input', () => { btnGuardar.disabled = !campo.value.trim(); });
+  campo.addEventListener('keydown', (ev) => { if (ev.key === 'Enter') { ev.preventDefault(); btnGuardar.click(); } });
+  btnGuardar.addEventListener('click', () => {
+    const valor = campo.value.trim().slice(0, 60);
+    if (!valor) return;
+    campo.value = valor;
+    try { localStorage.setItem(claveEmojisFavoritos(), valor); } catch (e) { /* opcional */ }
+    guardado = true;
+    pintar();
+  });
+  btnEditar.addEventListener('click', () => {
+    guardado = false;
+    pintar();
+    campo.focus();
+    campo.setSelectionRange(campo.value.length, campo.value.length);
+  });
+
+  // Selector con todos los emojis (PC)
+  let construido = false;
+  const construirPanel = () => {
+    panel.innerHTML = `
+      <div class="lab-emoji-panel__tabs" role="tablist">${EMOJIS_POR_CATEGORIA.map((c, i) => `<button type="button" class="lab-emoji-panel__tab${i === 0 ? ' is-activa' : ''}" data-cat="${i}" role="tab" aria-selected="${i === 0}">${esc(c.nombre)}</button>`).join('')}</div>
+      <div class="lab-emoji-panel__grid" role="listbox"></div>`;
+    construido = true;
+    pintarCategoria(0);
+  };
+  const pintarCategoria = (i) => {
+    panel.querySelectorAll('.lab-emoji-panel__tab').forEach((t) => {
+      const activa = Number(t.dataset.cat) === i;
+      t.classList.toggle('is-activa', activa);
+      t.setAttribute('aria-selected', String(activa));
+    });
+    panel.querySelector('.lab-emoji-panel__grid').innerHTML = EMOJIS_POR_CATEGORIA[i].emojis.map((e) => `<button type="button" class="lab-emoji-panel__emoji">${e}</button>`).join('');
+  };
+  btnElegir.addEventListener('click', () => {
+    if (!panel.classList.contains('hidden')) { cerrarPanel(); return; }
+    if (!construido) construirPanel();
+    panel.classList.remove('hidden');
+    btnElegir.setAttribute('aria-expanded', 'true');
+  });
+  panel.addEventListener('click', (ev) => {
+    const tab = ev.target.closest('.lab-emoji-panel__tab');
+    if (tab) { pintarCategoria(Number(tab.dataset.cat)); return; }
+    const op = ev.target.closest('.lab-emoji-panel__emoji');
+    if (!op || guardado) return;
+    const ini = campo.selectionStart ?? campo.value.length;
+    const fin = campo.selectionEnd ?? campo.value.length;
+    const nuevo = campo.value.slice(0, ini) + op.textContent + campo.value.slice(fin);
+    if (nuevo.length > campo.maxLength) return;
+    campo.value = nuevo;
+    campo.focus();
+    campo.setSelectionRange(ini + op.textContent.length, ini + op.textContent.length);
+    btnGuardar.disabled = !campo.value.trim();
+  });
+  pintar();
 }
 
 function conectarBarraEmojis(el) {
@@ -525,12 +612,7 @@ function conectarBarraEmojis(el) {
     inp.setAttribute('aria-valuetext', nivel.nombre);
     inp.style.setProperty('--lab-pos', `${(n / (NIVELES_EMOJIS.length - 1)) * 100}%`);
   };
-  const campoFavoritos = el.querySelector('#lab-emojis-favoritos');
-  if (campoFavoritos) {
-    const guardarFavoritos = () => { try { localStorage.setItem(claveEmojisFavoritos(), emojisFavoritosActual()); } catch (e) { /* opcional */ } };
-    campoFavoritos.addEventListener('input', guardarFavoritos);
-    campoFavoritos.addEventListener('change', guardarFavoritos);
-  }
+  conectarEmojisFavoritos(el);
   inp.addEventListener('input', mostrar);
   inp.addEventListener('change', () => { try { localStorage.setItem(claveEmojis(), String(nivelEmojisActual())); } catch (e) { /* opcional */ } });
   mostrar();
