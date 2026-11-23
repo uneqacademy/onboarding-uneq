@@ -33,7 +33,41 @@ const puedeEditar = () => estado.esDirector;
 // El director reordena arrastrando (las flechas siguen como respaldo, p. ej. en el celular).
 const arrastrable = () => estado.esDirector && !estado.modoSeleccion ? ' draggable="true"' : '';
 const origenDe = mid => (mid && estado.datos[mid] && estado.datos[mid]._origen) || estado.programa;
-const TAMANO_MAXIMO_PDF = 25 * 1024 * 1024;
+// Material de apoyo de una lección: PDF, Word (.doc/.docx) y audio.
+const TAMANO_MAXIMO_MATERIAL = 25 * 1024 * 1024;          // PDF y Word
+const TAMANO_MAXIMO_AUDIO = 200 * 1024 * 1024;            // audios (una clase grabada pesa bastante)
+const MIME_MATERIAL = {
+  pdf: 'application/pdf', doc: 'application/msword',
+  docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  mp3: 'audio/mpeg', m4a: 'audio/mp4', wav: 'audio/wav', ogg: 'audio/ogg', oga: 'audio/ogg', aac: 'audio/aac', opus: 'audio/ogg', weba: 'audio/webm'
+};
+const EXTENSIONES_AUDIO = ['mp3', 'm4a', 'wav', 'ogg', 'oga', 'aac', 'opus', 'weba'];
+const extensionDe = nombre => (String(nombre || '').split('.').pop() || '').toLowerCase();
+// Qué tipo de material es un archivo elegido (por su extensión, que es más fiable que el tipo que informa el navegador).
+function clasificarMaterial(f) {
+  const ext = extensionDe(f.name);
+  let mime = MIME_MATERIAL[ext] || '';
+  const t = String(f.type || '').toLowerCase();
+  if (!mime && (t === 'application/pdf' || t === 'application/msword' || t.includes('wordprocessingml') || t.startsWith('audio/'))) mime = t;
+  if (!mime) return null;
+  const tipo = mime.startsWith('audio/') ? 'audio' : mime === 'application/pdf' ? 'pdf' : 'word';
+  return { mime, tipo, max: tipo === 'audio' ? TAMANO_MAXIMO_AUDIO : TAMANO_MAXIMO_MATERIAL };
+}
+// Los materiales antiguos no guardaban el tipo: se deduce del nombre.
+function tipoMaterial(mt) {
+  if (mt && ['pdf', 'word', 'audio'].includes(mt.tipo)) return mt.tipo;
+  const ext = extensionDe(mt && mt.nombre);
+  return EXTENSIONES_AUDIO.includes(ext) ? 'audio' : (ext === 'doc' || ext === 'docx') ? 'word' : 'pdf';
+}
+const iconoMaterial = mt => ({ audio: '🎧', word: '📝', pdf: '📄' })[tipoMaterial(mt)];
+// Cómo se ve un material en la lección: enlace de descarga; los audios además traen su reproductor.
+function htmlMaterial(mt) {
+  const tipo = tipoMaterial(mt);
+  const enlace = `<a class="ct-material" style="display:block; margin-bottom:${tipo === 'audio' ? 4 : 8}px;" href="${escaparHtml(mt.url)}" target="_blank" rel="noopener noreferrer">${iconoMaterial(mt)} ${escaparHtml(mt.nombre || 'Material')}</a>`;
+  return tipo === 'audio'
+    ? `<div style="margin-bottom:10px;">${enlace}<audio controls preload="none" src="${escaparHtml(mt.url)}" style="width:100%; max-width:520px;"></audio></div>`
+    : enlace;
+}
 const TEXTOS_FASE = { 0: 'Desde el inicio', 1: 'Fase 1', 2: 'Fase 2', 3: 'Fase 3', 4: 'Fase 4' };
 
 const estado = {
@@ -574,7 +608,7 @@ function vistaLeccion(mid, m, cid) {
             <div class="ct-lado__lista">${lista}</div>
           </div>
           <div data-pane="downloads" class="hidden">
-            ${materiales.length ? materiales.map(mt => `<a class="ct-material" style="display:block; margin-bottom:8px;" href="${escaparHtml(mt.url)}" target="_blank" rel="noopener noreferrer">📄 ${escaparHtml(mt.nombre || 'Material')}</a>`).join('')
+            ${materiales.length ? materiales.map(htmlMaterial).join('')
               : '<p class="text-soft" style="margin:0;">Esta lección no tiene material para descargar.</p>'}
           </div>
         </div>
@@ -1205,9 +1239,10 @@ function editarClase(mid, cid) {
     <div class="field mb-16"><label>…o pega el código de inserción de Vturb</label>
       <textarea id="ct-c-embed" placeholder="Pega aquí el código JS del video (botón &lt;/&gt; en Vturb)" style="min-height:90px; font-family:monospace; font-size:12px;"></textarea>
       <p class="text-soft" style="font-size:12px; margin:4px 0 0;">${c && c.vturb ? '✓ Ya tiene un video. Pega un código nuevo solo si quieres cambiarlo.' : 'Debe incluir la etiqueta vturb-smartplayer y el script de converteai.net.'}</p></div>
-    <div class="field mb-16"><label>Materiales (PDF)</label><div id="ct-c-mats"></div>
-      <button type="button" class="btn btn--ghost" id="ct-c-addmat" style="font-size:12px; margin-top:6px;">+ Agregar PDF</button>
-      <input type="file" id="ct-c-file" accept="application/pdf,.pdf" class="hidden"></div>
+    <div class="field mb-16"><label>Materiales (PDF, Word o audio)</label><div id="ct-c-mats"></div>
+      <button type="button" class="btn btn--ghost" id="ct-c-addmat" style="font-size:12px; margin-top:6px;">+ Agregar archivo</button>
+      <input type="file" id="ct-c-file" accept="application/pdf,.pdf,.doc,.docx,audio/*,.mp3,.m4a,.wav,.ogg,.aac,.opus" class="hidden">
+      <p class="text-soft" style="font-size:12px; margin:4px 0 0;">PDF y Word hasta 25 MB; audios (MP3, M4A, WAV, OGG, AAC) hasta 200 MB.</p></div>
     ${prog === 'comun' ? `<div class="field mb-16"><label>Aparece en estos programas</label><div style="display:flex; gap:14px; flex-wrap:wrap; font-size:13.5px;">${PROGRAMAS_REALES.map(p => `<label style="display:flex; gap:6px; align-items:center;"><input type="checkbox" class="ct-c-prog" data-p="${p}" ${excluidaDe(c, p) ? '' : 'checked'}> ${escaparHtml(programaLabel(p))}</label>`).join('')}</div><p class="text-soft" style="font-size:12px; margin:4px 0 0;">Desmarca un programa para sacar esta lección de ahí (el resto de la base común sigue).</p></div>` : ''}
     <label style="display:flex; gap:8px; align-items:center; font-size:13.5px;"><input type="checkbox" id="ct-c-pub" ${!c || c.publicado !== false ? 'checked' : ''}> Publicada (visible para los alumnos)</label>`,
   async ov => {
@@ -1241,13 +1276,13 @@ function editarClase(mid, cid) {
     }
     const base = `contenidos/${prog}/${mid}/clases/${claseId}`;
     await aplicarPortada(portada, portadaActual, `contenidos-portadas/${prog}/${claseId}`, campos);
-    // Sube los PDF nuevos y registra los que quedan.
+    // Sube los archivos nuevos (PDF, Word o audio) y registra los que quedan.
     for (const n of nuevos) {
       if (!materiales[n.clave]) continue;
       const ruta = `contenidos-materiales/${prog}/${claseId}/${Date.now()}_${n.archivo.name.replace(/[^\w.\-]+/g, '_')}`;
       const sref = storageRef(storage, ruta);
-      await uploadBytes(sref, n.archivo, { contentType: 'application/pdf' });
-      materiales[n.clave] = { nombre: n.archivo.name, url: await getDownloadURL(sref), ruta };
+      await uploadBytes(sref, n.archivo, { contentType: n.mime });
+      materiales[n.clave] = { nombre: n.archivo.name, url: await getDownloadURL(sref), ruta, tipo: n.tipo };
     }
     campos.materiales = Object.keys(materiales).length ? materiales : null;
     if (cid) await update(ref(db, base), campos);
@@ -1316,7 +1351,7 @@ function editarClase(mid, cid) {
   });
   const pintarMats = () => {
     ov.querySelector('#ct-c-mats').innerHTML = Object.entries(materiales).map(([k, mt]) =>
-      `<div style="display:flex; justify-content:space-between; gap:8px; font-size:13px; padding:4px 0;"><span>📄 ${escaparHtml(mt.nombre || 'PDF')}</span><button type="button" class="ct-icono" data-quitar="${k}" title="Quitar">✕</button></div>`).join('')
+      `<div style="display:flex; justify-content:space-between; gap:8px; font-size:13px; padding:4px 0;"><span>${iconoMaterial(mt)} ${escaparHtml(mt.nombre || 'Material')}</span><button type="button" class="ct-icono" data-quitar="${k}" title="Quitar">✕</button></div>`).join('')
       || '<p class="text-soft" style="font-size:12.5px; margin:0;">Sin materiales.</p>';
     ov.querySelectorAll('[data-quitar]').forEach(b => b.addEventListener('click', () => {
       const k = b.dataset.quitar;
@@ -1332,11 +1367,12 @@ function editarClase(mid, cid) {
     const f = input.files[0];
     input.value = '';
     if (!f) return;
-    if (f.type !== 'application/pdf') return alert('Solo se pueden subir archivos PDF.');
-    if (f.size > TAMANO_MAXIMO_PDF) return alert('El PDF pesa más de 25 MB.');
+    const cl = clasificarMaterial(f);
+    if (!cl) return alert('Solo se pueden subir PDF, Word (.doc o .docx) o audios (MP3, M4A, WAV, OGG, AAC).');
+    if (f.size > cl.max) return alert(`${cl.tipo === 'audio' ? 'El audio' : 'El archivo'} pesa más de ${cl.max / 1024 / 1024} MB.`);
     const clave = `nuevo${Date.now()}`;
-    nuevos.push({ clave, archivo: f });
-    materiales[clave] = { nombre: f.name };
+    nuevos.push({ clave, archivo: f, mime: cl.mime, tipo: cl.tipo });
+    materiales[clave] = { nombre: f.name, tipo: cl.tipo };
     pintarMats();
   });
 }

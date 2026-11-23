@@ -70,10 +70,14 @@ service firebase.storage {
       allow create, update: if direccion() && fotoOk();
       allow delete: if direccion();
     }
-    // PDF de las clases (se suben desde Contenidos).
+    // Material de apoyo de las clases (se sube desde Contenidos): PDF y Word hasta 25 MB; audios hasta 200 MB.
     match /contenidos-materiales/{programa}/{claseId}/{archivo} {
       allow read: if perfil();
-      allow create, update: if direccion() && tamanoOk() && request.resource.contentType == 'application/pdf';
+      allow create, update: if direccion() && (
+        (tamanoOk() && (request.resource.contentType == 'application/pdf'
+          || request.resource.contentType == 'application/msword'
+          || request.resource.contentType == 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'))
+        || (request.resource.size < 200 * 1024 * 1024 && request.resource.contentType.matches('audio/.*')));
       allow delete: if direccion();
     }
     // Imágenes genéricas de las vistas previas del Laboratorio IA (se suben desde Configuración).
