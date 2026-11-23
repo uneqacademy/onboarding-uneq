@@ -98,6 +98,10 @@ export function textoACopiar(pieza, tipo, m) {
   if (tipo === 'mensaje') return ((pieza.mensajes || [])[Number(m)] || {}).texto || '';
   if (tipo === 'anuncio') return pieza.anuncio || '';
   if (tipo === 'imagen') return textoImagen(pieza);
+  if (tipo === 'pantallas') return (pieza.laminas || []).join('\n\n');
+  if (tipo === 'asunto') return pieza.asunto || '';
+  if (tipo === 'cuerpo') return pieza.cuerpo || '';
+  if (tipo === 'email') return [pieza.asunto ? `Asunto: ${pieza.asunto}` : '', pieza.cuerpo].filter(Boolean).join('\n\n');
   // Propuestas antiguas (con secciones)
   return [pieza.titulo, ...(pieza.secciones || []).map(s => `${s.etiqueta ? s.etiqueta + ':\n' : ''}${s.texto}`)].join('\n\n');
 }
@@ -167,6 +171,48 @@ function htmlReel(p, i) {
           <div class="lab-reelcard__guion">${esc(p.guion)}</div>
           ${botonCopiar('guion', i, 'Copiar guion')}
         </div>` : ''}
+      </div>
+    </article>`;
+}
+
+// Historia de Instagram: marco vertical con barras de progreso arriba; se pasa de pantalla tocando a la derecha o a la izquierda.
+function htmlHistoria(p, i) {
+  const pant = p.laminas || [];
+  return `
+    <article class="lab-histcard" data-pieza="${i}">
+      <div class="lab-historia" data-historia>
+        <div class="lab-historia__marco" style="${fondo(p.titulo, 0)}">
+          <div class="lab-historia__barras">${pant.map((_, n) => `<span class="lab-historia__barra ${n === 0 ? 'is-activa' : ''}"></span>`).join('')}</div>
+          <div class="lab-historia__cab">${avatar('lab-avatar--chico')}<strong>${esc(nombreVista())}</strong><span>Ahora</span></div>
+          <div class="lab-historia__texto" data-texto>${esc(pant[0] || '')}</div>
+          <button type="button" class="lab-historia__zona lab-historia__zona--izq" data-prev aria-label="Pantalla anterior"></button>
+          <button type="button" class="lab-historia__zona lab-historia__zona--der" data-next aria-label="Pantalla siguiente"></button>
+        </div>
+        <div class="lab-imagen__medida">Toca a los lados para pasar de pantalla</div>
+      </div>
+      <div class="lab-reelcard__texto">
+        <div class="lab-reelcard__bloque">
+          <div class="lab-reelcard__etiqueta">Textos de las pantallas</div>
+          <div class="lab-reelcard__guion">${pant.map((t, n) => `<strong>Pantalla ${n + 1}</strong>\n${esc(t)}`).join('\n\n')}</div>
+          ${botonCopiar('pantallas', i, 'Copiar textos de las pantallas')}
+        </div>
+      </div>
+    </article>`;
+}
+
+// Email con un modelo genérico: para quién va, asunto y cuerpo.
+function htmlEmail(p, i) {
+  return `
+    <article class="lab-emailcard" data-pieza="${i}">
+      <div class="lab-email">
+        <div class="lab-email__fila"><span>Para</span> ${esc(p.audiencia || 'Tu lista de contactos')}</div>
+        <div class="lab-email__fila"><span>Asunto</span> <strong>${esc(p.asunto)}</strong></div>
+        <div class="lab-email__cuerpo">${esc(p.cuerpo)}</div>
+      </div>
+      <div class="lab-copiar-fila">
+        ${botonCopiar('asunto', i, 'Copiar asunto')}
+        ${botonCopiar('cuerpo', i, 'Copiar cuerpo')}
+        ${botonCopiar('email', i, 'Copiar todo')}
       </div>
     </article>`;
 }
@@ -249,10 +295,12 @@ function htmlAntigua(p, i) {
 /* ---------------- Cada propuesta: se ve completa y se puede editar ---------------- */
 
 // Solo se pueden editar las propuestas con el formato nuevo (las antiguas, con secciones, no).
-const esEditable = (p) => !!p && (p.tipo === 'reel' || p.tipo === 'carrusel' || p.tipo === 'chat' || p.tipo === 'imagen');
+const esEditable = (p) => !!p && ['reel', 'carrusel', 'chat', 'imagen', 'historia', 'email'].includes(p.tipo);
 
 function htmlVista(p, i) {
   return p.tipo === 'carrusel' ? htmlCarrusel(p, i)
+    : p.tipo === 'historia' ? htmlHistoria(p, i)
+    : p.tipo === 'email' ? htmlEmail(p, i)
     : p.tipo === 'imagen' ? htmlImagen(p, i)
     : p.tipo === 'reel' ? htmlReel(p, i)
     : p.tipo === 'chat' ? htmlChat(p, i)
@@ -268,7 +316,7 @@ function htmlCuerpoVista(p, i, op) {
 
 function htmlPieza(p, i, op) {
   const titulo = p.tipo
-    ? `<div class="lab-propuesta__titulo">${esc(p.titulo)}${p.angulo ? ` <span class="lab-propuesta__angulo">Ángulo ${esc(p.angulo)}</span>` : ''}${p.editadoEn ? ' <span class="lab-propuesta__editado">Editado</span>' : ''}</div>`
+    ? `<div class="lab-propuesta__titulo">${esc(p.titulo)}${p.angulo ? ` <span class="lab-propuesta__angulo">Ángulo ${esc(p.angulo)}</span>` : ''}${p.formato === 'email' && p.orden ? ` <span class="lab-propuesta__angulo">Email ${esc(p.orden)}</span>` : ''}${p.formato !== 'email' && p.audiencia ? ` <span class="lab-propuesta__angulo">${esc(p.audiencia)}</span>` : ''}${p.editadoEn ? ' <span class="lab-propuesta__editado">Editado</span>' : ''}</div>`
     : '';
   return `<div class="lab-propuesta" data-i="${i}">${titulo}<div class="lab-propuesta__cuerpo">${htmlCuerpoVista(p, i, op)}</div></div>`;
 }
@@ -301,6 +349,11 @@ function htmlEdicion(p) {
   } else if (p.tipo === 'carrusel') {
     campos = (p.laminas || []).map((t, n) => campoTexto(`Lámina ${n + 1}`, `lamina:${n}`, t, 3, 500)).join('')
       + campoTexto('Descripción para publicar', 'descripcion', p.descripcion, 6, 2500);
+  } else if (p.tipo === 'historia') {
+    campos = (p.laminas || []).map((t, n) => campoTexto(`Pantalla ${n + 1}`, `lamina:${n}`, t, 2, 500)).join('');
+  } else if (p.tipo === 'email') {
+    campos = campoLinea('Asunto', 'asunto', p.asunto, 150)
+      + campoTexto('Cuerpo del email', 'cuerpo', p.cuerpo, 12, 3500);
   } else if (p.tipo === 'imagen') {
     campos = campoLinea('Gancho', 'titular', p.titular, 200)
       + campoLinea('Bajada', 'apoyo', p.apoyo, 300)
@@ -330,6 +383,8 @@ export function leerEdicion(p, form) {
   const val = (k) => ((form.querySelector(`[data-campo="${k}"]`) || {}).value || '').trim();
   if (p.tipo === 'reel') return { guion: val('guion'), textoPantalla: val('textoPantalla'), descripcion: val('descripcion') };
   if (p.tipo === 'carrusel') return { laminas: (p.laminas || []).map((_, n) => val(`lamina:${n}`)), descripcion: val('descripcion') };
+  if (p.tipo === 'historia') return { laminas: (p.laminas || []).map((_, n) => val(`lamina:${n}`)) };
+  if (p.tipo === 'email') return { asunto: val('asunto'), cuerpo: val('cuerpo') };
   if (p.tipo === 'imagen') return { titular: val('titular'), apoyo: val('apoyo'), sesion: val('sesion'), boton: val('boton'), anuncio: val('anuncio'), ideaVisual: val('ideaVisual') };
   return { mensajes: (p.mensajes || []).map((m, n) => ({ contexto: form.querySelector(`[data-campo="contexto:${n}"]`) ? val(`contexto:${n}`) : (m.contexto || ''), texto: val(`texto:${n}`) })) };
 }
@@ -337,6 +392,8 @@ export function leerEdicion(p, form) {
 export function validarEdicion(p, c) {
   if (p.tipo === 'reel' && !c.guion && !c.descripcion) return 'Escribe el guion o la descripción.';
   if (p.tipo === 'carrusel' && c.laminas.some(t => !t)) return 'Ninguna lámina puede quedar vacía.';
+  if (p.tipo === 'historia' && c.laminas.some(t => !t)) return 'Ninguna pantalla puede quedar vacía.';
+  if (p.tipo === 'email' && (!c.asunto || !c.cuerpo)) return 'El email necesita asunto y cuerpo.';
   if (p.tipo === 'imagen' && !c.titular && !c.anuncio) return 'Escribe el titular o el texto del anuncio.';
   if (p.tipo === 'chat' && c.mensajes.some(m => !m.texto)) return 'Ningún mensaje puede quedar vacío.';
   return '';
@@ -353,6 +410,24 @@ function enlazarVista(cuerpo, piezas) {
       btn.textContent = ok ? 'Copiado ✓' : 'No se pudo copiar';
       setTimeout(() => { btn.textContent = original; }, 1800);
     });
+  });
+  // Historias: tocar a la derecha o a la izquierda cambia de pantalla.
+  cuerpo.querySelectorAll('[data-historia]').forEach(h => {
+    const art = h.closest('[data-pieza]');
+    const pant = (piezas[Number(art && art.dataset.pieza)] || {}).laminas || [];
+    const texto = h.querySelector('[data-texto]');
+    const barras = [...h.querySelectorAll('.lab-historia__barra')];
+    let n = 0;
+    const ir = (k) => {
+      if (!pant.length) return;
+      n = (k + pant.length) % pant.length;
+      texto.textContent = pant[n];
+      barras.forEach((b, j) => b.classList.toggle('is-activa', j <= n));
+    };
+    const sig = h.querySelector('[data-next]');
+    const ant = h.querySelector('[data-prev]');
+    if (sig) sig.addEventListener('click', () => ir(n + 1));
+    if (ant) ant.addEventListener('click', () => ir(n - 1));
   });
   cuerpo.querySelectorAll('.lab-ig__media').forEach(media => {
     const slides = media.querySelector('[data-slides]');
