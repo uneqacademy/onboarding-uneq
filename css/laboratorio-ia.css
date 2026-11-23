@@ -755,3 +755,4 @@
 #view-laboratorio-ia .lab-formato__lista > .lab-propuesta > .lab-propuesta__cuerpo { flex: 1 1 auto; display: flex; flex-direction: column; }
 #view-laboratorio-ia .lab-propuesta__cuerpo > :is(.lab-imgcard, .lab-histcard, .lab-emailcard, .lab-reelcard, .lab-edicion) { flex: 1 1 auto; }
 #view-laboratorio-ia .lab-propuesta__cuerpo > .lab-acciones-pieza { flex: 0 0 auto; }
+#view-laboratorio-ia .lab-propuesta__cuerpo > :is(.lab-imgcard, .lab-histcard, .lab-reelcard) { align-content: flex-start; }
