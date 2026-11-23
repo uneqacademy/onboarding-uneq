@@ -27,6 +27,7 @@ const NOMBRES_PROMPT = {
   bienvenida: ['Frase de bienvenida', 'Cómo debe ser la frase cálida que ve el alumno arriba al entrar al Laboratorio.'],
   fichaBorrador: ['Borrador de la ficha', 'Cómo debe redactar la IA el borrador de las respuestas de la ficha a partir de los hitos y notas del copiloto.'],
   generacion: ['Generación de contenidos', 'Instrucción general al crear Reels, carruseles, DMs y WhatsApp. El objetivo de cada etapa y la estructura de cada formato se editan más arriba.'],
+  estrategia: ['Reglas de CTA de Encuentro (estrategia)', 'Cómo se escriben los llamados a la acción en Encuentro. Puedes usar {palabra}, {link} y {fecha}: la app los reemplaza con lo que cada alumno definió en su estrategia.'],
   formatoTexto: ['Formato de los textos (párrafos y hashtags)', 'Cómo deben escribirse los textos para que queden como se publicarían: párrafos separados por una línea en blanco y hashtags al final. Además, la app ordena el texto sola al guardarlo.'],
   emoji0: ['Nivel de emojis: «Sin emojis»', 'Instrucción cuando la barra del alumno está en el extremo izquierdo. Además la app quita cualquier emoji que se cuele.'],
   emoji1: ['Nivel de emojis: «Pocos»', 'Instrucción cuando la barra está en la segunda posición.'],
