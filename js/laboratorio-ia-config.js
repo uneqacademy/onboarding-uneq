@@ -27,16 +27,34 @@ const NOMBRES_PROMPT = {
   bienvenida: ['Frase de bienvenida', 'Cómo debe ser la frase cálida que ve el alumno arriba al entrar al Laboratorio.'],
   fichaBorrador: ['Borrador de la ficha', 'Cómo debe redactar la IA el borrador de las respuestas de la ficha a partir de los hitos y notas del copiloto.'],
   generacion: ['Generación de contenidos', 'Instrucción general al crear Reels, carruseles, DMs y WhatsApp. El objetivo de cada etapa y la estructura de cada formato se editan más arriba.'],
-  pagado: ['Reglas del contenido pagado (anuncios)', 'Cómo se escriben los anuncios: el llamado a la acción es el botón de la publicación. Puedes usar {destino} (página de registro, página puente o grupo) y {fecha}.'],
-  angulos: ['Creación de ángulos comunicacionales', 'Cómo debe pensar la IA los ángulos (enfoques para conectar con el Cliente Soñado) que el alumno revisa y aprueba antes de generar contenido pagado.'],
-  estrategia: ['Reglas de CTA de Encuentro (estrategia)', 'Cómo se escriben los llamados a la acción en Encuentro. Puedes usar {palabra}, {link} y {fecha}: la app los reemplaza con lo que cada alumno definió en su estrategia.'],
+  pagado: ['Contenido PAGADO: reglas de los anuncios', 'Cómo se escriben los anuncios: el llamado a la acción es el botón de la publicación. Puedes usar {destino} (página de registro, página puente o grupo) y {fecha}.'],
+  angulos: ['Contenido PAGADO: cómo crear los ángulos comunicacionales', 'Cómo debe pensar la IA los ángulos (enfoques para conectar con el Cliente Soñado) que el alumno revisa y aprueba antes de generar contenido pagado.'],
+  estrategia: ['Contenido ORGÁNICO: reglas de los llamados a la acción', 'Cómo se escriben los llamados a la acción en Encuentro. Puedes usar {palabra}, {link} y {fecha}: la app los reemplaza con lo que cada alumno definió en su estrategia.'],
   formatoTexto: ['Formato de los textos (párrafos y hashtags)', 'Cómo deben escribirse los textos para que queden como se publicarían: párrafos separados por una línea en blanco y hashtags al final. Además, la app ordena el texto sola al guardarlo.'],
   emoji0: ['Nivel de emojis: «Sin emojis»', 'Instrucción cuando la barra del alumno está en el extremo izquierdo. Además la app quita cualquier emoji que se cuele.'],
   emoji1: ['Nivel de emojis: «Pocos»', 'Instrucción cuando la barra está en la segunda posición.'],
   emoji2: ['Nivel de emojis: «Algunos»', 'Instrucción cuando la barra está en el medio (es la posición inicial).'],
   emoji3: ['Nivel de emojis: «Bastantes»', 'Instrucción cuando la barra está en la cuarta posición.'],
-  emoji4: ['Nivel de emojis: «Todos los que quieras»', 'Instrucción cuando la barra está en el extremo derecho.']
+  emoji4: ['Nivel de emojis: «Todos los que quieras»', 'Instrucción cuando la barra está en el extremo derecho.'],
+  encuentroGeneral: ['Encuentro: reglas para todo contenido', 'Se suma a TODO lo que se genere en Encuentro, sea orgánico o pagado: por ejemplo que la sesión es gratuita y que la información y los enlaces se comparten en el grupo. Admite {palabra}, {link} y {fecha}. Puede quedar vacía.'],
+  tecnica_web: ['Técnica: SDV con Registro WEB y luego a Grupo', 'Explícale a la IA cómo funciona esta técnica y cómo debe hablar de ella. Se suma cuando el alumno elige esta técnica. Admite {palabra}, {link} y {fecha}. Puede quedar vacía.'],
+  tecnica_puente: ['Técnica: SDV con Página Puente y luego a Grupo', 'Explícale a la IA cómo funciona esta técnica y cómo debe hablar de ella. Se suma cuando el alumno elige esta técnica. Puede quedar vacía.'],
+  tecnica_directo: ['Técnica: SDV Directo a Grupo', 'Explícale a la IA cómo funciona esta técnica y cómo debe hablar de ella. Se suma cuando el alumno elige esta técnica. Puede quedar vacía.']
 };
+// Una instrucción por cada tipo de mensaje (medio) y tipo de contenido (orgánico o pagado) de Encuentro.
+const NOMBRES_FORMATO_PROMPT = { reel: 'Reels', carrusel: 'Carruseles', historia: 'Historias', imagen: 'Imágenes estáticas', whatsapp: 'WhatsApp', dm: 'DMs', email: 'Emails' };
+Object.entries(NOMBRES_FORMATO_PROMPT).forEach(([f, n]) => ['organico', 'pagado'].forEach(t => {
+  const tipo = t === 'organico' ? 'orgánico' : 'pagado';
+  NOMBRES_PROMPT[`fmt_${f}_${t}`] = [`${n} · contenido ${tipo}`, `Cómo deben escribirse los ${n.toLowerCase()} cuando el contenido de Encuentro es ${tipo}: tono, a quién les hablan, qué destacar. Admite {palabra}, {link} y {fecha}. Puede quedar vacía.`];
+}));
+// Cómo se agrupan en pantalla (de lo más general a lo más específico).
+const GRUPOS_PROMPT = [
+  { titulo: 'Instrucciones generales de la IA', ayuda: 'Valen para todas las etapas del funnel.', claves: ['sistema', 'generacion', 'formatoTexto', 'bienvenida', 'fichaBorrador', 'emoji0', 'emoji1', 'emoji2', 'emoji3', 'emoji4'] },
+  { titulo: 'Encuentro: para todo contenido', ayuda: 'Se suma a todo lo que se genere en Encuentro.', claves: ['encuentroGeneral'] },
+  { titulo: 'Encuentro: según la técnica de la SDV', ayuda: 'Se suma según la técnica que eligió el alumno.', claves: ['tecnica_web', 'tecnica_puente', 'tecnica_directo'] },
+  { titulo: 'Encuentro: según sea orgánico o pagado', ayuda: 'Las reglas de cada tipo de contenido y la creación de ángulos.', claves: ['estrategia', 'pagado', 'angulos'] },
+  { titulo: 'Encuentro: por tipo de mensaje y tipo de contenido', ayuda: 'Una instrucción para cada medio (reel, carrusel, historia, imagen, WhatsApp, DM, email), según sea orgánico o pagado. Se suma a la instrucción del formato.', claves: Object.keys(NOMBRES_PROMPT).filter(k => k.startsWith('fmt_')) }
+];
 const ETIQUETAS_FICHA = { fase1: 'Ficha 1', fase2: 'Ficha 2', fase3: 'Ficha 3' };
 
 let cfg = null;      // configuración efectiva en pantalla
@@ -147,14 +165,40 @@ function pintar() {
         <button type="button" class="btn btn--ghost labcfg-mini" data-act="re-add" data-re="${id}">+ Agregar formato</button>
       </div>`).join('')}
 
-    <div class="labcfg-sub">Instrucciones internas de la IA (prompts)</div>
-    ${Object.keys(NOMBRES_PROMPT).map(k => `
+    <div class="labcfg-sub">Ver la instrucción completa que recibe la IA</div>
+    <div class="labcfg-bloque">
+      <p class="text-soft" style="font-size:12.5px; margin:0 0 8px;">Elige una situación y mira EXACTAMENTE el texto que recibe la IA, armado con todas tus instrucciones (con datos de ejemplo de una persona). Sirve para comprobar que tu explicación llegó bien. Muestra lo que ya está guardado: si cambiaste algo, pulsa antes «Guardar cambios».</p>
+      <div class="labcfg-fila">
+        <div class="field" style="margin:0;"><label>Etapa</label><select id="labcfg-vp-etapa">${base.etapas.map(id => `<option value="${id}" ${id === 'encuentro' ? 'selected' : ''}>${esc(cfg.etapas[id].nombre)}</option>`).join('')}</select></div>
+        <div class="field" style="margin:0;"><label>Tipo de mensaje</label><select id="labcfg-vp-formato">${base.formatos.map(f => `<option value="${f}">${esc(cfg.formatos[f].nombre)}</option>`).join('')}</select></div>
+        <span></span>
+      </div>
+      <div class="labcfg-fila" style="margin-top:8px;">
+        <div class="field" style="margin:0;"><label>Contenido (solo Encuentro)</label><select id="labcfg-vp-tipo"><option value="organico">Orgánico</option><option value="pagado">Pagado</option></select></div>
+        <div class="field" style="margin:0;"><label>Técnica (solo Encuentro)</label><select id="labcfg-vp-tecnica"><option value="web">SDV con Registro WEB y luego a Grupo</option><option value="puente">SDV con Página Puente y luego a Grupo</option><option value="directo">SDV Directo a Grupo</option></select></div>
+        <span></span>
+      </div>
+      <button type="button" class="btn btn--ghost labcfg-mini" id="labcfg-vp-ver" style="margin-top:8px;">Ver la instrucción completa</button>
+      <p class="text-soft hidden" id="labcfg-vp-estado" style="font-size:12.5px;"></p>
+      <textarea id="labcfg-vp-salida" class="hidden" rows="22" readonly style="margin-top:8px; font-size:12.5px;"></textarea>
+    </div>
+
+    <div class="labcfg-sub">Instrucciones de la IA (todas editables)</div>
+    <p class="text-soft" style="font-size:12.5px; margin:0 0 8px;">Aquí le explicas a la IA cada cosa. Van de lo más general a lo más específico y se suman entre sí. Las de Encuentro admiten {palabra}, {link} y {fecha}: la app los reemplaza con lo que cada alumno definió en su estrategia. Lo único que no se puede cambiar es la forma técnica de la respuesta (para que la pantalla no se rompa).</p>
+    ${GRUPOS_PROMPT.map(g => {
+      const claves = g.claves.filter(k => cfg.prompts[k] !== undefined);
+      if (!claves.length) return '';
+      return `
+      <div class="labcfg-sub" style="font-size:13.5px;">${esc(g.titulo)}</div>
+      <p class="text-soft" style="font-size:12.5px; margin:0 0 6px;">${esc(g.ayuda)}</p>
+      ${claves.map(k => `
       <div class="labcfg-bloque">
         <label style="font-size:13px; font-weight:700;">${esc(NOMBRES_PROMPT[k][0])}</label>
         <p class="text-soft" style="font-size:12.5px; margin:2px 0 6px;">${esc(NOMBRES_PROMPT[k][1])}</p>
-        <textarea data-prompt="${k}" rows="${k === 'sistema' ? 12 : 6}" maxlength="8000">${esc(cfg.prompts[k])}</textarea>
+        <textarea data-prompt="${k}" rows="${k === 'sistema' ? 12 : k.startsWith('fmt_') ? 4 : 6}" maxlength="8000">${esc(cfg.prompts[k])}</textarea>
         <button type="button" class="btn btn--ghost labcfg-mini" data-act="restaurar-prompt" data-k="${k}" style="margin-top:6px;">Restaurar el original</button>
-      </div>`).join('')}
+      </div>`).join('')}`;
+    }).join('')}
 
     <p id="labcfg-error" class="hidden" style="color:#C0392B; font-size:13px;"></p>
     <div class="labcfg-acciones">
@@ -323,7 +367,10 @@ function conectarBotones() {
         recetas: cfg.recetas || {}
       };
       const prompts = {};
-      Object.keys(NOMBRES_PROMPT).forEach(k => { if (cfg.prompts[k].trim() !== porDefecto.prompts[k].trim()) prompts[k] = cfg.prompts[k].trim(); });
+      Object.keys(NOMBRES_PROMPT).forEach(k => {
+        if (cfg.prompts[k] === undefined || porDefecto.prompts[k] === undefined) return;
+        if (cfg.prompts[k].trim() !== porDefecto.prompts[k].trim()) prompts[k] = cfg.prompts[k].trim();   // vacío también se guarda: borrar una instrucción es válido
+      });
       await set(ref(db, 'laboratorioIA/config'), guardarConfig);
       await set(ref(db, 'laboratorioIA/prompts'), Object.keys(prompts).length ? prompts : null);
       btn.textContent = 'Guardado ✓';
@@ -333,6 +380,30 @@ function conectarBotones() {
       mostrarError('No se pudo guardar. Revisa que las reglas de Firebase estén publicadas e intenta de nuevo.');
     } finally {
       btn.disabled = false;
+    }
+  });
+
+  // Ver la instrucción completa que recibe la IA en una situación (lo ya guardado).
+  const verPrompt = document.getElementById('labcfg-vp-ver');
+  if (verPrompt) verPrompt.addEventListener('click', async () => {
+    const estado = document.getElementById('labcfg-vp-estado');
+    const salida = document.getElementById('labcfg-vp-salida');
+    estado.textContent = 'Armando la instrucción…';
+    estado.classList.remove('hidden');
+    salida.classList.add('hidden');
+    verPrompt.disabled = true;
+    try {
+      const q = (id) => document.getElementById(id).value;
+      const r = await pedirConfig({ vistaPrompt: { etapa: q('labcfg-vp-etapa'), formato: q('labcfg-vp-formato'), tipo: q('labcfg-vp-tipo'), tecnica: q('labcfg-vp-tecnica') } });
+      const v = r.data.vistaPrompt;
+      salida.value = `=== INSTRUCCIÓN GENERAL (sistema) ===\n${v.sistema}\n\n=== PEDIDO PARA ESTA SITUACIÓN ===\n${v.pedido}`;
+      salida.classList.remove('hidden');
+      estado.classList.add('hidden');
+    } catch (err) {
+      console.error('No se pudo armar la vista:', err);
+      estado.textContent = 'No se pudo armar la instrucción. Puede que la función aún no esté publicada.';
+    } finally {
+      verPrompt.disabled = false;
     }
   });
 
