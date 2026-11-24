@@ -36,6 +36,8 @@ const NOMBRES_PROMPT = {
   emoji2: ['Nivel de emojis: «Algunos»', 'Instrucción cuando la barra está en el medio (es la posición inicial).'],
   emoji3: ['Nivel de emojis: «Bastantes»', 'Instrucción cuando la barra está en la cuarta posición.'],
   emoji4: ['Nivel de emojis: «Todos los que quieras»', 'Instrucción cuando la barra está en el extremo derecho.'],
+  flujoEncuentro: ['Flujos de Encuentro: directrices técnicas', 'Directrices técnicas y objetivos de los flujos de mensajes para el grupo ANTES de la SDV (conectar, recordar fecha y hora, aumentar la asistencia en vivo). Se suman a las directrices de cada flujo y a lo que defines en cada mensaje.'],
+  flujoVenta: ['Flujos de Venta: directrices técnicas', 'Directrices técnicas y objetivos de los flujos de mensajes para el grupo DESPUÉS de la SDV (comunicar la oferta que se creó en vivo). Se suman a las directrices de cada flujo y a lo que defines en cada mensaje.'],
   ventaGeneral: ['Venta: reglas para todo contenido', 'Se suma a TODO lo que se genere en Venta, sea orgánico o pagado: cómo usar el nombre, la promesa y el precio del producto. Admite {palabra}, {link} y {wa}. Los llamados a la acción por destino (DM, WhatsApp, página de venta) los arma la app.'],
   ventaAngulos: ['Venta: cómo crear los ángulos (contenido pagado)', 'Cómo debe pensar la IA los ángulos de Venta: nacen del producto, su promesa y el Cliente Soñado. Son distintos de los de Encuentro.'],
   encuentroGeneral: ['Encuentro: reglas para todo contenido', 'Se suma a TODO lo que se genere en Encuentro, sea orgánico o pagado: por ejemplo que la sesión es gratuita y que la información y los enlaces se comparten en el grupo. Admite {palabra}, {link} y {fecha}. Puede quedar vacía.'],
@@ -52,6 +54,7 @@ Object.entries(NOMBRES_FORMATO_PROMPT).forEach(([f, n]) => ['organico', 'pagado'
 // Cómo se agrupan en pantalla (de lo más general a lo más específico).
 const GRUPOS_PROMPT = [
   { titulo: 'Instrucciones generales de la IA', ayuda: 'Valen para todas las etapas del funnel.', claves: ['sistema', 'generacion', 'formatoTexto', 'bienvenida', 'fichaBorrador', 'emoji0', 'emoji1', 'emoji2', 'emoji3', 'emoji4'] },
+  { titulo: 'Flujos de mensajes para el grupo', ayuda: 'Directrices técnicas de los flujos de Encuentro (antes de la SDV) y de Venta (después de la SDV). Los flujos mismos se definen más arriba.', claves: ['flujoEncuentro', 'flujoVenta'] },
   { titulo: 'Venta', ayuda: 'Instrucciones de la etapa Venta.', claves: ['ventaGeneral', 'ventaAngulos'] },
   { titulo: 'Encuentro: para todo contenido', ayuda: 'Se suma a todo lo que se genere en Encuentro.', claves: ['encuentroGeneral'] },
   { titulo: 'Encuentro: según la técnica de la SDV', ayuda: 'Se suma según la técnica que eligió el alumno.', claves: ['tecnica_web', 'tecnica_puente', 'tecnica_directo'] },
@@ -62,6 +65,18 @@ const ETIQUETAS_FICHA = { fase1: 'Ficha 1', fase2: 'Ficha 2', fase3: 'Ficha 3' }
 
 let cfg = null;      // configuración efectiva en pantalla
 let porDefecto = null;
+
+const MAX_MENSAJES_FLUJO = 30;
+const MAX_FLUJOS = 12;
+const ETAPAS_FLUJO = { encuentro: 'Encuentro: antes de la SDV', venta: 'Venta: después de la SDV' };
+// dia relativo a la SDV: -7 = 7 días antes, 0 = el día de la sesión, 1 = 1 día después
+const cuandoDeDia = (dia) => (dia < 0 ? 'antes' : dia > 0 ? 'despues' : 'mismo');
+const resumenFlujo = (f) => {
+  const dias = f.mensajes.map(m => m.dia);
+  const desde = Math.min(...dias), hasta = Math.max(...dias);
+  return `${f.mensajes.length} ${f.mensajes.length === 1 ? 'mensaje' : 'mensajes'} en ${hasta - desde + 1} ${hasta - desde === 0 ? 'día' : 'días'}`;
+};
+const HORA_FLUJO_OK = /^(\d{1,2}:\d{2}|[+-]\d{1,3}[hm])$/i;
 
 const NOMBRES_DESTINO_REC = { dm: 'conversación por DM', whatsapp: 'WhatsApp', pagina: 'página de venta' };
 // Texto de grupo de una receta: «Encuentro · orgánico», «Venta · orgánico · WhatsApp», «Venta · pagado · página de venta».
@@ -147,6 +162,45 @@ function pintar() {
         <div class="field"><label>Instrucción para la IA</label><textarea data-f="instruccion" rows="3" maxlength="1500">${esc(f.instruccion)}</textarea></div>
       </div>`;
     }).join('')}
+
+    <div class="labcfg-sub">Flujos de mensajes para el grupo (antes y después de la SDV)</div>
+    <p class="text-soft" style="font-size:12.5px; margin:0 0 8px;">Define tú la estructura: cuántos mensajes, en qué día y con qué objetivo. Los flujos de Encuentro se envían <strong>antes</strong> de la SDV y los de Venta <strong>después</strong>. El día es relativo a la SDV: «antes» o «después» más la cantidad de días, o «el mismo día». La hora puede ser fija (19:00) o relativa a la hora de inicio de la SDV (-2h = 2 horas antes, -15m, +2h = 2 horas después); si la dejas vacía, se usa la hora de la SDV. Máximo ${MAX_MENSAJES_FLUJO} mensajes por flujo.</p>
+    ${Object.entries(cfg.flujos || {}).map(([id, f]) => `
+      <div class="labcfg-bloque" data-fl="${esc(id)}">
+        <div class="labcfg-fila">
+          <div class="field" style="margin:0;"><label>Nombre del flujo</label><input type="text" data-f="nombre" value="${esc(f.nombre)}" maxlength="60"></div>
+          <div class="field" style="margin:0;"><label>Etapa</label><select data-f="etapa">${Object.entries(ETAPAS_FLUJO).map(([k, n]) => `<option value="${k}" ${f.etapa === k ? 'selected' : ''}>${esc(n)}</option>`).join('')}</select></div>
+          <label style="font-size:13px; display:flex; gap:5px; align-items:center; margin-top:22px;"><input type="checkbox" data-f="activa" ${f.activa ? 'checked' : ''}> Activo</label>
+        </div>
+        <div class="field"><label>Directrices técnicas y objetivos de este flujo (se suman a las generales de la etapa)</label><textarea data-f="directrices" rows="3" maxlength="1500">${esc(f.directrices)}</textarea></div>
+        <label style="font-size:12.5px; font-weight:600;">Mensajes (en el orden en que se envían) · ${esc(resumenFlujo(f))}</label>
+        ${f.mensajes.map((m, n) => `
+          <div class="labcfg-pieza" data-m="${n}">
+            <div class="labcfg-fila">
+              <select data-f="cuando"><option value="antes" ${cuandoDeDia(m.dia) === 'antes' ? 'selected' : ''}>Días antes de la SDV</option><option value="mismo" ${cuandoDeDia(m.dia) === 'mismo' ? 'selected' : ''}>El mismo día de la SDV</option><option value="despues" ${cuandoDeDia(m.dia) === 'despues' ? 'selected' : ''}>Días después de la SDV</option></select>
+              <span style="display:flex; gap:6px; align-items:center;"><input type="number" min="1" max="60" data-f="dias" value="${esc(Math.abs(m.dia) || 1)}" style="max-width:80px;" ${m.dia === 0 ? 'disabled' : ''}> <input type="text" data-f="hora" placeholder="Hora: 19:00 o -2h" value="${esc(m.hora || '')}" maxlength="8" style="max-width:150px;"></span>
+              <span style="display:flex; gap:4px; align-items:center; white-space:nowrap;">
+                <button type="button" class="btn btn--ghost labcfg-mini" data-act="fl-up" data-fl="${esc(id)}" data-n="${n}" title="Subir">↑</button>
+                <button type="button" class="btn btn--ghost labcfg-mini" data-act="fl-down" data-fl="${esc(id)}" data-n="${n}" title="Bajar">↓</button>
+                <button type="button" class="btn btn--ghost labcfg-mini" data-act="fl-del-m" data-fl="${esc(id)}" data-n="${n}" title="Quitar">✕</button>
+              </span>
+            </div>
+            <div class="labcfg-fila">
+              <input type="text" data-f="objetivo" placeholder="Objetivo de este mensaje (obligatorio)" value="${esc(m.objetivo)}" maxlength="300">
+              <input type="text" data-f="nota" placeholder="Indicación extra para la IA (opcional)" value="${esc(m.nota || '')}" maxlength="600">
+              <span></span>
+            </div>
+          </div>`).join('')}
+        <div style="display:flex; gap:6px; flex-wrap:wrap;">
+          <button type="button" class="btn btn--ghost labcfg-mini" data-act="fl-add-m" data-fl="${esc(id)}">+ Agregar mensaje</button>
+          <button type="button" class="btn btn--ghost labcfg-mini" data-act="fl-dup" data-fl="${esc(id)}">Duplicar flujo</button>
+          <button type="button" class="btn btn--ghost labcfg-mini" data-act="fl-borrar" data-fl="${esc(id)}" style="color:#C0392B;">Borrar flujo</button>
+        </div>
+      </div>`).join('') || '<p class="text-soft">Aún no hay flujos. Crea el primero con los botones de abajo.</p>'}
+    <div style="display:flex; gap:6px; flex-wrap:wrap; margin-bottom:8px;">
+      <button type="button" class="btn btn--ghost labcfg-mini" data-act="fl-nuevo" data-etapa="encuentro">+ Nuevo flujo de Encuentro (antes de la SDV)</button>
+      <button type="button" class="btn btn--ghost labcfg-mini" data-act="fl-nuevo" data-etapa="venta">+ Nuevo flujo de Venta (después de la SDV)</button>
+    </div>
 
     <div class="labcfg-sub">Opciones de generación de Encuentro y Venta (qué se genera según el contenido que elige el alumno)</div>
     ${Object.entries(cfg.recetas || {}).map(([id, r], idx, todas) => `
@@ -274,6 +328,26 @@ function leer() {
       };
     });
   });
+  el.querySelectorAll('[data-fl]').forEach(bloque => {
+    if (!bloque.matches('.labcfg-bloque')) return;
+    const fl = (cfg.flujos || {})[bloque.dataset.fl];
+    if (!fl) return;
+    fl.nombre = bloque.querySelector('[data-f="nombre"]').value.trim();
+    fl.etapa = bloque.querySelector('[data-f="etapa"]').value;
+    fl.activa = bloque.querySelector('[data-f="activa"]').checked;
+    fl.directrices = bloque.querySelector('[data-f="directrices"]').value.trim();
+    fl.mensajes = [...bloque.querySelectorAll('.labcfg-pieza[data-m]')].map(fila => {
+      const cuando = fila.querySelector('[data-f="cuando"]').value;
+      const n = Math.max(1, Math.min(60, Math.round(Number(fila.querySelector('[data-f="dias"]').value)) || 1));
+      const nota = fila.querySelector('[data-f="nota"]').value.trim();
+      return {
+        dia: cuando === 'antes' ? -n : cuando === 'despues' ? n : 0,
+        hora: fila.querySelector('[data-f="hora"]').value.trim(),
+        objetivo: fila.querySelector('[data-f="objetivo"]').value.trim(),
+        ...(nota ? { nota } : {})
+      };
+    });
+  });
   el.querySelectorAll('[data-prompt]').forEach(t => { cfg.prompts[t.dataset.prompt] = t.value; });
 }
 
@@ -304,6 +378,13 @@ function validar() {
     if (!r.piezas.length) return `La receta «${r.nombre}» necesita al menos un formato.`;
     if (r.piezas.some(p => !(p.cantidad >= 1 && p.cantidad <= 12))) return `Las cantidades de la receta «${r.nombre}» deben ser entre 1 y 12.`;
   }
+  for (const fl of Object.values(cfg.flujos || {})) {
+    if (!fl.nombre) return 'Cada flujo de mensajes necesita un nombre.';
+    if (!fl.mensajes.length) return `El flujo «${fl.nombre}» necesita al menos un mensaje.`;
+    if (fl.mensajes.length > MAX_MENSAJES_FLUJO) return `El flujo «${fl.nombre}» tiene más de ${MAX_MENSAJES_FLUJO} mensajes.`;
+    if (fl.mensajes.some(m => !m.objetivo)) return `Todos los mensajes del flujo «${fl.nombre}» necesitan un objetivo.`;
+    if (fl.mensajes.some(m => m.hora && !HORA_FLUJO_OK.test(m.hora))) return `Revisa las horas del flujo «${fl.nombre}»: usa 19:00 o una hora relativa como -2h, -15m o +2h.`;
+  }
   if (!(cfg.limiteDia >= 1 && cfg.limiteDia <= 100)) return 'El tope diario debe estar entre 1 y 100.';
   if (!cfg.prompts.sistema.trim()) return 'La personalidad general de la IA no puede quedar vacía (usa «Restaurar el original»).';
   return '';
@@ -316,6 +397,12 @@ function conectar(el) {
   if (!delegadoListo) {
     delegadoListo = true;
     el.addEventListener('click', alHacerClic);
+    // Flujos: «El mismo día» no lleva cantidad de días.
+    el.addEventListener('change', (ev) => {
+      if (!ev.target.matches('[data-f="cuando"]')) return;
+      const dias = ev.target.closest('.labcfg-pieza').querySelector('[data-f="dias"]');
+      if (dias) dias.disabled = ev.target.value === 'mismo';
+    });
   }
   conectarBotones();
 }
@@ -327,6 +414,34 @@ async function alHacerClic(ev) {
     if (act === 'restaurar-prompt') {
       leer();
       cfg.prompts[b.dataset.k] = porDefecto.prompts[b.dataset.k];
+      pintar();
+      return;
+    }
+    if (act.startsWith('fl-')) {
+      leer();
+      const flujos = cfg.flujos = cfg.flujos || {};
+      const id = b.dataset.fl;
+      const fl = flujos[id];
+      if (act === 'fl-nuevo') {
+        if (Object.keys(flujos).length >= MAX_FLUJOS) { alert(`Puedes tener hasta ${MAX_FLUJOS} flujos.`); return; }
+        flujos['flujo_' + Date.now().toString(36)] = { nombre: 'Nuevo flujo', etapa: b.dataset.etapa === 'venta' ? 'venta' : 'encuentro', activa: true, directrices: '', mensajes: [{ dia: b.dataset.etapa === 'venta' ? 1 : -1, hora: '10:00', objetivo: '' }] };
+      } else if (fl && act === 'fl-add-m') {
+        if (fl.mensajes.length >= MAX_MENSAJES_FLUJO) { alert(`Un flujo puede tener hasta ${MAX_MENSAJES_FLUJO} mensajes.`); return; }
+        const ult = fl.mensajes[fl.mensajes.length - 1];
+        fl.mensajes.push({ dia: ult ? ult.dia : 0, hora: ult ? ult.hora : '', objetivo: '' });
+      } else if (fl && act === 'fl-del-m') {
+        if (fl.mensajes.length > 1) fl.mensajes.splice(Number(b.dataset.n), 1);
+      } else if (fl && (act === 'fl-up' || act === 'fl-down')) {
+        const n = Number(b.dataset.n);
+        const k = act === 'fl-up' ? n - 1 : n + 1;
+        if (k >= 0 && k < fl.mensajes.length) [fl.mensajes[n], fl.mensajes[k]] = [fl.mensajes[k], fl.mensajes[n]];
+      } else if (fl && act === 'fl-dup') {
+        if (Object.keys(flujos).length >= MAX_FLUJOS) { alert(`Puedes tener hasta ${MAX_FLUJOS} flujos.`); return; }
+        flujos['flujo_' + Date.now().toString(36)] = { ...JSON.parse(JSON.stringify(fl)), nombre: `${fl.nombre} (copia)` };
+      } else if (fl && act === 'fl-borrar') {
+        if (!confirm(`¿Borrar el flujo «${fl.nombre}»? Los mensajes ya generados de los alumnos no se tocan.`)) return;
+        delete flujos[id];
+      }
       pintar();
       return;
     }
@@ -376,7 +491,9 @@ function conectarBotones() {
         preguntas: cfg.preguntas,
         etapas: cfg.etapas,
         formatos: cfg.formatos,
-        recetas: cfg.recetas || {}
+        recetas: cfg.recetas || {},
+        flujos: cfg.flujos || {},
+        flujosGuardados: true
       };
       const prompts = {};
       Object.keys(NOMBRES_PROMPT).forEach(k => {
