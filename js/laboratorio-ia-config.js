@@ -36,6 +36,8 @@ const NOMBRES_PROMPT = {
   emoji2: ['Nivel de emojis: «Algunos»', 'Instrucción cuando la barra está en el medio (es la posición inicial).'],
   emoji3: ['Nivel de emojis: «Bastantes»', 'Instrucción cuando la barra está en la cuarta posición.'],
   emoji4: ['Nivel de emojis: «Todos los que quieras»', 'Instrucción cuando la barra está en el extremo derecho.'],
+  ventaGeneral: ['Venta: reglas para todo contenido', 'Se suma a TODO lo que se genere en Venta, sea orgánico o pagado: cómo usar el nombre, la promesa y el precio del producto. Admite {palabra}, {link} y {wa}. Los llamados a la acción por destino (DM, WhatsApp, página de venta) los arma la app.'],
+  ventaAngulos: ['Venta: cómo crear los ángulos (contenido pagado)', 'Cómo debe pensar la IA los ángulos de Venta: nacen del producto, su promesa y el Cliente Soñado. Son distintos de los de Encuentro.'],
   encuentroGeneral: ['Encuentro: reglas para todo contenido', 'Se suma a TODO lo que se genere en Encuentro, sea orgánico o pagado: por ejemplo que la sesión es gratuita y que la información y los enlaces se comparten en el grupo. Admite {palabra}, {link} y {fecha}. Puede quedar vacía.'],
   tecnica_web: ['Técnica: SDV con Registro WEB y luego a Grupo', 'Explícale a la IA cómo funciona esta técnica y cómo debe hablar de ella. Se suma cuando el alumno elige esta técnica. Admite {palabra}, {link} y {fecha}. Puede quedar vacía.'],
   tecnica_puente: ['Técnica: SDV con Página Puente y luego a Grupo', 'Explícale a la IA cómo funciona esta técnica y cómo debe hablar de ella. Se suma cuando el alumno elige esta técnica. Puede quedar vacía.'],
@@ -50,6 +52,7 @@ Object.entries(NOMBRES_FORMATO_PROMPT).forEach(([f, n]) => ['organico', 'pagado'
 // Cómo se agrupan en pantalla (de lo más general a lo más específico).
 const GRUPOS_PROMPT = [
   { titulo: 'Instrucciones generales de la IA', ayuda: 'Valen para todas las etapas del funnel.', claves: ['sistema', 'generacion', 'formatoTexto', 'bienvenida', 'fichaBorrador', 'emoji0', 'emoji1', 'emoji2', 'emoji3', 'emoji4'] },
+  { titulo: 'Venta', ayuda: 'Instrucciones de la etapa Venta.', claves: ['ventaGeneral', 'ventaAngulos'] },
   { titulo: 'Encuentro: para todo contenido', ayuda: 'Se suma a todo lo que se genere en Encuentro.', claves: ['encuentroGeneral'] },
   { titulo: 'Encuentro: según la técnica de la SDV', ayuda: 'Se suma según la técnica que eligió el alumno.', claves: ['tecnica_web', 'tecnica_puente', 'tecnica_directo'] },
   { titulo: 'Encuentro: según sea orgánico o pagado', ayuda: 'Las reglas de cada tipo de contenido y la creación de ángulos.', claves: ['estrategia', 'pagado', 'angulos'] },
@@ -59,6 +62,13 @@ const ETIQUETAS_FICHA = { fase1: 'Ficha 1', fase2: 'Ficha 2', fase3: 'Ficha 3' }
 
 let cfg = null;      // configuración efectiva en pantalla
 let porDefecto = null;
+
+const NOMBRES_DESTINO_REC = { dm: 'conversación por DM', whatsapp: 'WhatsApp', pagina: 'página de venta' };
+// Texto de grupo de una receta: «Encuentro · orgánico», «Venta · orgánico · WhatsApp», «Venta · pagado · página de venta».
+function etiquetaGrupoReceta(r) {
+  const etapa = r.etapa === 'venta' ? 'Venta' : 'Encuentro';
+  return [etapa, r.tipo === 'pagado' ? 'pagado' : 'orgánico', r.destino ? NOMBRES_DESTINO_REC[r.destino] || r.destino : ''].filter(Boolean).join(' · ');
+}
 
 function opcionesFase(sel) {
   return [1, 2, 3, 4].map(n => `<option value="${n}" ${Number(sel) === n ? 'selected' : ''}>Fase ${n}</option>`).join('');
@@ -138,19 +148,20 @@ function pintar() {
       </div>`;
     }).join('')}
 
-    <div class="labcfg-sub">Recetas de Encuentro (qué se genera según el contenido que elige el alumno)</div>
-    ${Object.entries(cfg.recetas || {}).map(([id, r]) => `
+    <div class="labcfg-sub">Opciones de generación de Encuentro y Venta (qué se genera según el contenido que elige el alumno)</div>
+    ${Object.entries(cfg.recetas || {}).map(([id, r], idx, todas) => `
+      ${(idx === 0 || etiquetaGrupoReceta(todas[idx - 1][1]) !== etiquetaGrupoReceta(r)) ? `<div class="labcfg-sub" style="font-size:13.5px;">${esc(etiquetaGrupoReceta(r))}</div>` : ''}
       <div class="labcfg-bloque" data-re="${id}">
         <div class="labcfg-fila">
           <div class="field" style="margin:0;"><label>Nombre (lo ve el alumno)</label><input type="text" data-f="nombre" value="${esc(r.nombre)}" maxlength="60"></div>
-          <div class="field" style="margin:0;"><label>Tipo</label><input type="text" value="${esc(r.tipo === 'pagado' ? 'Pagado' : 'Orgánico')}" disabled></div>
+          <div class="field" style="margin:0;"><label>Etapa y tipo</label><input type="text" value="${esc(etiquetaGrupoReceta(r))}" disabled></div>
           <label style="font-size:13px; display:flex; gap:5px; align-items:center; margin-top:22px;"><input type="checkbox" data-f="activa" ${r.activa ? 'checked' : ''}> Activa</label>
         </div>
         <div class="field"><label>Descripción (la ve el alumno)</label><input type="text" data-f="descripcion" value="${esc(r.descripcion)}" maxlength="200"></div>
         <label style="font-size:13px; display:flex; gap:5px; align-items:center;"><input type="checkbox" data-f="preguntaWsp" ${r.preguntaWsp ? 'checked' : ''}> Antes de generar, preguntar si el WhatsApp es para grupos o privado</label>
         <label style="font-size:12.5px; font-weight:600;">Qué se genera (formato y cantidad en total; se reparte entre los ángulos que elija el alumno)</label>
         ${r.piezas.map((p, n) => `
-          <div class="labcfg-pieza" data-p="${n}">
+          <div class="labcfg-pieza" data-p="${n}" ${p.sinAngulo ? 'data-sin-angulo="1"' : ''}>
             <div class="labcfg-fila">
               <select data-f="formato">${base.formatos.map(fo => `<option value="${fo}" ${p.formato === fo ? 'selected' : ''}>${esc(cfg.formatos[fo].nombre)}</option>`).join('')}</select>
               <input type="number" min="1" max="12" data-f="cantidad" value="${esc(p.cantidad)}">
@@ -258,7 +269,8 @@ function leer() {
         cantidad: Math.round(Number(fila.querySelector('[data-f="cantidad"]').value)) || 1,
         ...(etiqueta ? { etiqueta } : {}),
         ...(nota ? { nota } : {}),
-        ...(fila.querySelector('[data-f="secuencia"]').checked ? { secuencia: true } : {})
+        ...(fila.querySelector('[data-f="secuencia"]').checked ? { secuencia: true } : {}),
+        ...(fila.dataset.sinAngulo === '1' ? { sinAngulo: true } : {})
       };
     });
   });

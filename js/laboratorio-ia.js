@@ -20,7 +20,7 @@ import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/
 import { EMOJIS_POR_CATEGORIA } from './emojis-todos.js';
 import { getCurrentRole, esModoDemo } from './main.js';
 import { getFaseDemo } from './demo.js';
-import { htmlPiezas, conectarPiezas, fijarContextoVista, fijarImagenesVista, enlazarAcordeon, cerrarOtrasPeticiones, hayEdicionesSinGuardar, descartarEdiciones } from './laboratorio-ia-vista.js';
+import { htmlPiezas, conectarPiezas, fijarContextoVista, fijarWhatsappVenta, fijarImagenesVista, enlazarAcordeon, cerrarOtrasPeticiones, hayEdicionesSinGuardar, descartarEdiciones } from './laboratorio-ia-vista.js';
 
 const functions = getFunctions(app);
 const abrirLaboratorio = httpsCallable(functions, 'laboratorioAbrir', { timeout: 120000 });
@@ -252,13 +252,123 @@ async function abrirEstrategia() {
   }
 }
 
+/* --- Estrategia de VENTA: tipo de contenido y a dónde dirige a las personas --- */
+
+const NOMBRES_DESTINO_PAGADO = { pagina: 'Venta directo a página de venta', whatsapp: 'Venta con clic a WhatsApp' };
+const nombreDestinoVenta = (e) => (e.tipo === 'pagado' ? NOMBRES_DESTINO_PAGADO[e.destino] : (datos.destinosVenta || {})[e.destino]) || e.destino;
+
+const resumenEstrategiaVenta = (e) => `
+  <div class="lab-estrategia__resumen">
+    <div><strong>Contenido:</strong> ${esc((datos.tipos || {})[e.tipo] || e.tipo)}</div>
+    <div><strong>Dirige a:</strong> ${esc(nombreDestinoVenta(e))}</div>
+    ${e.tipo === 'organico' ? `<div><strong>Palabra clave:</strong> ${esc(e.palabra)}</div>` : ''}
+    ${e.destino === 'pagina' ? `<div><strong>Página de venta:</strong> ${e.link ? esc(e.link) : '<span class="text-soft">sin link (los textos llevarán [TU LINK])</span>'}</div>` : ''}
+    ${e.destino === 'whatsapp' ? `<div><strong>WhatsApp:</strong> ${e.whatsapp ? esc('+' + e.whatsapp) : '<span class="text-soft">sin número (los textos llevarán [TU LINK DE WHATSAPP])</span>'}</div>` : ''}
+  </div>`;
+
+async function abrirEstrategiaVenta() {
+  const cont = document.getElementById('lab-estrategia');
+  if (!cont) return;
+  const e = datos.estrategiaVenta || null;
+  cont.innerHTML = `
+    <div class="lab-estrategia" id="lab-estrategia-panel">
+      <h4>Tu estrategia de Venta</h4>
+      <p class="text-soft">El nombre, la promesa y el precio de tu producto salen de tu ficha. Aquí eliges el tipo de contenido y a dónde llevas a las personas. Puedes cambiarlo cuando quieras.</p>
+      <fieldset class="lab-estrategia__campo"><legend>¿Tu contenido es orgánico o pagado?</legend>
+        ${Object.entries(datos.tipos).map(([k, n]) => `<label class="lab-estrategia__opcion"><input type="radio" name="lab-ven-tipo" value="${esc(k)}" ${e && e.tipo === k ? 'checked' : ''}> ${esc(n)}</label>`).join('')}
+      </fieldset>
+      <fieldset class="lab-estrategia__campo" id="lab-ven-destinos"></fieldset>
+      <label class="lab-estrategia__campo" id="lab-ven-palabra-caja"><span>Palabra clave para comentar</span>
+        <input type="text" id="lab-ven-palabra" maxlength="30" value="${esc(e ? e.palabra : '')}" placeholder="Ej: QUIERO">
+        <small class="text-soft">Quien comente esta palabra en tus reels y carruseles recibirá tu mensaje por DM. Es una sola para toda tu estrategia de Venta.</small></label>
+      <label class="lab-estrategia__campo" id="lab-ven-link-caja"><span>Link de tu página de venta</span>
+        <input type="url" id="lab-ven-link" maxlength="500" value="${esc(e ? e.link : '')}" placeholder="https://…">
+        <small class="text-soft">Opcional. Si lo dejas vacío, los textos llevarán [TU LINK] para que lo completes.</small></label>
+      <label class="lab-estrategia__campo" id="lab-ven-wa-caja"><span>Tu número de WhatsApp</span>
+        <input type="text" id="lab-ven-wa" maxlength="30" inputmode="tel" value="${esc(e ? e.whatsapp : '')}" placeholder="Con código de país, solo números. Ej: 56912345678">
+        <small class="text-soft">Con él armamos tu link directo a WhatsApp. Opcional: si lo dejas vacío, los textos llevarán [TU LINK DE WHATSAPP].</small></label>
+      <p class="lab-error hidden" id="lab-ven-error"></p>
+      <div class="lab-acciones-pieza">
+        <button type="button" class="btn btn--primary" id="lab-ven-guardar">Guardar estrategia</button>
+        <button type="button" class="btn btn--ghost" id="lab-ven-cancelar">Cancelar</button>
+      </div>
+    </div>`;
+  cont.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  const q = (id) => document.getElementById(id);
+  const tipoActual = () => (cont.querySelector('input[name="lab-ven-tipo"]:checked') || {}).value || '';
+  const destinoActual = () => (cont.querySelector('input[name="lab-ven-destino"]:checked') || {}).value || '';
+  const pintarDestinos = () => {
+    const tipo = tipoActual();
+    const previo = destinoActual() || (e ? e.destino : '');
+    const claves = tipo === 'pagado' ? (datos.destinosVentaPagado || Object.keys(NOMBRES_DESTINO_PAGADO)) : Object.keys(datos.destinosVenta || {});
+    q('lab-ven-destinos').innerHTML = tipo
+      ? `<legend>${tipo === 'pagado' ? '¿Cómo vendes con tus anuncios?' : '¿Dónde diriges a las personas?'}</legend>` +
+        claves.map(k => `<label class="lab-estrategia__opcion"><input type="radio" name="lab-ven-destino" value="${esc(k)}" ${previo === k ? 'checked' : ''}> ${esc(tipo === 'pagado' ? NOMBRES_DESTINO_PAGADO[k] : datos.destinosVenta[k])}</label>`).join('')
+      : '<legend>¿Dónde diriges a las personas?</legend><p class="text-soft">Primero elige si tu contenido es orgánico o pagado.</p>';
+    cont.querySelectorAll('input[name="lab-ven-destino"]').forEach(r => r.addEventListener('change', actualizarCampos));
+  };
+  const actualizarCampos = () => {
+    q('lab-ven-palabra-caja').classList.toggle('hidden', tipoActual() !== 'organico');
+    q('lab-ven-link-caja').classList.toggle('hidden', destinoActual() !== 'pagina');
+    q('lab-ven-wa-caja').classList.toggle('hidden', destinoActual() !== 'whatsapp');
+  };
+  cont.querySelectorAll('input[name="lab-ven-tipo"]').forEach(r => r.addEventListener('change', () => { pintarDestinos(); actualizarCampos(); }));
+  pintarDestinos();
+  actualizarCampos();
+  q('lab-ven-cancelar').addEventListener('click', () => { cont.innerHTML = ''; });
+  q('lab-ven-guardar').addEventListener('click', async () => {
+    const err = q('lab-ven-error');
+    err.classList.add('hidden');
+    const btn = q('lab-ven-guardar');
+    btn.disabled = true;
+    btn.textContent = 'Guardando…';
+    try {
+      const r = await estrategiaServidor(conFase({ etapa: 'venta', accion: 'guardar', tipo: tipoActual(), destino: destinoActual(), palabra: q('lab-ven-palabra').value, link: q('lab-ven-link').value, whatsapp: q('lab-ven-wa').value }));
+      datos.estrategiaVenta = r.data.estrategia;
+      fijarWhatsappVenta(datos.estrategiaVenta.whatsapp);
+      pintarAlumno();
+    } catch (ex) {
+      err.textContent = mensajeError(ex, 'No se pudo guardar tu estrategia. Intenta de nuevo.');
+      err.classList.remove('hidden');
+      btn.disabled = false;
+      btn.textContent = 'Guardar estrategia';
+    }
+  });
+  // Primera vez: la IA propone una palabra clave a partir del producto. Solo rellena si sigue vacía.
+  if (!e) {
+    try {
+      const r = await estrategiaServidor(conFase({ etapa: 'venta', accion: 'proponer' }));
+      if (q('lab-ven-palabra') && !q('lab-ven-palabra').value.trim() && r.data.palabra) q('lab-ven-palabra').value = r.data.palabra;
+    } catch (ex) { /* la propuesta es un extra: puede escribirla a mano */ }
+  }
+}
+
+// Botones de cada tarjeta de etapa cuando está abierta.
+function botonesEtapa(id, e) {
+  if (e.hitoActivador) {   // Encuentro
+    if (!datos.estrategia) return '<p class="lab-etapa__estado">Primero define tu estrategia.</p><button type="button" class="btn btn--primary" data-estrategia>Definir mi estrategia</button>';
+    return `${resumenEstrategia(datos.estrategia)}<button type="button" class="btn btn--ghost" data-estrategia>Editar estrategia</button>${datos.estrategia.tipo === 'pagado'
+      ? '<button type="button" class="btn btn--primary" data-pagado>Mis ángulos y contenidos</button>'
+      : '<button type="button" class="btn btn--primary" data-organico>Elegir y generar contenidos</button>'}`;
+  }
+  if (id === 'venta') {
+    const v = datos.estrategiaVenta;
+    if (!v) return '<p class="lab-etapa__estado">Primero define tu estrategia de Venta.</p><button type="button" class="btn btn--primary" data-estrategia-venta>Definir mi estrategia</button>';
+    return `${resumenEstrategiaVenta(v)}<button type="button" class="btn btn--ghost" data-estrategia-venta>Editar estrategia</button>${v.tipo === 'pagado'
+      ? '<button type="button" class="btn btn--primary" data-pagado-venta>Mis ángulos y contenidos</button>'
+      : '<button type="button" class="btn btn--primary" data-organico-venta>Elegir y generar contenidos</button>'}`;
+  }
+  return `<button type="button" class="btn btn--primary" data-generar="${id}">Generar contenidos</button>`;
+}
+
 /* --- Contenido pagado: ángulos comunicacionales (de 3 en 3) y creación de los contenidos --- */
 
 let angulos = [];                 // lista actual de ángulos del alumno
 const angulosElegidos = new Set(); // ids de los ángulos marcados para crear contenidos
+let etapaPanel = 'encuentro';      // etapa del panel de ángulos / opciones que está abierto: 'encuentro' o 'venta'
 
 const llamarAngulos = async (accion, extra) => {
-  const r = await estrategiaServidor(conFase({ accion, ...(extra || {}) }));
+  const r = await estrategiaServidor(conFase({ accion, ...(etapaPanel === 'venta' ? { etapa: 'venta' } : {}), ...(extra || {}) }));
   angulos = (r.data && r.data.angulos) || [];
   [...angulosElegidos].forEach(id => { const a = angulos.find(x => x.id === id); if (!a || !a.aprobado) angulosElegidos.delete(id); });
 };
@@ -302,7 +412,7 @@ function pintarAngulos(editandoId) {
 function pintarOpcionesPagado() {
   const cont = document.getElementById('lab-pagado-opciones');
   if (!cont) return;
-  const recetas = Object.entries(datos.recetas || {}).filter(([, r]) => r.tipo === 'pagado');
+  const recetas = recetasDisponibles('pagado');
   const aprobados = angulos.filter(a => a.aprobado);
   const recetaPrevia = (cont.querySelector('input[name="lab-receta"]:checked') || {}).value || (recetas[0] || [])[0];
   cont.innerHTML = `
@@ -319,17 +429,32 @@ function pintarOpcionesPagado() {
   btn.addEventListener('click', () => {
     const receta = (cont.querySelector('input[name="lab-receta"]:checked') || {}).value || '';
     if (!angulosElegidos.size) { alert('Elige al menos un ángulo aprobado.'); return; }
-    generarEtapa('encuentro', btn, { receta, angulos: [...angulosElegidos] });
+    generarEtapa(etapaPanel, btn, { receta, angulos: [...angulosElegidos] });
   });
 }
 
-async function abrirPagado() {
+// Las opciones (recetas) que se ofrecen: las de la etapa abierta y, en Venta, solo las del destino que eligió el alumno.
+function recetasDisponibles(tipo) {
+  return Object.entries(datos.recetas || {}).filter(([, r]) => {
+    if (r.tipo !== tipo) return false;
+    if (etapaPanel === 'venta') return r.etapa === 'venta' && datos.estrategiaVenta && r.destino === datos.estrategiaVenta.destino;
+    return (r.etapa || 'encuentro') === 'encuentro';
+  });
+}
+
+async function abrirPagado(etapa) {
+  etapaPanel = etapa === 'venta' ? 'venta' : 'encuentro';
+  angulosElegidos.clear();
+  angulos = [];
   const cont = document.getElementById('lab-pagado');
   if (!cont) return;
+  const esVenta = etapaPanel === 'venta';
   cont.innerHTML = `
     <div class="lab-estrategia lab-pagado">
-      <h4>Contenido pagado: tus ángulos</h4>
-      <p class="text-soft">Un ángulo es un enfoque comunicacional para conectar con tu Cliente Soñado. La IA los crea de a 3 con lo que compartiste sobre él, y se numeran seguidos. Revísalos, edítalos o bórralos, y aprueba los que quieras usar.</p>
+      <h4>${esVenta ? 'Contenido pagado de Venta: tus ángulos' : 'Contenido pagado: tus ángulos'}</h4>
+      <p class="text-soft">${esVenta
+        ? 'Un ángulo es un enfoque para vender tu producto: una forma distinta de mostrar su promesa y su valor a tu Cliente Soñado. La IA los crea de a 3 a partir de tu producto, y se numeran seguidos. Son distintos de los de Encuentro. Revísalos, edítalos o bórralos, y aprueba los que quieras usar.'
+        : 'Un ángulo es un enfoque comunicacional para conectar con tu Cliente Soñado. La IA los crea de a 3 con lo que compartiste sobre él, y se numeran seguidos. Revísalos, edítalos o bórralos, y aprueba los que quieras usar.'}</p>
       <div id="lab-angulos-lista"><p class="text-soft"><span class="lab-spinner"></span> Cargando tus ángulos…</p></div>
       <p class="lab-error hidden" id="lab-ang-error"></p>
       <div class="lab-acciones-pieza"><button type="button" class="btn btn--primary" id="lab-ang-generar">Crear 3 ángulos nuevos</button></div>
@@ -392,15 +517,19 @@ async function abrirPagado() {
 let recetaOrganicaElegida = '';
 let wspElegido = '';
 
-function abrirOrganico() {
+function abrirOrganico(etapa) {
+  etapaPanel = etapa === 'venta' ? 'venta' : 'encuentro';
   const cont = document.getElementById('lab-pagado');
   if (!cont) return;
-  const recetas = Object.entries(datos.recetas || {}).filter(([, r]) => r.tipo === 'organico');
+  const esVenta = etapaPanel === 'venta';
+  const recetas = recetasDisponibles('organico');
   if (!recetas.some(([id]) => id === recetaOrganicaElegida)) recetaOrganicaElegida = (recetas[0] || [])[0] || '';
   cont.innerHTML = `
     <div class="lab-estrategia lab-pagado">
-      <h4>Contenido orgánico: ¿qué quieres crear?</h4>
-      <p class="text-soft">Elige una opción. Todos los contenidos usan tu estrategia: tu técnica, tu palabra clave, tu link y la fecha de tu SDV.</p>
+      <h4>${esVenta ? 'Contenido orgánico de Venta: ¿qué quieres crear?' : 'Contenido orgánico: ¿qué quieres crear?'}</h4>
+      <p class="text-soft">${esVenta
+        ? 'Elige una opción. Todos los contenidos venden tu producto (su nombre y su promesa salen de tu ficha) y llevan a las personas al destino que elegiste.'
+        : 'Elige una opción. Todos los contenidos usan tu estrategia: tu técnica, tu palabra clave, tu link y la fecha de tu SDV.'}</p>
       ${recetas.map(([id, r]) => `<label class="lab-estrategia__opcion"><input type="radio" name="lab-receta-org" value="${esc(id)}" ${id === recetaOrganicaElegida ? 'checked' : ''}> <span><strong>${esc(r.nombre)}</strong>${r.descripcion ? `<br><span class="text-soft">${esc(r.descripcion)}</span>` : ''}</span></label>`).join('') || '<p class="text-soft">No hay opciones activas por ahora.</p>'}
       <div id="lab-org-wsp" class="hidden">
         <h5>¿Tu WhatsApp es para grupos o es un mensaje privado?</h5>
@@ -425,7 +554,7 @@ function abrirOrganico() {
     err.classList.add('hidden');
     if (!r) return;
     if (r.preguntaWsp && !wspElegido) { err.textContent = 'Elige si tu WhatsApp es para grupos o es un mensaje privado.'; err.classList.remove('hidden'); return; }
-    generarEtapa('encuentro', ev.currentTarget, { receta: recetaOrganicaElegida, wsp: r.preguntaWsp ? wspElegido : '' });
+    generarEtapa(etapaPanel, ev.currentTarget, { receta: recetaOrganicaElegida, wsp: r.preguntaWsp ? wspElegido : '' });
   });
 }
 
@@ -639,15 +768,7 @@ function htmlEtapas() {
             <strong>${esc(e.nombre)}</strong>
             <p class="text-soft">${esc(e.descripcion)}</p>
             <div class="lab-chips">${e.formatos.map(f => `<span class="lab-chip">${esc((datos.formatos[f] || {}).nombre || f)}</span>`).join('')}</div>
-            ${!abierta
-              ? `<p class="lab-etapa__estado">🔒 ${esc(textoEstadoEtapa(id))}</p>`
-              : e.hitoActivador && !datos.estrategia
-                ? `<p class="lab-etapa__estado">Primero define tu estrategia.</p><button type="button" class="btn btn--primary" data-estrategia>Definir mi estrategia</button>`
-                : `${e.hitoActivador ? `${resumenEstrategia(datos.estrategia)}<button type="button" class="btn btn--ghost" data-estrategia>Editar estrategia</button>` : ''}${e.hitoActivador && datos.estrategia.tipo === 'pagado'
-                  ? '<button type="button" class="btn btn--primary" data-pagado>Mis ángulos y contenidos</button>'
-                  : e.hitoActivador
-                    ? '<button type="button" class="btn btn--primary" data-organico>Elegir y generar contenidos</button>'
-                    : `<button type="button" class="btn btn--primary" data-generar="${id}">Generar contenidos</button>`}`}
+            ${!abierta ? `<p class="lab-etapa__estado">🔒 ${esc(textoEstadoEtapa(id))}</p>` : botonesEtapa(id, e)}
           </div>`;
         }).join('')}
       </div>
@@ -818,7 +939,10 @@ function conectarAlumno(el) {
   el.querySelectorAll('[data-generar]').forEach(b => b.addEventListener('click', () => generarEtapa(b.dataset.generar, b)));
   el.querySelectorAll('[data-estrategia]').forEach(b => b.addEventListener('click', () => abrirEstrategia()));
   el.querySelectorAll('[data-pagado]').forEach(b => b.addEventListener('click', () => abrirPagado()));
-  el.querySelectorAll('[data-organico]').forEach(b => b.addEventListener('click', () => abrirOrganico()));
+  el.querySelectorAll('[data-organico]').forEach(b => b.addEventListener('click', () => abrirOrganico('encuentro')));
+  el.querySelectorAll('[data-estrategia-venta]').forEach(b => b.addEventListener('click', () => abrirEstrategiaVenta()));
+  el.querySelectorAll('[data-pagado-venta]').forEach(b => b.addEventListener('click', () => abrirPagado('venta')));
+  el.querySelectorAll('[data-organico-venta]').forEach(b => b.addEventListener('click', () => abrirOrganico('venta')));
 }
 
 async function recargar() {
@@ -837,6 +961,7 @@ async function cargarComoAlumno() {
     datos = r.data;
     const perfil = datos.perfil || {};
     fijarContextoVista({ nombre: perfil.nombre || datos.primerNombre || '', fotoUrl: perfil.fotoUrl || '' });
+    fijarWhatsappVenta((datos.estrategiaVenta || {}).whatsapp);
     await cargarImagenesVista();
     pintarAlumno();
   } catch (err) {

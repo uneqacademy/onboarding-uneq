@@ -20,6 +20,10 @@ let imagenes = [];
 
 /** Nombre y foto que aparecen en el encabezado de las vistas previas. */
 export function fijarContextoVista(c) { ctx = { nombre: '', fotoUrl: '', ...(c || {}) }; }
+// Número de WhatsApp de Venta (solo dígitos, con código de país): sirve para armar el link con el mensaje predefinido.
+let waVenta = '';
+export function fijarWhatsappVenta(n) { waVenta = String(n || '').replace(/[^0-9]/g, ''); }
+const ETIQUETA_MENSAJE_PREDEFINIDO = 'Mensaje predefinido de WhatsApp';
 /** Imágenes genéricas (URLs) que subió el Director. */
 export function fijarImagenesVista(lista) {
   imagenes = (Array.isArray(lista) ? lista : []).filter(u => typeof u === 'string' && /^https:\/\/[^\s"'()<>]+$/.test(u));
@@ -98,6 +102,7 @@ export function textoACopiar(pieza, tipo, m) {
   if (tipo === 'mensaje') return ((pieza.mensajes || [])[Number(m)] || {}).texto || '';
   if (tipo === 'anuncio') return pieza.anuncio || '';
   if (tipo === 'imagen') return textoImagen(pieza);
+  if (tipo === 'linkwa') return waVenta ? `https://wa.me/${waVenta}?text=${encodeURIComponent((((pieza.mensajes || [])[0]) || {}).texto || '')}` : '';
   if (tipo === 'pantallas') return (pieza.laminas || []).join('\n\n');
   if (tipo === 'asunto') return pieza.asunto || '';
   if (tipo === 'cuerpo') return pieza.cuerpo || '';
@@ -274,6 +279,12 @@ function htmlChat(p, i) {
         <div class="lab-chat__quien"><strong>Tu cliente soñado</strong><span>${wa ? 'en línea' : 'Activo ahora'}</span></div>
       </div>
       <div class="lab-chat__cuerpo">${burbujas}</div>
+      ${p.audiencia === ETIQUETA_MENSAJE_PREDEFINIDO ? `
+      <div class="lab-copiar-fila">
+        ${waVenta
+          ? `${botonCopiar('linkwa', i, 'Copiar link de WhatsApp con este mensaje')}<span class="text-soft lab-pagado__nota">Pega este link en el botón de tu anuncio: al hacer clic, WhatsApp se abre con el mensaje ya escrito.</span>`
+          : '<span class="text-soft lab-pagado__nota">Para armar el link de WhatsApp con este mensaje, agrega tu número en tu estrategia de Venta.</span>'}
+      </div>` : ''}
     </article>`;
 }
 
@@ -357,7 +368,7 @@ function htmlEdicion(p) {
   } else if (p.tipo === 'imagen') {
     campos = campoLinea('Gancho', 'titular', p.titular, 200)
       + campoLinea('Bajada', 'apoyo', p.apoyo, 300)
-      + campoLinea('Título de la sesión con fecha y hora', 'sesion', p.sesion, 200)
+      + campoLinea(p.etapaId === 'venta' ? 'Producto y promesa' : 'Título de la sesión con fecha y hora', 'sesion', p.sesion, 200)
       + campoLinea('CTA (texto del botón)', 'boton', p.boton, 40)
       + campoTexto('Texto del anuncio', 'anuncio', p.anuncio, 6, 2500)
       + campoTexto('Idea visual', 'ideaVisual', p.ideaVisual, 3, 500);
