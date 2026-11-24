@@ -337,7 +337,11 @@ function htmlPieza(p, i, op) {
 export function htmlPiezas(piezas, nombresFormato, op) {
   const porFormato = {};
   (piezas || []).forEach((p, i) => { (porFormato[p.formato] = porFormato[p.formato] || []).push({ p, i }); });
-  return Object.keys(porFormato).map(f => `
+  // Flujo de mensajes para el grupo: un botón copia todos los mensajes en orden, cada uno con su día y su hora.
+  const barraFlujo = op && op.flujo
+    ? '<div class="lab-copiar-fila"><button type="button" class="btn btn--ghost lab-btn-copiar" data-copiar-flujo>Copiar todo el flujo</button><span class="text-soft lab-pagado__nota">Copia todos los mensajes en orden, cada uno con su día y su hora.</span></div>'
+    : '';
+  return barraFlujo + Object.keys(porFormato).map(f => `
     <div class="lab-formato">
       <h4 class="lab-formato__titulo">${esc((nombresFormato && nombresFormato[f] && nombresFormato[f].nombre) || f)}</h4>
       <div class="lab-formato__lista lab-formato__lista--${esc(f)}">${porFormato[f].map(({ p, i }) => htmlPieza(p, i, op)).join('')}</div>
@@ -461,8 +465,26 @@ function enlazarVista(cuerpo, piezas) {
 /** Enlaza los botones Copiar, las láminas deslizables y la edición de cada propuesta dentro de `contenedor`.
  *  `op.editable` + `op.guardar(i, cambios)` (promesa que escribe en la base): activan Editar,
  *  Guardar cambios y Cancelar. Guardar solo existe mientras se edita. */
+/** Todos los mensajes de un flujo, en orden, cada uno con su día y su hora, listos para copiar. */
+export function textoFlujo(piezas) {
+  return [...(piezas || [])]
+    .filter(p => p && p.tipo === 'chat' && p.mensajes && p.mensajes[0])
+    .sort((a, b) => (a.orden || 0) - (b.orden || 0))
+    .map(p => `${p.mensajes[0].contexto ? `📅 ${p.mensajes[0].contexto}\n\n` : ''}${p.mensajes[0].texto}`)
+    .join('\n\n———\n\n');
+}
+
 export function conectarPiezas(contenedor, piezas, op) {
   const opciones = op || {};
+
+  contenedor.querySelectorAll('[data-copiar-flujo]').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const original = btn.textContent;
+      const ok = await copiarAlPortapapeles(textoFlujo(piezas));
+      btn.textContent = ok ? 'Copiado ✓' : 'No se pudo copiar';
+      setTimeout(() => { btn.textContent = original; }, 1800);
+    });
+  });
 
   contenedor.querySelectorAll('.lab-propuesta').forEach(card => {
     const i = Number(card.dataset.i);

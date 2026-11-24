@@ -97,8 +97,8 @@ async function cargarHistorial(alumnoId, contenedor, nombresFormato, editable) {
   if (!lista.length) { contenedor.innerHTML = '<p class="text-soft">Aún no hay contenidos generados.</p>'; return; }
   contenedor.innerHTML = lista.map((g, n) => `
     <details class="lab-historial__item lab-acordeon">
-      <summary><strong>${esc(g.etapaNombre || g.etapa || '')}</strong> · ${esc(fechaLegible(g.creadoEn))} · ${(g.piezas || []).length} propuestas</summary>
-      <div class="lab-historial__cuerpo" data-g="${n}">${htmlPiezas(g.piezas, nombresFormato, { editable })}</div>
+      <summary><strong>${esc(g.etapaNombre || g.etapa || '')}${g.flujoNombre ? ` · Flujo: ${esc(g.flujoNombre)}` : ''}</strong> · ${esc(fechaLegible(g.creadoEn))} · ${(g.piezas || []).length} ${g.flujoNombre ? 'mensajes' : 'propuestas'}</summary>
+      <div class="lab-historial__cuerpo" data-g="${n}">${htmlPiezas(g.piezas, nombresFormato, { editable, flujo: g.flujoNombre || '' })}</div>
     </details>`).join('');
   contenedor.querySelectorAll('[data-g]').forEach(div => {
     const gen = lista[Number(div.dataset.g)];
@@ -165,7 +165,7 @@ const resumenEstrategia = (e) => {
   const t = (datos.tecnicas[e.tecnica] || {}).nombre || e.tecnica;
   return `
     <div class="lab-estrategia__resumen">
-      <div><strong>Fecha y horario de tu SDV:</strong> ${esc(e.fecha)}</div>
+      <div><strong>Fecha y horario de tu SDV:</strong> ${esc(e.fecha)}${e.sdvFecha && e.sdvHora ? ` <span class="text-soft">(${esc(e.sdvFecha)} · ${esc(e.sdvHora)})</span>` : ''}</div>
       <div><strong>Técnica:</strong> ${esc(t)}</div>
       <div><strong>Contenido:</strong> ${esc((datos.tipos || {})[e.tipo] || e.tipo)}</div>
       ${e.tipo === 'pagado' ? '' : `<div><strong>Palabra clave:</strong> ${esc(e.palabra)}</div>`}
@@ -184,6 +184,13 @@ function htmlEstrategiaPanel(e) {
       <label class="lab-estrategia__campo"><span>Fecha y horario de tu SDV</span>
         <input type="text" id="lab-est-fecha" maxlength="200" value="${esc(e ? e.fecha : '')}" placeholder="Ej: jueves 5 de diciembre a las 20:00 hrs (hora de Chile)">
         <small class="text-soft">La tomamos de tu hito. Revísala: los contenidos usarán exactamente esto.</small></label>
+      <div class="lab-estrategia__fila">
+        <label class="lab-estrategia__campo"><span>Fecha exacta de tu SDV</span>
+          <input type="date" id="lab-est-sdvfecha" value="${esc(e && e.sdvFecha ? e.sdvFecha : '')}"></label>
+        <label class="lab-estrategia__campo"><span>Hora de inicio</span>
+          <input type="time" id="lab-est-sdvhora" value="${esc(e && e.sdvHora ? e.sdvHora : '')}"></label>
+      </div>
+      <small class="text-soft">Con la fecha y la hora exactas calculamos el día y la hora de cada mensaje de tu flujo para el grupo.</small>
       <fieldset class="lab-estrategia__campo"><legend>¿Qué técnica usarás?</legend>
         ${Object.entries(datos.tecnicas).map(([k, t]) => `<label class="lab-estrategia__opcion"><input type="radio" name="lab-est-tecnica" value="${esc(k)}" ${tec === k ? 'checked' : ''}> ${esc(t.nombre)}</label>`).join('')}
       </fieldset>
@@ -228,7 +235,7 @@ async function abrirEstrategia() {
     btn.disabled = true;
     btn.textContent = 'Guardando…';
     try {
-      const r = await estrategiaServidor(conFase({ accion: 'guardar', tecnica, tipo, fecha: q('lab-est-fecha').value, palabra: q('lab-est-palabra').value, link: q('lab-est-link').value }));
+      const r = await estrategiaServidor(conFase({ accion: 'guardar', tecnica, tipo, fecha: q('lab-est-fecha').value, sdvFecha: q('lab-est-sdvfecha').value, sdvHora: q('lab-est-sdvhora').value, palabra: q('lab-est-palabra').value, link: q('lab-est-link').value }));
       datos.estrategia = r.data.estrategia;
       pintarAlumno();
     } catch (ex) {
@@ -244,6 +251,8 @@ async function abrirEstrategia() {
       const r = await estrategiaServidor(conFase({ accion: 'proponer' }));
       if (!document.getElementById('lab-est-fecha')) return;
       if (!q('lab-est-fecha').value.trim() && r.data.fecha) q('lab-est-fecha').value = r.data.fecha;
+      if (!q('lab-est-sdvfecha').value && r.data.fechaISO) q('lab-est-sdvfecha').value = r.data.fechaISO;
+      if (!q('lab-est-sdvhora').value && r.data.hora) q('lab-est-sdvhora').value = r.data.hora;
       if (!q('lab-est-palabra').value.trim() && r.data.palabra) q('lab-est-palabra').value = r.data.palabra;
       if (!r.data.fecha) q('lab-est-fecha').focus();
     } catch (ex) { /* la propuesta es un extra: puede completarlo a mano */ }
@@ -345,20 +354,148 @@ async function abrirEstrategiaVenta() {
 
 // Botones de cada tarjeta de etapa cuando está abierta.
 function botonesEtapa(id, e) {
+  const hayFlujos = (datos.flujos || []).some(f => f.etapa === (id === 'venta' ? 'venta' : 'encuentro'));
   if (e.hitoActivador) {   // Encuentro
+    const flujo = hayFlujos ? '<button type="button" class="btn btn--ghost" data-flujo-encuentro>Flujo de mensajes para tu grupo</button>' : '';
     if (!datos.estrategia) return '<p class="lab-etapa__estado">Primero define tu estrategia.</p><button type="button" class="btn btn--primary" data-estrategia>Definir mi estrategia</button>';
     return `${resumenEstrategia(datos.estrategia)}<button type="button" class="btn btn--ghost" data-estrategia>Editar estrategia</button>${datos.estrategia.tipo === 'pagado'
       ? '<button type="button" class="btn btn--primary" data-pagado>Mis ángulos y contenidos</button>'
-      : '<button type="button" class="btn btn--primary" data-organico>Elegir y generar contenidos</button>'}`;
+      : '<button type="button" class="btn btn--primary" data-organico>Elegir y generar contenidos</button>'}${flujo}`;
   }
   if (id === 'venta') {
     const v = datos.estrategiaVenta;
-    if (!v) return '<p class="lab-etapa__estado">Primero define tu estrategia de Venta.</p><button type="button" class="btn btn--primary" data-estrategia-venta>Definir mi estrategia</button>';
+    const flujo = hayFlujos ? '<button type="button" class="btn btn--ghost" data-flujo-venta>Flujo de mensajes para tu grupo</button>' : '';
+    if (!v) return `<p class="lab-etapa__estado">Primero define tu estrategia de Venta.</p><button type="button" class="btn btn--primary" data-estrategia-venta>Definir mi estrategia</button>${flujo}`;
     return `${resumenEstrategiaVenta(v)}<button type="button" class="btn btn--ghost" data-estrategia-venta>Editar estrategia</button>${v.tipo === 'pagado'
       ? '<button type="button" class="btn btn--primary" data-pagado-venta>Mis ángulos y contenidos</button>'
-      : '<button type="button" class="btn btn--primary" data-organico-venta>Elegir y generar contenidos</button>'}`;
+      : '<button type="button" class="btn btn--primary" data-organico-venta>Elegir y generar contenidos</button>'}${flujo}`;
   }
   return `<button type="button" class="btn btn--primary" data-generar="${id}">Generar contenidos</button>`;
+}
+
+/* --- Flujo de mensajes para el grupo de WhatsApp donde llegaron los leads ---
+   Encuentro: ANTES de la SDV (conectar, recordar fecha y hora, aumentar la asistencia en vivo).
+   Venta: DESPUÉS de la SDV (comunicar la oferta que se presentó en vivo). El Director define cada flujo en Configuración. */
+
+let flujoElegido = '';
+
+const resumenOferta = (o) => `
+  <div class="lab-estrategia__resumen">
+    <div><strong>Oferta:</strong> ${esc(o.nombre)}</div>
+    ${o.incluye ? `<div><strong>Incluye:</strong> ${esc(o.incluye)}</div>` : ''}
+    ${o.precio ? `<div><strong>Precio o descuento:</strong> ${esc(o.precio)}</div>` : ''}
+    ${o.bonos ? `<div><strong>Bonos:</strong> ${esc(o.bonos)}</div>` : ''}
+    ${o.cierre ? `<div><strong>Cierre:</strong> ${esc(o.cierre)}</div>` : ''}
+    <div><strong>Link de compra:</strong> ${o.link ? esc(o.link) : '<span class="text-soft">sin link (los mensajes llevarán [LINK DE COMPRA])</span>'}</div>
+  </div>`;
+
+function htmlOfertaForm(o, esBorrador) {
+  const c = (id, etiqueta, valor, max, ayuda, tipo) => `<label class="lab-estrategia__campo"><span>${etiqueta}</span><${tipo === 'area' ? `textarea id="${id}" rows="2" maxlength="${max}"` : `input type="${tipo || 'text'}" id="${id}" maxlength="${max}"`}${tipo === 'area' ? '' : ` value="${esc(valor || '')}"`}>${tipo === 'area' ? `${esc(valor || '')}</textarea>` : ''}${ayuda ? `<small class="text-soft">${ayuda}</small>` : ''}</label>`;
+  return `
+    <p class="text-soft">${esBorrador ? 'Armé este borrador con lo que publicaste en la Fase 3. Revísalo, corrígelo y apruébalo: los mensajes usarán exactamente esto.' : 'Edita tu oferta y vuelve a aprobarla.'}</p>
+    ${c('lab-of-nombre', 'Nombre de la oferta', o.nombre, 150)}
+    ${c('lab-of-incluye', 'Qué incluye', o.incluye, 800, '', 'area')}
+    ${c('lab-of-precio', 'Precio o descuento', o.precio, 200)}
+    ${c('lab-of-bonos', 'Bonos (si hay)', o.bonos, 500)}
+    ${c('lab-of-cierre', 'Fecha de cierre de la oferta', o.cierre, 200, 'Escríbela como quieres que se lea, por ejemplo: domingo 13 de diciembre a las 23:59.')}
+    ${c('lab-of-link', 'Link de compra', o.link, 500, 'Opcional. Si lo dejas vacío, los mensajes llevarán [LINK DE COMPRA].', 'url')}
+    <p class="lab-error hidden" id="lab-of-error"></p>
+    <div class="lab-acciones-pieza"><button type="button" class="btn btn--primary" id="lab-of-guardar">Aprobar mi oferta</button></div>`;
+}
+
+async function pintarOferta(editar) {
+  const caja = document.getElementById('lab-oferta');
+  if (!caja) return;
+  const o = datos.ofertaVenta;
+  if (o && o.aprobada && !editar) {
+    caja.innerHTML = `<h5>Tu oferta</h5>${resumenOferta(o)}<button type="button" class="btn btn--ghost" data-oferta-editar>Editar oferta</button>`;
+    caja.querySelector('[data-oferta-editar]').addEventListener('click', () => pintarOferta(true));
+    pintarOpcionesFlujo();
+    return;
+  }
+  let borrador = o || { nombre: '', incluye: '', precio: '', bonos: '', cierre: '', link: '' };
+  if (!o) {
+    caja.innerHTML = '<h5>Tu oferta</h5><p class="text-soft"><span class="lab-spinner"></span> Armando tu oferta con lo que publicaste en la Fase 3…</p>';
+    try {
+      const r = await estrategiaServidor(conFase({ etapa: 'venta', accion: 'ofertaProponer' }));
+      borrador = r.data.oferta;
+    } catch (ex) { /* la propuesta es un extra: la puede escribir a mano */ }
+  }
+  caja.innerHTML = `<h5>Tu oferta</h5>${htmlOfertaForm(borrador, !o)}`;
+  pintarOpcionesFlujo();
+  const q = (id) => document.getElementById(id);
+  q('lab-of-guardar').addEventListener('click', async (ev) => {
+    const btn = ev.currentTarget;
+    const err = q('lab-of-error');
+    err.classList.add('hidden');
+    btn.disabled = true;
+    btn.textContent = 'Guardando…';
+    try {
+      const r = await estrategiaServidor(conFase({ etapa: 'venta', accion: 'ofertaGuardar', nombre: q('lab-of-nombre').value, incluye: q('lab-of-incluye').value, precio: q('lab-of-precio').value, bonos: q('lab-of-bonos').value, cierre: q('lab-of-cierre').value, link: q('lab-of-link').value }));
+      datos.ofertaVenta = r.data.oferta;
+      pintarOferta();
+    } catch (ex) {
+      err.textContent = mensajeError(ex, 'No se pudo guardar tu oferta. Intenta de nuevo.');
+      err.classList.remove('hidden');
+      btn.disabled = false;
+      btn.textContent = 'Aprobar mi oferta';
+    }
+  });
+}
+
+function pintarOpcionesFlujo() {
+  const cont = document.getElementById('lab-flujo-opciones');
+  if (!cont) return;
+  const esVenta = etapaPanel === 'venta';
+  const flujos = (datos.flujos || []).filter(f => f.etapa === etapaPanel);
+  if (!flujos.some(f => f.id === flujoElegido)) flujoElegido = (flujos[0] || {}).id || '';
+  const ofertaLista = !esVenta || (datos.ofertaVenta && datos.ofertaVenta.aprobada);
+  cont.innerHTML = `
+    <h5>¿Qué flujo quieres crear?</h5>
+    ${flujos.map(f => `<label class="lab-estrategia__opcion"><input type="radio" name="lab-flujo" value="${esc(f.id)}" ${f.id === flujoElegido ? 'checked' : ''}> <span><strong>${esc(f.nombre)}</strong> <span class="text-soft">· ${esc(f.mensajes)} ${f.mensajes === 1 ? 'mensaje' : 'mensajes'} en ${esc(f.hasta - f.desde + 1)} ${f.hasta - f.desde === 0 ? 'día' : 'días'}</span></span></label>`).join('') || '<p class="text-soft">No hay flujos activos por ahora.</p>'}
+    ${ofertaLista ? '' : '<p class="text-soft lab-pagado__nota">Aprueba tu oferta para poder generar el flujo.</p>'}
+    <p class="lab-error hidden" id="lab-flujo-error"></p>
+    <button type="button" class="btn btn--primary" id="lab-flujo-generar" data-generar-pagado ${flujos.length && ofertaLista ? '' : 'disabled'}>Generar flujo de mensajes</button>`;
+  cont.querySelectorAll('input[name="lab-flujo"]').forEach(x => x.addEventListener('change', () => { flujoElegido = x.value; }));
+  const btn = cont.querySelector('#lab-flujo-generar');
+  btn.addEventListener('click', () => {
+    const id = (cont.querySelector('input[name="lab-flujo"]:checked') || {}).value || '';
+    if (id) generarEtapa(etapaPanel, btn, { flujo: id });
+  });
+}
+
+async function abrirFlujo(etapa) {
+  etapaPanel = etapa === 'venta' ? 'venta' : 'encuentro';
+  const esVenta = etapaPanel === 'venta';
+  const cont = document.getElementById('lab-pagado');
+  if (!cont) return;
+  const e = datos.estrategia;
+  const titulo = esVenta ? 'Flujo de mensajes para tu grupo: después de tu SDV' : 'Flujo de mensajes para tu grupo: antes de tu SDV';
+  const intro = esVenta
+    ? 'Son los mensajes que envías al grupo donde llegaron tus leads, después de la sesión, para comunicar la oferta que presentaste en vivo. Cada mensaje trae su día y su hora exactos.'
+    : 'Son los mensajes que envías al grupo donde llegaron tus leads, antes de la sesión, para conectar, recordar la fecha y la hora y aumentar la asistencia en vivo. Cada mensaje trae su día y su hora exactos.';
+  if (!e || !e.sdvFecha || !e.sdvHora) {
+    cont.innerHTML = `
+      <div class="lab-estrategia lab-pagado">
+        <h4>${titulo}</h4>
+        <p class="text-soft">${intro}</p>
+        <p>Para calcular el día y la hora de cada mensaje necesito la <strong>fecha exacta y la hora de inicio de tu SDV</strong>${e ? '' : ', y para eso primero hay que definir tu estrategia de Encuentro'}.</p>
+        <div class="lab-acciones-pieza"><button type="button" class="btn btn--primary" id="lab-flujo-completar">${e ? 'Completar la fecha de mi SDV' : 'Definir mi estrategia de Encuentro'}</button></div>
+      </div>`;
+    document.getElementById('lab-flujo-completar').addEventListener('click', () => { cont.innerHTML = ''; abrirEstrategia(); });
+    cont.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    return;
+  }
+  cont.innerHTML = `
+    <div class="lab-estrategia lab-pagado">
+      <h4>${titulo}</h4>
+      <p class="text-soft">${intro}</p>
+      <p class="text-soft">Tu SDV: <strong>${esc(e.fecha)}</strong> (${esc(e.sdvFecha)} · ${esc(e.sdvHora)})</p>
+      ${esVenta ? '<div id="lab-oferta"></div>' : ''}
+      <div id="lab-flujo-opciones"></div>
+    </div>`;
+  cont.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  if (esVenta) await pintarOferta(); else pintarOpcionesFlujo();
 }
 
 /* --- Contenido pagado: ángulos comunicacionales (de 3 en 3) y creación de los contenidos --- */
@@ -909,11 +1046,11 @@ async function generarEtapa(etapaId, btn, extra) {
     if (contador) contador.textContent = `Generaciones de hoy: ${datos.usosHoy}/${datos.limiteDia}`;
     resultado.innerHTML = `
       <details class="lab-historial__item lab-acordeon lab-acordeon--nuevo" open>
-        <summary><strong>${esc(g.etapaNombre)}: tus propuestas</strong><span class="lab-acordeon__nuevo">Nuevo</span></summary>
+        <summary><strong>${esc(g.etapaNombre)}${g.flujoNombre ? ` · Flujo: ${esc(g.flujoNombre)}` : ': tus propuestas'}</strong><span class="lab-acordeon__nuevo">Nuevo</span></summary>
         <div class="lab-historial__cuerpo">
           <p class="lab-acordeon__sub">Edítalas con tu estilo o llévalas a tus mentores para pulirlas.</p>
           ${g.incompleta ? '<p class="lab-aviso">Uno de los formatos no se pudo generar esta vez. Puedes volver a intentarlo.</p>' : ''}
-          ${htmlPiezas(g.piezas, datos.formatos, { editable: true })}
+          ${htmlPiezas(g.piezas, datos.formatos, { editable: true, flujo: g.flujoNombre || '' })}
         </div>
       </details>`;
     conectarPiezas(resultado, g.piezas, { editable: true, guardar: (i, cambios) => guardarEdicion(alumnoIdActual, g.id, i, cambios) });
@@ -940,6 +1077,8 @@ function conectarAlumno(el) {
   el.querySelectorAll('[data-estrategia]').forEach(b => b.addEventListener('click', () => abrirEstrategia()));
   el.querySelectorAll('[data-pagado]').forEach(b => b.addEventListener('click', () => abrirPagado()));
   el.querySelectorAll('[data-organico]').forEach(b => b.addEventListener('click', () => abrirOrganico('encuentro')));
+  el.querySelectorAll('[data-flujo-encuentro]').forEach(b => b.addEventListener('click', () => abrirFlujo('encuentro')));
+  el.querySelectorAll('[data-flujo-venta]').forEach(b => b.addEventListener('click', () => abrirFlujo('venta')));
   el.querySelectorAll('[data-estrategia-venta]').forEach(b => b.addEventListener('click', () => abrirEstrategiaVenta()));
   el.querySelectorAll('[data-pagado-venta]').forEach(b => b.addEventListener('click', () => abrirPagado('venta')));
   el.querySelectorAll('[data-organico-venta]').forEach(b => b.addEventListener('click', () => abrirOrganico('venta')));

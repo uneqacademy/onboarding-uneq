@@ -785,3 +785,7 @@
 #view-laboratorio-ia .lab-emojis .btn--ghost { background: rgba(47, 118, 255, 0.10); color: #cfe0ff; border: 1px solid rgba(140, 175, 255, 0.4); }
 #view-laboratorio-ia .lab-emojis .btn--ghost:not(:disabled):hover { background: rgba(47, 118, 255, 0.24); border-color: var(--lab-cian); color: #fff; }
 .lab-emoji-panel, .lab-emoji-panel__grid, .lab-emoji-panel__tabs { color-scheme: dark; }
+
+/* Fecha y hora exactas de la SDV: dos campos en una fila */
+.lab-estrategia__fila { display: flex; gap: 12px; flex-wrap: wrap; }
+.lab-estrategia__fila .lab-estrategia__campo { flex: 1 1 160px; }
