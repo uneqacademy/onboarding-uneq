@@ -204,7 +204,10 @@ export function renderStepper(estadoActual) {
 }
 
 /* --- Decide qué panel de acción mostrar, según rol + estado --- */
-export function renderAcciones(estadoProceso, role, listoParaGenerarAcuerdo = true) {
+// Con el alumno pausado no se muestra ninguna acción del proceso (generar acuerdo, enviar a firma, firma procesada):
+// "firma procesada" lo pasaría a Activo sin querer. Al reactivarlo vuelve a verse la acción de su etapa.
+export function renderAcciones(estadoProcesoReal, role, listoParaGenerarAcuerdo = true, pausado = false) {
+  const estadoProceso = pausado ? null : estadoProcesoReal;
   const panelCoach = document.getElementById('panel-accion-coach');
   const panelEnviarRevision = document.getElementById('panel-accion-enviar-revision');
   const panelFirmaProcesada = document.getElementById('panel-accion-firma-procesada');

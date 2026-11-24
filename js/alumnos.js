@@ -645,7 +645,7 @@ export async function cargarListasAlumnos() {
         else if (ciclo.programa === 'next') next++;
         else if (ciclo.programa === 'exit') exit++;
       }
-      if (ciclo.estadoProceso === 'enviado_firma' || ciclo.estadoProceso === 'en_revision') pendientesFirma++;
+      if (ciclo.estadoAlumno !== 'pausado' && (ciclo.estadoProceso === 'enviado_firma' || ciclo.estadoProceso === 'en_revision')) pendientesFirma++;
 
       if (acuerdo) {
         const moneda = acuerdo.moneda || 'CLP';
@@ -682,8 +682,8 @@ export async function cargarListasAlumnos() {
       if (ciclosContadosKpiCoach.has(alumno.cicloActualId)) return;
       ciclosContadosKpiCoach.add(alumno.cicloActualId);
       if (ciclo.estadoAlumno === 'activo') activos++;
-      if (ciclo.estadoProceso === 'en_onboarding') enOnboarding++;
-      if (ciclo.estadoProceso === 'enviado_firma' || ciclo.estadoProceso === 'en_revision') esperandoDirector++;
+      if (ciclo.estadoAlumno !== 'pausado' && ciclo.estadoProceso === 'en_onboarding') enOnboarding++;
+      if (ciclo.estadoAlumno !== 'pausado' && (ciclo.estadoProceso === 'enviado_firma' || ciclo.estadoProceso === 'en_revision')) esperandoDirector++;
     });
     setTexto('kpi-coach-alumnos-activos', activos);
     setTexto('kpi-coach-en-onboarding', enOnboarding);
@@ -1045,7 +1045,7 @@ async function abrirFicha(alumnoId) {
   await cargarBitacoraParaCiclo(currentCicloId, estadoProceso === 'matricula_finalizada');
 
   const listoParaGenerarAcuerdo = datosGeneralesCompletos(alumno) && cicloCompleto(ciclo);
-  renderAcciones(estadoProceso, role, listoParaGenerarAcuerdo);
+  renderAcciones(estadoProceso, role, listoParaGenerarAcuerdo, estadoAlumnoActual === 'pausado');
 
   // --- Bloqueo general: si Datos+Ciclo ya están completos, se bloquea todo
   //     y aparece "Editar" (alcance según rol). Si aún falta algo, queda
@@ -1652,7 +1652,8 @@ function actualizarPanelCongelar(ciclo, role) {
   const panel = document.getElementById('panel-congelar');
   if (!panel) return;
   const estado = ciclo ? ciclo.estadoAlumno : null;
-  const visible = role === 'director' && (estado === 'activo' || estado === 'pausado');
+  // Se puede pausar en cualquier etapa: durante el onboarding (en_proceso_matricula) o ya como alumno activo.
+  const visible = role === 'director' && ['activo', 'en_proceso_matricula', 'pausado'].includes(estado);
   panel.classList.toggle('hidden', !visible);
   if (!visible) return;
 
@@ -1710,7 +1711,7 @@ if (btnCongelar) {
     btnCongelar.disabled = true;
     try {
       const id = String(Date.now());
-      const datos = { desde, hasta, creadoEn: Date.now() };
+      const datos = { desde, hasta, creadoEn: Date.now(), estadoAntes: cicloCongelarActual.estadoAlumno };
       if (motivo) datos.motivo = motivo;
       await update(ref(db, `ciclos/${currentCicloId}`), {
         estadoAlumno: 'pausado',
@@ -1743,12 +1744,15 @@ if (btnReactivar) {
     const dias = diasEntreFechas(actual.desde, fecha);
     const corre = cicloCongelarActual.modalidadPago !== 'membresia' && cicloCongelarActual.fechaEgreso;
     const nuevoEgreso = corre ? sumarDiasFecha(cicloCongelarActual.fechaEgreso, dias) : null;
-    const mensaje = `¿Reactivar a este alumno? Estuvo ${dias} días congelado${corre ? ` y su fecha de término pasa de ${formatFecha(cicloCongelarActual.fechaEgreso)} a ${formatFecha(nuevoEgreso)}` : ''}. Vuelve a ver todos los contenidos.`;
+    // Si lo pausaron en pleno onboarding vuelve al proceso de matrícula; si ya era alumno activo, vuelve a activo.
+    const volverAOnboarding = actual.estadoAntes === 'en_proceso_matricula' && cicloCongelarActual.estadoProceso !== 'matricula_finalizada';
+    const estadoRestaurado = volverAOnboarding ? 'en_proceso_matricula' : 'activo';
+    const mensaje = `¿Reactivar a este alumno? Estuvo ${dias} días congelado${corre ? ` y su fecha de término pasa de ${formatFecha(cicloCongelarActual.fechaEgreso)} a ${formatFecha(nuevoEgreso)}` : ''}. ${volverAOnboarding ? 'Vuelve a su proceso de matrícula, en la etapa donde quedó.' : 'Vuelve a ver todos los contenidos.'}`;
     if (!confirm(mensaje)) return;
     btnReactivar.disabled = true;
     try {
       const cambios = {
-        estadoAlumno: 'activo',
+        estadoAlumno: estadoRestaurado,
         congelamientoActualId: null,
         [`congelamientos/${actualId}/reactivadoEn`]: fecha,
         [`congelamientos/${actualId}/dias`]: dias
@@ -1756,6 +1760,10 @@ if (btnReactivar) {
       if (corre) {
         cambios.fechaEgreso = nuevoEgreso;
         cambios[`congelamientos/${actualId}/fechaEgresoAnterior`] = cicloCongelarActual.fechaEgreso;
+      }
+      // Los días pausados no cuentan como "estancado" en la etapa del onboarding.
+      if (volverAOnboarding && cicloCongelarActual.estadoProcesoDesde) {
+        cambios.estadoProcesoDesde = cicloCongelarActual.estadoProcesoDesde + dias * 86400000;
       }
       await update(ref(db, `ciclos/${currentCicloId}`), cambios);
       await abrirFicha(currentAlumnoId);
