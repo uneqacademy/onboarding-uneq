@@ -19,7 +19,7 @@ import { ref, get, update } from "https://www.gstatic.com/firebasejs/12.17.1/fir
 import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-functions.js";
 import { EMOJIS_POR_CATEGORIA } from './emojis-todos.js';
 import { getCurrentRole, esModoDemo } from './main.js';
-import { getFaseDemo } from './demo.js';
+import { getFaseDemo, getH2F4Demo } from './demo.js';
 import { htmlPiezas, conectarPiezas, fijarContextoVista, fijarWhatsappVenta, fijarImagenesVista, enlazarAcordeon, cerrarOtrasPeticiones, hayEdicionesSinGuardar, descartarEdiciones } from './laboratorio-ia-vista.js';
 
 const functions = getFunctions(app);
@@ -29,25 +29,11 @@ const guardarFichaServidor = httpsCallable(functions, 'laboratorioGuardarFicha',
 const generarContenidos = httpsCallable(functions, 'laboratorioGenerar', { timeout: 175000 });
 const estrategiaServidor = httpsCallable(functions, 'laboratorioEstrategia', { timeout: 120000 });
 
-/* ---------------- Alumno Demo: simular que publicó el hito H2F4 (abre Encuentro) ---------------- */
-
-const CLAVE_H2F4_DEMO = 'uneq_lab_h2f4_demo';
-const TEXTO_H2F4_DEMO = 'Mi SDV está lista. Será el jueves 5 de diciembre a las 20:00 hrs (hora de Chile). Mi promesa: que las terapeutas ordenen sus precios y su tiempo en 8 semanas. Nombre: Agenda Ordenada. Incluye una sesión grupal semanal y acompañamiento por WhatsApp.';
-function h2f4DemoGuardado() {
-  try {
-    const v = JSON.parse(localStorage.getItem(CLAVE_H2F4_DEMO) || 'null');
-    if (v && typeof v === 'object') return { activo: v.activo === true, texto: typeof v.texto === 'string' && v.texto.trim() ? v.texto : TEXTO_H2F4_DEMO };
-  } catch (e) { /* sin almacenamiento: queda apagado */ }
-  return { activo: false, texto: TEXTO_H2F4_DEMO };
-}
-function guardarH2F4Demo(v) {
-  try { localStorage.setItem(CLAVE_H2F4_DEMO, JSON.stringify(v)); } catch (e) { /* opcional */ }
-}
-
-// En modo demo se manda la fase que el banner dice simular y, si lo activó, el H2F4 de prueba; el servidor solo lo acepta si la cuenta es el demo.
+// En modo demo se manda la fase que la barra del Demo dice simular y, si activó «Simular H2F4», el texto del H2F4 de prueba
+// (ese control vive en la barra de arriba, no en esta pantalla); el servidor solo lo acepta si la cuenta es el demo.
 const conFase = (datos) => {
   if (!esModoDemo()) return datos;
-  const h = h2f4DemoGuardado();
+  const h = getH2F4Demo();
   return { ...datos, faseDemo: getFaseDemo(), ...(h.activo ? { h2f4Demo: h.texto } : {}) };
 };
 
@@ -165,7 +151,7 @@ const resumenEstrategia = (e) => {
   const t = (datos.tecnicas[e.tecnica] || {}).nombre || e.tecnica;
   return `
     <div class="lab-estrategia__resumen">
-      <div><strong>Fecha y horario de tu SDV:</strong> ${esc(e.fecha)}${e.sdvFecha && e.sdvHora ? ` <span class="text-soft">(${esc(e.sdvFecha)} · ${esc(e.sdvHora)})</span>` : ''}</div>
+      <div><strong>Tu SDV:</strong> ${e.fecha ? esc(e.fecha) : '<span class="text-soft">completa la fecha en tu ficha de la SDV</span>'}</div>
       <div><strong>Técnica:</strong> ${esc(t)}</div>
       <div><strong>Contenido:</strong> ${esc((datos.tipos || {})[e.tipo] || e.tipo)}</div>
       ${e.tipo === 'pagado' ? '' : `<div><strong>Palabra clave:</strong> ${esc(e.palabra)}</div>`}
@@ -180,17 +166,8 @@ function htmlEstrategiaPanel(e) {
     <div class="lab-estrategia" id="lab-estrategia-panel">
       <h4>Tu estrategia de Encuentro</h4>
       <p class="text-soft">Esto le da contexto a tus contenidos y define cómo se escriben los llamados a la acción. Puedes cambiarlo cuando quieras.</p>
-      <p class="lab-estrategia__estado text-soft ${e ? 'hidden' : ''}" id="lab-estrategia-estado"><span class="lab-spinner"></span> Leyendo tu hito ${esc(((datos.etapas.encuentro || {}).hitoActivador) || 'H2F4')} para proponerte la fecha y una palabra clave…</p>
-      <label class="lab-estrategia__campo"><span>Fecha y horario de tu SDV</span>
-        <input type="text" id="lab-est-fecha" maxlength="200" value="${esc(e ? e.fecha : '')}" placeholder="Ej: jueves 5 de diciembre a las 20:00 hrs (hora de Chile)">
-        <small class="text-soft">La tomamos de tu hito. Revísala: los contenidos usarán exactamente esto.</small></label>
-      <div class="lab-estrategia__fila">
-        <label class="lab-estrategia__campo"><span>Fecha exacta de tu SDV</span>
-          <input type="date" id="lab-est-sdvfecha" value="${esc(e && e.sdvFecha ? e.sdvFecha : '')}"></label>
-        <label class="lab-estrategia__campo"><span>Hora de inicio</span>
-          <input type="time" id="lab-est-sdvhora" value="${esc(e && e.sdvHora ? e.sdvHora : '')}"></label>
-      </div>
-      <small class="text-soft">Con la fecha y la hora exactas calculamos el día y la hora de cada mensaje de tu flujo para el grupo.</small>
+      <p class="text-soft">La fecha y la hora de tu SDV salen de tu ficha «${esc(((datos.preguntas || {}).fase4 || {}).titulo || '¡Mi SDV lista para despegar!')}».</p>
+      <p class="lab-estrategia__estado text-soft ${e ? 'hidden' : ''}" id="lab-estrategia-estado"><span class="lab-spinner"></span> Leyendo tu hito ${esc(((datos.etapas.encuentro || {}).hitoActivador) || 'H2F4')} para proponerte una palabra clave…</p>
       <fieldset class="lab-estrategia__campo"><legend>¿Qué técnica usarás?</legend>
         ${Object.entries(datos.tecnicas).map(([k, t]) => `<label class="lab-estrategia__opcion"><input type="radio" name="lab-est-tecnica" value="${esc(k)}" ${tec === k ? 'checked' : ''}> ${esc(t.nombre)}</label>`).join('')}
       </fieldset>
@@ -214,6 +191,7 @@ function htmlEstrategiaPanel(e) {
 async function abrirEstrategia() {
   const cont = document.getElementById('lab-estrategia');
   if (!cont) return;
+  if (!alternarPanel('est-encuentro')) return;
   const e = datos.estrategia || null;
   cont.innerHTML = htmlEstrategiaPanel(e);
   cont.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
@@ -225,7 +203,7 @@ async function abrirEstrategia() {
   };
   cont.querySelectorAll('input[name="lab-est-tecnica"]').forEach(r => r.addEventListener('change', actualizarEtiquetaLink));
   actualizarEtiquetaLink();
-  q('lab-est-cancelar').addEventListener('click', () => { cont.innerHTML = ''; });
+  q('lab-est-cancelar').addEventListener('click', cerrarPaneles);
   q('lab-est-guardar').addEventListener('click', async () => {
     const err = q('lab-est-error');
     err.classList.add('hidden');
@@ -235,7 +213,7 @@ async function abrirEstrategia() {
     btn.disabled = true;
     btn.textContent = 'Guardando…';
     try {
-      const r = await estrategiaServidor(conFase({ accion: 'guardar', tecnica, tipo, fecha: q('lab-est-fecha').value, sdvFecha: q('lab-est-sdvfecha').value, sdvHora: q('lab-est-sdvhora').value, palabra: q('lab-est-palabra').value, link: q('lab-est-link').value }));
+      const r = await estrategiaServidor(conFase({ accion: 'guardar', tecnica, tipo, palabra: q('lab-est-palabra').value, link: q('lab-est-link').value }));
       datos.estrategia = r.data.estrategia;
       pintarAlumno();
     } catch (ex) {
@@ -245,16 +223,12 @@ async function abrirEstrategia() {
       btn.textContent = 'Guardar estrategia';
     }
   });
-  // Primera vez: la IA propone la fecha (leída del hito) y una palabra clave. Solo rellena lo que siga vacío.
+  // Primera vez: la IA propone una palabra clave (leída del hito). Solo rellena si sigue vacía.
   if (!e) {
     try {
       const r = await estrategiaServidor(conFase({ accion: 'proponer' }));
-      if (!document.getElementById('lab-est-fecha')) return;
-      if (!q('lab-est-fecha').value.trim() && r.data.fecha) q('lab-est-fecha').value = r.data.fecha;
-      if (!q('lab-est-sdvfecha').value && r.data.fechaISO) q('lab-est-sdvfecha').value = r.data.fechaISO;
-      if (!q('lab-est-sdvhora').value && r.data.hora) q('lab-est-sdvhora').value = r.data.hora;
+      if (!document.getElementById('lab-est-palabra')) return;
       if (!q('lab-est-palabra').value.trim() && r.data.palabra) q('lab-est-palabra').value = r.data.palabra;
-      if (!r.data.fecha) q('lab-est-fecha').focus();
     } catch (ex) { /* la propuesta es un extra: puede completarlo a mano */ }
     const est = document.getElementById('lab-estrategia-estado');
     if (est) est.classList.add('hidden');
@@ -278,6 +252,7 @@ const resumenEstrategiaVenta = (e) => `
 async function abrirEstrategiaVenta() {
   const cont = document.getElementById('lab-estrategia');
   if (!cont) return;
+  if (!alternarPanel('est-venta')) return;
   const e = datos.estrategiaVenta || null;
   cont.innerHTML = `
     <div class="lab-estrategia" id="lab-estrategia-panel">
@@ -324,7 +299,7 @@ async function abrirEstrategiaVenta() {
   cont.querySelectorAll('input[name="lab-ven-tipo"]').forEach(r => r.addEventListener('change', () => { pintarDestinos(); actualizarCampos(); }));
   pintarDestinos();
   actualizarCampos();
-  q('lab-ven-cancelar').addEventListener('click', () => { cont.innerHTML = ''; });
+  q('lab-ven-cancelar').addEventListener('click', cerrarPaneles);
   q('lab-ven-guardar').addEventListener('click', async () => {
     const err = q('lab-ven-error');
     err.classList.add('hidden');
@@ -352,150 +327,113 @@ async function abrirEstrategiaVenta() {
   }
 }
 
-// Botones de cada tarjeta de etapa cuando está abierta.
+// Botones de cada tarjeta de etapa cuando está abierta. Siempre en el mismo orden: primero los secundarios
+// (editar estrategia, flujo de mensajes) y al final el principal, así queda a la misma altura en todas las tarjetas.
 function botonesEtapa(id, e) {
-  const hayFlujos = (datos.flujos || []).some(f => f.etapa === (id === 'venta' ? 'venta' : 'encuentro'));
+  const etapaFlujo = id === 'venta' ? 'venta' : 'encuentro';
+  const hayFlujos = (datos.flujos || []).some(f => f.etapa === etapaFlujo);
+  const btnFlujo = hayFlujos ? `<button type="button" class="btn btn--ghost" data-flujo="${etapaFlujo}">Flujo de mensajes para tu grupo</button>` : '';
   if (e.hitoActivador) {   // Encuentro
-    const flujo = hayFlujos ? '<button type="button" class="btn btn--ghost" data-flujo-encuentro>Flujo de mensajes para tu grupo</button>' : '';
-    if (!datos.estrategia) return '<p class="lab-etapa__estado">Primero define tu estrategia.</p><button type="button" class="btn btn--primary" data-estrategia>Definir mi estrategia</button>';
-    return `${resumenEstrategia(datos.estrategia)}<button type="button" class="btn btn--ghost" data-estrategia>Editar estrategia</button>${datos.estrategia.tipo === 'pagado'
+    if (!datos.estrategia) return `<div class="lab-etapa__acciones"><p class="lab-etapa__estado">Primero define tu estrategia.</p>${btnFlujo}<button type="button" class="btn btn--primary" data-estrategia>Definir mi estrategia</button></div>`;
+    return `${resumenEstrategia(datos.estrategia)}<div class="lab-etapa__acciones"><button type="button" class="btn btn--ghost" data-estrategia>Editar estrategia</button>${btnFlujo}${datos.estrategia.tipo === 'pagado'
       ? '<button type="button" class="btn btn--primary" data-pagado>Mis ángulos y contenidos</button>'
-      : '<button type="button" class="btn btn--primary" data-organico>Elegir y generar contenidos</button>'}${flujo}`;
+      : '<button type="button" class="btn btn--primary" data-organico>Elegir y generar contenidos</button>'}</div>`;
   }
   if (id === 'venta') {
     const v = datos.estrategiaVenta;
-    const flujo = hayFlujos ? '<button type="button" class="btn btn--ghost" data-flujo-venta>Flujo de mensajes para tu grupo</button>' : '';
-    if (!v) return `<p class="lab-etapa__estado">Primero define tu estrategia de Venta.</p><button type="button" class="btn btn--primary" data-estrategia-venta>Definir mi estrategia</button>${flujo}`;
-    return `${resumenEstrategiaVenta(v)}<button type="button" class="btn btn--ghost" data-estrategia-venta>Editar estrategia</button>${v.tipo === 'pagado'
+    if (!v) return `<div class="lab-etapa__acciones"><p class="lab-etapa__estado">Primero define tu estrategia de Venta.</p>${btnFlujo}<button type="button" class="btn btn--primary" data-estrategia-venta>Definir mi estrategia</button></div>`;
+    return `${resumenEstrategiaVenta(v)}<div class="lab-etapa__acciones"><button type="button" class="btn btn--ghost" data-estrategia-venta>Editar estrategia</button>${btnFlujo}${v.tipo === 'pagado'
       ? '<button type="button" class="btn btn--primary" data-pagado-venta>Mis ángulos y contenidos</button>'
-      : '<button type="button" class="btn btn--primary" data-organico-venta>Elegir y generar contenidos</button>'}${flujo}`;
+      : '<button type="button" class="btn btn--primary" data-organico-venta>Elegir y generar contenidos</button>'}</div>`;
   }
-  return `<button type="button" class="btn btn--primary" data-generar="${id}">Generar contenidos</button>`;
+  return `<div class="lab-etapa__acciones"><button type="button" class="btn btn--primary" data-generar="${id}">Generar contenidos</button></div>`;
 }
+
+/* --- Paneles que se despliegan bajo las tarjetas (estrategia, ángulos, opciones, flujo) ---
+   Solo hay uno abierto a la vez. Se minimizan al terminar su acción (guardar o generar) y vuelven a aparecer al pulsar
+   de nuevo su botón; pulsar el botón con el panel abierto lo cierra. */
+
+let panelAbierto = '';
+
+function cerrarPaneles() {
+  panelAbierto = '';
+  ['lab-estrategia', 'lab-pagado'].forEach(id => { const c = document.getElementById(id); if (c) c.innerHTML = ''; });
+}
+// Devuelve false si el panel ya estaba abierto (y lo cierra); true si hay que abrirlo (cerrando el que hubiera).
+function alternarPanel(clave) {
+  if (panelAbierto === clave) { cerrarPaneles(); return false; }
+  cerrarPaneles();
+  panelAbierto = clave;
+  return true;
+}
+function conectarCerrarPanel(cont) {
+  cont.querySelectorAll('[data-cerrar-panel]').forEach(b => b.addEventListener('click', cerrarPaneles));
+}
+const BOTON_CERRAR_PANEL = '<button type="button" class="btn btn--ghost" data-cerrar-panel>Cerrar</button>';
 
 /* --- Flujo de mensajes para el grupo de WhatsApp donde llegaron los leads ---
    Encuentro: ANTES de la SDV (conectar, recordar fecha y hora, aumentar la asistencia en vivo).
-   Venta: DESPUÉS de la SDV (comunicar la oferta que se presentó en vivo). El Director define cada flujo en Configuración. */
+   Venta: DESPUÉS de la SDV (comunicar la oferta). Todo sale de la ficha «¡Mi SDV lista para despegar!»:
+   al pulsar el botón se genera de inmediato (si hay varios flujos, antes se elige cuál). El Director define los flujos. */
 
 let flujoElegido = '';
 
-const resumenOferta = (o) => `
-  <div class="lab-estrategia__resumen">
-    <div><strong>Oferta:</strong> ${esc(o.nombre)}</div>
-    ${o.incluye ? `<div><strong>Incluye:</strong> ${esc(o.incluye)}</div>` : ''}
-    ${o.precio ? `<div><strong>Precio o descuento:</strong> ${esc(o.precio)}</div>` : ''}
-    ${o.bonos ? `<div><strong>Bonos:</strong> ${esc(o.bonos)}</div>` : ''}
-    ${o.cierre ? `<div><strong>Cierre:</strong> ${esc(o.cierre)}</div>` : ''}
-    <div><strong>Link de compra:</strong> ${o.link ? esc(o.link) : '<span class="text-soft">sin link (los mensajes llevarán [LINK DE COMPRA])</span>'}</div>
-  </div>`;
+const ficha4Aprobada = () => !!(datos.fichas && datos.fichas.fase4 && datos.fichas.fase4.aprobada);
+const tituloFicha4 = () => ((datos.preguntas || {}).fase4 || {}).titulo || '¡Mi SDV lista para despegar!';
 
-function htmlOfertaForm(o, esBorrador) {
-  const c = (id, etiqueta, valor, max, ayuda, tipo) => `<label class="lab-estrategia__campo"><span>${etiqueta}</span><${tipo === 'area' ? `textarea id="${id}" rows="2" maxlength="${max}"` : `input type="${tipo || 'text'}" id="${id}" maxlength="${max}"`}${tipo === 'area' ? '' : ` value="${esc(valor || '')}"`}>${tipo === 'area' ? `${esc(valor || '')}</textarea>` : ''}${ayuda ? `<small class="text-soft">${ayuda}</small>` : ''}</label>`;
-  return `
-    <p class="text-soft">${esBorrador ? 'Armé este borrador con lo que publicaste en la Fase 3. Revísalo, corrígelo y apruébalo: los mensajes usarán exactamente esto.' : 'Edita tu oferta y vuelve a aprobarla.'}</p>
-    ${c('lab-of-nombre', 'Nombre de la oferta', o.nombre, 150)}
-    ${c('lab-of-incluye', 'Qué incluye', o.incluye, 800, '', 'area')}
-    ${c('lab-of-precio', 'Precio o descuento', o.precio, 200)}
-    ${c('lab-of-bonos', 'Bonos (si hay)', o.bonos, 500)}
-    ${c('lab-of-cierre', 'Fecha de cierre de la oferta', o.cierre, 200, 'Escríbela como quieres que se lea, por ejemplo: domingo 13 de diciembre a las 23:59.')}
-    ${c('lab-of-link', 'Link de compra', o.link, 500, 'Opcional. Si lo dejas vacío, los mensajes llevarán [LINK DE COMPRA].', 'url')}
-    <p class="lab-error hidden" id="lab-of-error"></p>
-    <div class="lab-acciones-pieza"><button type="button" class="btn btn--primary" id="lab-of-guardar">Aprobar mi oferta</button></div>`;
-}
-
-async function pintarOferta(editar) {
-  const caja = document.getElementById('lab-oferta');
-  if (!caja) return;
-  const o = datos.ofertaVenta;
-  if (o && o.aprobada && !editar) {
-    caja.innerHTML = `<h5>Tu oferta</h5>${resumenOferta(o)}<button type="button" class="btn btn--ghost" data-oferta-editar>Editar oferta</button>`;
-    caja.querySelector('[data-oferta-editar]').addEventListener('click', () => pintarOferta(true));
-    pintarOpcionesFlujo();
-    return;
-  }
-  let borrador = o || { nombre: '', incluye: '', precio: '', bonos: '', cierre: '', link: '' };
-  if (!o) {
-    caja.innerHTML = '<h5>Tu oferta</h5><p class="text-soft"><span class="lab-spinner"></span> Armando tu oferta con lo que publicaste en la Fase 3…</p>';
-    try {
-      const r = await estrategiaServidor(conFase({ etapa: 'venta', accion: 'ofertaProponer' }));
-      borrador = r.data.oferta;
-    } catch (ex) { /* la propuesta es un extra: la puede escribir a mano */ }
-  }
-  caja.innerHTML = `<h5>Tu oferta</h5>${htmlOfertaForm(borrador, !o)}`;
-  pintarOpcionesFlujo();
-  const q = (id) => document.getElementById(id);
-  q('lab-of-guardar').addEventListener('click', async (ev) => {
-    const btn = ev.currentTarget;
-    const err = q('lab-of-error');
-    err.classList.add('hidden');
-    btn.disabled = true;
-    btn.textContent = 'Guardando…';
-    try {
-      const r = await estrategiaServidor(conFase({ etapa: 'venta', accion: 'ofertaGuardar', nombre: q('lab-of-nombre').value, incluye: q('lab-of-incluye').value, precio: q('lab-of-precio').value, bonos: q('lab-of-bonos').value, cierre: q('lab-of-cierre').value, link: q('lab-of-link').value }));
-      datos.ofertaVenta = r.data.oferta;
-      pintarOferta();
-    } catch (ex) {
-      err.textContent = mensajeError(ex, 'No se pudo guardar tu oferta. Intenta de nuevo.');
-      err.classList.remove('hidden');
-      btn.disabled = false;
-      btn.textContent = 'Aprobar mi oferta';
-    }
-  });
-}
-
-function pintarOpcionesFlujo() {
-  const cont = document.getElementById('lab-flujo-opciones');
-  if (!cont) return;
-  const esVenta = etapaPanel === 'venta';
-  const flujos = (datos.flujos || []).filter(f => f.etapa === etapaPanel);
-  if (!flujos.some(f => f.id === flujoElegido)) flujoElegido = (flujos[0] || {}).id || '';
-  const ofertaLista = !esVenta || (datos.ofertaVenta && datos.ofertaVenta.aprobada);
-  cont.innerHTML = `
-    <h5>¿Qué flujo quieres crear?</h5>
-    ${flujos.map(f => `<label class="lab-estrategia__opcion"><input type="radio" name="lab-flujo" value="${esc(f.id)}" ${f.id === flujoElegido ? 'checked' : ''}> <span><strong>${esc(f.nombre)}</strong> <span class="text-soft">· ${esc(f.mensajes)} ${f.mensajes === 1 ? 'mensaje' : 'mensajes'} en ${esc(f.hasta - f.desde + 1)} ${f.hasta - f.desde === 0 ? 'día' : 'días'}</span></span></label>`).join('') || '<p class="text-soft">No hay flujos activos por ahora.</p>'}
-    ${ofertaLista ? '' : '<p class="text-soft lab-pagado__nota">Aprueba tu oferta para poder generar el flujo.</p>'}
-    <p class="lab-error hidden" id="lab-flujo-error"></p>
-    <button type="button" class="btn btn--primary" id="lab-flujo-generar" data-generar-pagado ${flujos.length && ofertaLista ? '' : 'disabled'}>Generar flujo de mensajes</button>`;
-  cont.querySelectorAll('input[name="lab-flujo"]').forEach(x => x.addEventListener('change', () => { flujoElegido = x.value; }));
-  const btn = cont.querySelector('#lab-flujo-generar');
-  btn.addEventListener('click', () => {
-    const id = (cont.querySelector('input[name="lab-flujo"]:checked') || {}).value || '';
-    if (id) generarEtapa(etapaPanel, btn, { flujo: id });
-  });
-}
-
-async function abrirFlujo(etapa) {
+function iniciarFlujo(etapa, btn) {
   etapaPanel = etapa === 'venta' ? 'venta' : 'encuentro';
   const esVenta = etapaPanel === 'venta';
   const cont = document.getElementById('lab-pagado');
   if (!cont) return;
-  const e = datos.estrategia;
+  const flujos = (datos.flujos || []).filter(f => f.etapa === etapaPanel);
   const titulo = esVenta ? 'Flujo de mensajes para tu grupo: después de tu SDV' : 'Flujo de mensajes para tu grupo: antes de tu SDV';
-  const intro = esVenta
-    ? 'Son los mensajes que envías al grupo donde llegaron tus leads, después de la sesión, para comunicar la oferta que presentaste en vivo. Cada mensaje trae su día y su hora exactos.'
-    : 'Son los mensajes que envías al grupo donde llegaron tus leads, antes de la sesión, para conectar, recordar la fecha y la hora y aumentar la asistencia en vivo. Cada mensaje trae su día y su hora exactos.';
-  if (!e || !e.sdvFecha || !e.sdvHora) {
+
+  // Sin la ficha de la SDV aprobada no hay fecha ni datos: se guía al alumno hacia ella.
+  if (!ficha4Aprobada()) {
+    if (!alternarPanel('flujo-' + etapaPanel)) return;
     cont.innerHTML = `
       <div class="lab-estrategia lab-pagado">
         <h4>${titulo}</h4>
-        <p class="text-soft">${intro}</p>
-        <p>Para calcular el día y la hora de cada mensaje necesito la <strong>fecha exacta y la hora de inicio de tu SDV</strong>${e ? '' : ', y para eso primero hay que definir tu estrategia de Encuentro'}.</p>
-        <div class="lab-acciones-pieza"><button type="button" class="btn btn--primary" id="lab-flujo-completar">${e ? 'Completar la fecha de mi SDV' : 'Definir mi estrategia de Encuentro'}</button></div>
+        <p>Para armar tu flujo necesito tu ficha <strong>«${esc(tituloFicha4())}»</strong> revisada y aprobada: de ahí salen la fecha, la hora y los datos de tu SDV.</p>
+        <div class="lab-acciones-pieza"><button type="button" class="btn btn--primary" id="lab-flujo-ficha">Ir a mi ficha</button>${BOTON_CERRAR_PANEL}</div>
       </div>`;
-    document.getElementById('lab-flujo-completar').addEventListener('click', () => { cont.innerHTML = ''; abrirEstrategia(); });
-    cont.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    conectarCerrarPanel(cont);
+    document.getElementById('lab-flujo-ficha').addEventListener('click', () => {
+      cerrarPaneles();
+      const tarjeta = document.querySelector('[data-seccion="fase4"]');
+      if (tarjeta) { tarjeta.scrollIntoView({ behavior: 'smooth', block: 'center' }); abrirEditorFicha('fase4', false); }
+    });
     return;
   }
+
+  // Un solo flujo: se genera al instante, sin pasos intermedios.
+  if (flujos.length === 1) {
+    cerrarPaneles();
+    generarEtapa(etapaPanel, btn, { flujo: flujos[0].id });
+    return;
+  }
+
+  // Varios flujos: se elige cuál (el panel se minimiza al generar).
+  if (!alternarPanel('flujo-' + etapaPanel)) return;
+  if (!flujos.some(f => f.id === flujoElegido)) flujoElegido = (flujos[0] || {}).id || '';
+  const sdv = datos.sdv || {};
   cont.innerHTML = `
     <div class="lab-estrategia lab-pagado">
       <h4>${titulo}</h4>
-      <p class="text-soft">${intro}</p>
-      <p class="text-soft">Tu SDV: <strong>${esc(e.fecha)}</strong> (${esc(e.sdvFecha)} · ${esc(e.sdvHora)})</p>
-      ${esVenta ? '<div id="lab-oferta"></div>' : ''}
-      <div id="lab-flujo-opciones"></div>
+      ${sdv.textoFecha ? `<p class="text-soft">Tu SDV: <strong>${esc(sdv.textoFecha)}</strong>. Cada mensaje sale con su día y su hora exactos.</p>` : ''}
+      <h5>¿Qué flujo quieres crear?</h5>
+      ${flujos.map(f => `<label class="lab-estrategia__opcion"><input type="radio" name="lab-flujo" value="${esc(f.id)}" ${f.id === flujoElegido ? 'checked' : ''}> <span><strong>${esc(f.nombre)}</strong> <span class="text-soft">· ${esc(f.mensajes)} ${f.mensajes === 1 ? 'mensaje' : 'mensajes'} en ${esc(f.hasta - f.desde + 1)} ${f.hasta - f.desde === 0 ? 'día' : 'días'}</span></span></label>`).join('') || '<p class="text-soft">No hay flujos activos por ahora.</p>'}
+      <div class="lab-acciones-pieza"><button type="button" class="btn btn--primary" id="lab-flujo-generar" data-generar-pagado ${flujos.length ? '' : 'disabled'}>Generar flujo de mensajes</button>${BOTON_CERRAR_PANEL}</div>
     </div>`;
+  conectarCerrarPanel(cont);
   cont.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-  if (esVenta) await pintarOferta(); else pintarOpcionesFlujo();
+  cont.querySelectorAll('input[name="lab-flujo"]').forEach(x => x.addEventListener('change', () => { flujoElegido = x.value; }));
+  const generar = document.getElementById('lab-flujo-generar');
+  generar.addEventListener('click', () => {
+    const id = (cont.querySelector('input[name="lab-flujo"]:checked') || {}).value || '';
+    if (id) generarEtapa(etapaPanel, generar, { flujo: id });
+  });
 }
 
 /* --- Contenido pagado: ángulos comunicacionales (de 3 en 3) y creación de los contenidos --- */
@@ -585,6 +523,7 @@ async function abrirPagado(etapa) {
   angulos = [];
   const cont = document.getElementById('lab-pagado');
   if (!cont) return;
+  if (!alternarPanel('pagado-' + etapaPanel)) return;
   const esVenta = etapaPanel === 'venta';
   cont.innerHTML = `
     <div class="lab-estrategia lab-pagado">
@@ -594,10 +533,11 @@ async function abrirPagado(etapa) {
         : 'Un ángulo es un enfoque comunicacional para conectar con tu Cliente Soñado. La IA los crea de a 3 con lo que compartiste sobre él, y se numeran seguidos. Revísalos, edítalos o bórralos, y aprueba los que quieras usar.'}</p>
       <div id="lab-angulos-lista"><p class="text-soft"><span class="lab-spinner"></span> Cargando tus ángulos…</p></div>
       <p class="lab-error hidden" id="lab-ang-error"></p>
-      <div class="lab-acciones-pieza"><button type="button" class="btn btn--primary" id="lab-ang-generar">Crear 3 ángulos nuevos</button></div>
+      <div class="lab-acciones-pieza"><button type="button" class="btn btn--primary" id="lab-ang-generar">Crear 3 ángulos nuevos</button>${BOTON_CERRAR_PANEL}</div>
       <div id="lab-pagado-opciones"></div>
     </div>`;
   cont.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  conectarCerrarPanel(cont);
   const errorEl = () => document.getElementById('lab-ang-error');
   const mostrarError = (ex, msg) => { const e = errorEl(); if (e) { e.textContent = mensajeError(ex, msg); e.classList.remove('hidden'); } };
   const limpiarError = () => { const e = errorEl(); if (e) e.classList.add('hidden'); };
@@ -658,6 +598,7 @@ function abrirOrganico(etapa) {
   etapaPanel = etapa === 'venta' ? 'venta' : 'encuentro';
   const cont = document.getElementById('lab-pagado');
   if (!cont) return;
+  if (!alternarPanel('organico-' + etapaPanel)) return;
   const esVenta = etapaPanel === 'venta';
   const recetas = recetasDisponibles('organico');
   if (!recetas.some(([id]) => id === recetaOrganicaElegida)) recetaOrganicaElegida = (recetas[0] || [])[0] || '';
@@ -674,9 +615,10 @@ function abrirOrganico(etapa) {
         <label class="lab-estrategia__opcion"><input type="radio" name="lab-wsp" value="privado" ${wspElegido === 'privado' ? 'checked' : ''}> Mensaje privado</label>
       </div>
       <p class="lab-error hidden" id="lab-org-error"></p>
-      <div class="lab-acciones-pieza"><button type="button" class="btn btn--primary" id="lab-org-generar" data-generar-pagado ${recetas.length ? '' : 'disabled'}>Generar contenidos</button></div>
+      <div class="lab-acciones-pieza"><button type="button" class="btn btn--primary" id="lab-org-generar" data-generar-pagado ${recetas.length ? '' : 'disabled'}>Generar contenidos</button>${BOTON_CERRAR_PANEL}</div>
     </div>`;
   cont.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  conectarCerrarPanel(cont);
   const actualizar = () => {
     recetaOrganicaElegida = (cont.querySelector('input[name="lab-receta-org"]:checked') || {}).value || '';
     const r = (datos.recetas || {})[recetaOrganicaElegida];
@@ -693,34 +635,6 @@ function abrirOrganico(etapa) {
     if (r.preguntaWsp && !wspElegido) { err.textContent = 'Elige si tu WhatsApp es para grupos o es un mensaje privado.'; err.classList.remove('hidden'); return; }
     generarEtapa(etapaPanel, ev.currentTarget, { receta: recetaOrganicaElegida, wsp: r.preguntaWsp ? wspElegido : '' });
   });
-}
-
-// Solo el Alumno Demo: simular que publicó el hito H2F4 para probar Encuentro.
-function htmlDemoH2F4() {
-  if (!datos.esDemo) return '';
-  const h = h2f4DemoGuardado();
-  return `
-    <section class="lab-bloque lab-demoh2f4">
-      <label class="lab-estrategia__opcion"><input type="checkbox" id="lab-demo-h2f4" ${h.activo ? 'checked' : ''}> <strong>Demo:</strong> simular que publiqué mi hito H2F4 (abre Encuentro)</label>
-      <div id="lab-demo-h2f4-texto-caja" class="${h.activo ? '' : 'hidden'}">
-        <label class="lab-estrategia__campo"><span>Texto de mi hito H2F4 (de aquí se lee la fecha y el horario)</span>
-          <textarea id="lab-demo-h2f4-texto" rows="3" maxlength="1500">${esc(h.texto)}</textarea></label>
-        <button type="button" class="btn btn--ghost" id="lab-demo-h2f4-aplicar">Aplicar texto</button>
-      </div>
-    </section>`;
-}
-
-function conectarDemoH2F4(el) {
-  const chk = el.querySelector('#lab-demo-h2f4');
-  if (!chk) return;
-  const aplicar = async () => {
-    const txt = el.querySelector('#lab-demo-h2f4-texto');
-    guardarH2F4Demo({ activo: chk.checked, texto: txt ? txt.value : TEXTO_H2F4_DEMO });
-    try { await recargar(); } catch (err) { /* se queda como estaba */ }
-  };
-  chk.addEventListener('change', aplicar);
-  const btn = el.querySelector('#lab-demo-h2f4-aplicar');
-  if (btn) btn.addEventListener('click', aplicar);
 }
 
 /* --- Nivel de emojis (barra deslizable: se arrastra con el dedo o con el mouse) --- */
@@ -931,9 +845,9 @@ function htmlBloqueado() {
 
 function pintarAlumno() {
   const el = rootEl();
-  el.innerHTML = htmlCabeceraAlumno() + htmlDemoH2F4() + (datos.seccionesAbiertas.length ? htmlFichas() + htmlEtapas() : htmlBloqueado());
+  panelAbierto = '';
+  el.innerHTML = htmlCabeceraAlumno() + (datos.seccionesAbiertas.length ? htmlFichas() + htmlEtapas() : htmlBloqueado());
   conectarAlumno(el);
-  conectarDemoH2F4(el);
   const hist = document.getElementById('lab-historial');
   if (hist && alumnoIdActual) cargarHistorial(alumnoIdActual, hist, datos.formatos, true);
 }
@@ -948,7 +862,9 @@ function htmlEditorFicha(seccion, respuestas, vacias) {
       <div class="field lab-campo ${vacias.includes(i.id) ? 'lab-campo--vacio' : ''}">
         <label for="lab-r-${seccion}-${esc(i.id)}">${esc(i.pregunta)}${i.opcional ? ' <span class="text-soft">(opcional)</span>' : ''}</label>
         ${i.ayuda ? `<div class="lab-campo__ayuda text-soft">${esc(i.ayuda)}</div>` : ''}
-        <textarea id="lab-r-${seccion}-${esc(i.id)}" data-id="${esc(i.id)}" rows="4" maxlength="2500">${esc(respuestas[i.id] || '')}</textarea>
+        ${i.tipo === 'fecha' || i.tipo === 'hora'
+          ? `<input type="${i.tipo === 'fecha' ? 'date' : 'time'}" id="lab-r-${seccion}-${esc(i.id)}" data-id="${esc(i.id)}" value="${esc(respuestas[i.id] || '')}" style="max-width:220px;">`
+          : `<textarea id="lab-r-${seccion}-${esc(i.id)}" data-id="${esc(i.id)}" rows="4" maxlength="2500">${esc(respuestas[i.id] || '')}</textarea>`}
       </div>`).join('')}
     <p class="lab-error hidden" data-error></p>
     <div class="lab-ficha__acciones">
@@ -998,7 +914,7 @@ function conectarEditor(editor, seccion) {
   btnGuardar.addEventListener('click', async () => {
     errorEl.classList.add('hidden');
     const respuestas = {};
-    editor.querySelectorAll('textarea[data-id]').forEach(t => { respuestas[t.dataset.id] = t.value.trim(); });
+    editor.querySelectorAll('textarea[data-id], input[data-id]').forEach(t => { respuestas[t.dataset.id] = t.value.trim(); });
     const falta = datos.preguntas[seccion].items.find(i => !i.opcional && !respuestas[i.id]);
     if (falta) {
       errorEl.textContent = `Falta responder: «${falta.pregunta}»`;
@@ -1041,6 +957,7 @@ async function generarEtapa(etapaId, btn, extra) {
   try {
     const r = await generarContenidos(conFase({ etapa: etapaId, emojis: nivelEmojisActual(), emojisFavoritos: emojisFavoritosActual(), ...(extra || {}) }));
     const g = r.data;
+    cerrarPaneles();   // el panel desde el que se generó se minimiza; queda solo el resultado
     datos.usosHoy += 1;
     const contador = document.getElementById('lab-contador');
     if (contador) contador.textContent = `Generaciones de hoy: ${datos.usosHoy}/${datos.limiteDia}`;
@@ -1077,8 +994,7 @@ function conectarAlumno(el) {
   el.querySelectorAll('[data-estrategia]').forEach(b => b.addEventListener('click', () => abrirEstrategia()));
   el.querySelectorAll('[data-pagado]').forEach(b => b.addEventListener('click', () => abrirPagado()));
   el.querySelectorAll('[data-organico]').forEach(b => b.addEventListener('click', () => abrirOrganico('encuentro')));
-  el.querySelectorAll('[data-flujo-encuentro]').forEach(b => b.addEventListener('click', () => abrirFlujo('encuentro')));
-  el.querySelectorAll('[data-flujo-venta]').forEach(b => b.addEventListener('click', () => abrirFlujo('venta')));
+  el.querySelectorAll('[data-flujo]').forEach(b => b.addEventListener('click', () => iniciarFlujo(b.dataset.flujo, b)));
   el.querySelectorAll('[data-estrategia-venta]').forEach(b => b.addEventListener('click', () => abrirEstrategiaVenta()));
   el.querySelectorAll('[data-pagado-venta]').forEach(b => b.addEventListener('click', () => abrirPagado('venta')));
   el.querySelectorAll('[data-organico-venta]').forEach(b => b.addEventListener('click', () => abrirOrganico('venta')));
@@ -1184,7 +1100,7 @@ async function verAlumno(alumnoId) {
     const snap = await get(ref(db, `laboratorioIA/fichas/${alumnoId}`));
     fichas = snap.exists() ? snap.val() : {};
   } catch (err) { /* se muestra vacío */ }
-  const secciones = ['fase1', 'fase2', 'fase3'].filter(s => fichas[s]);
+  const secciones = ['fase1', 'fase2', 'fase3', 'fase4'].filter(s => fichas[s]);
   det.innerHTML = `
     <h3>${esc(a ? a.nombre : '')}</h3>
     <section class="lab-bloque">

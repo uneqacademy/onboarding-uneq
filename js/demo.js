@@ -54,6 +54,21 @@ const CLAVE_FASE_DEMO = 'uneq.demoFase';
 let faseDemoSel = 1;
 try { const g = parseInt(sessionStorage.getItem(CLAVE_FASE_DEMO), 10); if (g >= 0 && g <= 5) faseDemoSel = g; } catch (e) { /* sin almacenamiento */ }
 
+/* Simular que el Alumno Demo publicó su hito H2F4 (abre Encuentro y la ficha «¡Mi SDV lista para despegar!» en el
+   Laboratorio IA). El control está en la barra del Demo, junto a la fase; el Laboratorio solo lee el valor. */
+const CLAVE_H2F4_DEMO = 'uneq_lab_h2f4_demo';
+export const TEXTO_H2F4_DEMO = 'Mi SDV está lista. Se llama «Agenda Ordenada» y será el sábado 5 de diciembre a las 20:00 hrs (hora de Chile). Mi promesa: que las terapeutas ordenen sus precios y su tiempo en 8 semanas. Contenido: cómo ordenar tus precios, cómo ordenar tu agenda y cómo dejar de agotarte. Después de la sesión presento mi programa.';
+export function getH2F4Demo() {
+  try {
+    const v = JSON.parse(localStorage.getItem(CLAVE_H2F4_DEMO) || 'null');
+    if (v && typeof v === 'object') return { activo: v.activo === true, texto: typeof v.texto === 'string' && v.texto.trim() ? v.texto : TEXTO_H2F4_DEMO };
+  } catch (e) { /* sin almacenamiento: queda apagado */ }
+  return { activo: false, texto: TEXTO_H2F4_DEMO };
+}
+export function setH2F4Demo(v) {
+  try { localStorage.setItem(CLAVE_H2F4_DEMO, JSON.stringify({ activo: v.activo === true, texto: String(v.texto || '') })); } catch (e) { /* opcional */ }
+}
+
 export const getFaseDemo = () => faseDemoSel;
 export function setFaseDemo(n) {
   faseDemoSel = Math.min(5, Math.max(0, Number(n) || 0));

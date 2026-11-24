@@ -55,7 +55,7 @@
 .lab-etapas { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 14px; }
 .lab-etapa { border: 1px solid var(--color-border); border-radius: var(--radius-md); padding: 16px; display: flex; flex-direction: column; gap: 6px; background: var(--color-surface); }
 .lab-etapa p { margin: 0; font-size: 13px; }
-.lab-etapa .btn { margin-top: auto; }
+.lab-etapa .btn { margin-top: 0; }
 .lab-etapa--bloqueada { background: var(--color-surface-alt); opacity: 0.85; }
 .lab-etapa__num { width: 26px; height: 26px; border-radius: 50%; background: var(--color-accent); color: #fff; font-weight: 700; font-size: 13px; display: flex; align-items: center; justify-content: center; }
 .lab-etapa--bloqueada .lab-etapa__num { background: #9AA4B2; }
@@ -585,7 +585,7 @@
   border-color: var(--lab-c);
   box-shadow: 0 0 0 1px var(--lab-c), 0 14px 36px color-mix(in srgb, var(--lab-c) 38%, transparent);
 }
-#view-laboratorio-ia .lab-etapa strong { font-family: var(--font-display); font-size: 17px; color: #fff; text-shadow: 0 0 14px color-mix(in srgb, var(--lab-c) 70%, transparent); }
+#view-laboratorio-ia .lab-etapa > strong { font-family: var(--font-display); font-size: 17px; color: #fff; text-shadow: 0 0 14px color-mix(in srgb, var(--lab-c) 70%, transparent); }
 #view-laboratorio-ia .lab-etapa__num {
   width: 34px; height: 34px; font-size: 15px; margin-bottom: 6px;
   background: color-mix(in srgb, var(--lab-c) 22%, #0b1330);
@@ -596,7 +596,7 @@
 #view-laboratorio-ia .lab-etapa--bloqueada { opacity: 1; background: rgba(13, 22, 52, 0.6); border-color: rgba(120, 160, 255, 0.14); }
 #view-laboratorio-ia .lab-etapa--bloqueada::before { background: linear-gradient(90deg, transparent, rgba(120, 160, 255, 0.35), transparent); box-shadow: none; }
 #view-laboratorio-ia .lab-etapa--bloqueada .lab-etapa__num { background: #121a38; border-color: #3a4a7a; box-shadow: none; color: #7f90bd; }
-#view-laboratorio-ia .lab-etapa--bloqueada strong { text-shadow: none; color: #b8c6ee; }
+#view-laboratorio-ia .lab-etapa--bloqueada > strong { text-shadow: none; color: #b8c6ee; }
 #view-laboratorio-ia .lab-etapa--bloqueada p { opacity: 0.8; }
 #view-laboratorio-ia .lab-etapa__estado { color: var(--lab-suave); }
 #view-laboratorio-ia .lab-chip {
@@ -789,3 +789,19 @@
 /* Fecha y hora exactas de la SDV: dos campos en una fila */
 .lab-estrategia__fila { display: flex; gap: 12px; flex-wrap: wrap; }
 .lab-estrategia__fila .lab-estrategia__campo { flex: 1 1 160px; }
+
+/* ============================================================
+   Tarjetas de etapa parejas: mismo alto, botones siempre abajo y en la misma línea
+   (el botón principal va último, así queda a la misma altura en las cuatro). Vale en PC y en móvil.
+   ============================================================ */
+#view-laboratorio-ia .lab-etapas { align-items: stretch; }
+#view-laboratorio-ia .lab-etapa { height: 100%; box-sizing: border-box; }
+.lab-etapa__acciones { margin-top: auto; padding-top: 10px; display: flex; flex-direction: column; gap: 8px; }
+.lab-etapa__acciones .btn { width: 100%; min-height: 52px; margin-top: 0; justify-content: center; text-align: center; box-sizing: border-box; }
+.lab-etapa__acciones .lab-etapa__estado { margin: 0 !important; }
+/* El resumen de la estrategia es compacto y parejo: títulos y datos del mismo tamaño */
+#view-laboratorio-ia .lab-estrategia__resumen { font-size: 12px; line-height: 1.4; gap: 3px; margin: 6px 0 4px; color: var(--lab-suave, #9fb2e0); }
+#view-laboratorio-ia .lab-estrategia__resumen strong { font-family: inherit; font-size: inherit; font-weight: 700; color: #fff; text-shadow: none; }
+@media (max-width: 600px) {
+  #view-laboratorio-ia .lab-etapa { height: auto; }
+}

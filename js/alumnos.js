@@ -18,7 +18,7 @@ import {
   crearCiclo, iniciarOnboardingSiCorresponde, generarAcuerdoYEnviarRevision,
   marcarEnviadoParaFirma, marcarFirmaProcesada, toggleCandado, renderStepper, renderAcciones
 } from './ciclos.js';
-import { getFaseDemo, setFaseDemo } from './demo.js';
+import { getFaseDemo, setFaseDemo, getH2F4Demo, setH2F4Demo } from './demo.js';
 import { guardarSub, borrarSub, registrarRestauradores } from './main.js';
 import { showView, marcarNavActivo, setNav, setCandado, aplicarBloqueoCamposFicha, getCurrentRole, getCurrentUserNombre, getCurrentRolesDisponibles, applyRole, esSubdirectora } from './main.js';
 import { cargarTestParaCiclo } from './test.js';
@@ -1994,11 +1994,36 @@ function mostrarBannerModoDemo(programa) {
   const puedeReiniciarDemo = !!(estadoDirectorAntesDeDemo && estadoDirectorAntesDeDemo.rol === 'director');
   banner.innerHTML = `👁️ Viendo como Alumno Demo (${ETIQUETAS_DEMO[programa]}) — esto no es un alumno real, nada de lo que hagas acá cuenta en el sistema ni lo ven los alumnos.
     <label style="display:flex; align-items:center; gap:6px;">Fase que simula: <select id="select-fase-demo" style="font-size:12px; padding:2px 6px;">${['Inicio (sin fase)', 'Fase 1', 'Fase 2', 'Fase 3', 'Fase 4', 'Final (egresado)'].map((x, i) => `<option value="${i}"${i === getFaseDemo() ? ' selected' : ''}>${x}</option>`).join('')}</select></label>
+    <label style="display:flex; align-items:center; gap:6px;" title="Simula que el Alumno Demo publicó su hito H2F4: abre Encuentro y la ficha «¡Mi SDV lista para despegar!» en el Laboratorio IA."><input type="checkbox" id="chk-h2f4-demo"${getH2F4Demo().activo ? ' checked' : ''}> Simular H2F4 publicado</label>
+    <button type="button" id="btn-h2f4-texto" class="btn btn--ghost" style="font-size:11px; padding:3px 12px; background:#fff;">✏️ Texto del H2F4</button>
+    <div id="panel-h2f4-demo" style="display:none; flex-basis:100%; text-align:left; background:#fff7e6; border-radius:8px; padding:10px 12px; font-weight:400;">
+      <div style="font-size:12px; margin-bottom:6px;">Este es el texto del hito H2F4 de prueba. De aquí la IA lee el nombre, la promesa, el contenido y la fecha de la SDV.</div>
+      <textarea id="txt-h2f4-demo" rows="3" maxlength="1500" style="width:100%; box-sizing:border-box; font-size:12.5px;">${escaparHtml(getH2F4Demo().texto)}</textarea>
+      <div style="margin-top:6px; display:flex; gap:8px;"><button type="button" id="btn-h2f4-aplicar" class="btn btn--primary" style="font-size:11px; padding:3px 12px;">Aplicar</button><button type="button" id="btn-h2f4-cerrar" class="btn btn--ghost" style="font-size:11px; padding:3px 12px; background:#fff;">Cerrar</button></div>
+    </div>
     ${puedeReiniciarDemo ? '<button type="button" id="btn-reiniciar-demo" class="btn btn--ghost" title="Borra todo lo que el Alumno Demo hizo, en todas las secciones" style="font-size:11px; padding:3px 12px; background:#fff;">🗑️ Reiniciar demo</button>' : ''}
     <button type="button" id="btn-salir-modo-demo" class="btn btn--ghost" style="font-size:11px; padding:3px 12px; background:#fff;">🔙 Volver a mi vista</button>`;
   document.getElementById('btn-salir-modo-demo').addEventListener('click', salirModoDemo);
   const btnReiniciarDemo = document.getElementById('btn-reiniciar-demo');
   if (btnReiniciarDemo) btnReiniciarDemo.addEventListener('click', reiniciarAlumnoDemo);
+  // Simular el H2F4: se activa o se edita su texto y se vuelve a cargar la sección abierta (el Laboratorio lee el valor al abrirse).
+  const recargarSeccionDemo = () => {
+    document.dispatchEvent(new CustomEvent('demo-fase-cambio'));
+    const activo = document.querySelector('.nav-item[data-nav].is-active');
+    if (activo) activo.click();
+  };
+  const panelH2F4 = document.getElementById('panel-h2f4-demo');
+  document.getElementById('chk-h2f4-demo').addEventListener('change', ev => {
+    setH2F4Demo({ activo: ev.target.checked, texto: document.getElementById('txt-h2f4-demo').value });
+    recargarSeccionDemo();
+  });
+  document.getElementById('btn-h2f4-texto').addEventListener('click', () => { panelH2F4.style.display = panelH2F4.style.display === 'none' ? 'block' : 'none'; });
+  document.getElementById('btn-h2f4-cerrar').addEventListener('click', () => { panelH2F4.style.display = 'none'; });
+  document.getElementById('btn-h2f4-aplicar').addEventListener('click', () => {
+    setH2F4Demo({ activo: document.getElementById('chk-h2f4-demo').checked, texto: document.getElementById('txt-h2f4-demo').value });
+    panelH2F4.style.display = 'none';
+    recargarSeccionDemo();
+  });
   document.getElementById('select-fase-demo').addEventListener('change', async ev => {
     setFaseDemo(ev.target.value);
     // El Dashboard solo se carga al entrar al modo demo (ir a él no lo recarga): se vuelve a pintar siempre,

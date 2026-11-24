@@ -61,7 +61,7 @@ const GRUPOS_PROMPT = [
   { titulo: 'Encuentro: según sea orgánico o pagado', ayuda: 'Las reglas de cada tipo de contenido y la creación de ángulos.', claves: ['estrategia', 'pagado', 'angulos'] },
   { titulo: 'Encuentro: por tipo de mensaje y tipo de contenido', ayuda: 'Una instrucción para cada medio (reel, carrusel, historia, imagen, WhatsApp, DM, email), según sea orgánico o pagado. Se suma a la instrucción del formato.', claves: Object.keys(NOMBRES_PROMPT).filter(k => k.startsWith('fmt_')) }
 ];
-const ETIQUETAS_FICHA = { fase1: 'Ficha 1', fase2: 'Ficha 2', fase3: 'Ficha 3' };
+const ETIQUETAS_FICHA = { fase1: 'Ficha 1', fase2: 'Ficha 2', fase3: 'Ficha 3', fase4: 'Ficha 4 (SDV)' };
 
 let cfg = null;      // configuración efectiva en pantalla
 let porDefecto = null;
@@ -115,14 +115,14 @@ function pintar() {
         <div class="field"><label>Descripción (la ve el alumno)</label><input type="text" data-f="descripcion" value="${esc(p.descripcion)}" maxlength="300"></div>
         <label style="font-size:12.5px; font-weight:600;">Preguntas</label>
         ${p.items.map((i, n) => `
-          <div class="labcfg-fila" data-i="${n}" data-id="${esc(i.id)}">
+          <div class="labcfg-fila" data-i="${n}" data-id="${esc(i.id)}" ${i.tipo ? `data-tipo="${esc(i.tipo)}"` : ''}>
             <input type="text" data-f="pregunta" placeholder="Pregunta" value="${esc(i.pregunta)}" maxlength="300">
             <input type="text" data-f="ayuda" placeholder="Ayuda (opcional)" value="${esc(i.ayuda)}" maxlength="300">
             <span style="display:flex; gap:4px; align-items:center; white-space:nowrap;">
               <label style="font-size:12px; display:flex; gap:3px; align-items:center;"><input type="checkbox" data-f="opcional" ${i.opcional ? 'checked' : ''}> opcional</label>
               <button type="button" class="btn btn--ghost labcfg-mini" data-act="up" title="Subir">↑</button>
               <button type="button" class="btn btn--ghost labcfg-mini" data-act="down" title="Bajar">↓</button>
-              <button type="button" class="btn btn--ghost labcfg-mini" data-act="del" title="Quitar">✕</button>
+              ${i.tipo ? `<span class="text-soft" style="font-size:11px;" title="Esta pregunta se pide con selector de ${i.tipo === 'fecha' ? 'fecha' : 'hora'} y alimenta los flujos de mensajes: no se puede quitar.">${i.tipo === 'fecha' ? '📅 fecha' : '🕒 hora'}</span>` : '<button type="button" class="btn btn--ghost labcfg-mini" data-act="del" title="Quitar">✕</button>'}
             </span>
           </div>`).join('')}
         <button type="button" class="btn btn--ghost labcfg-mini" data-act="add" data-sec="${s}">+ Agregar pregunta</button>
@@ -285,6 +285,7 @@ function leer() {
     p.desdeFase = Number(bloque.querySelector('[data-f="desdeFase"]').value);
     p.items = [...bloque.querySelectorAll('.labcfg-fila[data-i]')].map(fila => ({
       id: fila.dataset.id,
+      ...(fila.dataset.tipo ? { tipo: fila.dataset.tipo } : {}),
       pregunta: fila.querySelector('[data-f="pregunta"]').value.trim(),
       ayuda: fila.querySelector('[data-f="ayuda"]').value.trim(),
       opcional: fila.querySelector('[data-f="opcional"]').checked
