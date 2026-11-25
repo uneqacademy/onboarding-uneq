@@ -1993,6 +1993,7 @@ function mostrarBannerModoDemo(programa) {
   // Reiniciar demo: solo Director y Sub-directora (el copiloto y el mentor no pueden recrear los alumnos demo).
   const puedeReiniciarDemo = !!(estadoDirectorAntesDeDemo && estadoDirectorAntesDeDemo.rol === 'director');
   banner.innerHTML = `👁️ Viendo como Alumno Demo (${ETIQUETAS_DEMO[programa]}) — esto no es un alumno real, nada de lo que hagas acá cuenta en el sistema ni lo ven los alumnos.
+    <label style="display:flex; align-items:center; gap:6px;">Programa: <select id="select-programa-demo" style="font-size:12px; padding:2px 6px;">${Object.entries(ETIQUETAS_DEMO).map(([p, et]) => `<option value="${p}"${p === programa ? ' selected' : ''}>${et}</option>`).join('')}</select></label>
     <label style="display:flex; align-items:center; gap:6px;">Fase que simula: <select id="select-fase-demo" style="font-size:12px; padding:2px 6px;">${['Inicio (sin fase)', 'Fase 1', 'Fase 2', 'Fase 3', 'Fase 4', 'Final (egresado)'].map((x, i) => `<option value="${i}"${i === getFaseDemo() ? ' selected' : ''}>${x}</option>`).join('')}</select></label>
     <label style="display:flex; align-items:center; gap:6px;" title="Simula que el Alumno Demo publicó su hito H2F4: abre Encuentro y la ficha «¡Mi SDV lista para despegar!» en el Laboratorio IA."><input type="checkbox" id="chk-h2f4-demo"${getH2F4Demo().activo ? ' checked' : ''}> Simular H2F4 publicado</label>
     <button type="button" id="btn-h2f4-texto" class="btn btn--ghost" style="font-size:11px; padding:3px 12px; background:#fff;">✏️ Texto del H2F4</button>
@@ -2023,6 +2024,17 @@ function mostrarBannerModoDemo(programa) {
     setH2F4Demo({ activo: document.getElementById('chk-h2f4-demo').checked, texto: document.getElementById('txt-h2f4-demo').value });
     panelH2F4.style.display = 'none';
     recargarSeccionDemo();
+  });
+  // Saltar de programa: se vuelve a entrar al demo con el Alumno Demo de ese programa (la fase simulada se conserva).
+  document.getElementById('select-programa-demo').addEventListener('change', async ev => {
+    const sel = ev.target;
+    sel.disabled = true;
+    try {
+      // Mientras se está mapeado a un Alumno Demo las reglas no dejan leer los otros: se suelta el vínculo y se vuelve a entrar con el nuevo.
+      const uid = auth.currentUser ? auth.currentUser.uid : null;
+      if (uid) await set(ref(db, `alumnoPorAuthUid/${uid}`), null);
+      await verComoAlumnoDemo(sel.value);
+    } catch (err) { console.error('No se pudo cambiar de programa:', err); alert('No se pudo cambiar de programa. Intenta de nuevo.'); sel.disabled = false; }
   });
   document.getElementById('select-fase-demo').addEventListener('change', async ev => {
     setFaseDemo(ev.target.value);

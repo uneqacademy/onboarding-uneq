@@ -309,48 +309,10 @@
         </div>
 
         <div class="panel">
-          <div class="panel__header">
-            <h3>Todos los alumnos</h3>
-            <div class="filters">
-              <select id="filtro-dash-director-coach"><option value="">Copiloto: Todos</option></select>
-              <select id="filtro-dash-director-programa">
-                <option value="">Programa: Todos</option>
-                <option value="open">Open</option>
-                <option value="begin">Begin</option>
-                <option value="next">Next</option>
-                <option value="exit">eXIT</option>
-              </select>
-              <select id="filtro-dash-director-estado">
-                <option value="">Estado: Todos</option>
-                <option value="activo">Activo</option>
-                <option value="egresado">Egresado</option>
-              </select>
-              <input type="text" id="filtro-dash-director-nombre" placeholder="Buscar alumno...">
-            </div>
-          </div>
-          <div class="panel__body" style="padding:0;">
-            <table class="data-table">
-              <thead>
-                <tr>
-                  <th>Alumno</th><th>Copiloto</th><th>Programa</th><th>Estado Proceso</th>
-                  <th>Estado Alumno</th><th>Onboarding</th><th class="solo-director-pleno">Próx. Cuota</th><th class="solo-director-pleno">Monto</th><th class="solo-director-pleno">Estado Pago</th>
-                </tr>
-              </thead>
-              <tbody id="tabla-alumnos-dashboard-director"></tbody>
-            </table>
-          </div>
-        </div>
-
-        <div class="panel" style="margin-top:24px;">
           <div class="panel__header"><h3>🎭 Ver como Alumno (Demo)</h3></div>
           <div class="panel__body">
-            <p class="text-soft mb-16" style="font-size:13px;">Prueba la experiencia real de un alumno sin crear datos falsos — no cuenta en ninguna estadística, y aparece marcado "(DEMO)" para que mentores y copilotos no se confundan.</p>
-            <div style="display:flex; gap:10px; flex-wrap:wrap;">
-              <button type="button" class="btn btn--accent btn-ver-demo" id="btn-ver-demo-open" data-programa="open">Ver como Alumno OPEN</button>
-              <button type="button" class="btn btn--accent btn-ver-demo" id="btn-ver-demo-begin" data-programa="begin">Ver como Alumno BEGIN</button>
-              <button type="button" class="btn btn--accent btn-ver-demo" id="btn-ver-demo-next" data-programa="next">Ver como Alumno NEXT</button>
-              <button type="button" class="btn btn--accent btn-ver-demo" id="btn-ver-demo-exit" data-programa="exit">Ver como Alumno eXIT</button>
-            </div>
+            <p class="text-soft mb-16" style="font-size:13px;">Prueba la experiencia real de un alumno sin crear datos falsos — no cuenta en ninguna estadística, y aparece marcado "(DEMO)" para que mentores y copilotos no se confundan. Entra en OPEN; dentro del modo demo puedes saltar a BEGIN, NEXT o eXIT desde la barra amarilla de arriba.</p>
+            <button type="button" class="btn btn--accent btn-ver-demo" id="btn-ver-demo-open" data-programa="open">Ver como Alumno (Demo)</button>
           </div>
         </div>
       </section>
