@@ -816,3 +816,105 @@
 .lab-idea .lab-reelcard__etiqueta { color: #54656f; }
 .lab-idea .lab-reelcard__guion { color: #111b21; background: #fff; }
 .lab-idea .lab-copiar-fila { padding: 0 12px 10px; }
+
+/* ============================================================
+   BOX INTELIGENTE (alumno): misma línea estética del Laboratorio IA
+   (nov-2026). Azules profundos, neón y vidrio oscuro. Solo presentación:
+   no cambia estructura, textos ni funcionamiento.
+   ============================================================ */
+#view-box-alumno {
+  --lab-fondo: #050a1c;
+  --lab-panel: rgba(13, 22, 52, 0.82);
+  --lab-panel-2: rgba(19, 32, 72, 0.9);
+  --lab-borde: rgba(120, 160, 255, 0.20);
+  --lab-texto: #e8eeff;
+  --lab-suave: #9fb2e0;
+  --lab-cian: #22d3ee;
+  --lab-azul: #2f76ff;
+  --lab-violeta: #b52ad0;
+  --lab-rosa: #ff4fa3;
+  --lab-glow: 0 0 0 1px rgba(120, 160, 255, 0.28), 0 0 24px rgba(47, 118, 255, 0.22);
+  position: relative;
+  isolation: isolate;
+  padding: 22px;
+  border-radius: 24px;
+  color: var(--lab-texto);
+  background:
+    radial-gradient(700px 360px at 8% -5%, rgba(47, 118, 255, 0.28), transparent 70%),
+    radial-gradient(620px 340px at 100% 8%, rgba(176, 42, 200, 0.24), transparent 70%),
+    radial-gradient(700px 400px at 50% 115%, rgba(255, 79, 163, 0.14), transparent 70%),
+    var(--lab-fondo);
+  box-shadow: 0 20px 60px rgba(5, 10, 28, 0.45);
+  overflow: hidden;
+}
+#view-box-alumno::before {
+  content: '';
+  position: absolute; inset: 0; z-index: -1;
+  background-image:
+    linear-gradient(rgba(120, 160, 255, 0.07) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(120, 160, 255, 0.07) 1px, transparent 1px);
+  background-size: 36px 36px;
+  -webkit-mask-image: linear-gradient(180deg, #000 0%, transparent 85%);
+  mask-image: linear-gradient(180deg, #000 0%, transparent 85%);
+  pointer-events: none;
+}
+#view-box-alumno .text-soft, #view-box-alumno #box-alumno-contador { color: var(--lab-suave); }
+#view-box-alumno :is(h3, h4) { color: #fff; text-shadow: 0 0 18px rgba(47, 118, 255, 0.55); }
+#view-box-alumno strong { color: #fff; }
+#view-box-alumno a { color: var(--lab-cian); }
+
+/* Paneles de vidrio con línea de neón arriba */
+#view-box-alumno .panel {
+  position: relative; overflow: hidden;
+  background: var(--lab-panel);
+  border: 1px solid var(--lab-borde);
+  border-radius: 18px;
+  box-shadow: var(--lab-glow);
+  color: var(--lab-texto);
+}
+#view-box-alumno .panel::before {
+  content: ''; position: absolute; left: 0; right: 0; top: 0; height: 2px;
+  background: linear-gradient(90deg, transparent, var(--lab-cian), var(--lab-violeta), var(--lab-rosa), transparent);
+  opacity: 0.85; pointer-events: none;
+}
+#view-box-alumno .panel__header { border-bottom: 1px solid var(--lab-borde); }
+#view-box-alumno .panel__body { color: var(--lab-texto); }
+#view-box-alumno [style*="#EFF6FF"], #view-box-alumno [style*="#F7F8FA"], #view-box-alumno [style*="#F0F1F3"] {
+  background: rgba(19, 32, 72, 0.9) !important; border-color: var(--lab-borde) !important; color: var(--lab-texto) !important;
+}
+
+/* Formularios */
+#view-box-alumno label { color: var(--lab-suave); }
+#view-box-alumno :is(input[type="text"], input[type="date"], input[type="url"], select, textarea) {
+  background: rgba(5, 10, 28, 0.75); color: var(--lab-texto);
+  border: 1px solid var(--lab-borde); border-radius: 10px;
+}
+#view-box-alumno :is(input, select, textarea):focus { outline: none; border-color: var(--lab-cian); box-shadow: 0 0 0 3px rgba(34, 211, 238, 0.18), 0 0 16px rgba(34, 211, 238, 0.25); }
+#view-box-alumno ::placeholder { color: #6f82b3; }
+#view-box-alumno select option { background: #0d1634; color: var(--lab-texto); }
+
+/* Botones */
+#view-box-alumno .btn { border-radius: 11px; font-weight: 600; transition: transform 0.14s ease, box-shadow 0.18s ease, filter 0.18s ease, background 0.18s ease; }
+#view-box-alumno .btn--primary {
+  background: linear-gradient(135deg, #2f76ff, #8e0da4); color: #fff;
+  box-shadow: 0 0 0 1px rgba(160, 190, 255, 0.35), 0 4px 16px rgba(79, 110, 255, 0.4);
+}
+#view-box-alumno .btn--primary:not(:disabled):hover { transform: translateY(-2px); filter: brightness(1.12); box-shadow: 0 0 0 1px rgba(190, 210, 255, 0.6), 0 8px 26px rgba(142, 13, 164, 0.6); }
+#view-box-alumno .btn--primary:disabled { filter: grayscale(0.6) brightness(0.7); }
+#view-box-alumno :is(.btn--ghost, .btn-detalles-mentor) {
+  background: rgba(47, 118, 255, 0.08) !important; color: #cfe0ff !important; border: 1px solid rgba(140, 175, 255, 0.4) !important;
+}
+#view-box-alumno :is(.btn--ghost, .btn-detalles-mentor):not(:disabled):hover {
+  background: rgba(47, 118, 255, 0.2) !important; border-color: var(--lab-cian) !important; box-shadow: 0 0 16px rgba(34, 211, 238, 0.35); color: #fff !important;
+}
+#view-box-alumno .btn:focus-visible { outline: 2px solid var(--lab-cian); outline-offset: 2px; }
+
+/* Tarjetas de los mentores */
+#view-box-alumno #box-alumno-mentores-grid .mentor-card-ia {
+  background: var(--lab-panel-2) !important;
+  border: 1px solid var(--lab-borde); border-radius: 16px !important;
+  box-shadow: 0 0 0 1px rgba(34, 211, 238, 0.06), 0 6px 22px rgba(5, 10, 28, 0.5);
+  transition: transform 0.16s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+}
+#view-box-alumno #box-alumno-mentores-grid .mentor-card-ia:hover { transform: translateY(-3px); border-color: rgba(34, 211, 238, 0.55); box-shadow: 0 0 22px rgba(47, 118, 255, 0.4), 0 10px 28px rgba(5, 10, 28, 0.6); }
+#view-box-alumno #box-alumno-mentores-grid .mentor-card-ia > img { border: 2px solid var(--lab-cian); box-shadow: 0 0 14px rgba(34, 211, 238, 0.45); }
