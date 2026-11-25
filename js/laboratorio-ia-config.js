@@ -24,6 +24,8 @@ const cuerpo = () => document.getElementById('labcfg-cuerpo');
 
 const NOMBRES_PROMPT = {
   sistema: ['Personalidad y reglas generales de la IA', 'Se usa en TODO: bienvenida, borrador de ficha y contenidos. Define cómo habla y qué no debe hacer.'],
+  ganchos: ['Estilo de los ganchos', 'Cómo deben ser los ganchos (la primera frase) de reels, carruseles, historias, imágenes y emails: por ejemplo, no abusar de las preguntas y mezclar premisas, deducciones, nombrar el dolor, etc.'],
+  vozApp: ['Voz de la persona: lo que compartió en la app', 'Encabezado del bloque con todo lo que la persona ha compartido en la Comunidad UNEQ (presentación, preguntas, historias, comentarios y respuestas), el BOX Inteligente y el asistente. La IA lo usa junto con los hitos, la bitácora y las fichas para afinar su voz.'],
   bienvenida: ['Frase de bienvenida', 'Cómo debe ser la frase cálida que ve el alumno arriba al entrar al Laboratorio.'],
   fichaBorrador: ['Borrador de la ficha', 'Cómo debe redactar la IA el borrador de las respuestas de la ficha a partir de los hitos y notas del copiloto.'],
   generacion: ['Generación de contenidos', 'Instrucción general al crear Reels, carruseles, DMs y WhatsApp. El objetivo de cada etapa y la estructura de cada formato se editan más arriba.'],
@@ -61,7 +63,7 @@ Object.entries(NOMBRES_FORMATO_PROMPT).forEach(([f, n]) => ['organico', 'pagado'
 }));
 // Cómo se agrupan en pantalla (de lo más general a lo más específico).
 const GRUPOS_PROMPT = [
-  { titulo: 'Instrucciones generales de la IA', ayuda: 'Valen para todas las etapas del funnel.', claves: ['sistema', 'generacion', 'formatoTexto', 'bienvenida', 'fichaBorrador', 'emoji0', 'emoji1', 'emoji2', 'emoji3', 'emoji4'] },
+  { titulo: 'Instrucciones generales de la IA', ayuda: 'Valen para todas las etapas del funnel.', claves: ['sistema', 'generacion', 'ganchos', 'vozApp', 'formatoTexto', 'bienvenida', 'fichaBorrador', 'emoji0', 'emoji1', 'emoji2', 'emoji3', 'emoji4'] },
   { titulo: 'Flujos de mensajes para el grupo', ayuda: 'Directrices técnicas de los flujos de Encuentro (antes de la SDV) y de Venta (después de la SDV). Los flujos mismos se definen más arriba.', claves: ['flujoEncuentro', 'flujoVenta'] },
   { titulo: 'Programa OPEN: Encuentro (comunidad de WhatsApp)', ayuda: 'Solo para alumnos del programa OPEN: Encuentro lleva a una comunidad gratuita de WhatsApp y no hay Venta ni flujos.', claves: ['openGeneral', 'openAngulos', 'ideasGrupo', 'ideasGrupoCerrado', 'ideasMedioTexto', 'ideasMedioVideo', 'ideasMedioAudio', 'ideasMedioVariado'] },
   { titulo: 'Venta', ayuda: 'Instrucciones de la etapa Venta.', claves: ['ventaGeneral', 'ventaAngulos'] },
