@@ -288,6 +288,38 @@ function htmlChat(p, i) {
     </article>`;
 }
 
+// Idea de contenido para el grupo de WhatsApp (programa OPEN): encuesta, pregunta abierta, video, audio o texto.
+// Se guarda en descripcion (el mensaje listo para publicar), apoyo (para qué sirve) y, en video y audio, guion.
+const NOMBRES_IDEA = { encuesta: 'Encuesta', pregunta: 'Pregunta abierta', video: 'Video', audio: 'Audio', texto: 'Texto' };
+const ICONOS_IDEA = { encuesta: '📊', pregunta: '💬', video: '🎥', audio: '🎙️', texto: '✍️' };
+
+function htmlIdea(p, i) {
+  const tipo = NOMBRES_IDEA[p.ideaTipo] ? p.ideaTipo : 'texto';
+  const hora = horaActual();
+  const lineas = String(p.descripcion || '').split('\n').map(l => l.trim()).filter(Boolean);
+  // Encuesta: la primera línea es la pregunta y cada línea siguiente es una opción.
+  const cuerpoMensaje = tipo === 'encuesta' && lineas.length > 1
+    ? `<div class="lab-burbuja lab-burbuja--encuesta"><div class="lab-encuesta__pregunta">${esc(lineas[0])}</div><div class="lab-encuesta__nota">Selecciona una opción</div>${lineas.slice(1).map(o => `<div class="lab-encuesta__opcion"><span class="lab-encuesta__circulo"></span>${esc(o)}</div>`).join('')}<span class="lab-burbuja__hora">${hora} <span class="lab-burbuja__ticks">✓✓</span></span></div>`
+    : `<div class="lab-burbuja">${esc(p.descripcion)}<span class="lab-burbuja__hora">${hora} <span class="lab-burbuja__ticks">✓✓</span></span></div>`;
+  const anuncio = tipo === 'video' ? '🎥 Video para grabar y enviar al grupo' : tipo === 'audio' ? '🎙️ Audio para grabar y enviar al grupo' : '';
+  return `
+    <article class="lab-chat lab-chat--wa lab-idea" data-pieza="${i}">
+      <div class="lab-chat__cab">
+        <span class="lab-avatar lab-avatar--chico lab-avatar--cliente">${ICONOS_IDEA[tipo]}</span>
+        <div class="lab-chat__quien"><strong>${esc(NOMBRES_IDEA[tipo])} para tu grupo</strong><span>${esc(p.apoyo || 'Idea para mantener la conexión')}</span></div>
+      </div>
+      <div class="lab-chat__cuerpo">
+        ${anuncio ? `<div class="lab-chat__contexto">${anuncio}</div>` : ''}
+        <div class="lab-chat__fila">${cuerpoMensaje}</div>
+      </div>
+      <div class="lab-copiar-fila">
+        ${botonCopiar('descripcion', i, tipo === 'encuesta' ? 'Copiar pregunta y opciones' : 'Copiar mensaje')}
+        ${p.guion ? botonCopiar('guion', i, 'Copiar guion') : ''}
+      </div>
+      ${p.guion ? `<div class="lab-reelcard__bloque"><div class="lab-reelcard__etiqueta">Lo que dices</div><div class="lab-reelcard__guion">${esc(p.guion)}</div></div>` : ''}
+    </article>`;
+}
+
 function htmlAntigua(p, i) {
   return `
     <article class="lab-pieza" data-pieza="${i}">
@@ -306,7 +338,7 @@ function htmlAntigua(p, i) {
 /* ---------------- Cada propuesta: se ve completa y se puede editar ---------------- */
 
 // Solo se pueden editar las propuestas con el formato nuevo (las antiguas, con secciones, no).
-const esEditable = (p) => !!p && ['reel', 'carrusel', 'chat', 'imagen', 'historia', 'email'].includes(p.tipo);
+const esEditable = (p) => !!p && ['reel', 'carrusel', 'chat', 'imagen', 'historia', 'email', 'idea'].includes(p.tipo);
 
 function htmlVista(p, i) {
   return p.tipo === 'carrusel' ? htmlCarrusel(p, i)
@@ -315,6 +347,7 @@ function htmlVista(p, i) {
     : p.tipo === 'imagen' ? htmlImagen(p, i)
     : p.tipo === 'reel' ? htmlReel(p, i)
     : p.tipo === 'chat' ? htmlChat(p, i)
+    : p.tipo === 'idea' ? htmlIdea(p, i)
     : htmlAntigua(p, i);
 }
 
@@ -343,7 +376,7 @@ export function htmlPiezas(piezas, nombresFormato, op) {
     : '';
   return barraFlujo + Object.keys(porFormato).map(f => `
     <div class="lab-formato">
-      <h4 class="lab-formato__titulo">${esc((nombresFormato && nombresFormato[f] && nombresFormato[f].nombre) || f)}</h4>
+      <h4 class="lab-formato__titulo">${esc((nombresFormato && nombresFormato[f] && nombresFormato[f].nombre) || (f === 'idea' ? 'Ideas para tu grupo' : f))}</h4>
       <div class="lab-formato__lista lab-formato__lista--${esc(f)}">${porFormato[f].map(({ p, i }) => htmlPieza(p, i, op)).join('')}</div>
     </div>`).join('');
 }
@@ -372,10 +405,14 @@ function htmlEdicion(p) {
   } else if (p.tipo === 'imagen') {
     campos = campoLinea('Gancho', 'titular', p.titular, 200)
       + campoLinea('Bajada', 'apoyo', p.apoyo, 300)
-      + campoLinea(p.etapaId === 'venta' ? 'Producto y promesa' : 'Título de la sesión con fecha y hora', 'sesion', p.sesion, 200)
+      + campoLinea(p.etapaId === 'venta' ? 'Producto y promesa' : p.etapaId === 'open' ? 'Invitación a la comunidad' : 'Título de la sesión con fecha y hora', 'sesion', p.sesion, 200)
       + campoLinea('CTA (texto del botón)', 'boton', p.boton, 40)
       + campoTexto('Texto del anuncio', 'anuncio', p.anuncio, 6, 2500)
       + campoTexto('Idea visual', 'ideaVisual', p.ideaVisual, 3, 500);
+  } else if (p.tipo === 'idea') {
+    campos = campoLinea('Para qué sirve', 'apoyo', p.apoyo, 300)
+      + campoTexto(p.ideaTipo === 'encuesta' ? 'Pregunta y opciones (una por línea)' : 'Mensaje para el grupo', 'descripcion', p.descripcion, 6, 1500)
+      + (p.guion !== undefined ? campoTexto('Lo que dices', 'guion', p.guion, 6, 2500) : '');
   } else if (p.tipo === 'chat') {
     campos = (p.mensajes || []).map((m, n) =>
       ((n > 0 || m.contexto) ? campoLinea('Cuándo se envía', `contexto:${n}`, m.contexto, 80) : '')
@@ -400,6 +437,7 @@ export function leerEdicion(p, form) {
   if (p.tipo === 'carrusel') return { laminas: (p.laminas || []).map((_, n) => val(`lamina:${n}`)), descripcion: val('descripcion') };
   if (p.tipo === 'historia') return { laminas: (p.laminas || []).map((_, n) => val(`lamina:${n}`)) };
   if (p.tipo === 'email') return { asunto: val('asunto'), cuerpo: val('cuerpo') };
+  if (p.tipo === 'idea') return { apoyo: val('apoyo'), descripcion: val('descripcion'), ...(p.guion !== undefined ? { guion: val('guion') } : {}) };
   if (p.tipo === 'imagen') return { titular: val('titular'), apoyo: val('apoyo'), sesion: val('sesion'), boton: val('boton'), anuncio: val('anuncio'), ideaVisual: val('ideaVisual') };
   return { mensajes: (p.mensajes || []).map((m, n) => ({ contexto: form.querySelector(`[data-campo="contexto:${n}"]`) ? val(`contexto:${n}`) : (m.contexto || ''), texto: val(`texto:${n}`) })) };
 }
@@ -411,6 +449,7 @@ export function validarEdicion(p, c) {
   if (p.tipo === 'email' && (!c.asunto || !c.cuerpo)) return 'El email necesita asunto y cuerpo.';
   if (p.tipo === 'imagen' && !c.titular && !c.anuncio) return 'Escribe el titular o el texto del anuncio.';
   if (p.tipo === 'chat' && c.mensajes.some(m => !m.texto)) return 'Ningún mensaje puede quedar vacío.';
+  if (p.tipo === 'idea' && !c.descripcion) return 'Escribe el mensaje para el grupo.';
   return '';
 }
 

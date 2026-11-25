@@ -83,7 +83,7 @@ async function cargarHistorial(alumnoId, contenedor, nombresFormato, editable) {
   if (!lista.length) { contenedor.innerHTML = '<p class="text-soft">Aún no hay contenidos generados.</p>'; return; }
   contenedor.innerHTML = lista.map((g, n) => `
     <details class="lab-historial__item lab-acordeon">
-      <summary><strong>${esc(g.etapaNombre || g.etapa || '')}${g.flujoNombre ? ` · Flujo: ${esc(g.flujoNombre)}` : ''}</strong> · ${esc(fechaLegible(g.creadoEn))} · ${(g.piezas || []).length} ${g.flujoNombre ? 'mensajes' : 'propuestas'}</summary>
+      <summary><strong>${esc(g.etapaNombre || g.etapa || '')}${g.flujoNombre ? ` · Flujo: ${esc(g.flujoNombre)}` : g.tipoContenido === 'ideas' ? ' · Ideas para tu grupo' : ''}</strong> · ${esc(fechaLegible(g.creadoEn))} · ${(g.piezas || []).length} ${g.flujoNombre ? 'mensajes' : g.tipoContenido === 'ideas' ? 'ideas' : 'propuestas'}</summary>
       <div class="lab-historial__cuerpo" data-g="${n}">${htmlPiezas(g.piezas, nombresFormato, { editable, flujo: g.flujoNombre || '' })}</div>
     </details>`).join('');
   contenedor.querySelectorAll('[data-g]').forEach(div => {
@@ -327,12 +327,117 @@ async function abrirEstrategiaVenta() {
   }
 }
 
+/* --- Estrategia de ENCUENTRO en OPEN: la comunidad gratuita de WhatsApp a la que invitas a tu audiencia --- */
+
+const resumenEstrategiaOpen = (e) => `
+  <div class="lab-estrategia__resumen">
+    <div><strong>Tu comunidad:</strong> ${esc(e.comunidad)}</div>
+    ${e.queRecibiran ? `<div><strong>Qué recibirán:</strong> ${esc(e.queRecibiran)}</div>` : ''}
+    <div><strong>Contenido:</strong> ${esc((datos.tipos || {})[e.tipo] || e.tipo)}</div>
+    ${e.tipo === 'pagado'
+      ? `<div><strong>Llegan al grupo:</strong> ${esc((datos.destinosOpenPagado || {})[e.destino] || e.destino)}</div>`
+      : `<div><strong>Palabra clave:</strong> ${esc(e.palabra)}</div>`}
+    <div><strong>Link del grupo:</strong> ${e.linkGrupo ? esc(e.linkGrupo) : '<span class="text-soft">sin link (los textos llevarán [LINK DEL GRUPO])</span>'}</div>
+    ${e.tipo === 'pagado' && e.destino === 'puente' ? `<div><strong>Página puente:</strong> ${e.linkPuente ? esc(e.linkPuente) : '<span class="text-soft">sin link (los textos llevarán [LINK DE TU PÁGINA PUENTE])</span>'}</div>` : ''}
+  </div>`;
+
+async function abrirEstrategiaOpen() {
+  const cont = document.getElementById('lab-estrategia');
+  if (!cont) return;
+  if (!alternarPanel('est-open')) return;
+  const e = datos.estrategiaOpen || null;
+  const destinos = datos.destinosOpenPagado || {};
+  cont.innerHTML = `
+    <div class="lab-estrategia" id="lab-estrategia-panel">
+      <h4>Tu estrategia de Encuentro</h4>
+      <p class="text-soft">Aquí invitas a tu audiencia a una <strong>comunidad gratuita de WhatsApp</strong>: un grupo donde se encuentran con personas como ellas y reciben contenido de valor de tu parte, una y otra vez. Define tu comunidad y cómo llegan a ella. Puedes cambiarlo cuando quieras.</p>
+      <p class="lab-estrategia__estado text-soft ${e ? 'hidden' : ''}" id="lab-open-estado"><span class="lab-spinner"></span> Leyendo lo que compartiste para proponerte el nombre de tu comunidad y una palabra clave…</p>
+      <label class="lab-estrategia__campo"><span>Nombre de tu comunidad</span>
+        <input type="text" id="lab-open-comunidad" maxlength="100" value="${esc(e ? e.comunidad : '')}" placeholder="Ej: Mamás Tranquilas">
+        <small class="text-soft">Con este nombre invitarás a las personas. Puedes cambiar lo que te propone la IA.</small></label>
+      <label class="lab-estrategia__campo"><span>¿Qué recibirán las personas al sumarse?</span>
+        <textarea id="lab-open-recibiran" rows="3" maxlength="400" placeholder="Ej: Tips semanales, respuestas a tus dudas e invitaciones a actividades">${esc(e ? e.queRecibiran : '')}</textarea>
+        <small class="text-soft">Es la razón para sumarse: contenido de valor, gratis y recurrente.</small></label>
+      <fieldset class="lab-estrategia__campo"><legend>¿Tu contenido es orgánico o pagado?</legend>
+        ${Object.entries(datos.tipos).map(([k, n]) => `<label class="lab-estrategia__opcion"><input type="radio" name="lab-open-tipo" value="${esc(k)}" ${e && e.tipo === k ? 'checked' : ''}> ${esc(n)}</label>`).join('')}
+      </fieldset>
+      <fieldset class="lab-estrategia__campo" id="lab-open-destinos">
+        <legend>¿Cómo llegan las personas al grupo?</legend>
+        ${Object.entries(destinos).map(([k, n]) => `<label class="lab-estrategia__opcion"><input type="radio" name="lab-open-destino" value="${esc(k)}" ${(e ? e.destino : 'grupo') === k ? 'checked' : ''}> ${esc(n)}</label>`).join('')}
+      </fieldset>
+      <label class="lab-estrategia__campo" id="lab-open-palabra-caja"><span>Palabra clave para comentar</span>
+        <input type="text" id="lab-open-palabra" maxlength="30" value="${esc(e ? e.palabra : '')}" placeholder="Ej: COMUNIDAD">
+        <small class="text-soft">Quien comente esta palabra en tus reels y carruseles recibirá por DM la invitación a tu grupo. Es una sola para toda tu estrategia.</small></label>
+      <label class="lab-estrategia__campo"><span>Link de tu grupo de WhatsApp</span>
+        <input type="url" id="lab-open-grupo" maxlength="500" value="${esc(e ? e.linkGrupo : '')}" placeholder="https://chat.whatsapp.com/…">
+        <small class="text-soft">Opcional. Si lo dejas vacío, los textos llevarán [LINK DEL GRUPO] para que lo completes.</small></label>
+      <label class="lab-estrategia__campo" id="lab-open-puente-caja"><span>Link de tu página puente</span>
+        <input type="url" id="lab-open-puente" maxlength="500" value="${esc(e ? e.linkPuente : '')}" placeholder="https://…">
+        <small class="text-soft">Opcional. La página puente explica tu comunidad y desde ahí se entra al grupo.</small></label>
+      <p class="lab-error hidden" id="lab-open-error"></p>
+      <div class="lab-acciones-pieza">
+        <button type="button" class="btn btn--primary" id="lab-open-guardar">Guardar estrategia</button>
+        <button type="button" class="btn btn--ghost" id="lab-open-cancelar">Cancelar</button>
+      </div>
+    </div>`;
+  cont.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  const q = (id) => document.getElementById(id);
+  const tipoActual = () => (cont.querySelector('input[name="lab-open-tipo"]:checked') || {}).value || '';
+  const destinoActual = () => (cont.querySelector('input[name="lab-open-destino"]:checked') || {}).value || 'grupo';
+  const actualizarCampos = () => {
+    const pagado = tipoActual() === 'pagado';
+    q('lab-open-destinos').classList.toggle('hidden', !pagado);
+    q('lab-open-palabra-caja').classList.toggle('hidden', pagado);
+    q('lab-open-puente-caja').classList.toggle('hidden', !(pagado && destinoActual() === 'puente'));
+  };
+  cont.querySelectorAll('input[name="lab-open-tipo"], input[name="lab-open-destino"]').forEach(r => r.addEventListener('change', actualizarCampos));
+  actualizarCampos();
+  q('lab-open-cancelar').addEventListener('click', cerrarPaneles);
+  q('lab-open-guardar').addEventListener('click', async () => {
+    const err = q('lab-open-error');
+    err.classList.add('hidden');
+    const btn = q('lab-open-guardar');
+    btn.disabled = true;
+    btn.textContent = 'Guardando…';
+    try {
+      const pagado = tipoActual() === 'pagado';
+      const r = await estrategiaServidor(conFase({ accion: 'guardar', tipo: tipoActual(), destino: pagado ? destinoActual() : 'grupo', palabra: q('lab-open-palabra').value, comunidad: q('lab-open-comunidad').value, queRecibiran: q('lab-open-recibiran').value, linkGrupo: q('lab-open-grupo').value, linkPuente: q('lab-open-puente').value }));
+      datos.estrategiaOpen = r.data.estrategia;
+      pintarAlumno();
+    } catch (ex) {
+      err.textContent = mensajeError(ex, 'No se pudo guardar tu estrategia. Intenta de nuevo.');
+      err.classList.remove('hidden');
+      btn.disabled = false;
+      btn.textContent = 'Guardar estrategia';
+    }
+  });
+  // Primera vez: la IA propone la palabra clave, el nombre de la comunidad y qué recibirán. Solo rellena lo que siga vacío.
+  if (!e) {
+    try {
+      const r = await estrategiaServidor(conFase({ accion: 'proponer' }));
+      if (q('lab-open-palabra') && !q('lab-open-palabra').value.trim() && r.data.palabra) q('lab-open-palabra').value = r.data.palabra;
+      if (q('lab-open-comunidad') && !q('lab-open-comunidad').value.trim() && r.data.comunidad) q('lab-open-comunidad').value = r.data.comunidad;
+      if (q('lab-open-recibiran') && !q('lab-open-recibiran').value.trim() && r.data.queRecibiran) q('lab-open-recibiran').value = r.data.queRecibiran;
+    } catch (ex) { /* la propuesta es un extra: puede completarlo a mano */ }
+    const est = document.getElementById('lab-open-estado');
+    if (est) est.classList.add('hidden');
+  }
+}
+
 // Botones de cada tarjeta de etapa cuando está abierta. Siempre en el mismo orden: primero los secundarios
 // (editar estrategia, flujo de mensajes) y al final el principal, así queda a la misma altura en todas las tarjetas.
 function botonesEtapa(id, e) {
   const etapaFlujo = id === 'venta' ? 'venta' : 'encuentro';
   const hayFlujos = (datos.flujos || []).some(f => f.etapa === etapaFlujo);
   const btnFlujo = hayFlujos ? `<button type="button" class="btn btn--ghost" data-flujo="${etapaFlujo}">Flujo de mensajes para tu grupo</button>` : '';
+  if (datos.programa === 'open' && id === 'encuentro') {   // Encuentro en OPEN: la comunidad gratuita de WhatsApp
+    const o = datos.estrategiaOpen;
+    if (!o) return `<div class="lab-etapa__acciones"><p class="lab-etapa__estado">Primero define tu estrategia.</p><button type="button" class="btn btn--primary" data-estrategia-open>Definir mi estrategia</button></div>`;
+    const btnIdeas = (datos.ideas || []).length ? '<button type="button" class="btn btn--ghost" data-ideas-open data-generar-pagado>Ideas para tu grupo</button>' : '';
+    return `${resumenEstrategiaOpen(o)}<div class="lab-etapa__acciones"><button type="button" class="btn btn--ghost" data-estrategia-open>Editar estrategia</button>${btnIdeas}${o.tipo === 'pagado'
+      ? '<button type="button" class="btn btn--primary" data-pagado>Mis ángulos y contenidos</button>'
+      : '<button type="button" class="btn btn--primary" data-organico>Elegir y generar contenidos</button>'}</div>`;
+  }
   if (e.hitoActivador) {   // Encuentro
     if (!datos.estrategia) return `<div class="lab-etapa__acciones"><p class="lab-etapa__estado">Primero define tu estrategia.</p>${btnFlujo}<button type="button" class="btn btn--primary" data-estrategia>Definir mi estrategia</button></div>`;
     return `${resumenEstrategia(datos.estrategia)}<div class="lab-etapa__acciones"><button type="button" class="btn btn--ghost" data-estrategia>Editar estrategia</button>${btnFlujo}${datos.estrategia.tipo === 'pagado'
@@ -513,6 +618,7 @@ function recetasDisponibles(tipo) {
   return Object.entries(datos.recetas || {}).filter(([, r]) => {
     if (r.tipo !== tipo) return false;
     if (etapaPanel === 'venta') return r.etapa === 'venta' && datos.estrategiaVenta && r.destino === datos.estrategiaVenta.destino;
+    if (datos.programa === 'open') return r.etapa === 'open';   // en OPEN, Encuentro tiene sus propias opciones
     return (r.etapa || 'encuentro') === 'encuentro';
   });
 }
@@ -530,7 +636,9 @@ async function abrirPagado(etapa) {
       <h4>${esVenta ? 'Contenido pagado de Venta: tus ángulos' : 'Contenido pagado: tus ángulos'}</h4>
       <p class="text-soft">${esVenta
         ? 'Un ángulo es un enfoque para vender tu producto: una forma distinta de mostrar su promesa y su valor a tu Cliente Soñado. La IA los crea de a 3 a partir de tu producto, y se numeran seguidos. Son distintos de los de Encuentro. Revísalos, edítalos o bórralos, y aprueba los que quieras usar.'
-        : 'Un ángulo es un enfoque comunicacional para conectar con tu Cliente Soñado. La IA los crea de a 3 con lo que compartiste sobre él, y se numeran seguidos. Revísalos, edítalos o bórralos, y aprueba los que quieras usar.'}</p>
+        : datos.programa === 'open'
+          ? 'Un ángulo es un enfoque para que quieran sumarse a tu comunidad de WhatsApp: una forma distinta de mostrar el valor de pertenecer a ella. La IA los crea de a 3 con lo que compartiste sobre tu Cliente Soñado, y se numeran seguidos. Revísalos, edítalos o bórralos, y aprueba los que quieras usar.'
+          : 'Un ángulo es un enfoque comunicacional para conectar con tu Cliente Soñado. La IA los crea de a 3 con lo que compartiste sobre él, y se numeran seguidos. Revísalos, edítalos o bórralos, y aprueba los que quieras usar.'}</p>
       <div id="lab-angulos-lista"><p class="text-soft"><span class="lab-spinner"></span> Cargando tus ángulos…</p></div>
       <p class="lab-error hidden" id="lab-ang-error"></p>
       <div class="lab-acciones-pieza"><button type="button" class="btn btn--primary" id="lab-ang-generar">Crear 3 ángulos nuevos</button>${BOTON_CERRAR_PANEL}</div>
@@ -607,7 +715,9 @@ function abrirOrganico(etapa) {
       <h4>${esVenta ? 'Contenido orgánico de Venta: ¿qué quieres crear?' : 'Contenido orgánico: ¿qué quieres crear?'}</h4>
       <p class="text-soft">${esVenta
         ? 'Elige una opción. Todos los contenidos venden tu producto (su nombre y su promesa salen de tu ficha) y llevan a las personas al destino que elegiste.'
-        : 'Elige una opción. Todos los contenidos usan tu estrategia: tu técnica, tu palabra clave, tu link y la fecha de tu SDV.'}</p>
+        : datos.programa === 'open'
+          ? 'Elige una opción. Todos los contenidos invitan a sumarse a tu comunidad gratuita de WhatsApp y usan tu estrategia: el nombre de tu comunidad, tu palabra clave y el link de tu grupo.'
+          : 'Elige una opción. Todos los contenidos usan tu estrategia: tu técnica, tu palabra clave, tu link y la fecha de tu SDV.'}</p>
       ${recetas.map(([id, r]) => `<label class="lab-estrategia__opcion"><input type="radio" name="lab-receta-org" value="${esc(id)}" ${id === recetaOrganicaElegida ? 'checked' : ''}> <span><strong>${esc(r.nombre)}</strong>${r.descripcion ? `<br><span class="text-soft">${esc(r.descripcion)}</span>` : ''}</span></label>`).join('') || '<p class="text-soft">No hay opciones activas por ahora.</p>'}
       <div id="lab-org-wsp" class="hidden">
         <h5>¿Tu WhatsApp es para grupos o es un mensaje privado?</h5>
@@ -963,7 +1073,7 @@ async function generarEtapa(etapaId, btn, extra) {
     if (contador) contador.textContent = `Generaciones de hoy: ${datos.usosHoy}/${datos.limiteDia}`;
     resultado.innerHTML = `
       <details class="lab-historial__item lab-acordeon lab-acordeon--nuevo" open>
-        <summary><strong>${esc(g.etapaNombre)}${g.flujoNombre ? ` · Flujo: ${esc(g.flujoNombre)}` : ': tus propuestas'}</strong><span class="lab-acordeon__nuevo">Nuevo</span></summary>
+        <summary><strong>${esc(g.etapaNombre)}${g.flujoNombre ? ` · Flujo: ${esc(g.flujoNombre)}` : g.tipoContenido === 'ideas' ? ': ideas para tu grupo' : ': tus propuestas'}</strong><span class="lab-acordeon__nuevo">Nuevo</span></summary>
         <div class="lab-historial__cuerpo">
           <p class="lab-acordeon__sub">Edítalas con tu estilo o llévalas a tus mentores para pulirlas.</p>
           ${g.incompleta ? '<p class="lab-aviso">Uno de los formatos no se pudo generar esta vez. Puedes volver a intentarlo.</p>' : ''}
@@ -995,6 +1105,8 @@ function conectarAlumno(el) {
   el.querySelectorAll('[data-pagado]').forEach(b => b.addEventListener('click', () => abrirPagado()));
   el.querySelectorAll('[data-organico]').forEach(b => b.addEventListener('click', () => abrirOrganico('encuentro')));
   el.querySelectorAll('[data-flujo]').forEach(b => b.addEventListener('click', () => iniciarFlujo(b.dataset.flujo, b)));
+  el.querySelectorAll('[data-estrategia-open]').forEach(b => b.addEventListener('click', () => abrirEstrategiaOpen()));
+  el.querySelectorAll('[data-ideas-open]').forEach(b => b.addEventListener('click', () => { cerrarPaneles(); generarEtapa('encuentro', b, { ideas: true }); }));
   el.querySelectorAll('[data-estrategia-venta]').forEach(b => b.addEventListener('click', () => abrirEstrategiaVenta()));
   el.querySelectorAll('[data-pagado-venta]').forEach(b => b.addEventListener('click', () => abrirPagado('venta')));
   el.querySelectorAll('[data-organico-venta]').forEach(b => b.addEventListener('click', () => abrirOrganico('venta')));
@@ -1029,7 +1141,7 @@ async function cargarComoAlumno() {
    ============================================================ */
 
 let listaStaff = [];
-const FORMATOS_STAFF = { reel: { nombre: 'Reels' }, carrusel: { nombre: 'Carruseles' }, dm: { nombre: 'DMs' }, whatsapp: { nombre: 'WhatsApp' }, imagen: { nombre: 'Imágenes estáticas' }, historia: { nombre: 'Historias' }, email: { nombre: 'Emails' } };
+const FORMATOS_STAFF = { reel: { nombre: 'Reels' }, carrusel: { nombre: 'Carruseles' }, dm: { nombre: 'DMs' }, whatsapp: { nombre: 'WhatsApp' }, imagen: { nombre: 'Imágenes estáticas' }, historia: { nombre: 'Historias' }, email: { nombre: 'Emails' }, idea: { nombre: 'Ideas para el grupo' } };
 
 function faseDe(ciclo) {
   if (!ciclo) return 0;

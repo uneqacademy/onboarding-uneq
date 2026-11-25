@@ -36,6 +36,9 @@ const NOMBRES_PROMPT = {
   emoji2: ['Nivel de emojis: «Algunos»', 'Instrucción cuando la barra está en el medio (es la posición inicial).'],
   emoji3: ['Nivel de emojis: «Bastantes»', 'Instrucción cuando la barra está en la cuarta posición.'],
   emoji4: ['Nivel de emojis: «Todos los que quieras»', 'Instrucción cuando la barra está en el extremo derecho.'],
+  openGeneral: ['OPEN · Encuentro: reglas para todo contenido', 'Se suma a TODO lo que se genere en Encuentro del programa OPEN, sea orgánico o pagado: la invitación a la comunidad gratuita de WhatsApp. Admite {palabra}, {grupo} y {puente}. Los llamados a la acción (comentar la palabra, link directo, botón del anuncio) los arma la app según lo que eligió el alumno.'],
+  openAngulos: ['OPEN · cómo crear los ángulos (contenido pagado)', 'Cómo debe pensar la IA los ángulos de OPEN: enfoques para que las personas quieran sumarse a la comunidad de WhatsApp.'],
+  ideasGrupo: ['OPEN · ideas para el grupo: directrices técnicas', 'Directrices que se suman a cada tipo de idea (encuestas, preguntas abiertas, videos, audios y textos) que se crean para mantener la conexión y la interacción en el grupo. Cuántas se crean de cada tipo y cómo se escriben se define más arriba. Admite {palabra}, {grupo} y {puente}.'],
   flujoEncuentro: ['Flujos de Encuentro: directrices técnicas', 'Directrices técnicas y objetivos de los flujos de mensajes para el grupo ANTES de la SDV (conectar, recordar fecha y hora, aumentar la asistencia en vivo). Se suman a las directrices de cada flujo y a lo que defines en cada mensaje.'],
   flujoVenta: ['Flujos de Venta: directrices técnicas', 'Directrices técnicas y objetivos de los flujos de mensajes para el grupo DESPUÉS de la SDV (comunicar la oferta que se creó en vivo). Se suman a las directrices de cada flujo y a lo que defines en cada mensaje.'],
   ventaGeneral: ['Venta: reglas para todo contenido', 'Se suma a TODO lo que se genere en Venta, sea orgánico o pagado: cómo usar el nombre, la promesa y el precio del producto. Admite {palabra}, {link} y {wa}. Los llamados a la acción por destino (DM, WhatsApp, página de venta) los arma la app.'],
@@ -55,6 +58,7 @@ Object.entries(NOMBRES_FORMATO_PROMPT).forEach(([f, n]) => ['organico', 'pagado'
 const GRUPOS_PROMPT = [
   { titulo: 'Instrucciones generales de la IA', ayuda: 'Valen para todas las etapas del funnel.', claves: ['sistema', 'generacion', 'formatoTexto', 'bienvenida', 'fichaBorrador', 'emoji0', 'emoji1', 'emoji2', 'emoji3', 'emoji4'] },
   { titulo: 'Flujos de mensajes para el grupo', ayuda: 'Directrices técnicas de los flujos de Encuentro (antes de la SDV) y de Venta (después de la SDV). Los flujos mismos se definen más arriba.', claves: ['flujoEncuentro', 'flujoVenta'] },
+  { titulo: 'Programa OPEN: Encuentro (comunidad de WhatsApp)', ayuda: 'Solo para alumnos del programa OPEN: Encuentro lleva a una comunidad gratuita de WhatsApp y no hay Venta ni flujos.', claves: ['openGeneral', 'openAngulos', 'ideasGrupo'] },
   { titulo: 'Venta', ayuda: 'Instrucciones de la etapa Venta.', claves: ['ventaGeneral', 'ventaAngulos'] },
   { titulo: 'Encuentro: para todo contenido', ayuda: 'Se suma a todo lo que se genere en Encuentro.', claves: ['encuentroGeneral'] },
   { titulo: 'Encuentro: según la técnica de la SDV', ayuda: 'Se suma según la técnica que eligió el alumno.', claves: ['tecnica_web', 'tecnica_puente', 'tecnica_directo'] },
@@ -81,7 +85,7 @@ const HORA_FLUJO_OK = /^(\d{1,2}:\d{2}|[+-]\d{1,3}[hm])$/i;
 const NOMBRES_DESTINO_REC = { dm: 'conversación por DM', whatsapp: 'WhatsApp', pagina: 'página de venta' };
 // Texto de grupo de una receta: «Encuentro · orgánico», «Venta · orgánico · WhatsApp», «Venta · pagado · página de venta».
 function etiquetaGrupoReceta(r) {
-  const etapa = r.etapa === 'venta' ? 'Venta' : 'Encuentro';
+  const etapa = r.etapa === 'venta' ? 'Venta' : r.etapa === 'open' ? 'OPEN · Encuentro (comunidad)' : 'Encuentro';
   return [etapa, r.tipo === 'pagado' ? 'pagado' : 'orgánico', r.destino ? NOMBRES_DESTINO_REC[r.destino] || r.destino : ''].filter(Boolean).join(' · ');
 }
 
@@ -202,7 +206,19 @@ function pintar() {
       <button type="button" class="btn btn--ghost labcfg-mini" data-act="fl-nuevo" data-etapa="venta">+ Nuevo flujo de Venta (después de la SDV)</button>
     </div>
 
-    <div class="labcfg-sub">Opciones de generación de Encuentro y Venta (qué se genera según el contenido que elige el alumno)</div>
+    <div class="labcfg-sub">Programa OPEN: ideas de contenido para el grupo de WhatsApp</div>
+    <p class="text-soft" style="font-size:12.5px; margin:0 0 8px;">En OPEN, el alumno tiene un botón «Ideas para tu grupo» que crea ideas para mantener la conexión y la interacción de su comunidad. Aquí defines cuántas ideas de cada tipo se crean por clic (0 apaga ese tipo) y cómo debe escribirlas la IA. Admiten {palabra}, {grupo} y {puente}.</p>
+    ${Object.entries(cfg.ideas || {}).map(([id, i]) => `
+      <div class="labcfg-bloque" data-id-idea="${esc(id)}">
+        <div class="labcfg-fila">
+          <div class="field" style="margin:0;"><label>Nombre</label><input type="text" data-f="nombre" value="${esc(i.nombre)}" maxlength="40"></div>
+          <div class="field" style="margin:0;"><label>Ideas por clic (0 a 6)</label><input type="number" min="0" max="6" data-f="cantidad" value="${esc(i.cantidad)}"></div>
+          <span></span>
+        </div>
+        <div class="field"><label>Cómo debe escribirlas la IA</label><textarea data-f="instruccion" rows="3" maxlength="800">${esc(i.instruccion)}</textarea></div>
+      </div>`).join('')}
+
+    <div class="labcfg-sub">Opciones de generación de Encuentro, Venta y OPEN (qué se genera según el contenido que elige el alumno)</div>
     ${Object.entries(cfg.recetas || {}).map(([id, r], idx, todas) => `
       ${(idx === 0 || etiquetaGrupoReceta(todas[idx - 1][1]) !== etiquetaGrupoReceta(r)) ? `<div class="labcfg-sub" style="font-size:13.5px;">${esc(etiquetaGrupoReceta(r))}</div>` : ''}
       <div class="labcfg-bloque" data-re="${id}">
@@ -234,13 +250,15 @@ function pintar() {
     <div class="labcfg-bloque">
       <p class="text-soft" style="font-size:12.5px; margin:0 0 8px;">Elige una situación y mira EXACTAMENTE el texto que recibe la IA, armado con todas tus instrucciones (con datos de ejemplo de una persona). Sirve para comprobar que tu explicación llegó bien. Muestra lo que ya está guardado: si cambiaste algo, pulsa antes «Guardar cambios».</p>
       <div class="labcfg-fila">
+        <div class="field" style="margin:0;"><label>Programa</label><select id="labcfg-vp-programa"><option value="">BEGIN, Next y eXIT</option><option value="open">OPEN</option></select></div>
         <div class="field" style="margin:0;"><label>Etapa</label><select id="labcfg-vp-etapa">${base.etapas.map(id => `<option value="${id}" ${id === 'encuentro' ? 'selected' : ''}>${esc(cfg.etapas[id].nombre)}</option>`).join('')}</select></div>
         <div class="field" style="margin:0;"><label>Tipo de mensaje</label><select id="labcfg-vp-formato">${base.formatos.map(f => `<option value="${f}">${esc(cfg.formatos[f].nombre)}</option>`).join('')}</select></div>
         <span></span>
       </div>
       <div class="labcfg-fila" style="margin-top:8px;">
         <div class="field" style="margin:0;"><label>Contenido (solo Encuentro)</label><select id="labcfg-vp-tipo"><option value="organico">Orgánico</option><option value="pagado">Pagado</option></select></div>
-        <div class="field" style="margin:0;"><label>Técnica (solo Encuentro)</label><select id="labcfg-vp-tecnica"><option value="web">SDV con Registro WEB y luego a Grupo</option><option value="puente">SDV con Página Puente y luego a Grupo</option><option value="directo">SDV Directo a Grupo</option></select></div>
+        <div class="field" style="margin:0;"><label>Técnica (solo Encuentro, sin OPEN)</label><select id="labcfg-vp-tecnica"><option value="web">SDV con Registro WEB y luego a Grupo</option><option value="puente">SDV con Página Puente y luego a Grupo</option><option value="directo">SDV Directo a Grupo</option></select></div>
+        <div class="field" style="margin:0;"><label>Cómo llegan al grupo (solo OPEN pagado)</label><select id="labcfg-vp-destino"><option value="grupo">Directo al grupo</option><option value="puente">A través de una página puente</option></select></div>
         <span></span>
       </div>
       <button type="button" class="btn btn--ghost labcfg-mini" id="labcfg-vp-ver" style="margin-top:8px;">Ver la instrucción completa</button>
@@ -308,6 +326,14 @@ function leer() {
     f.estructura = bloque.querySelector('[data-f="estructura"]').value.trim();
     f.instruccion = bloque.querySelector('[data-f="instruccion"]').value.trim();
   });
+  el.querySelectorAll('[data-id-idea]').forEach(bloque => {
+    const i = (cfg.ideas || {})[bloque.dataset.idIdea];
+    if (!i) return;
+    i.nombre = bloque.querySelector('[data-f="nombre"]').value.trim();
+    const c = Math.round(Number(bloque.querySelector('[data-f="cantidad"]').value));
+    i.cantidad = Number.isFinite(c) ? c : i.cantidad;
+    i.instruccion = bloque.querySelector('[data-f="instruccion"]').value.trim();
+  });
   el.querySelectorAll('[data-re]').forEach(bloque => {
     if (!bloque.matches('.labcfg-bloque')) return;
     const r = (cfg.recetas || {})[bloque.dataset.re];
@@ -373,6 +399,10 @@ function validar() {
     const f = cfg.formatos[id];
     if (!f.nombre || !f.estructura) return 'Cada formato necesita nombre y estructura.';
     if (!(f.cantidad >= 1 && f.cantidad <= 6)) return `Las propuestas de «${f.nombre}» deben ser entre 1 y 6.`;
+  }
+  for (const i of Object.values(cfg.ideas || {})) {
+    if (!i.nombre) return 'Cada tipo de idea para el grupo necesita un nombre.';
+    if (!(i.cantidad >= 0 && i.cantidad <= 6)) return `Las ideas de «${i.nombre}» deben ser entre 0 y 6.`;
   }
   for (const r of Object.values(cfg.recetas || {})) {
     if (!r.nombre) return 'Cada receta necesita un nombre.';
@@ -494,6 +524,7 @@ function conectarBotones() {
         formatos: cfg.formatos,
         recetas: cfg.recetas || {},
         flujos: cfg.flujos || {},
+        ideas: cfg.ideas || {},
         flujosGuardados: true
       };
       const prompts = {};
@@ -513,6 +544,17 @@ function conectarBotones() {
     }
   });
 
+  // Programa OPEN: el selector de tipo de mensaje suma las ideas para el grupo (y se fuerza la etapa Encuentro).
+  const selPrograma = document.getElementById('labcfg-vp-programa');
+  if (selPrograma) selPrograma.addEventListener('change', () => {
+    const sf = document.getElementById('labcfg-vp-formato');
+    sf.querySelectorAll('option[data-idea]').forEach(o => o.remove());
+    if (selPrograma.value === 'open') {
+      Object.entries(cfg.ideas || {}).forEach(([id, i]) => sf.insertAdjacentHTML('beforeend', `<option value="idea:${esc(id)}" data-idea="1">Idea para el grupo: ${esc(i.nombre)}</option>`));
+      document.getElementById('labcfg-vp-etapa').value = 'encuentro';
+    }
+  });
+
   // Ver la instrucción completa que recibe la IA en una situación (lo ya guardado).
   const verPrompt = document.getElementById('labcfg-vp-ver');
   if (verPrompt) verPrompt.addEventListener('click', async () => {
@@ -524,7 +566,7 @@ function conectarBotones() {
     verPrompt.disabled = true;
     try {
       const q = (id) => document.getElementById(id).value;
-      const r = await pedirConfig({ vistaPrompt: { etapa: q('labcfg-vp-etapa'), formato: q('labcfg-vp-formato'), tipo: q('labcfg-vp-tipo'), tecnica: q('labcfg-vp-tecnica') } });
+      const r = await pedirConfig({ vistaPrompt: { programa: q('labcfg-vp-programa'), etapa: q('labcfg-vp-etapa'), formato: q('labcfg-vp-formato'), tipo: q('labcfg-vp-tipo'), tecnica: q('labcfg-vp-tecnica'), destino: q('labcfg-vp-destino') } });
       const v = r.data.vistaPrompt;
       salida.value = `=== INSTRUCCIÓN GENERAL (sistema) ===\n${v.sistema}\n\n=== PEDIDO PARA ESTA SITUACIÓN ===\n${v.pedido}`;
       salida.classList.remove('hidden');
