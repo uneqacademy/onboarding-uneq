@@ -1069,6 +1069,13 @@ function pintarAvatarTopbarAlumno(alumno) {
 const avatarTopbarAlumnoEl = document.getElementById('topbar-avatar-alumno');
 // Se "toca" el ítem del menú (no solo setNav) para que corran los cargadores de la ficha y del acuerdo.
 if (avatarTopbarAlumnoEl) avatarTopbarAlumnoEl.addEventListener('click', () => document.querySelector('.nav-item[data-nav="ficha-alumno-propia"]')?.click());
+// La foto grande sobre el menú también abre «Mi Ficha Personal» (esa opción ya no está en el menú).
+const fotoMenuAlumnoEl = document.getElementById('sidebar-foto-alumno');
+if (fotoMenuAlumnoEl) {
+  const abrirFicha = () => document.querySelector('.nav-item[data-nav="ficha-alumno-propia"]')?.click();
+  fotoMenuAlumnoEl.addEventListener('click', abrirFicha);
+  fotoMenuAlumnoEl.addEventListener('keydown', (ev) => { if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); abrirFicha(); } });
+}
 
 function renderRespuestaBox(respuesta, estadoIA) {
   if (!respuesta) {
