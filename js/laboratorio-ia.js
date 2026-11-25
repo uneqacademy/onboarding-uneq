@@ -433,7 +433,7 @@ function botonesEtapa(id, e) {
   if (datos.programa === 'open' && id === 'encuentro') {   // Encuentro en OPEN: la comunidad gratuita de WhatsApp
     const o = datos.estrategiaOpen;
     if (!o) return `<div class="lab-etapa__acciones"><p class="lab-etapa__estado">Primero define tu estrategia.</p><button type="button" class="btn btn--primary" data-estrategia-open>Definir mi estrategia</button></div>`;
-    const btnIdeas = (datos.ideas || []).length ? '<button type="button" class="btn btn--ghost" data-ideas-open data-generar-pagado>Ideas para tu grupo</button>' : '';
+    const btnIdeas = (datos.ideas || []).length ? '<button type="button" class="btn btn--ghost" data-ideas-open>Ideas para tu grupo</button>' : '';
     return `${resumenEstrategiaOpen(o)}<div class="lab-etapa__acciones"><button type="button" class="btn btn--ghost" data-estrategia-open>Editar estrategia</button>${btnIdeas}${o.tipo === 'pagado'
       ? '<button type="button" class="btn btn--primary" data-pagado>Mis ángulos y contenidos</button>'
       : '<button type="button" class="btn btn--primary" data-organico>Elegir y generar contenidos</button>'}</div>`;
@@ -744,6 +744,46 @@ function abrirOrganico(etapa) {
     if (!r) return;
     if (r.preguntaWsp && !wspElegido) { err.textContent = 'Elige si tu WhatsApp es para grupos o es un mensaje privado.'; err.classList.remove('hidden'); return; }
     generarEtapa(etapaPanel, ev.currentTarget, { receta: recetaOrganicaElegida, wsp: r.preguntaWsp ? wspElegido : '' });
+  });
+}
+
+/* --- Ideas para tu grupo (OPEN): se elige el tipo de idea y, salvo en encuestas, el formato --- */
+
+let ideaTipoElegida = 'mezclado';
+let ideaMedioElegido = 'variado';
+
+function abrirIdeas() {
+  const cont = document.getElementById('lab-pagado');
+  if (!cont) return;
+  if (!alternarPanel('ideas-open')) return;
+  const tipos = datos.ideas || [];
+  const medios = datos.mediosIdeas || { texto: 'Textos', video: 'Videos', audio: 'Audios', variado: 'Formatos variados' };
+  if (ideaTipoElegida !== 'mezclado' && !tipos.some(t => t.id === ideaTipoElegida)) ideaTipoElegida = 'mezclado';
+  cont.innerHTML = `
+    <div class="lab-estrategia lab-pagado">
+      <h4>Ideas para tu grupo</h4>
+      <p class="text-soft">Ideas para compartir en tu comunidad de WhatsApp y mantener la conexión y la interacción. Elige qué quieres crear.</p>
+      <h5>¿Qué ideas quieres?</h5>
+      <label class="lab-estrategia__opcion"><input type="radio" name="lab-idea-tipo" value="mezclado" ${ideaTipoElegida === 'mezclado' ? 'checked' : ''}> <span><strong>Mezclado</strong> <span class="text-soft">· 1 de cada tipo (${esc(tipos.length)} ideas)</span></span></label>
+      ${tipos.map(t => `<label class="lab-estrategia__opcion"><input type="radio" name="lab-idea-tipo" value="${esc(t.id)}" ${ideaTipoElegida === t.id ? 'checked' : ''}> <span><strong>${esc(t.nombre)}</strong> <span class="text-soft">· ${esc(t.cantidad)} ${t.cantidad === 1 ? 'idea' : 'ideas'}</span></span></label>`).join('')}
+      <div id="lab-idea-medio-caja">
+        <h5>¿En qué formato?</h5>
+        ${Object.entries(medios).map(([k, n]) => `<label class="lab-estrategia__opcion"><input type="radio" name="lab-idea-medio" value="${esc(k)}" ${ideaMedioElegido === k ? 'checked' : ''}> ${esc(n)}</label>`).join('')}
+        <p class="text-soft lab-pagado__nota">Los videos y los audios traen el guion y un texto corto que los acompaña. Las encuestas siempre son encuestas.</p>
+      </div>
+      <div class="lab-acciones-pieza"><button type="button" class="btn btn--primary" id="lab-ideas-generar" data-generar-pagado>Generar ideas</button>${BOTON_CERRAR_PANEL}</div>
+    </div>`;
+  cont.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  conectarCerrarPanel(cont);
+  const actualizar = () => {
+    ideaTipoElegida = (cont.querySelector('input[name="lab-idea-tipo"]:checked') || {}).value || 'mezclado';
+    cont.querySelector('#lab-idea-medio-caja').classList.toggle('hidden', ideaTipoElegida === 'encuesta');
+  };
+  cont.querySelectorAll('input[name="lab-idea-tipo"]').forEach(x => x.addEventListener('change', actualizar));
+  cont.querySelectorAll('input[name="lab-idea-medio"]').forEach(x => x.addEventListener('change', () => { ideaMedioElegido = x.value; }));
+  actualizar();
+  cont.querySelector('#lab-ideas-generar').addEventListener('click', (ev) => {
+    generarEtapa('encuentro', ev.currentTarget, { ideas: true, tipoIdea: ideaTipoElegida, medio: ideaMedioElegido });
   });
 }
 
@@ -1106,7 +1146,7 @@ function conectarAlumno(el) {
   el.querySelectorAll('[data-organico]').forEach(b => b.addEventListener('click', () => abrirOrganico('encuentro')));
   el.querySelectorAll('[data-flujo]').forEach(b => b.addEventListener('click', () => iniciarFlujo(b.dataset.flujo, b)));
   el.querySelectorAll('[data-estrategia-open]').forEach(b => b.addEventListener('click', () => abrirEstrategiaOpen()));
-  el.querySelectorAll('[data-ideas-open]').forEach(b => b.addEventListener('click', () => { cerrarPaneles(); generarEtapa('encuentro', b, { ideas: true }); }));
+  el.querySelectorAll('[data-ideas-open]').forEach(b => b.addEventListener('click', () => abrirIdeas()));
   el.querySelectorAll('[data-estrategia-venta]').forEach(b => b.addEventListener('click', () => abrirEstrategiaVenta()));
   el.querySelectorAll('[data-pagado-venta]').forEach(b => b.addEventListener('click', () => abrirPagado('venta')));
   el.querySelectorAll('[data-organico-venta]').forEach(b => b.addEventListener('click', () => abrirOrganico('venta')));
