@@ -805,3 +805,14 @@
 @media (max-width: 600px) {
   #view-laboratorio-ia .lab-etapa { height: auto; }
 }
+
+/* ---- OPEN: ideas de contenido para el grupo de WhatsApp (encuestas, preguntas, videos, audios y textos) ---- */
+.lab-burbuja--encuesta { min-width: 230px; white-space: normal; }
+.lab-encuesta__pregunta { font-weight: 600; margin-bottom: 2px; }
+.lab-encuesta__nota { font-size: 12px; color: #667781; margin-bottom: 6px; }
+.lab-encuesta__opcion { display: flex; align-items: center; gap: 8px; padding: 7px 0; border-top: 1px solid rgba(11, 20, 26, 0.1); }
+.lab-encuesta__circulo { width: 16px; height: 16px; border: 2px solid #8696a0; border-radius: 50%; flex: none; box-sizing: border-box; }
+.lab-idea .lab-reelcard__bloque { padding: 4px 12px 12px; }
+.lab-idea .lab-reelcard__etiqueta { color: #54656f; }
+.lab-idea .lab-reelcard__guion { color: #111b21; background: #fff; }
+.lab-idea .lab-copiar-fila { padding: 0 12px 10px; }
