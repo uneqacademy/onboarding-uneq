@@ -290,11 +290,13 @@ function htmlChat(p, i) {
 
 // Idea de contenido para el grupo de WhatsApp (programa OPEN): encuesta, pregunta abierta, video, audio o texto.
 // Se guarda en descripcion (el mensaje listo para publicar), apoyo (para qué sirve) y, en video y audio, guion.
-const NOMBRES_IDEA = { encuesta: 'Encuesta', pregunta: 'Pregunta abierta', video: 'Video', audio: 'Audio', texto: 'Texto' };
+const NOMBRES_IDEA = { encuesta: 'Encuesta', video: 'Video', audio: 'Audio', texto: 'Texto' };
+const CATEGORIAS_IDEA = { encuesta: 'Encuesta', pregunta: 'Pregunta abierta', interaccion: 'Interacción general', abrir: 'Abrir el grupo por un tiempo', contenido: 'Invitación a un contenido en redes sociales', recurso: 'Invitación a descargar un recurso o ver un video' };
 const ICONOS_IDEA = { encuesta: '📊', pregunta: '💬', video: '🎥', audio: '🎙️', texto: '✍️' };
 
 function htmlIdea(p, i) {
-  const tipo = NOMBRES_IDEA[p.ideaTipo] ? p.ideaTipo : 'texto';
+  const tipo = NOMBRES_IDEA[p.medio || p.ideaTipo] ? (p.medio || p.ideaTipo) : 'texto';
+  const categoria = CATEGORIAS_IDEA[p.ideaTipo] || '';
   const hora = horaActual();
   const lineas = String(p.descripcion || '').split('\n').map(l => l.trim()).filter(Boolean);
   // Encuesta: la primera línea es la pregunta y cada línea siguiente es una opción.
@@ -306,7 +308,7 @@ function htmlIdea(p, i) {
     <article class="lab-chat lab-chat--wa lab-idea" data-pieza="${i}">
       <div class="lab-chat__cab">
         <span class="lab-avatar lab-avatar--chico lab-avatar--cliente">${ICONOS_IDEA[tipo]}</span>
-        <div class="lab-chat__quien"><strong>${esc(NOMBRES_IDEA[tipo])} para tu grupo</strong><span>${esc(p.apoyo || 'Idea para mantener la conexión')}</span></div>
+        <div class="lab-chat__quien"><strong>${esc(NOMBRES_IDEA[tipo])} para tu grupo</strong><span>${esc(categoria ? `${categoria}${p.apoyo ? ' · ' + p.apoyo : ''}` : (p.apoyo || 'Idea para mantener la conexión'))}</span></div>
       </div>
       <div class="lab-chat__cuerpo">
         ${anuncio ? `<div class="lab-chat__contexto">${anuncio}</div>` : ''}
@@ -411,7 +413,7 @@ function htmlEdicion(p) {
       + campoTexto('Idea visual', 'ideaVisual', p.ideaVisual, 3, 500);
   } else if (p.tipo === 'idea') {
     campos = campoLinea('Para qué sirve', 'apoyo', p.apoyo, 300)
-      + campoTexto(p.ideaTipo === 'encuesta' ? 'Pregunta y opciones (una por línea)' : 'Mensaje para el grupo', 'descripcion', p.descripcion, 6, 1500)
+      + campoTexto((p.medio || p.ideaTipo) === 'encuesta' ? 'Pregunta y opciones (una por línea)' : 'Mensaje para el grupo', 'descripcion', p.descripcion, 6, 1500)
       + (p.guion !== undefined ? campoTexto('Lo que dices', 'guion', p.guion, 6, 2500) : '');
   } else if (p.tipo === 'chat') {
     campos = (p.mensajes || []).map((m, n) =>

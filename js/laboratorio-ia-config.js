@@ -207,7 +207,7 @@ function pintar() {
     </div>
 
     <div class="labcfg-sub">Programa OPEN: ideas de contenido para el grupo de WhatsApp</div>
-    <p class="text-soft" style="font-size:12.5px; margin:0 0 8px;">En OPEN, el alumno tiene un botón «Ideas para tu grupo» que crea ideas para mantener la conexión y la interacción de su comunidad. Aquí defines cuántas ideas de cada tipo se crean por clic (0 apaga ese tipo) y cómo debe escribirlas la IA. Admiten {palabra}, {grupo} y {puente}.</p>
+    <p class="text-soft" style="font-size:12.5px; margin:0 0 8px;">En OPEN, el alumno tiene un botón «Ideas para tu grupo»: elige un tipo de idea (o mezclado: 1 de cada tipo) y el formato (textos, videos, audios o variados; las encuestas no lo llevan). Aquí defines cuántas ideas se crean por clic cuando elige un solo tipo (0 apaga ese tipo) y cómo debe escribirlas la IA. Los videos y audios traen guion y un texto corto; nunca llevan hashtags. Los enlaces, días y horas salen como marcas ([LINK DEL RECURSO], [DÍA]…) para que el alumno las complete. Admiten {palabra}, {grupo} y {puente}.</p>
     ${Object.entries(cfg.ideas || {}).map(([id, i]) => `
       <div class="labcfg-bloque" data-id-idea="${esc(id)}">
         <div class="labcfg-fila">
@@ -258,6 +258,7 @@ function pintar() {
       <div class="labcfg-fila" style="margin-top:8px;">
         <div class="field" style="margin:0;"><label>Contenido (solo Encuentro)</label><select id="labcfg-vp-tipo"><option value="organico">Orgánico</option><option value="pagado">Pagado</option></select></div>
         <div class="field" style="margin:0;"><label>Técnica (solo Encuentro, sin OPEN)</label><select id="labcfg-vp-tecnica"><option value="web">SDV con Registro WEB y luego a Grupo</option><option value="puente">SDV con Página Puente y luego a Grupo</option><option value="directo">SDV Directo a Grupo</option></select></div>
+        <div class="field" style="margin:0;"><label>Formato de las ideas (solo OPEN)</label><select id="labcfg-vp-medio"><option value="variado">Formatos variados</option><option value="texto">Textos</option><option value="video">Videos</option><option value="audio">Audios</option></select></div>
         <div class="field" style="margin:0;"><label>Cómo llegan al grupo (solo OPEN pagado)</label><select id="labcfg-vp-destino"><option value="grupo">Directo al grupo</option><option value="puente">A través de una página puente</option></select></div>
         <span></span>
       </div>
@@ -566,7 +567,7 @@ function conectarBotones() {
     verPrompt.disabled = true;
     try {
       const q = (id) => document.getElementById(id).value;
-      const r = await pedirConfig({ vistaPrompt: { programa: q('labcfg-vp-programa'), etapa: q('labcfg-vp-etapa'), formato: q('labcfg-vp-formato'), tipo: q('labcfg-vp-tipo'), tecnica: q('labcfg-vp-tecnica'), destino: q('labcfg-vp-destino') } });
+      const r = await pedirConfig({ vistaPrompt: { programa: q('labcfg-vp-programa'), etapa: q('labcfg-vp-etapa'), formato: q('labcfg-vp-formato'), tipo: q('labcfg-vp-tipo'), tecnica: q('labcfg-vp-tecnica'), destino: q('labcfg-vp-destino'), medio: q('labcfg-vp-medio') } });
       const v = r.data.vistaPrompt;
       salida.value = `=== INSTRUCCIÓN GENERAL (sistema) ===\n${v.sistema}\n\n=== PEDIDO PARA ESTA SITUACIÓN ===\n${v.pedido}`;
       salida.classList.remove('hidden');
