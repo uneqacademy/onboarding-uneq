@@ -34,6 +34,8 @@ html { overflow-x: hidden; }
 body {
   margin: 0;
   overflow-x: hidden;
+  /* clip (y no "hidden") para que body no sea un contenedor de scroll y el menú lateral pueda quedar fijo (sticky) */
+  overflow-x: clip;
   font-family: var(--font-body);
   background: var(--color-bg);
   color: var(--color-ink);
@@ -90,6 +92,17 @@ a { color: inherit; }
   display: flex;
   flex-direction: column;
   gap: 28px;
+}
+/* Vista PC: el menú lateral queda fijo y solo se desplaza el contenido (si el menú es más alto que la pantalla, se desplaza solo él). */
+@media (min-width: 901px) {
+  .sidebar {
+    position: sticky;
+    top: 0;
+    align-self: start;
+    height: 100vh;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
 }
 .sidebar .brand__name,
 .sidebar .brand__sub { color: #fff; }
