@@ -107,7 +107,11 @@ function pintar() {
 
     <div class="labcfg-sub" style="margin-top:0;">General</div>
     <div class="labcfg-bloque">
-      <div class="field" style="max-width:260px; margin:0;"><label>Generaciones por día por alumno</label>
+      <p class="text-soft" style="font-size:12.5px; margin:0 0 8px;">Cuántas generaciones de contenidos puede hacer cada alumno por día, según su programa. Lo normal es que suban de OPEN a eXIT. Cada clic en «Generar» (contenidos, flujos o ideas) cuenta como una.</p>
+      <div class="labcfg-fila">
+        ${[['open', 'OPEN'], ['begin', 'BEGIN'], ['next', 'Next'], ['exit', 'eXIT']].map(([k, n]) => `<div class="field" style="margin:0;"><label>${n}</label><input type="number" min="1" max="100" data-lp="${k}" value="${esc((cfg.limitesPrograma || {})[k] || cfg.limiteDia)}"></div>`).join('')}
+      </div>
+      <div class="field" style="max-width:260px; margin:10px 0 0;"><label>Sin programa definido</label>
         <input type="number" min="1" max="100" data-lc="limiteDia" value="${esc(cfg.limiteDia)}"></div>
     </div>
 
@@ -301,6 +305,8 @@ function pintar() {
 function leer() {
   const el = cuerpo();
   cfg.limiteDia = Number(el.querySelector('[data-lc="limiteDia"]').value) || cfg.limiteDia;
+  cfg.limitesPrograma = cfg.limitesPrograma || {};
+  el.querySelectorAll('[data-lp]').forEach(i => { cfg.limitesPrograma[i.dataset.lp] = Math.round(Number(i.value)) || cfg.limitesPrograma[i.dataset.lp]; });
   el.querySelectorAll('[data-sec]').forEach(bloque => {
     if (!bloque.matches('.labcfg-bloque')) return;
     const p = cfg.preguntas[bloque.dataset.sec];
@@ -423,6 +429,7 @@ function validar() {
     if (fl.mensajes.some(m => m.hora && !HORA_FLUJO_OK.test(m.hora))) return `Revisa las horas del flujo «${fl.nombre}»: usa 19:00 o una hora relativa como -2h, -15m o +2h.`;
   }
   if (!(cfg.limiteDia >= 1 && cfg.limiteDia <= 100)) return 'El tope diario debe estar entre 1 y 100.';
+  if (Object.values(cfg.limitesPrograma || {}).some(v => !(v >= 1 && v <= 100))) return 'El tope diario de cada programa debe estar entre 1 y 100.';
   if (!cfg.prompts.sistema.trim()) return 'La personalidad general de la IA no puede quedar vacía (usa «Restaurar el original»).';
   return '';
 }
@@ -525,6 +532,7 @@ function conectarBotones() {
     try {
       const guardarConfig = {
         limiteDia: cfg.limiteDia,
+        limitesPrograma: cfg.limitesPrograma || {},
         preguntas: cfg.preguntas,
         etapas: cfg.etapas,
         formatos: cfg.formatos,
