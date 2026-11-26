@@ -19,6 +19,7 @@ import { ref, get, update } from "https://www.gstatic.com/firebasejs/12.17.1/fir
 import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-functions.js";
 import { EMOJIS_POR_CATEGORIA } from './emojis-todos.js';
 import { getCurrentRole, esModoDemo } from './main.js';
+import { cargarPanelInstagram } from './instagram-panel.js';
 import { getFaseDemo, getH2F4Demo } from './demo.js';
 import { htmlPiezas, conectarPiezas, fijarContextoVista, fijarWhatsappVenta, fijarImagenesVista, enlazarAcordeon, cerrarOtrasPeticiones, hayEdicionesSinGuardar, descartarEdiciones } from './laboratorio-ia-vista.js';
 
@@ -1282,6 +1283,7 @@ async function verAlumno(alumnoId) {
    ============================================================ */
 
 export async function cargarLaboratorio() {
+  cargarPanelInstagram();
   const role = getCurrentRole();
   const el = rootEl();
   if (!el) return;
