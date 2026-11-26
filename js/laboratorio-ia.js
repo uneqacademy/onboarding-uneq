@@ -1288,7 +1288,7 @@ export async function cargarLaboratorio() {
   const el = rootEl();
   if (!el) return;
   if (role === 'alumno') return cargarComoAlumno();
-  if (role === 'director' || role === 'coach') return cargarComoStaff(role);
+  if (role === 'director' || role === 'coach' || role === 'mentor') return cargarComoStaff(role);   // el mentor ve a todos los alumnos (solo lectura)
   el.innerHTML = '';
 }
 

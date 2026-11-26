@@ -98,7 +98,7 @@ export function applyRole(role, nombre, rolesDisponibles) {
   if (navContenidos) navContenidos.classList.toggle('hidden', !(['director', 'mentor', 'coach'].includes(role) || (role === 'alumno' && esModoDemo())));
 
   const navLaboratorio = document.querySelector('.nav-item[data-nav="laboratorio-ia"]');
-  if (navLaboratorio) navLaboratorio.classList.toggle('hidden', !(['director', 'coach'].includes(role) || (role === 'alumno' && (LABORATORIO_ABIERTO_A_ALUMNOS || esModoDemo()))));
+  if (navLaboratorio) navLaboratorio.classList.toggle('hidden', !(['director', 'coach', 'mentor'].includes(role) || (role === 'alumno' && (LABORATORIO_ABIERTO_A_ALUMNOS || esModoDemo()))));
 
   const navMentoriasMentor = document.querySelector('.nav-item[data-nav="mentorias-mentor"]');
   if (navMentoriasMentor) navMentoriasMentor.classList.toggle('hidden', role !== 'mentor');
