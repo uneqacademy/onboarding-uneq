@@ -29,3 +29,10 @@ body.ig-modal-abierto { overflow: hidden; }
 .ig-modal__confirmar { margin-top: 14px; background: #FBEEDB; border: 1px solid #F0D3A5; border-radius: 10px; padding: 12px 14px; }
 .ig-modal__confirmar p { margin: 0; font-size: 14.5px; color: #1B2333; }
 .ig-modal .hidden { display: none !important; }
+
+/* Los temas oscuro y BEGIN pintan de blanco los botones "ghost": sobre estas tarjetas blancas quedaban invisibles
+   (el botón Desconectar no se veía). Colores explícitos, con !important a propósito, solo dentro de estos bloques. */
+html body .ig-panel .btn.btn--ghost, html body .ig-modal .btn.btn--ghost { background: #FFFFFF !important; color: #1B2A4A !important; border: 1px solid #C9CDD4 !important; }
+html body .ig-panel .btn.btn--ghost:hover, html body .ig-modal .btn.btn--ghost:hover { background: #F0F1EE !important; }
+html body .ig-panel .btn.btn--primary, html body .ig-modal .btn.btn--primary { color: #FFFFFF !important; }
+html body .ig-panel .btn:disabled, html body .ig-modal .btn:disabled { opacity: .55; cursor: not-allowed; }
