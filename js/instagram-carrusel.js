@@ -16,10 +16,22 @@ import { ANCHO, ALTO, PLANTILLAS, FUENTES, MARCA_BASE, normalizarHex, dibujarLam
 
 const MAX_LAMINAS = 10;
 
+// El botón "Diseñar y publicar" sale en las propuestas del Alumno Demo. El equipo, al revisar el Laboratorio de un
+// alumno real (solo lectura), NO lo ve: no debe publicar contenido de un alumno. Cuando se abra a los alumnos, aquí se
+// cambia la condición por (r === 'alumno').
 export function puedePublicarInstagram() {
-  const r = getCurrentRole();
-  return r === 'director' || r === 'coach' || (r === 'alumno' && esModoDemo());
+  return getCurrentRole() === 'alumno' && esModoDemo();
 }
+
+// Carrusel de ejemplo para probar la publicación sin generar nada con IA (lo usa el equipo y la revisión de Meta).
+export const CARRUSEL_EJEMPLO = {
+  laminas: [
+    'Así se ve un carrusel hecho en Universo UNEQ',
+    'Escribes el texto, eliges tu marca y lo publicas en un clic.',
+    'Esta es una publicación de ejemplo.'
+  ],
+  descripcion: 'Publicación de ejemplo de Universo UNEQ. Se puede borrar.'
+};
 
 async function leerMarca(uid, usuarioIg) {
   let m = {};

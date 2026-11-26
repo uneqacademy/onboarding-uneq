@@ -10,6 +10,7 @@ import { ref, get } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-da
 import { escaparHtml } from './util-html.js';
 import { getCurrentRole, esModoDemo } from './main.js';
 import { llamarInstagram, urlInicioSesion, direccionDeRetorno } from './instagram-api.js';
+import { abrirDisenoCarrusel, CARRUSEL_EJEMPLO } from './instagram-carrusel.js';
 
 function raiz() { return document.getElementById('lab-instagram'); }
 function puedeVerlo() { const r = getCurrentRole(); return r === 'director' || r === 'coach' || (r === 'alumno' && esModoDemo()); }
@@ -37,9 +38,11 @@ function pintar(estado, aviso) {
       <div class="ig-panel__titulo">Instagram conectado: <strong>@${escaparHtml(estado.username || '')}</strong></div>
       <p class="ig-panel__texto">Solo publicamos en tu cuenta lo que tú revisas y confirmas. No leemos tus mensajes.</p>
       <div class="ig-panel__acciones">
-        <button type="button" class="btn btn--primary" id="ig-probar">Publicar imagen de prueba</button>
+        <button type="button" class="btn btn--primary" id="ig-ejemplo">Probar con un carrusel de ejemplo</button>
+        <button type="button" class="btn btn--ghost" id="ig-probar">Publicar imagen de prueba</button>
         <button type="button" class="btn btn--ghost" id="ig-desconectar">Desconectar</button>
       </div>${nota}</div>`;
+    document.getElementById('ig-ejemplo').addEventListener('click', () => abrirDisenoCarrusel(CARRUSEL_EJEMPLO));
     document.getElementById('ig-probar').addEventListener('click', publicarPrueba);
     document.getElementById('ig-desconectar').addEventListener('click', desconectar);
   } else {
