@@ -510,6 +510,33 @@
       }
     },
 
+    "instagramSolicitudes": {
+      "$uid": {
+        ".read": "auth != null && auth.uid === $uid",
+        "$solicitudId": {
+          ".write": "auth != null && auth.uid === $uid",
+          ".validate": "newData.hasChild('accion')",
+          "accion": { ".validate": "newData.isString() && newData.val().length <= 30" },
+          "datos": { ".validate": true },
+          "creada": { ".validate": "newData.isNumber()" },
+          "respuesta": { ".validate": false },
+          "$otro": { ".validate": false }
+        }
+      }
+    },
+
+    "instagramEstado": {
+      "$uid": {
+        ".read": "auth != null && auth.uid === $uid",
+        ".write": false
+      }
+    },
+
+    "instagramConexiones": {
+      ".read": false,
+      ".write": false
+    },
+
     "contenidos": {
       ".read": "auth != null && (root.child('usuarios').child(auth.uid).exists() || root.child('alumnoPorAuthUid').child(auth.uid).exists())",
       "$programa": {

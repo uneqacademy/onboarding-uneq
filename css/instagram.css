@@ -1,0 +1,6 @@
+/* Panel de Instagram del Laboratorio. Colores explícitos para leerse igual en los temas oscuro y claro. */
+.ig-panel { background: #FFFFFF; color: #1B2333; border: 1px solid #E2E4E8; border-radius: 12px; padding: 16px 18px; margin-bottom: 16px; }
+.ig-panel__titulo { font-weight: 700; font-size: 16px; color: #1B2A4A; margin-bottom: 4px; }
+.ig-panel__texto { margin: 4px 0 10px; font-size: 14px; color: #5B6472; }
+.ig-panel__acciones { display: flex; gap: 10px; flex-wrap: wrap; }
+.ig-aviso { margin: 10px 0 0; font-size: 13.5px; color: #1B2333; background: #E3F3F1; border-radius: 8px; padding: 8px 10px; word-break: break-word; }
