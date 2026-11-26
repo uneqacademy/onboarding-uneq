@@ -12,6 +12,7 @@
    ============================================================ */
 
 import { escaparHtml } from './util-html.js';
+import { puedePublicarInstagram, abrirDisenoCarrusel } from './instagram-carrusel.js';
 
 const esc = escaparHtml;
 
@@ -148,6 +149,7 @@ function htmlCarrusel(p, i) {
       <div class="lab-copiar-fila">
         ${p.descripcion ? botonCopiar('descripcion', i, 'Copiar descripción') : ''}
         ${botonCopiar('laminas', i, 'Copiar textos de las láminas')}
+        ${puedePublicarInstagram() && laminas.length >= 2 ? `<button type="button" class="btn btn--primary lab-btn-copiar" data-ig-publicar data-pieza="${i}">Diseñar y publicar en Instagram</button>` : ''}
       </div>
     </article>`;
 }
@@ -458,6 +460,9 @@ export function validarEdicion(p, c) {
 /* --- Botones Copiar y láminas deslizables dentro de un cuerpo ya dibujado --- */
 
 function enlazarVista(cuerpo, piezas) {
+  cuerpo.querySelectorAll('[data-ig-publicar]').forEach(btn => {
+    btn.addEventListener('click', () => abrirDisenoCarrusel(piezas[Number(btn.dataset.pieza)]));
+  });
   cuerpo.querySelectorAll('[data-copiar]').forEach(btn => {
     btn.addEventListener('click', async () => {
       const original = btn.textContent;

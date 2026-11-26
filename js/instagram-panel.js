@@ -37,8 +37,8 @@ function pintar(estado, aviso) {
       <div class="ig-panel__titulo">Instagram conectado: <strong>@${escaparHtml(estado.username || '')}</strong></div>
       <p class="ig-panel__texto">Solo publicamos en tu cuenta lo que tú revisas y confirmas. No leemos tus mensajes.</p>
       <div class="ig-panel__acciones">
-        <button type="button" class="btn btn-primary" id="ig-probar">Publicar imagen de prueba</button>
-        <button type="button" class="btn btn-secondary" id="ig-desconectar">Desconectar</button>
+        <button type="button" class="btn btn--primary" id="ig-probar">Publicar imagen de prueba</button>
+        <button type="button" class="btn btn--ghost" id="ig-desconectar">Desconectar</button>
       </div>${nota}</div>`;
     document.getElementById('ig-probar').addEventListener('click', publicarPrueba);
     document.getElementById('ig-desconectar').addEventListener('click', desconectar);
@@ -47,7 +47,7 @@ function pintar(estado, aviso) {
     el.innerHTML = `<div class="ig-panel">
       <div class="ig-panel__titulo">Instagram</div>
       <p class="ig-panel__texto">Conecta tu cuenta profesional de Instagram para publicar desde aquí lo que crees en el Laboratorio. Fase de prueba: solo el equipo UNEQ.</p>
-      <div class="ig-panel__acciones"><button type="button" class="btn btn-primary" id="ig-conectar"${sinRetorno ? ' disabled' : ''}>Conectar Instagram</button></div>
+      <div class="ig-panel__acciones"><button type="button" class="btn btn--primary" id="ig-conectar"${sinRetorno ? ' disabled' : ''}>Conectar Instagram</button></div>
       ${sinRetorno ? '<p class="ig-aviso">Entra por app.somosuneq.com o alumnos.somosuneq.com para conectar.</p>' : ''}${nota}</div>`;
     const b = document.getElementById('ig-conectar');
     if (b) b.addEventListener('click', () => { const u = urlInicioSesion(); if (u) location.href = u; });

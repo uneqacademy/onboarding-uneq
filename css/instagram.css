@@ -4,3 +4,28 @@
 .ig-panel__texto { margin: 4px 0 10px; font-size: 14px; color: #5B6472; }
 .ig-panel__acciones { display: flex; gap: 10px; flex-wrap: wrap; }
 .ig-aviso { margin: 10px 0 0; font-size: 13.5px; color: #1B2333; background: #E3F3F1; border-radius: 8px; padding: 8px 10px; word-break: break-word; }
+
+/* Editor "Diseñar y publicar" (carruseles). Colores explícitos: se ve igual en todos los temas. */
+body.ig-modal-abierto { overflow: hidden; }
+.ig-modal { position: fixed; inset: 0; z-index: 2000; background: rgba(10, 14, 28, .72); display: flex; align-items: flex-start; justify-content: center; padding: 24px 12px; overflow-y: auto; }
+.ig-modal__caja { background: #FFFFFF; color: #1B2333; width: 100%; max-width: 980px; border-radius: 16px; box-shadow: 0 20px 60px rgba(0, 0, 0, .35); }
+.ig-modal__cab { display: flex; align-items: center; justify-content: space-between; padding: 16px 20px; border-bottom: 1px solid #E2E4E8; font-size: 17px; color: #1B2A4A; }
+.ig-modal__x { background: none; border: 0; font-size: 28px; line-height: 1; cursor: pointer; color: #5B6472; }
+.ig-modal__cuerpo { padding: 18px 20px 24px; }
+.ig-modal__marca { display: flex; flex-wrap: wrap; gap: 12px 16px; align-items: flex-end; margin-bottom: 16px; }
+.ig-modal__marca label, .ig-modal__etq { display: flex; flex-direction: column; gap: 4px; font-size: 13px; font-weight: 600; color: #5B6472; }
+.ig-modal__marca select, .ig-modal__marca input[type=text], .ig-modal textarea { font: inherit; font-weight: 400; font-size: 14px; color: #1B2333; background: #FFFFFF; border: 1px solid #C9CDD4; border-radius: 8px; padding: 7px 9px; }
+.ig-modal__marca input[type=color] { width: 54px; height: 36px; padding: 2px; border: 1px solid #C9CDD4; border-radius: 8px; background: #FFFFFF; cursor: pointer; }
+.ig-modal__usuario { flex: 1 1 180px; }
+.ig-modal__laminas { display: flex; gap: 14px; overflow-x: auto; padding: 4px 2px 12px; margin-bottom: 8px; }
+.ig-lam { flex: 0 0 240px; display: flex; flex-direction: column; gap: 8px; }
+.ig-lam__canvas { width: 240px; height: 300px; border-radius: 8px; border: 1px solid #E2E4E8; background: #F0F1EE; }
+.ig-lam__texto { width: 100%; resize: vertical; }
+.ig-modal__etq textarea { width: 100%; resize: vertical; }
+.ig-modal__estado { min-height: 20px; margin: 10px 0 0; font-size: 14px; color: #1B2333; word-break: break-word; }
+.ig-modal__estado--error { color: #A12B2B; background: #FBE4E4; border-radius: 8px; padding: 8px 10px; }
+.ig-modal__estado a { color: #2A3B63; text-decoration: underline; }
+.ig-modal__acciones { display: flex; gap: 10px; flex-wrap: wrap; justify-content: flex-end; margin-top: 14px; }
+.ig-modal__confirmar { margin-top: 14px; background: #FBEEDB; border: 1px solid #F0D3A5; border-radius: 10px; padding: 12px 14px; }
+.ig-modal__confirmar p { margin: 0; font-size: 14.5px; color: #1B2333; }
+.ig-modal .hidden { display: none !important; }
