@@ -78,7 +78,8 @@ async function cargarIdentidadAsistente() {
       avatarEl.innerHTML = `<img src="${fotoAsistente}" alt="" style="width:100%; height:100%; object-fit:cover; display:block;">`;
     }
     const bienvenidaEl = document.getElementById(`asistente-bienvenida-${sufijo}`);
-    const avatarBienvenida = bienvenidaEl ? bienvenidaEl.querySelector('div > div:first-child') : null;
+    // :scope > div > div → solo el circulito del avatar (antes agarraba la fila completa y la foto salía gigante)
+    const avatarBienvenida = bienvenidaEl ? bienvenidaEl.querySelector(':scope > div > div:first-child') : null;
     if (avatarBienvenida && fotoAsistente) {
       avatarBienvenida.style.background = 'none';
       avatarBienvenida.innerHTML = `<img src="${fotoAsistente}" alt="" style="width:100%; height:100%; object-fit:cover; display:block;">`;
