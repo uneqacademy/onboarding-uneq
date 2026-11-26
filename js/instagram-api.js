@@ -9,7 +9,7 @@ import { auth, db } from './firebase-config.js';
 import { ref, push, set, onValue, remove } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-database.js";
 
 // Datos públicos de la app de Meta (no son secretos): id de la app y de la configuración de inicio de sesión.
-export const META_APP_ID = '1175115271735292';
+export const META_APP_ID = '1681371620005466';
 export const META_CONFIG_ID = '1820079042437343';
 export const IG_CLAVE_ESTADO = 'uneq-ig-estado';
 // Solo estos dominios están registrados en la app de Meta como dirección de retorno.
