@@ -1946,7 +1946,7 @@ async function asegurarAlumnoDemo(programa) {
     return demoId;
   }
 
-  if (getCurrentRole() === 'mentor') {
+  if (rolRealDemo() === 'mentor') {
     alert('Este Alumno Demo todavía no existe. Pídele a la Dirección que lo active una vez con "Ver como Alumno" en su Dashboard.');
     return null;
   }
@@ -1980,6 +1980,8 @@ async function asegurarAlumnoDemo(programa) {
 }
 
 let demoIdActual = null;   // id del Alumno Demo mientras se está en modo demo
+// Mientras se está en el modo demo la pantalla funciona como «alumno» (getCurrentRole() devuelve 'alumno'): quien manda es el rol real.
+const rolRealDemo = () => (estadoDirectorAntesDeDemo ? estadoDirectorAntesDeDemo.rol : getCurrentRole());
 
 function mostrarBannerModoDemo(programa) {
   let banner = document.getElementById('banner-modo-demo');
@@ -2032,8 +2034,15 @@ function mostrarBannerModoDemo(programa) {
     try {
       // Mientras se está mapeado a un Alumno Demo las reglas no dejan leer los otros: se suelta el vínculo y se vuelve a entrar con el nuevo.
       const uid = auth.currentUser ? auth.currentUser.uid : null;
+      const demoAnterior = demoIdActual;
       if (uid) await set(ref(db, `alumnoPorAuthUid/${uid}`), null);
-      await verComoAlumnoDemo(sel.value);
+      try {
+        await verComoAlumnoDemo(sel.value);
+      } catch (err) {
+        if (uid && demoAnterior) { try { await set(ref(db, `alumnoPorAuthUid/${uid}`), demoAnterior); } catch (e) { /* queda sin vínculo: se verá al recargar */ } }
+        throw err;
+      }
+      sel.disabled = false;
     } catch (err) { console.error('No se pudo cambiar de programa:', err); alert('No se pudo cambiar de programa. Intenta de nuevo.'); sel.disabled = false; }
   });
   document.getElementById('select-fase-demo').addEventListener('change', async ev => {
@@ -2132,7 +2141,7 @@ async function reiniciarAlumnoDemo() {
 }
 
 async function verComoAlumnoDemo(programa) {
-  if (!['director', 'coach', 'mentor'].includes(getCurrentRole())) return;
+  if (!['director', 'coach', 'mentor'].includes(rolRealDemo())) return;   // (al cambiar de programa ya se está en modo demo: se mira el rol real)
   const uid = auth.currentUser ? auth.currentUser.uid : null;
   if (!uid) return;
   if (!estadoDirectorAntesDeDemo) {
