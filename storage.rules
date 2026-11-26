@@ -100,6 +100,14 @@ service firebase.storage {
       allow delete: if direccion();
     }
 
+    // Láminas de carrusel que se suben un momento para publicarlas en Instagram. Solo su dueño; JPEG de hasta 6 MB.
+    // Meta descarga el archivo con la dirección con token; el servidor los borra al terminar de publicar.
+    match /instagram-temp/{uid}/{pubId}/{archivo} {
+      allow read: if esDe(uid);
+      allow create, update: if esDe(uid) && request.resource.contentType == 'image/jpeg' && request.resource.size < 6 * 1024 * 1024;
+      allow delete: if esDe(uid);
+    }
+
     // --- Contratos: solo el equipo ---
     match /acuerdos/{cicloId} {
       allow read: if equipo();

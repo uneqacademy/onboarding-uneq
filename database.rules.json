@@ -532,6 +532,20 @@
       }
     },
 
+    "instagramMarca": {
+      "$uid": {
+        ".read": "auth != null && auth.uid === $uid",
+        ".write": "auth != null && auth.uid === $uid",
+        ".validate": "newData.hasChildren(['color1', 'color2', 'fuente', 'plantilla'])",
+        "color1": { ".validate": "newData.isString() && newData.val().matches(/^#[0-9a-fA-F]{6}$/)" },
+        "color2": { ".validate": "newData.isString() && newData.val().matches(/^#[0-9a-fA-F]{6}$/)" },
+        "fuente": { ".validate": "newData.isString() && newData.val().matches(/^(sora|inter|serif)$/)" },
+        "plantilla": { ".validate": "newData.isString() && newData.val().matches(/^(degradado|claro|oscuro)$/)" },
+        "usuario": { ".validate": "newData.isString() && newData.val().matches(/^[A-Za-z0-9._]{0,30}$/)" },
+        "$otro": { ".validate": false }
+      }
+    },
+
     "instagramConexiones": {
       ".read": false,
       ".write": false

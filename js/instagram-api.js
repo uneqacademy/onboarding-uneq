@@ -20,14 +20,14 @@ export function direccionDeRetorno() {
   return `${location.origin}/instagram-conectado.html`;
 }
 
-export function llamarInstagram(accion, datos) {
+export function llamarInstagram(accion, datos, esperaMs = 100000) {
   const u = auth.currentUser;
   if (!u) return Promise.reject(new Error('Tu sesión se cerró. Vuelve a entrar.'));
   const nodo = push(ref(db, `instagramSolicitudes/${u.uid}`));
   const ruta = `instagramSolicitudes/${u.uid}/${nodo.key}`;
   return new Promise((resolve, reject) => {
     let cerrado = false, dejarDeEscuchar = () => {};
-    const cierre = setTimeout(() => fin(new Error('Instagram tardó demasiado en responder. Intenta de nuevo.')), 100000);
+    const cierre = setTimeout(() => fin(new Error('Instagram tardó demasiado en responder. Intenta de nuevo.')), esperaMs);
     function fin(err, datosRespuesta) {
       if (cerrado) return;
       cerrado = true; clearTimeout(cierre); dejarDeEscuchar();
