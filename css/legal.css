@@ -1,0 +1,19 @@
+/* Páginas legales públicas (privacidad, términos, eliminar datos). Sin login. */
+body.legal { background: var(--color-bg, #F5F6F4); color: var(--color-ink, #1B2333); }
+.legal-wrap { max-width: 760px; margin: 0 auto; padding: 28px 20px 56px; }
+.legal-head { display: flex; align-items: center; gap: 12px; margin-bottom: 22px; }
+.legal-head .brand__mark { color: #1B2A4A; width: 34px; height: 34px; flex: none; }
+.legal-head .brand__name { font-family: var(--font-display, 'Sora', system-ui, sans-serif); font-weight: 700; font-size: 18px; color: #1B2A4A; }
+.legal-head .brand__sub { font-size: 13px; color: #5B6472; }
+.legal-card { background: #FFFFFF; color: #1B2333; border: 1px solid #E2E4E8; border-radius: 16px; padding: 28px 26px; box-shadow: 0 4px 16px rgba(27, 35, 51, 0.08); }
+.legal-card h1 { font-family: var(--font-display, 'Sora', system-ui, sans-serif); font-size: 26px; line-height: 1.25; margin: 0 0 6px; color: #1B2A4A; }
+.legal-card h2 { font-family: var(--font-display, 'Sora', system-ui, sans-serif); font-size: 18px; margin: 28px 0 8px; color: #1B2A4A; }
+.legal-card p, .legal-card li { font-size: 15px; line-height: 1.65; color: #1B2333; }
+.legal-card ul, .legal-card ol { padding-left: 22px; margin: 8px 0; }
+.legal-card li { margin: 5px 0; }
+.legal-card a { color: #2A3B63; text-decoration: underline; }
+.legal-meta { font-size: 13px; color: #5B6472; margin: 0 0 18px; }
+.legal-aviso { background: #E3F3F1; border: 1px solid #BFE2DD; border-radius: 10px; padding: 12px 14px; margin: 16px 0; font-size: 14.5px; }
+.legal-foot { margin-top: 22px; font-size: 13px; color: #5B6472; text-align: center; }
+.legal-foot a { color: #2A3B63; margin: 0 8px; }
+@media (max-width: 520px) { .legal-card { padding: 22px 18px; } .legal-card h1 { font-size: 22px; } }
