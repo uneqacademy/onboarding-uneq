@@ -438,12 +438,109 @@ async function abrirEstrategiaOpen() {
   }
 }
 
+/* --- Estrategia de UNEQ (solo Laboratorio UNEQ): una sola, compartida por el equipo, que condiciona Encuentro y/o Venta --- */
+
+const NOMBRE_ETAPA_ESTRATEGIA = { encuentro: 'Encuentro', venta: 'Venta' };
+const textoPrecioUneq = (u) => (u.precio ? `${u.precio} ${u.moneda || 'USD'}` : '');
+
+function resumenEstrategiaUneq(u, etapaId) {
+  const condiciona = u.etapas.includes(etapaId);
+  return `
+    <div class="lab-estrategia__resumen">
+      <div><strong>Estrategia de UNEQ:</strong> ${esc(u.nombre)}</div>
+      ${u.eventoNombre ? `<div><strong>Evento:</strong> ${esc(u.eventoNombre)} · <strong>Precio:</strong> ${esc(textoPrecioUneq(u))}</div>` : ''}
+      ${condiciona ? '' : `<div class="text-soft">Esta estrategia solo condiciona ${u.etapas.map(x => NOMBRE_ETAPA_ESTRATEGIA[x]).join(' y ')}: aquí los contenidos son libres.</div>`}
+    </div>`;
+}
+
+function abrirEstrategiaUneq() {
+  const cont = document.getElementById('lab-estrategia');
+  if (!cont) return;
+  if (!alternarPanel('est-uneq')) return;
+  const cat = datos.estrategiasUneq || { lista: [], eventos: [], monedas: [] };
+  const u = datos.estrategiaUneq || null;
+  const memoria = (u && u.preciosEventos) || {};
+  const monedaInicial = (u && u.moneda) || 'USD';
+  const monedaEnLista = cat.monedas.includes(monedaInicial);
+  cont.innerHTML = `
+    <div class="lab-estrategia" id="lab-estrategia-panel">
+      <h4>Estrategia de UNEQ</h4>
+      <p class="text-soft">Condiciona los contenidos de Encuentro y de Venta de @somosuneq. Queda guardada para todo el equipo hasta que alguien la cambie.</p>
+      <fieldset class="lab-estrategia__campo"><legend>¿Qué estrategia vamos a trabajar?</legend>
+        ${cat.lista.map(e => `<label class="lab-estrategia__opcion"><input type="radio" name="lab-uneq-estr" value="${esc(e.id)}" ${u && u.id === e.id ? 'checked' : ''}> <span><strong>${esc(e.nombre)}</strong> <span class="text-soft">· ${e.etapas.length === 2 ? 'condiciona Encuentro y Venta' : 'condiciona solo Venta'}</span></span></label>`).join('')}
+      </fieldset>
+      <div id="lab-uneq-evento" class="hidden">
+        <label class="lab-estrategia__campo"><span>¿Qué evento online?</span>
+          <select id="lab-uneq-evento-sel">${cat.eventos.map(ev => `<option value="${esc(ev.id)}" ${u && u.evento === ev.id ? 'selected' : ''}>${esc(ev.nombre)}</option>`).join('')}</select></label>
+        <label class="lab-estrategia__campo"><span>Precio</span>
+          <input type="text" id="lab-uneq-precio" inputmode="decimal" maxlength="20" value="${esc(u ? u.precio : '')}" placeholder="Ej: 97"></label>
+        <label class="lab-estrategia__campo"><span>Moneda</span>
+          <select id="lab-uneq-moneda">${cat.monedas.map(m => `<option value="${esc(m)}" ${monedaEnLista && m === monedaInicial ? 'selected' : ''}>${esc(m)}</option>`).join('')}<option value="OTRA" ${monedaEnLista ? '' : 'selected'}>Otra…</option></select>
+          <input type="text" id="lab-uneq-moneda-otra" class="${monedaEnLista ? 'hidden' : ''}" maxlength="3" value="${monedaEnLista ? '' : esc(monedaInicial)}" placeholder="Código de 3 letras, ej: GBP">
+          <small class="text-soft">Cada evento recuerda el último precio que guardaste.</small></label>
+      </div>
+      <p class="lab-error hidden" id="lab-uneq-error"></p>
+      <div class="lab-acciones-pieza">
+        <button type="button" class="btn btn--primary" id="lab-uneq-guardar">Guardar estrategia</button>
+        <button type="button" class="btn btn--ghost" id="lab-uneq-cancelar">Cancelar</button>
+      </div>
+    </div>`;
+  cont.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  const q = (id) => document.getElementById(id);
+  const idElegido = () => (cont.querySelector('input[name="lab-uneq-estr"]:checked') || {}).value || '';
+  const defElegida = () => cat.lista.find(e => e.id === idElegido());
+  const mostrarEvento = () => { const d = defElegida(); q('lab-uneq-evento').classList.toggle('hidden', !(d && d.conEvento)); };
+  const aplicarMemoria = () => {
+    const m = memoria[q('lab-uneq-evento-sel').value];
+    if (!m) return;
+    q('lab-uneq-precio').value = m.precio;
+    const enLista = cat.monedas.includes(m.moneda);
+    q('lab-uneq-moneda').value = enLista ? m.moneda : 'OTRA';
+    q('lab-uneq-moneda-otra').value = enLista ? '' : m.moneda;
+    q('lab-uneq-moneda-otra').classList.toggle('hidden', enLista);
+  };
+  cont.querySelectorAll('input[name="lab-uneq-estr"]').forEach(r => r.addEventListener('change', mostrarEvento));
+  q('lab-uneq-evento-sel').addEventListener('change', aplicarMemoria);
+  q('lab-uneq-moneda').addEventListener('change', () => q('lab-uneq-moneda-otra').classList.toggle('hidden', q('lab-uneq-moneda').value !== 'OTRA'));
+  if (!(u && u.evento)) aplicarMemoria();   // primera vez: si el evento ya tiene un precio guardado, se muestra
+  mostrarEvento();
+  q('lab-uneq-cancelar').addEventListener('click', cerrarPaneles);
+  q('lab-uneq-guardar').addEventListener('click', async () => {
+    const err = q('lab-uneq-error');
+    err.classList.add('hidden');
+    const def = defElegida();
+    if (!def) { err.textContent = 'Elige una estrategia.'; err.classList.remove('hidden'); return; }
+    const datosEvento = def.conEvento
+      ? { evento: q('lab-uneq-evento-sel').value, precio: q('lab-uneq-precio').value, moneda: q('lab-uneq-moneda').value === 'OTRA' ? q('lab-uneq-moneda-otra').value : q('lab-uneq-moneda').value }
+      : {};
+    const btn = q('lab-uneq-guardar');
+    btn.disabled = true;
+    btn.textContent = 'Guardando…';
+    try {
+      const r = await estrategiaServidor(conFase({ etapa: 'uneq', accion: 'guardar', id: def.id, ...datosEvento }));
+      datos.estrategiaUneq = r.data.estrategia;
+      cerrarPaneles();
+      pintarAlumno();
+    } catch (ex) {
+      err.textContent = mensajeError(ex, 'No se pudo guardar la estrategia. Intenta de nuevo.');
+      err.classList.remove('hidden');
+      btn.disabled = false;
+      btn.textContent = 'Guardar estrategia';
+    }
+  });
+}
+
 // Botones de cada tarjeta de etapa cuando está abierta. Siempre en el mismo orden: primero los secundarios
 // (editar estrategia, flujo de mensajes) y al final el principal, así queda a la misma altura en todas las tarjetas.
 function botonesEtapa(id, e) {
   const etapaFlujo = id === 'venta' ? 'venta' : 'encuentro';
   const hayFlujos = (datos.flujos || []).some(f => f.etapa === etapaFlujo);
   const btnFlujo = hayFlujos ? `<button type="button" class="btn btn--ghost" data-flujo="${etapaFlujo}">Flujo de mensajes para tu grupo</button>` : '';
+  if (modoUneq && (id === 'encuentro' || id === 'venta')) {   // Laboratorio UNEQ: la estrategia de UNEQ condiciona Encuentro y/o Venta
+    const u = datos.estrategiaUneq;
+    if (!u) return `<div class="lab-etapa__acciones"><p class="lab-etapa__estado">Primero elige la estrategia de UNEQ.</p><button type="button" class="btn btn--primary" data-estrategia-uneq>Elegir estrategia</button></div>`;
+    return `${resumenEstrategiaUneq(u, id)}<div class="lab-etapa__acciones"><button type="button" class="btn btn--ghost" data-estrategia-uneq>Cambiar estrategia</button>${btnFlujo}<button type="button" class="btn btn--ghost" data-formatos-libres="${id}">Elegir formatos y cantidad</button><button type="button" class="btn btn--primary" data-generar="${id}">Generar contenidos</button></div>`;
+  }
   if (datos.programa === 'open' && id === 'encuentro') {   // Encuentro en OPEN: la comunidad gratuita de WhatsApp
     const o = datos.estrategiaOpen;
     if (!o) return `<div class="lab-etapa__acciones"><p class="lab-etapa__estado">Primero define tu estrategia.</p><button type="button" class="btn btn--primary" data-estrategia-open>Definir mi estrategia</button></div>`;
@@ -1236,6 +1333,7 @@ function conectarAlumno(el) {
   el.querySelectorAll('[data-generar]').forEach(b => b.addEventListener('click', () => generarEtapa(b.dataset.generar, b)));
   el.querySelectorAll('[data-formatos-libres]').forEach(b => b.addEventListener('click', () => abrirFormatosLibres(b.dataset.formatosLibres)));
   el.querySelectorAll('[data-estrategia]').forEach(b => b.addEventListener('click', () => abrirEstrategia()));
+  el.querySelectorAll('[data-estrategia-uneq]').forEach(b => b.addEventListener('click', () => abrirEstrategiaUneq()));
   el.querySelectorAll('[data-pagado]').forEach(b => b.addEventListener('click', () => abrirPagado()));
   el.querySelectorAll('[data-organico]').forEach(b => b.addEventListener('click', () => abrirOrganico('encuentro')));
   el.querySelectorAll('[data-flujo]').forEach(b => b.addEventListener('click', () => iniciarFlujo(b.dataset.flujo, b)));
