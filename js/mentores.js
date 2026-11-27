@@ -21,6 +21,7 @@ import { getAuth, createUserWithEmailAndPassword, signOut as signOutSecundaria, 
 import { aplicarClampTexto } from './texto-clamp.js';
 import { getCurrentRole, setNav } from './main.js';
 import { programaLabel } from './ciclos.js';
+import { textoPrograma } from './etiqueta-programa.js';
 
 export const PLACEHOLDER_FOTO_PERFIL = 'data:image/svg+xml;utf8,' + encodeURIComponent(
   '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 80"><rect width="80" height="80" rx="40" fill="#E4E7EC"/><circle cx="40" cy="32" r="14" fill="#9AA4B2"/><ellipse cx="40" cy="70" rx="24" ry="18" fill="#9AA4B2"/></svg>'
@@ -645,7 +646,7 @@ function renderMatrizMentor() {
       tr.innerHTML = `
         <td><img src="${escaparHtml(alumno.fotoUrl || PLACEHOLDER_FOTO_PERFIL)}" alt="" style="width:28px; height:28px; border-radius:50%; object-fit:cover;"></td>
         <td>${escaparHtml(nombreCompleto)}</td>
-        <td>${programaLabel(ciclo.programa)}</td>
+        <td>${textoPrograma(programaLabel(ciclo.programa), ciclo)}</td>
         <td>${fase}</td>
         <td>${escaparHtml(coachNombre)}</td>
         <td><span class="badge badge--activo">Activo</span></td>

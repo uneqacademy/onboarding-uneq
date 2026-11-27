@@ -7,6 +7,7 @@
 
 import { db, auth, storage } from './firebase-config.js';
 import { escaparHtml, notaAHtml } from './util-html.js';
+import { textoPrograma } from './etiqueta-programa.js';
 import {
   ref, get, set, update, push
 } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-database.js";
@@ -479,7 +480,7 @@ function crearFilaAlumno(alumnoId, alumno, ciclo, columnas, acuerdo, nombreOverr
   const coachNombre = ciclo
     ? (ciclo.coachId ? (coachesMap[ciclo.coachId] || '—') : (sinCopilotoIndividual(ciclo.programa) ? '🚩 Copiloto de Cabecera' : '—'))
     : '—';
-  const programa = ciclo ? programaLabel(ciclo.programa) : '—';
+  const programa = ciclo ? textoPrograma(programaLabel(ciclo.programa), ciclo) : '—';
   const estadoProceso = ciclo ? estadoProcesoLabel(ciclo.estadoProceso) : '—';
   const estadoAlumno = ciclo ? ciclo.estadoAlumno : 'activo';
 
@@ -937,7 +938,7 @@ async function abrirFicha(alumnoId) {
   document.getElementById('ficha-nombre-alumno').textContent = nombreCombinado;
   document.getElementById('ficha-foto-alumno').src = alumno.fotoUrl || PLACEHOLDER_FOTO;
   document.getElementById('ficha-rut').textContent = alumno.rut || '—';
-  document.getElementById('ficha-programa').textContent = ciclo ? programaLabel(ciclo.programa) : '—';
+  document.getElementById('ficha-programa').textContent = ciclo ? textoPrograma(programaLabel(ciclo.programa), ciclo) : '—';
   document.getElementById('ficha-coach-nombre').textContent = ciclo
     ? (role === 'coach' ? getCurrentUserNombre() : (ciclo.coachId ? (coachesMap[ciclo.coachId] || '—') : (sinCopilotoIndividual(ciclo.programa) ? '🚩 Copiloto de Cabecera' : '—')))
     : '—';

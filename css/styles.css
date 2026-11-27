@@ -1958,3 +1958,8 @@ body.tema-alumno-oscuro #sidebar-foto-alumno:hover { transform: scale(1.04); box
 .cfg-vista .panel__body h4 { font-size: 16px; font-weight: 800; margin: 18px 0 8px; }
 .cfg-grupo--equipo:has(+ .panel.hidden) { display: none; }
 .cfg-plegable.cfg-cerrado > .panel__header button { display: none; }
+
+/* Distintivo OPEN Vitalicio: ∞ pequeño junto al logo */
+.vit-infinito { display: inline-flex; align-items: center; justify-content: center; margin-left: 6px; color: #fff; font-weight: 800; font-size: 15px; line-height: 1; }
+.rk-medalla .vit-infinito { font-size: 13px; margin-left: 4px; }
+.vit-infinito--tile { position: absolute; top: 4px; right: 6px; margin: 0; background: #000; border-radius: 999px; padding: 3px 7px; }

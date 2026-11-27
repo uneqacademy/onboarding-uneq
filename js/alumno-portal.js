@@ -23,6 +23,7 @@ import { getCurrentRole } from './main.js';
 import { ocultarParaAlumno, cicloParaVista } from './demo.js';
 import { getAuth, createUserWithEmailAndPassword, signOut as signOutSecundaria, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-auth.js";
 import { programaLabel, testEsDe, enModoVitalicio } from './ciclos.js';
+import { distintivoVitalicio, esVitalicioDe } from './etiqueta-programa.js';
 
 // OPEN Vitalicio desde el 2.º año: sigue todo lo que no es acompañamiento en vivo, pero sin mentorías en vivo,
 // sesiones de cabecera ni Copiloto de Cabecera.
@@ -259,8 +260,9 @@ export async function cargarDashboardAlumno(alumnoId) {
         ${PROGRAMAS_ORDEN.map(([clave, logo, label]) => {
           const activo = clave === programaActual;
           return `
-          <div style="display:flex; align-items:center; justify-content:center; flex:1 1 0; min-width:0; max-width:150px; height:64px; padding:6px 8px; border-radius:var(--radius-md, 10px); border:${activo ? (esBeginDashboard ? '1.5px solid #fff' : (esExitDashboard ? '1.5px solid #856C32' : '1.5px solid var(--color-accent, #2563EB)')) : '1.5px solid transparent'}; opacity:${activo ? '1' : '0.4'};">
+          <div style="position:relative; display:flex; align-items:center; justify-content:center; flex:1 1 0; min-width:0; max-width:150px; height:64px; padding:6px 8px; border-radius:var(--radius-md, 10px); border:${activo ? (esBeginDashboard ? '1.5px solid #fff' : (esExitDashboard ? '1.5px solid #856C32' : '1.5px solid var(--color-accent, #2563EB)')) : '1.5px solid transparent'}; opacity:${activo ? '1' : '0.4'};">
             <img src="${logo}" alt="${label}" style="height:100%; width:auto; max-width:100%; object-fit:contain;">
+            ${activo && esVitalicioDe(clave, ciclo && ciclo.vitalicio) ? distintivoVitalicio('vit-infinito--tile') : ''}
           </div>`;
         }).join('')}
       </div>`;

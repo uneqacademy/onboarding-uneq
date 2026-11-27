@@ -1,4 +1,5 @@
 import { aplicarClampTexto } from './texto-clamp.js';
+import { etiquetaProgramaHtml } from './etiqueta-programa.js';
 /* ============================================================
    hitos.js — "Mis Hitos" (alumno) / "Hitos Estudiantes" (staff)
    Los alumnos publican hitos predefinidos (uno por proyecto, no se
@@ -433,9 +434,8 @@ function programaLabelCorto(p) {
 
 // Etiqueta con el logo del programa (píldora negra, porque los logos
 // tienen letras blancas). Sin programa conocido, no muestra nada.
-function etiquetaProgramaHito(p) {
-  if (!['open', 'begin', 'next', 'exit'].includes(p)) return '';
-  return `<span class="hito-etiqueta-programa" title="${programaLabelCorto(p)}"><img src="assets/logos/wordmark-${p}.png" alt="${programaLabelCorto(p)}"></span>`;
+function etiquetaProgramaHito(p, vitalicio) {
+  return etiquetaProgramaHtml(p, programaLabelCorto(p), vitalicio === true);
 }
 
 function renderMiniaturasReacciones(hitoId, reacciones) {
@@ -604,7 +604,7 @@ function renderFeedHitos(hitosVisibles, usuarios, ctx) {
             <div class="hito-autor">
               <span class="hito-autor__fotos">${(ctx.fotosPublicacion && ctx.fotosPublicacion.get(hitoId) || [PLACEHOLDER_FOTO_HITO]).map(url => `<img src="${escaparHtml(url)}" alt="">`).join('')}</span>
               <strong>${escaparHtml(h.nombreAutor)}</strong>
-              ${etiquetaProgramaHito(h.programa)}
+              ${etiquetaProgramaHito(h.programa, h.vitalicio)}
               ${ctx.enMisHitos ? '' : etiquetaFijada(h.fijadaEn)}
             </div>
             <p class="text-soft" style="font-size:11px; margin:2px 0 0;">${escaparHtml(FASES_HITOS[h.fase] || h.fase)} · <strong>${escaparHtml(h.tituloHito)}</strong></p>
@@ -707,6 +707,7 @@ if (btnPublicarHito) {
         ...marcaDemo(),
         nombreAutor,
         programa: ciclo.programa || null,
+        vitalicio: ciclo.vitalicio === true,
         fase: hitoDef.fase,
         hitoDefId,
         tituloHito: hitoDef.titulo,

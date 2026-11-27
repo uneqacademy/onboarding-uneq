@@ -14,6 +14,7 @@ import { escaparHtml, linkificarSeguro } from './util-html.js';
 import { ref as storageRef, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-storage.js";
 import { getCurrentRole, showView, marcarNavActivo } from './main.js';
 import { aplicarClampTexto } from './texto-clamp.js';
+import { etiquetaProgramaHtml } from './etiqueta-programa.js';
 import { cargarHitosComunidad } from './hitos.js';
 import { cargarPreguntasComunidad } from './alumno-portal.js';
 import { marcarCompartido } from './puntos-marcas.js';
@@ -128,9 +129,8 @@ function asegurarBotonBackfillPrograma() {
   document.getElementById('btn-backfill-programa').addEventListener('click', (ev) => backfillProgramaEnPublicaciones(ev.currentTarget));
 }
 
-function etiquetaProgramaSocial(p) {
-  if (!['open', 'begin', 'next', 'exit'].includes(p)) return '';
-  return `<span class="hito-etiqueta-programa" title="${programaLabelCorto(p)}"><img src="assets/logos/wordmark-${p}.png" alt="${programaLabelCorto(p)}"></span>`;
+function etiquetaProgramaSocial(p, vitalicio) {
+  return etiquetaProgramaHtml(p, programaLabelCorto(p), vitalicio === true);
 }
 function formatFecha(ts) {
   return new Intl.DateTimeFormat('es-CL', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }).format(new Date(ts));
@@ -315,12 +315,12 @@ async function obtenerContextoAlumno(uid) {
   const alumnoSnap = await get(ref(db, `alumnos/${alumnoId}`));
   const alumno = alumnoSnap.exists() ? alumnoSnap.val() : {};
   const nombre = nombrePublicoDeAlumno(alumno);
-  let programa = '', coachId = '';
+  let programa = '', coachId = '', vitalicio = false;
   if (alumno.cicloActualId) {
     const cicloSnap = await get(ref(db, `ciclos/${alumno.cicloActualId}`));
-    if (cicloSnap.exists()) { programa = cicloSnap.val().programa || ''; coachId = cicloSnap.val().coachId || ''; }
+    if (cicloSnap.exists()) { programa = cicloSnap.val().programa || ''; coachId = cicloSnap.val().coachId || ''; vitalicio = cicloSnap.val().vitalicio === true; }
   }
-  return { alumnoId, nombre, fotoUrl: alumno.fotoUrl || '', programa, coachId };
+  return { alumnoId, nombre, fotoUrl: alumno.fotoUrl || '', programa, vitalicio, coachId };
 }
 
 /* ============================================================
@@ -385,7 +385,7 @@ function renderTarjetaSocial(basePath, id, item, ctx) {
         <div class="hito-autor">
           <span class="hito-autor__fotos"><img src="${autorFotoUrl || PLACEHOLDER_FOTO}" alt=""></span>
           <strong>${escaparHtml(item.alumnoNombre || 'Alumno')}</strong>
-          ${etiquetaProgramaSocial(item.programa)}
+          ${etiquetaProgramaSocial(item.programa, item.vitalicio)}
           ${item.estado === 'pendiente' ? '<span class="badge badge--impaga" style="font-size:9px; margin-left:6px;">En Revisión</span>' : ''}
           ${item.fijada ? '<span class="badge badge--activo" style="font-size:9px; margin-left:6px;">📌 Fijada</span>' : ''}
         </div>
@@ -772,7 +772,7 @@ async function cargarPreguntasLibres() {
         await set(push(ref(db, 'comunidad/preguntasLibres')), {
           autorId: uid, alumnoId: ctxAlumno.alumnoId || null,
           alumnoNombre: perfil.nombre || ctxAlumno.nombre || 'Alguien',
-          autorFotoUrl: perfil.fotoUrl || '', programa: ctxAlumno.programa || null,
+          autorFotoUrl: perfil.fotoUrl || '', programa: ctxAlumno.programa || null, vitalicio: ctxAlumno.vitalicio === true,
           titulo, texto, createdAt: Date.now(), ...marcaDemo()
         });
         document.getElementById('plc-titulo-form').value = '';
@@ -850,7 +850,7 @@ async function cargarPresentacion() {
   const conDatos = todas.map(([alumnoId, p]) => {
     const alumno = alumnos[alumnoId] || {};
     const ciclo = alumno.cicloActualId ? ciclos[alumno.cicloActualId] : null;
-    return { alumnoId, ...p, nombre: nombrePublicoDeAlumno(alumno) || p.alumnoNombre || 'Alumno', fotoUrl: alumno.fotoUrl || '', programa: p.programa || (ciclo ? ciclo.programa : ''), coachId: ciclo ? ciclo.coachId : '' };
+    return { alumnoId, ...p, nombre: nombrePublicoDeAlumno(alumno) || p.alumnoNombre || 'Alumno', fotoUrl: alumno.fotoUrl || '', programa: p.programa || (ciclo ? ciclo.programa : ''), vitalicio: p.vitalicio === true || !!(ciclo && ciclo.vitalicio === true), coachId: ciclo ? ciclo.coachId : '' };
   }).filter(p => esDirector || p.estado === 'aprobada' || p.alumnoId === ctxAlumno.alumnoId || (esCoach && (p.coachId === uid || (['begin', 'open'].includes(p.programa) && esCoachCabeceraBegin))))
     .sort((a, b) => b.createdAt - a.createdAt);
 
@@ -963,7 +963,7 @@ async function renderPropiaPresentacion(ctxAlumno) {
       try {
         const fotos = await subirFotos('comunidad-presentaciones', ctxAlumno.alumnoId, fotosSeleccionadasPres);
         await set(ref(db, `comunidad/presentaciones/${ctxAlumno.alumnoId}`), {
-          texto, estado: 'pendiente', createdAt: Date.now(), alumnoNombre: ctxAlumno.nombre, fotos, programa: ctxAlumno.programa || null, ...marcaDemo()
+          texto, estado: 'pendiente', createdAt: Date.now(), alumnoNombre: ctxAlumno.nombre, fotos, programa: ctxAlumno.programa || null, vitalicio: ctxAlumno.vitalicio === true, ...marcaDemo()
         });
         fotosSeleccionadasPres.length = 0;
         btn.disabled = false; btn.textContent = 'Enviar presentación';
@@ -1030,7 +1030,7 @@ async function cargarHistoriasReales() {
       // alumnoId: el guardado en la propia historia (nuevas, o antiguas ya
       // completadas por el backfill) tiene prioridad; si no, el que el
       // staff puede resolver por autorId con su lectura masiva.
-      return { id, ...h, alumnoId: h.alumnoId || alumno.id || null, fotoUrl: alumno.fotoUrl || '', programa: h.programa || (ciclo ? ciclo.programa : ''), coachId: ciclo ? ciclo.coachId : '' };
+      return { id, ...h, alumnoId: h.alumnoId || alumno.id || null, fotoUrl: alumno.fotoUrl || '', programa: h.programa || (ciclo ? ciclo.programa : ''), vitalicio: h.vitalicio === true || !!(ciclo && ciclo.vitalicio === true), coachId: ciclo ? ciclo.coachId : '' };
     })
     .sort((a, b) => b.createdAt - a.createdAt);
 
