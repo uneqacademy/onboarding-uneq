@@ -518,119 +518,6 @@
           ".write": "auth != null && ((root.child('usuarios').child(auth.uid).child('roles').child('director').val() === true || root.child('usuarios').child(auth.uid).child('rol').val() === 'director' || root.child('usuarios').child(auth.uid).child('roles').child('subdirectora').val() === true))",
           ".validate": "newData.isBoolean()"
         }
-      },
-      "marca": {
-        ".read": "auth != null && (((root.child('usuarios').child(auth.uid).child('roles').child('director').val() === true || root.child('usuarios').child(auth.uid).child('rol').val() === 'director' || root.child('usuarios').child(auth.uid).child('roles').child('subdirectora').val() === true)) || root.child('laboratorioUneq').child('acceso').child(auth.uid).val() === true)",
-        ".write": "auth != null && (((root.child('usuarios').child(auth.uid).child('roles').child('director').val() === true || root.child('usuarios').child(auth.uid).child('rol').val() === 'director' || root.child('usuarios').child(auth.uid).child('roles').child('subdirectora').val() === true)) || root.child('laboratorioUneq').child('acceso').child(auth.uid).val() === true)",
-        "$campo": {
-          ".validate": "($campo.matches(/^(esencia|voz|publico|ofertas|metodologia|pruebas|evitar)$/) && newData.isString() && newData.val().length <= 2500) || ($campo === 'actualizadoEn' && newData.isNumber()) || ($campo === 'actualizadoPor' && newData.isString() && newData.val().length <= 80)"
-        }
-      },
-      "generaciones": {
-        ".read": "auth != null && (((root.child('usuarios').child(auth.uid).child('roles').child('director').val() === true || root.child('usuarios').child(auth.uid).child('rol').val() === 'director' || root.child('usuarios').child(auth.uid).child('roles').child('subdirectora').val() === true)) || root.child('laboratorioUneq').child('acceso').child(auth.uid).val() === true)",
-        ".indexOn": [
-          "creadoEn"
-        ],
-        "$genId": {
-          "piezas": {
-            "$i": {
-              "guion": {
-                ".write": "auth != null && (((root.child('usuarios').child(auth.uid).child('roles').child('director').val() === true || root.child('usuarios').child(auth.uid).child('rol').val() === 'director' || root.child('usuarios').child(auth.uid).child('roles').child('subdirectora').val() === true)) || root.child('laboratorioUneq').child('acceso').child(auth.uid).val() === true)",
-                ".validate": "newData.isString() && newData.val().length <= 3500"
-              },
-              "textoPantalla": {
-                ".write": "auth != null && (((root.child('usuarios').child(auth.uid).child('roles').child('director').val() === true || root.child('usuarios').child(auth.uid).child('rol').val() === 'director' || root.child('usuarios').child(auth.uid).child('roles').child('subdirectora').val() === true)) || root.child('laboratorioUneq').child('acceso').child(auth.uid).val() === true)",
-                ".validate": "newData.isString() && newData.val().length <= 200"
-              },
-              "descripcion": {
-                ".write": "auth != null && (((root.child('usuarios').child(auth.uid).child('roles').child('director').val() === true || root.child('usuarios').child(auth.uid).child('rol').val() === 'director' || root.child('usuarios').child(auth.uid).child('roles').child('subdirectora').val() === true)) || root.child('laboratorioUneq').child('acceso').child(auth.uid).val() === true)",
-                ".validate": "newData.isString() && newData.val().length <= 2500"
-              },
-              "titular": {
-                ".write": "auth != null && (((root.child('usuarios').child(auth.uid).child('roles').child('director').val() === true || root.child('usuarios').child(auth.uid).child('rol').val() === 'director' || root.child('usuarios').child(auth.uid).child('roles').child('subdirectora').val() === true)) || root.child('laboratorioUneq').child('acceso').child(auth.uid).val() === true)",
-                ".validate": "newData.isString() && newData.val().length <= 200"
-              },
-              "sesion": {
-                ".write": "auth != null && (((root.child('usuarios').child(auth.uid).child('roles').child('director').val() === true || root.child('usuarios').child(auth.uid).child('rol').val() === 'director' || root.child('usuarios').child(auth.uid).child('roles').child('subdirectora').val() === true)) || root.child('laboratorioUneq').child('acceso').child(auth.uid).val() === true)",
-                ".validate": "newData.isString() && newData.val().length <= 200"
-              },
-              "apoyo": {
-                ".write": "auth != null && (((root.child('usuarios').child(auth.uid).child('roles').child('director').val() === true || root.child('usuarios').child(auth.uid).child('rol').val() === 'director' || root.child('usuarios').child(auth.uid).child('roles').child('subdirectora').val() === true)) || root.child('laboratorioUneq').child('acceso').child(auth.uid).val() === true)",
-                ".validate": "newData.isString() && newData.val().length <= 300"
-              },
-              "boton": {
-                ".write": "auth != null && (((root.child('usuarios').child(auth.uid).child('roles').child('director').val() === true || root.child('usuarios').child(auth.uid).child('rol').val() === 'director' || root.child('usuarios').child(auth.uid).child('roles').child('subdirectora').val() === true)) || root.child('laboratorioUneq').child('acceso').child(auth.uid).val() === true)",
-                ".validate": "newData.isString() && newData.val().length <= 40"
-              },
-              "anuncio": {
-                ".write": "auth != null && (((root.child('usuarios').child(auth.uid).child('roles').child('director').val() === true || root.child('usuarios').child(auth.uid).child('rol').val() === 'director' || root.child('usuarios').child(auth.uid).child('roles').child('subdirectora').val() === true)) || root.child('laboratorioUneq').child('acceso').child(auth.uid).val() === true)",
-                ".validate": "newData.isString() && newData.val().length <= 2500"
-              },
-              "ideaVisual": {
-                ".write": "auth != null && (((root.child('usuarios').child(auth.uid).child('roles').child('director').val() === true || root.child('usuarios').child(auth.uid).child('rol').val() === 'director' || root.child('usuarios').child(auth.uid).child('roles').child('subdirectora').val() === true)) || root.child('laboratorioUneq').child('acceso').child(auth.uid).val() === true)",
-                ".validate": "newData.isString() && newData.val().length <= 500"
-              },
-              "asunto": {
-                ".write": "auth != null && (((root.child('usuarios').child(auth.uid).child('roles').child('director').val() === true || root.child('usuarios').child(auth.uid).child('rol').val() === 'director' || root.child('usuarios').child(auth.uid).child('roles').child('subdirectora').val() === true)) || root.child('laboratorioUneq').child('acceso').child(auth.uid).val() === true)",
-                ".validate": "newData.isString() && newData.val().length <= 150"
-              },
-              "cuerpo": {
-                ".write": "auth != null && (((root.child('usuarios').child(auth.uid).child('roles').child('director').val() === true || root.child('usuarios').child(auth.uid).child('rol').val() === 'director' || root.child('usuarios').child(auth.uid).child('roles').child('subdirectora').val() === true)) || root.child('laboratorioUneq').child('acceso').child(auth.uid).val() === true)",
-                ".validate": "newData.isString() && newData.val().length <= 3500"
-              },
-              "editadoEn": {
-                ".write": "auth != null && (((root.child('usuarios').child(auth.uid).child('roles').child('director').val() === true || root.child('usuarios').child(auth.uid).child('rol').val() === 'director' || root.child('usuarios').child(auth.uid).child('roles').child('subdirectora').val() === true)) || root.child('laboratorioUneq').child('acceso').child(auth.uid).val() === true)",
-                ".validate": "newData.isNumber()"
-              },
-              "laminas": {
-                ".write": "auth != null && (((root.child('usuarios').child(auth.uid).child('roles').child('director').val() === true || root.child('usuarios').child(auth.uid).child('rol').val() === 'director' || root.child('usuarios').child(auth.uid).child('roles').child('subdirectora').val() === true)) || root.child('laboratorioUneq').child('acceso').child(auth.uid).val() === true)",
-                "$n": {
-                  ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 500 && $n.matches(/^([0-9]|1[01])$/)"
-                }
-              },
-              "mensajes": {
-                ".write": "auth != null && (((root.child('usuarios').child(auth.uid).child('roles').child('director').val() === true || root.child('usuarios').child(auth.uid).child('rol').val() === 'director' || root.child('usuarios').child(auth.uid).child('roles').child('subdirectora').val() === true)) || root.child('laboratorioUneq').child('acceso').child(auth.uid).val() === true)",
-                "$m": {
-                  ".validate": "newData.hasChildren(['texto']) && $m.matches(/^[0-5]$/)",
-                  "texto": {
-                    ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 1500"
-                  },
-                  "contexto": {
-                    ".validate": "newData.isString() && newData.val().length <= 80"
-                  },
-                  "$otro": {
-                    ".validate": false
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-
-    "laboratorioUneqSolicitudes": {
-      "$uid": {
-        ".read": "auth != null && auth.uid === $uid",
-        "$solicitudId": {
-          ".write": "auth != null && (((root.child('usuarios').child(auth.uid).child('roles').child('director').val() === true || root.child('usuarios').child(auth.uid).child('rol').val() === 'director' || root.child('usuarios').child(auth.uid).child('roles').child('subdirectora').val() === true)) || root.child('laboratorioUneq').child('acceso').child(auth.uid).val() === true) && auth.uid === $uid",
-          ".validate": "newData.hasChild('accion')",
-          "accion": {
-            ".validate": "newData.isString() && newData.val().length <= 30"
-          },
-          "datos": {
-            ".validate": true
-          },
-          "creada": {
-            ".validate": "newData.isNumber()"
-          },
-          "respuesta": {
-            ".validate": false
-          },
-          "$otro": {
-            ".validate": false
-          }
-        }
       }
     },
 
@@ -752,6 +639,83 @@
         }
       },
       "generaciones": {
+        "uneq": {
+          "$genId": {
+            "piezas": {
+              "$i": {
+                "guion": {
+                  ".write": "auth != null && (((root.child('usuarios').child(auth.uid).child('roles').child('director').val() === true || root.child('usuarios').child(auth.uid).child('rol').val() === 'director' || root.child('usuarios').child(auth.uid).child('roles').child('subdirectora').val() === true)) || root.child('laboratorioUneq').child('acceso').child(auth.uid).val() === true)",
+                  ".validate": "newData.isString() && newData.val().length <= 3500"
+                },
+                "textoPantalla": {
+                  ".write": "auth != null && (((root.child('usuarios').child(auth.uid).child('roles').child('director').val() === true || root.child('usuarios').child(auth.uid).child('rol').val() === 'director' || root.child('usuarios').child(auth.uid).child('roles').child('subdirectora').val() === true)) || root.child('laboratorioUneq').child('acceso').child(auth.uid).val() === true)",
+                  ".validate": "newData.isString() && newData.val().length <= 200"
+                },
+                "descripcion": {
+                  ".write": "auth != null && (((root.child('usuarios').child(auth.uid).child('roles').child('director').val() === true || root.child('usuarios').child(auth.uid).child('rol').val() === 'director' || root.child('usuarios').child(auth.uid).child('roles').child('subdirectora').val() === true)) || root.child('laboratorioUneq').child('acceso').child(auth.uid).val() === true)",
+                  ".validate": "newData.isString() && newData.val().length <= 2500"
+                },
+                "titular": {
+                  ".write": "auth != null && (((root.child('usuarios').child(auth.uid).child('roles').child('director').val() === true || root.child('usuarios').child(auth.uid).child('rol').val() === 'director' || root.child('usuarios').child(auth.uid).child('roles').child('subdirectora').val() === true)) || root.child('laboratorioUneq').child('acceso').child(auth.uid).val() === true)",
+                  ".validate": "newData.isString() && newData.val().length <= 200"
+                },
+                "sesion": {
+                  ".write": "auth != null && (((root.child('usuarios').child(auth.uid).child('roles').child('director').val() === true || root.child('usuarios').child(auth.uid).child('rol').val() === 'director' || root.child('usuarios').child(auth.uid).child('roles').child('subdirectora').val() === true)) || root.child('laboratorioUneq').child('acceso').child(auth.uid).val() === true)",
+                  ".validate": "newData.isString() && newData.val().length <= 200"
+                },
+                "apoyo": {
+                  ".write": "auth != null && (((root.child('usuarios').child(auth.uid).child('roles').child('director').val() === true || root.child('usuarios').child(auth.uid).child('rol').val() === 'director' || root.child('usuarios').child(auth.uid).child('roles').child('subdirectora').val() === true)) || root.child('laboratorioUneq').child('acceso').child(auth.uid).val() === true)",
+                  ".validate": "newData.isString() && newData.val().length <= 300"
+                },
+                "boton": {
+                  ".write": "auth != null && (((root.child('usuarios').child(auth.uid).child('roles').child('director').val() === true || root.child('usuarios').child(auth.uid).child('rol').val() === 'director' || root.child('usuarios').child(auth.uid).child('roles').child('subdirectora').val() === true)) || root.child('laboratorioUneq').child('acceso').child(auth.uid).val() === true)",
+                  ".validate": "newData.isString() && newData.val().length <= 40"
+                },
+                "anuncio": {
+                  ".write": "auth != null && (((root.child('usuarios').child(auth.uid).child('roles').child('director').val() === true || root.child('usuarios').child(auth.uid).child('rol').val() === 'director' || root.child('usuarios').child(auth.uid).child('roles').child('subdirectora').val() === true)) || root.child('laboratorioUneq').child('acceso').child(auth.uid).val() === true)",
+                  ".validate": "newData.isString() && newData.val().length <= 2500"
+                },
+                "ideaVisual": {
+                  ".write": "auth != null && (((root.child('usuarios').child(auth.uid).child('roles').child('director').val() === true || root.child('usuarios').child(auth.uid).child('rol').val() === 'director' || root.child('usuarios').child(auth.uid).child('roles').child('subdirectora').val() === true)) || root.child('laboratorioUneq').child('acceso').child(auth.uid).val() === true)",
+                  ".validate": "newData.isString() && newData.val().length <= 500"
+                },
+                "asunto": {
+                  ".write": "auth != null && (((root.child('usuarios').child(auth.uid).child('roles').child('director').val() === true || root.child('usuarios').child(auth.uid).child('rol').val() === 'director' || root.child('usuarios').child(auth.uid).child('roles').child('subdirectora').val() === true)) || root.child('laboratorioUneq').child('acceso').child(auth.uid).val() === true)",
+                  ".validate": "newData.isString() && newData.val().length <= 150"
+                },
+                "cuerpo": {
+                  ".write": "auth != null && (((root.child('usuarios').child(auth.uid).child('roles').child('director').val() === true || root.child('usuarios').child(auth.uid).child('rol').val() === 'director' || root.child('usuarios').child(auth.uid).child('roles').child('subdirectora').val() === true)) || root.child('laboratorioUneq').child('acceso').child(auth.uid).val() === true)",
+                  ".validate": "newData.isString() && newData.val().length <= 3500"
+                },
+                "editadoEn": {
+                  ".write": "auth != null && (((root.child('usuarios').child(auth.uid).child('roles').child('director').val() === true || root.child('usuarios').child(auth.uid).child('rol').val() === 'director' || root.child('usuarios').child(auth.uid).child('roles').child('subdirectora').val() === true)) || root.child('laboratorioUneq').child('acceso').child(auth.uid).val() === true)",
+                  ".validate": "newData.isNumber()"
+                },
+                "laminas": {
+                  ".write": "auth != null && (((root.child('usuarios').child(auth.uid).child('roles').child('director').val() === true || root.child('usuarios').child(auth.uid).child('rol').val() === 'director' || root.child('usuarios').child(auth.uid).child('roles').child('subdirectora').val() === true)) || root.child('laboratorioUneq').child('acceso').child(auth.uid).val() === true)",
+                  "$n": {
+                    ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 500 && $n.matches(/^([0-9]|1[01])$/)"
+                  }
+                },
+                "mensajes": {
+                  ".write": "auth != null && (((root.child('usuarios').child(auth.uid).child('roles').child('director').val() === true || root.child('usuarios').child(auth.uid).child('rol').val() === 'director' || root.child('usuarios').child(auth.uid).child('roles').child('subdirectora').val() === true)) || root.child('laboratorioUneq').child('acceso').child(auth.uid).val() === true)",
+                  "$m": {
+                    ".validate": "newData.hasChildren(['texto']) && $m.matches(/^[0-5]$/)",
+                    "texto": {
+                      ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 1500"
+                    },
+                    "contexto": {
+                      ".validate": "newData.isString() && newData.val().length <= 80"
+                    },
+                    "$otro": {
+                      ".validate": false
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
         "$alumnoId": {
           ".indexOn": ["creadoEn"],
           ".read": "auth != null && (root.child('alumnoPorAuthUid').child(auth.uid).val() === $alumnoId || (!root.child('alumnoPorAuthUid').child(auth.uid).exists() && (root.child('usuarios').child(auth.uid).child('roles').child('director').val() === true || root.child('usuarios').child(auth.uid).child('roles').child('coach').val() === true || root.child('usuarios').child(auth.uid).child('roles').child('mentor').val() === true || root.child('usuarios').child(auth.uid).child('rol').val() === 'director' || root.child('usuarios').child(auth.uid).child('rol').val() === 'coach' || root.child('usuarios').child(auth.uid).child('rol').val() === 'mentor')))",
