@@ -6,6 +6,7 @@
    ============================================================ */
 
 import { escaparHtml } from './util-html.js';
+import { iniciarConfigPlegable } from './config-plegable.js';
 
 let currentRole = null;
 let currentNombre = '';
@@ -356,6 +357,7 @@ export function setNav(section) {
     document.getElementById('topbar-title').textContent = 'Rendimiento IA';
   } else if (section === 'configuracion') {
     showView('view-configuracion');
+    iniciarConfigPlegable();
     document.getElementById('topbar-title').textContent = 'Configuración';
   } else if (section === 'bitacora-alumno') {
     showView('view-bitacora-alumno');
