@@ -22,7 +22,11 @@ import { initializeApp, deleteApp } from "https://www.gstatic.com/firebasejs/12.
 import { getCurrentRole } from './main.js';
 import { ocultarParaAlumno, cicloParaVista } from './demo.js';
 import { getAuth, createUserWithEmailAndPassword, signOut as signOutSecundaria, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-auth.js";
-import { programaLabel, testEsDe } from './ciclos.js';
+import { programaLabel, testEsDe, enModoVitalicio } from './ciclos.js';
+
+// OPEN Vitalicio desde el 2.º año: sigue todo lo que no es acompañamiento en vivo, pero sin mentorías en vivo,
+// sesiones de cabecera ni Copiloto de Cabecera.
+let modoVitalicioActual = false;
 import { registrarTestsAnalisis, botonAnalisisHtml } from './analisis-test.js';
 import { ordenarFijadasPrimero, registrarFijadas, botonFijar, etiquetaFijada } from './fijados.js';
 
@@ -210,6 +214,7 @@ export async function cargarDashboardAlumno(alumnoId) {
     const cicloSnap = await get(ref(db, `ciclos/${alumno.cicloActualId}`));
     ciclo = cicloSnap.exists() ? cicloParaVista(cicloSnap.val()) : null;   // en modo demo: con la fase simulada
   }
+  modoVitalicioActual = enModoVitalicio(ciclo);
 
   // --- Estética por nivel: BEGIN tiene su propio tema (azul) sobre el
   //     tema oscuro base de alumno. NEXT/eXIT mantienen el negro. ---
@@ -342,7 +347,9 @@ export async function cargarDashboardAlumno(alumnoId) {
     const whatsappCoachUrl = coach && coach.telefono ? `https://wa.me/${coach.telefono.replace(/[^0-9]/g, '')}?text=${mensajeCoach}` : '';
 
     let fraseDiasRestantes = '';
-    if (ciclo && ciclo.fechaEgreso) {
+    if (modoVitalicioActual) {
+      fraseDiasRestantes = '<strong>Tu acceso es vitalicio</strong> a todo el contenido y las herramientas de la plataforma.';
+    } else if (ciclo && ciclo.fechaEgreso) {
       const hoy = new Date(); hoy.setHours(0, 0, 0, 0);
       const egreso = new Date(ciclo.fechaEgreso + 'T00:00:00');
       const diasRestantes = Math.ceil((egreso.getTime() - hoy.getTime()) / (1000 * 60 * 60 * 24));
@@ -386,7 +393,7 @@ export async function cargarDashboardAlumno(alumnoId) {
     if (esBeginDashboard) {
       // BEGIN: días restantes dentro de Accesos Directos; la fase va en su
       // propia tarjeta, antes de los astronautas.
-      accesosEl.innerHTML = `${botonesAccesos}<div class="acceso-coach-bloque" style="line-height:1.6;">${lineaCoach}</div>${bloqueDias}`;
+      accesosEl.innerHTML = `${botonesAccesos}<div class="acceso-coach-bloque" style="line-height:1.6;">${modoVitalicioActual ? '' : lineaCoach}</div>${bloqueDias}`;
       if (fasePanelEl) {
         fasePanelEl.classList.remove('hidden', 'solo-pc');
         fasePanelEl.innerHTML = `<div class="panel__body alumno-fase-texto">${fraseFase}</div>`;
@@ -404,7 +411,7 @@ export async function cargarDashboardAlumno(alumnoId) {
       accesosEl.innerHTML = `
         ${botonesAccesos}
         <div class="acceso-coach-bloque" style="line-height:1.6;">
-          ${lineaCoach}
+          ${modoVitalicioActual ? '' : lineaCoach}
           <p class="solo-movil" style="margin:0 0 8px; line-height:1.6; text-align:center;">${fraseFase}</p>
         </div>
         ${bloqueDias ? bloqueDias.replace('class="acceso-dias"', 'class="acceso-dias solo-pc"') : ''}`;
@@ -2195,6 +2202,7 @@ let sesionVivoPendienteDeAbrir = null;
    cercana a la más lejana. Se usa en Preguntas en Vivo y en la tarjeta
    "Próxima Mentoría Grupal Semanal" del Dashboard. */
 async function obtenerSesionesVivoProximas(programa, usuarios) {
+  if (modoVitalicioActual) return []; // Vitalicio (2.º año en adelante): sin sesiones en vivo
   const esBegin = programa === 'begin';
   const esOpen = programa === 'open';
   const mentores = ordenarMentores(Object.entries(usuarios).filter(([, u]) => {
@@ -2288,12 +2296,13 @@ export async function cargarPreguntasVivo() {
   if (alumnoDatosPv.cicloActualId) {
     const cicloSnapPv = await get(ref(db, `ciclos/${alumnoDatosPv.cicloActualId}`));
     programaAlumnoPv = cicloSnapPv.exists() ? (cicloSnapPv.val().programa || null) : null;
+    modoVitalicioActual = cicloSnapPv.exists() && enModoVitalicio(cicloSnapPv.val());
   }
   const usuariosSnap = await get(ref(db, 'usuarios'));
   const usuarios = usuariosSnap.exists() ? usuariosSnap.val() : {};
 
   // OPEN no tiene mentorías en vivo generales: no se le muestran los horarios recurrentes.
-  renderHorariosRecurrentes(programaAlumnoPv === 'open' ? {} : usuarios);
+  renderHorariosRecurrentes((programaAlumnoPv === 'open' || modoVitalicioActual) ? {} : usuarios);
   const sesiones = await obtenerSesionesVivoProximas(programaAlumnoPv, usuarios);
 
   if (!sesiones.length) {

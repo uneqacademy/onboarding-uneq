@@ -14,7 +14,7 @@ import {
   ref as storageRef, uploadBytes, getDownloadURL
 } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-storage.js";
 import {
-  PROGRAMAS, cargarPreciosProgramas, tipoCambioConfigurado, calcularFechaEgreso, programaLabel, estadoProcesoLabel, diasEnEstadoProceso, estaEstancado, DIAS_ALERTA_POR_ESTADO,
+  PROGRAMAS, VITALICIO, precioContinuidadClp, dentroDeContinuidad, cargarPreciosProgramas, tipoCambioConfigurado, calcularFechaEgreso, programaLabel, estadoProcesoLabel, diasEnEstadoProceso, estaEstancado, DIAS_ALERTA_POR_ESTADO,
   crearCiclo, iniciarOnboardingSiCorresponde, generarAcuerdoYEnviarRevision,
   marcarEnviadoParaFirma, marcarFirmaProcesada, toggleCandado, renderStepper, renderAcciones
 } from './ciclos.js';
@@ -1035,6 +1035,8 @@ async function abrirFicha(alumnoId) {
   if (role === 'director' && estadoAlumnoActual === 'egresado') {
     poblarSelectCoaches(document.getElementById('nuevo-ciclo-coach'), null);
     actualizarCampoCoachSegunPrograma('nuevo-ciclo-programa', 'campo-nuevo-ciclo-coach', 'aviso-nuevo-ciclo-begin-sin-coach');
+    cicloBaseRenovacion = ciclo;
+    prepararContinuidadNuevoCiclo();
     autocompletarMontoNuevoCiclo();
   }
 
@@ -1109,6 +1111,7 @@ if (btnCrearAlumno) {
     const paisNuevo = document.getElementById('nuevo-alumno-pais').value;
     const programa = document.getElementById('nuevo-alumno-programa').value;
     const esMembresia = programa === 'next' && document.getElementById('nuevo-alumno-membresia').checked;
+    const esVitalicio = programa === 'open' && !!(document.getElementById('nuevo-alumno-vitalicio') || {}).checked;
     const coachId = sinCopilotoIndividual(programa) ? null : document.getElementById('nuevo-alumno-coach').value;
     const monto = document.getElementById('nuevo-alumno-monto').value.trim();
     const residencia = residenciaDePais(paisNuevo);
@@ -1190,7 +1193,8 @@ if (btnCrearAlumno) {
           : { montoTotal: monto, moneda, descuento, abono, saldo: saldoNuevo || monto, cuotas, pdfUrl: '' },
         fechaIngreso: fechaIngresoNuevo,
         fechaEgreso: fechaEgresoNuevo,
-        acuerdoCerrado: true // un solo guardado: el copiloto ya lo ve
+        acuerdoCerrado: true, // un solo guardado: el copiloto ya lo ve
+        vitalicio: esVitalicio
       });
 
       if (origenPreOnboardingId) {
@@ -1202,6 +1206,7 @@ if (btnCrearAlumno) {
         .forEach(id => { document.getElementById(id).value = ''; });
       document.getElementById('nuevo-alumno-programa').value = 'begin';
       document.getElementById('nuevo-alumno-membresia').checked = false;
+      const chkVit = document.getElementById('nuevo-alumno-vitalicio'); if (chkVit) chkVit.checked = false;
       actualizarCampoMembresiaSegunPrograma();
       paisManualNuevoAlumno = false;
       selectorTelefonoNuevo.restablecer();
@@ -1427,6 +1432,13 @@ function actualizarCampoMembresiaSegunPrograma() {
   if (!selectPrograma || !campoMembresia) return;
   const esNext = selectPrograma.value === 'next';
   campoMembresia.classList.toggle('hidden', !esNext);
+  const campoVitalicio = document.getElementById('campo-nuevo-alumno-vitalicio');
+  if (campoVitalicio) {
+    const esOpen = selectPrograma.value === 'open';
+    campoVitalicio.classList.toggle('hidden', !esOpen);
+    const chk = document.getElementById('nuevo-alumno-vitalicio');
+    if (!esOpen && chk) chk.checked = false;
+  }
   if (!esNext && checkboxMembresia) {
     checkboxMembresia.checked = false;
     actualizarFormularioPagoSegunMembresia();
@@ -1458,18 +1470,21 @@ async function autocompletarMontoNuevoAlumno() {
   await cargarPreciosProgramas(); // precios y tipo de cambio de Configuración
   const programa = PROGRAMAS[selectPrograma.value];
   if (!programa) return;
+  // OPEN Vitalicio tiene precio propio (Configuración).
+  const esVitalicio = selectPrograma.value === 'open' && !!(document.getElementById('nuevo-alumno-vitalicio') || {}).checked;
+  const precioBase = esVitalicio ? VITALICIO.precioClp : programa.precioClp;
 
   if (!selectMoneda.value) { // todavía sin país
     if (campoTipoCambio) campoTipoCambio.classList.add('hidden');
     inputMonto.value = '';
   } else if (selectMoneda.value === 'CLP') {
     if (campoTipoCambio) campoTipoCambio.classList.add('hidden');
-    inputMonto.value = programa.precioClp.toLocaleString('es-CL');
+    inputMonto.value = precioBase.toLocaleString('es-CL');
   } else if (selectMoneda.value === 'USD') {
     if (campoTipoCambio) campoTipoCambio.classList.remove('hidden');
     if (inputTipoCambio && !inputTipoCambio.value && tipoCambioConfigurado() > 0) inputTipoCambio.value = tipoCambioConfigurado();
     const tipoCambio = parseFloat(inputTipoCambio ? inputTipoCambio.value : '');
-    inputMonto.value = tipoCambio > 0 ? formatMonto(Math.round((programa.precioClp / tipoCambio) * 100) / 100, 'USD') : '';
+    inputMonto.value = tipoCambio > 0 ? formatMonto(Math.round((precioBase / tipoCambio) * 100) / 100, 'USD') : '';
   }
   recalcularTotalesNuevoAlumno();
 }
@@ -1594,6 +1609,7 @@ if (tablaCuotasNuevo) {
   new MutationObserver(recalcularTotalesNuevoAlumno).observe(tablaCuotasNuevo.querySelector('tbody'), { childList: true });
 }
 document.getElementById('nuevo-alumno-membresia')?.addEventListener('change', actualizarFechasNuevoAlumno);
+document.getElementById('nuevo-alumno-vitalicio')?.addEventListener('change', autocompletarMontoNuevoAlumno);
 // Al abrir el formulario se refrescan fechas, copiloto de cabecera y precios (por si cambiaron en Configuración).
 document.getElementById('btn-nuevo-alumno')?.addEventListener('click', () => { actualizarFormularioNuevoAlumno(); });
 if (inputNuevoAlumnoTipoCambio) inputNuevoAlumnoTipoCambio.addEventListener('input', autocompletarMontoNuevoAlumno);
@@ -1795,6 +1811,23 @@ if (btnMarcarEgresado) {
   });
 }
 
+// Renovación: el ciclo que termina (para saber si sigue dentro de la semana de gracia).
+let cicloBaseRenovacion = null;
+
+function prepararContinuidadNuevoCiclo() {
+  const chk = document.getElementById('nuevo-ciclo-continuidad');
+  const aviso = document.getElementById('aviso-nuevo-ciclo-continuidad');
+  if (!chk) return;
+  const dentro = dentroDeContinuidad(cicloBaseRenovacion);
+  chk.checked = dentro;
+  if (aviso) {
+    const egreso = cicloBaseRenovacion && cicloBaseRenovacion.fechaEgreso ? formatFecha(cicloBaseRenovacion.fechaEgreso) : '—';
+    aviso.textContent = dentro
+      ? 'Terminó el ' + egreso + ': sigue dentro de la continuidad (hasta 7 días después). Se aplica el 40% de descuento sobre el precio real.'
+      : 'Terminó el ' + egreso + ': pasó la semana de gracia, así que corresponde el precio real. Puedes marcar la continuidad a mano si hay una excepción.';
+  }
+}
+
 async function autocompletarMontoNuevoCiclo() {
   const selectPrograma = document.getElementById('nuevo-ciclo-programa');
   const selectMoneda = document.getElementById('nuevo-ciclo-moneda');
@@ -1812,11 +1845,13 @@ async function autocompletarMontoNuevoCiclo() {
   selectMoneda.value = monedaPorResidencia(residencia);
   const programa = PROGRAMAS[selectPrograma.value];
   if (!programa) return;
+  const chkContinuidad = document.getElementById('nuevo-ciclo-continuidad');
+  const precioBase = chkContinuidad && chkContinuidad.checked ? precioContinuidadClp(selectPrograma.value) : programa.precioClp;
   if (selectMoneda.value === 'CLP') {
-    inputMonto.value = programa.precioClp.toLocaleString('es-CL');
+    inputMonto.value = precioBase.toLocaleString('es-CL');
   } else {
     const tipoCambio = tipoCambioConfigurado();
-    inputMonto.value = tipoCambio > 0 ? (programa.precioClp / tipoCambio).toFixed(2) : '';
+    inputMonto.value = tipoCambio > 0 ? (precioBase / tipoCambio).toFixed(2) : '';
   }
 }
 const selectNuevoCicloPrograma = document.getElementById('nuevo-ciclo-programa');
@@ -1826,6 +1861,7 @@ if (selectNuevoCicloPrograma) {
   selectNuevoCicloPrograma.addEventListener('change', () => actualizarCampoCoachSegunPrograma('nuevo-ciclo-programa', 'campo-nuevo-ciclo-coach', 'aviso-nuevo-ciclo-begin-sin-coach'));
 }
 if (selectNuevoCicloMoneda) selectNuevoCicloMoneda.addEventListener('change', autocompletarMontoNuevoCiclo);
+document.getElementById('nuevo-ciclo-continuidad')?.addEventListener('change', autocompletarMontoNuevoCiclo);
 
 const btnCrearNuevoCiclo = document.getElementById('btn-crear-nuevo-ciclo');
 if (btnCrearNuevoCiclo) {
@@ -1848,7 +1884,8 @@ if (btnCrearNuevoCiclo) {
 
       await crearCiclo({
         alumnoId: currentAlumnoId, coachId, programa,
-        acuerdoPago: { montoTotal: monto, moneda, descuento: '', abono: '', saldo: monto, cuotas: {}, pdfUrl: '' }
+        acuerdoPago: { montoTotal: monto, moneda, descuento: '', abono: '', saldo: monto, cuotas: {}, pdfUrl: '' },
+        renovacionContinuidad: !!(document.getElementById('nuevo-ciclo-continuidad') || {}).checked
       });
 
       await abrirFicha(currentAlumnoId);

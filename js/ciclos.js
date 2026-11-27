@@ -14,17 +14,50 @@ import {
 
 import { parsearMonto } from './util-pagos.js';
 
-// "meses" = meses de ACCESO a la app (define la fecha de egreso). OPEN 2, BEGIN 4, NEXT 6, eXIT 12.
+// "meses" = meses de ACCESO. Desde el 27-nov-2026 TODOS duran 12 meses; los ciclos anteriores conservan los de antes (MESES_ANTERIORES).
 // (En eXIT el acompañamiento de Maca y Felipe y sus 8 sesiones son solo los primeros 6 meses.)
 // Los precios de abajo son los de respaldo: los vigentes los edita el director en
 // Configuración (configuracion/general: precioOpenClp, precioBeginClp, … y tipoCambioUsd)
 // y se cargan con cargarPreciosProgramas().
 export const PROGRAMAS = {
-  open:  { label: 'Open',  meses: 2, precioClp: 497000 },
-  begin: { label: 'Begin', meses: 4, precioClp: 1500000 },
-  next:  { label: 'Next',  meses: 6, precioClp: 3000000 },
+  open:  { label: 'Open',  meses: 12, precioClp: 497000 },
+  begin: { label: 'Begin', meses: 12, precioClp: 1500000 },
+  next:  { label: 'Next',  meses: 12, precioClp: 3000000 },
   exit:  { label: 'eXIT',  meses: 12, precioClp: 5000000 }
 };
+
+// Condiciones anteriores (ciclos sin `condiciones: 'v2'`): no cambian ni sus fechas ni su acuerdo.
+export const MESES_ANTERIORES = { open: 2, begin: 4, next: 6, exit: 12 };
+export const CONDICIONES_ACTUALES = 'v2';
+
+// Renovación con continuidad: 40% de descuento sobre el precio real si renueva sin cortar
+// (hasta 7 días después del vencimiento).
+export const DESCUENTO_CONTINUIDAD = 0.4;
+export const DIAS_GRACIA_CONTINUIDAD = 7;
+// OPEN Vitalicio: precio propio (editable en Configuración). El primer año funciona como OPEN normal;
+// desde el segundo, acceso vitalicio a todo lo que no sea acompañamiento en vivo.
+export const VITALICIO = { precioClp: 597000 };
+
+export function precioContinuidadClp(programaKey) {
+  const p = PROGRAMAS[programaKey];
+  return p ? Math.round(p.precioClp * (1 - DESCUENTO_CONTINUIDAD)) : 0;
+}
+
+// ¿Este ciclo ya pasó su primer año siendo Vitalicio? (Solo entonces se quita lo que es en vivo.)
+export function enModoVitalicio(ciclo) {
+  if (!ciclo || ciclo.vitalicio !== true || !ciclo.fechaEgreso) return false;
+  const hoy = new Date(); hoy.setHours(0, 0, 0, 0);
+  return hoy.getTime() > new Date(ciclo.fechaEgreso + 'T00:00:00').getTime();
+}
+
+// ¿La renovación sigue dentro de la continuidad (vencimiento del ciclo anterior + 7 días)?
+export function dentroDeContinuidad(cicloAnterior, hoy = new Date()) {
+  if (!cicloAnterior || !cicloAnterior.fechaEgreso) return false;
+  const limite = new Date(cicloAnterior.fechaEgreso + 'T00:00:00');
+  limite.setDate(limite.getDate() + DIAS_GRACIA_CONTINUIDAD);
+  const h = new Date(hoy); h.setHours(0, 0, 0, 0);
+  return h.getTime() <= limite.getTime();
+}
 
 const ORDEN_ESTADOS = ['asignado', 'en_onboarding', 'enviado_firma', 'en_revision', 'firma_procesada', 'matricula_finalizada'];
 
@@ -81,7 +114,7 @@ export function estadoProcesoLabel(estado) {
 }
 
 /* --- Crea un ciclo nuevo (llamado desde alumnos.js al crear alumno) --- */
-export async function crearCiclo({ alumnoId, coachId, programa, acuerdoPago, modalidadPago, fechaIngreso = null, fechaEgreso = null, acuerdoCerrado = false }) {
+export async function crearCiclo({ alumnoId, coachId, programa, acuerdoPago, modalidadPago, fechaIngreso = null, fechaEgreso = null, acuerdoCerrado = false, vitalicio = false, renovacionContinuidad = false }) {
   const cicloRef = push(ref(db, 'ciclos'));
   const cicloId = cicloRef.key;
 
@@ -99,6 +132,9 @@ export async function crearCiclo({ alumnoId, coachId, programa, acuerdoPago, mod
     // El copiloto lo ve cuando el acuerdo está cerrado. Al crear al alumno con todos los datos
     // (formulario de Nuevo Alumno) ya nace cerrado; si no, lo cierra el Director con "Guardar Acuerdo" (pagos.js).
     acuerdoCerrado,
+    condiciones: CONDICIONES_ACTUALES, // acuerdo y duración desde 27-nov-2026 (12 meses, renovación, Vitalicio)
+    vitalicio: !!vitalicio && programa === 'open',
+    renovacionContinuidad: !!renovacionContinuidad,
     facturacionActual: '',
     objetivoFacturacion: '',
     situacionPersonal: '',
@@ -145,7 +181,7 @@ export async function marcarFirmaProcesada(cicloId, fechaFirmaStr) {
   const fechaIngreso = ciclo.fechaIngreso || fechaFirmaStr;
   const fechaEgreso = ciclo.modalidadPago === 'membresia'
     ? fechaEgresoVigente(ciclo)
-    : (ciclo.fechaEgreso || calcularFechaEgreso(fechaIngreso, ciclo.programa));
+    : (ciclo.fechaEgreso || calcularFechaEgreso(fechaIngreso, ciclo.programa, ciclo.condiciones !== CONDICIONES_ACTUALES));
 
   await update(ref(db, `ciclos/${cicloId}`), {
     estadoProceso: 'matricula_finalizada',
@@ -157,8 +193,10 @@ export async function marcarFirmaProcesada(cicloId, fechaFirmaStr) {
   });
 }
 
-export function calcularFechaEgreso(fechaIngresoStr, programaKey) {
-  const meses = PROGRAMAS[programaKey] ? PROGRAMAS[programaKey].meses : 3;
+export function calcularFechaEgreso(fechaIngresoStr, programaKey, condicionesAnteriores = false) {
+  const meses = condicionesAnteriores && MESES_ANTERIORES[programaKey]
+    ? MESES_ANTERIORES[programaKey]
+    : (PROGRAMAS[programaKey] ? PROGRAMAS[programaKey].meses : 12);
   const fecha = new Date(fechaIngresoStr + 'T00:00:00');
   fecha.setMonth(fecha.getMonth() + meses);
   // Se arma con la fecha local (toISOString la pasaba a UTC y podía correr el día).
@@ -246,6 +284,8 @@ export async function cargarPreciosProgramas(forzar = false) {
       const precio = parsearMonto(c[campo]);
       if (precio > 0) PROGRAMAS[programa].precioClp = precio;
     });
+    const vit = parsearMonto(c.precioVitalicioClp);
+    if (vit > 0) VITALICIO.precioClp = vit;
     const tipoCambio = parseFloat(String(c.tipoCambioUsd || '').replace(',', '.'));
     tipoCambioCargado = tipoCambio > 0 ? tipoCambio : 0;
     preciosCargadosEn = Date.now();
