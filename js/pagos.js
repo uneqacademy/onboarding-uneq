@@ -16,6 +16,7 @@ import { ref, get, set, update, push, onValue } from "https://www.gstatic.com/fi
 import { ref as storageRef, uploadBytes, getDownloadURL, deleteObject } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-storage.js";
 import { getCurrentRole, esSubdirectora } from './main.js';
 import { hoyISO } from './util-pagos.js';
+import { generarPdfAcuerdo } from './pdf-acuerdo.js';
 
 let cicloIdActual = null;
 let monedaActual = 'CLP';
@@ -131,6 +132,30 @@ export async function cargarAcuerdoParaCiclo(cicloId) {
   pintarAcuerdo(cicloId, null);
 }
 
+// Vuelve a generar el PDF del acuerdo con los datos y cláusulas actuales (no cambia el estado del proceso).
+// Solo mientras no esté firmado: enviado para firma o en revisión.
+async function regenerarPdfAcuerdo(cicloId) {
+  const btn = document.getElementById('btn-regenerar-pdf-acuerdo');
+  try {
+    const cicloSnap = await get(ref(db, `ciclos/${cicloId}`));
+    const ciclo = cicloSnap.exists() ? cicloSnap.val() : null;
+    if (!ciclo) { alert('No se encontró el ciclo.'); return; }
+    if (!['enviado_firma', 'en_revision'].includes(ciclo.estadoProceso)) {
+      alert('Este acuerdo ya no está pendiente de firma, así que no se puede regenerar.');
+      return;
+    }
+    if (!confirm('¿Regenerar el PDF del acuerdo con los datos y cláusulas actuales? Reemplaza al PDF anterior.')) return;
+    if (btn) { btn.disabled = true; btn.textContent = 'Generando…'; }
+    await generarPdfAcuerdo(ciclo.alumnoId, cicloId);
+    alert('Listo: el PDF del acuerdo se regeneró.');
+  } catch (err) {
+    console.error('No se pudo regenerar el PDF del acuerdo:', err);
+    alert('No se pudo regenerar el PDF. Detalle: ' + (err && err.message ? err.message : err));
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = '🔄 Regenerar PDF'; }
+  }
+}
+
 async function pintarAcuerdo(cicloId, acuerdoGuardado) {
   const tbody = document.getElementById('tabla-cuotas-ficha-body');
   if (getCurrentRole() !== 'director' || !cicloId) {
@@ -169,6 +194,11 @@ async function pintarAcuerdo(cicloId, acuerdoGuardado) {
     estadoPdfEl.innerHTML = acuerdo.pdfUrl
       ? `<a href="${acuerdo.pdfUrl}" target="_blank" rel="noopener">Ver PDF ↗</a>`
       : 'Aún no generado';
+    // Si el acuerdo cambió (monto, fechas, cláusulas) antes de firmarse, se puede volver a generar el PDF.
+    if (acuerdo.pdfUrl) {
+      estadoPdfEl.insertAdjacentHTML('beforeend', ' <button type="button" class="btn btn--ghost" id="btn-regenerar-pdf-acuerdo" style="font-size:12px; padding:4px 10px; margin-left:8px;">🔄 Regenerar PDF</button>');
+      document.getElementById('btn-regenerar-pdf-acuerdo').addEventListener('click', () => regenerarPdfAcuerdo(cicloId));
+    }
   }
 
   const estadoPdfFirmadoEl = document.getElementById('pago-estado-pdf-firmado');
