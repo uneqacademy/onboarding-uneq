@@ -193,7 +193,8 @@ export async function generarPdfAcuerdo(alumnoId, cicloId) {
   const alumnosProyecto = [alumno, ...otrosSnaps.filter(s => s.exists()).map(s => s.val())];
 
   const esV2 = ciclo.condiciones === 'v2';           // acuerdo con las condiciones desde el 27-nov-2026
-  const esVitalicio = esV2 && ciclo.vitalicio === true && ciclo.programa === 'open';
+  const esUpgrade = !!ciclo.upgradeVitalicio;        // pasó (o está pasando) de OPEN anual a OPEN Vitalicio
+  const esVitalicio = esV2 && ciclo.programa === 'open' && (ciclo.vitalicio === true || esUpgrade);
   const hoyStr = new Date().toISOString().slice(0, 10);
   const esMembresia = ciclo.modalidadPago === 'membresia';
   // Fechas reales del ciclo (ya escritas a mano en "Ciclo Actual") en
@@ -321,7 +322,15 @@ export async function generarPdfAcuerdo(alumnoId, cicloId) {
   // --- SEGUNDO ---
   clausula('Condiciones Económicas');
   const textoDescuento = descuento > 0 ? ', que incluye un descuento aplicado sobre el valor de lista' : '';
-  parrafo(`El valor total del programa ${programaLabel(ciclo.programa)} es de ${acuerdo.montoTotal || '—'} ${moneda}${textoDescuento}.`);
+  if (esV2 && ciclo.programa === 'open') {
+    parrafo(`El valor de ${esVitalicio ? 'OPEN Vitalicio' : 'OPEN'} es de ${acuerdo.montoTotal || '—'} ${moneda}${textoDescuento}.`);
+  } else {
+    parrafo(`El valor total del programa ${programaLabel(ciclo.programa)} es de ${acuerdo.montoTotal || '—'} ${moneda}${textoDescuento}.`);
+  }
+  if (esUpgrade) {
+    const anterior = acuerdo.acuerdoAnterior || {};
+    parrafo(`El presente Acuerdo corresponde al paso (upgrade) de OPEN a OPEN Vitalicio y reemplaza al acuerdo anterior suscrito por el/la Alumno/a. El valor de OPEN, que el/la Alumno/a ya contrató, es de ${anterior.montoTotal || '—'} ${moneda}; se considera lo ya pagado por ese programa y el/la Alumno/a abona la diferencia correspondiente, según el calendario de pagos que sigue. El plazo del primer año de la modalidad Vitalicio se cuenta desde la fecha de ingreso original al programa OPEN, indicada en la cláusula Primera, y no se reinicia con este upgrade.`);
+  }
   parrafo('La forma de pago acordada es la siguiente:');
   const fechaAbono = ciclo.createdAt ? new Date(ciclo.createdAt).toISOString().slice(0, 10) : null;
   parrafo(`Abono inicial: ${acuerdo.abono || '0'} ${moneda}, pagado con fecha ${formatFechaLarga(fechaAbono)}`);
@@ -399,7 +408,8 @@ export async function generarPdfAcuerdo(alumnoId, cicloId) {
 
   // --- Subir a Storage y guardar la URL ---
   const blob = doc.output('blob');
-  const archivoRef = storageRef(storage, `acuerdos/${cicloId}.pdf`);
+  // En un upgrade a Vitalicio el PDF va en otra ruta: así el acuerdo anterior queda guardado como respaldo.
+  const archivoRef = storageRef(storage, `acuerdos/${cicloId}${esUpgrade ? '-vitalicio' : ''}.pdf`);
   await uploadBytes(archivoRef, blob);
   const url = await getDownloadURL(archivoRef);
 
