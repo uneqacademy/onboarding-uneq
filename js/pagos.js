@@ -17,6 +17,7 @@ import { ref as storageRef, uploadBytes, getDownloadURL, deleteObject } from "ht
 import { getCurrentRole, esSubdirectora } from './main.js';
 import { hoyISO } from './util-pagos.js';
 import { generarPdfAcuerdo } from './pdf-acuerdo.js';
+import { pintarPanelUpgrade, upgradePendiente } from './upgrade-vitalicio.js';
 
 let cicloIdActual = null;
 let monedaActual = 'CLP';
@@ -140,7 +141,8 @@ async function regenerarPdfAcuerdo(cicloId) {
     const cicloSnap = await get(ref(db, `ciclos/${cicloId}`));
     const ciclo = cicloSnap.exists() ? cicloSnap.val() : null;
     if (!ciclo) { alert('No se encontró el ciclo.'); return; }
-    if (!['enviado_firma', 'en_revision'].includes(ciclo.estadoProceso)) {
+    const upgradePendienteDeFirma = !!(ciclo.upgradeVitalicio && ciclo.upgradeVitalicio.estado === 'pendiente_firma');
+    if (!upgradePendienteDeFirma && !['enviado_firma', 'en_revision'].includes(ciclo.estadoProceso)) {
       alert('Este acuerdo ya no está pendiente de firma, así que no se puede regenerar.');
       return;
     }
@@ -232,6 +234,9 @@ async function pintarAcuerdo(cicloId, acuerdoGuardado) {
   const cuotas = acuerdo.cuotas ? Object.entries(acuerdo.cuotas).sort((a, b) => (a[1].fecha || '').localeCompare(b[1].fecha || '')) : [];
   cuotaIdsOriginales = new Set(cuotas.map(([id]) => id));
   cuotas.forEach(([id, c]) => agregarFilaCuota(c, id));
+
+  // Upgrade a OPEN Vitalicio (solo alumnos OPEN; ver upgrade-vitalicio.js)
+  await pintarPanelUpgrade(cicloId, acuerdo, () => cargarAcuerdoParaCiclo(cicloId));
 }
 
 const inputMonto = document.getElementById('pago-monto-total');
@@ -299,7 +304,7 @@ if (btnSubirAcuerdoFirmado && inputAcuerdoFirmado) {
     const textoOriginal = btnSubirAcuerdoFirmado.textContent;
     btnSubirAcuerdoFirmado.textContent = 'Subiendo...';
     try {
-      const archivoRef = storageRef(storage, `acuerdos-firmados/${cicloIdActual}`);
+      const archivoRef = storageRef(storage, `acuerdos-firmados/${cicloIdActual}${upgradePendiente() ? '-vitalicio' : ''}`);
       await uploadBytes(archivoRef, file);
       const url = await getDownloadURL(archivoRef);
       await update(ref(db, `acuerdosPago/${cicloIdActual}`), { pdfFirmadoUrl: url });
