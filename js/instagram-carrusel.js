@@ -20,8 +20,13 @@ const MAX_LAMINAS = 10;
 // alumno real (solo lectura), NO lo ve: no debe publicar contenido de un alumno. Cuando se abra a los alumnos, aquí se
 // cambia la condición por (r === 'alumno').
 export function puedePublicarInstagram() {
-  return getCurrentRole() === 'alumno' && esModoDemo();
+  return !!cuentaCompartida || (getCurrentRole() === 'alumno' && esModoDemo());
 }
+
+// Laboratorio UNEQ: todo el equipo publica en la MISMA cuenta (@somosuneq). Esa pantalla activa este modo al abrirse y el
+// Laboratorio IA de alumnos lo apaga; en ese modo la conexión y la marca visual son las de la cuenta compartida.
+let cuentaCompartida = '';
+export function usarCuentaInstagram(cuenta) { cuentaCompartida = cuenta === 'uneq' ? 'uneq' : ''; }
 
 // Carrusel de ejemplo para probar la publicación sin generar nada con IA (lo usa el equipo y la revisión de Meta).
 export const CARRUSEL_EJEMPLO = {
@@ -63,8 +68,10 @@ export async function abrirDisenoCarrusel(pieza) {
   const textos = (pieza.laminas || []).map(t => String(t || '')).slice(0, MAX_LAMINAS);
   if (textos.length < 2) { alert('Un carrusel necesita al menos 2 láminas.'); return; }
 
-  const estadoIg = await leerEstadoIg(u.uid);
-  const marca = await leerMarca(u.uid, estadoIg && estadoIg.username);
+  const cuenta = cuentaCompartida;                 // '' = su propia cuenta; 'uneq' = la cuenta compartida del equipo
+  const claveIg = cuenta || u.uid;
+  const estadoIg = await leerEstadoIg(claveIg);
+  const marca = await leerMarca(claveIg, estadoIg && estadoIg.username);
   let guardarTimer = null, ocupado = false;
 
   const fondo = document.createElement('div');
@@ -131,7 +138,7 @@ export async function abrirDisenoCarrusel(pieza) {
   }
   function programarGuardadoMarca() {
     clearTimeout(guardarTimer);
-    guardarTimer = setTimeout(() => { set(ref(db, `instagramMarca/${u.uid}`), marcaActual()).catch(err => console.error('Instagram: no se pudo guardar la marca:', err)); }, 900);
+    guardarTimer = setTimeout(() => { set(ref(db, `instagramMarca/${claveIg}`), marcaActual()).catch(err => console.error('Instagram: no se pudo guardar la marca:', err)); }, 900);
   }
   fondo.querySelectorAll('[data-plantilla],[data-fuente],[data-color1],[data-color2],[data-usuario]').forEach(el => el.addEventListener('input', () => { dibujar(); programarGuardadoMarca(); }));
   areas.forEach(ta => ta.addEventListener('input', dibujar));
@@ -160,7 +167,7 @@ export async function abrirDisenoCarrusel(pieza) {
 
   // Publicar: primero se pide confirmación explícita
   $('[data-publicar]').addEventListener('click', () => {
-    if (!estadoIg) { mostrar('Primero conecta tu Instagram en el panel de arriba del Laboratorio.', true); return; }
+    if (!estadoIg) { mostrar(cuenta ? 'Primero conecta la cuenta de Instagram de UNEQ en el panel de arriba.' : 'Primero conecta tu Instagram en el panel de arriba del Laboratorio.', true); return; }
     if (areas.some(a => !a.value.trim())) { mostrar('Ninguna lámina puede quedar vacía.', true); return; }
     mostrar('');
     $('[data-confirmar-texto]').textContent = `Se publicarán ${canvases.length} láminas en @${estadoIg.username} con el texto que ves. Después podrás borrarlas solo desde Instagram. ¿Publicar ahora?`;
@@ -185,7 +192,7 @@ export async function abrirDisenoCarrusel(pieza) {
         urls.push(await getDownloadURL(r));
       }
       mostrar('Publicando en Instagram… puede tardar un minuto.');
-      const res = await llamarInstagram('publicarCarrusel', { urls, caption: $('[data-caption]').value }, 280000);
+      const res = await llamarInstagram('publicarCarrusel', { urls, caption: $('[data-caption]').value, ...(cuenta ? { cuenta } : {}) }, 280000);
       ocupado = false;
       $('[data-confirmar]').classList.add('hidden');
       estado.className = 'ig-modal__estado';

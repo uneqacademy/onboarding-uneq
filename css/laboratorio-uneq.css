@@ -1,0 +1,69 @@
+/* ============================================================
+   Laboratorio UNEQ (equipo). Vive dentro de #view-laboratorio-ia: usa su estética oscura (variables --lab-*).
+   ============================================================ */
+
+#view-laboratorio-ia .luneq-intro { margin: 0 0 16px; font-size: 14.5px; line-height: 1.5; }
+#view-laboratorio-ia .luneq-intro strong { color: #fff; }
+
+/* Pasos del formulario */
+#view-laboratorio-ia .luneq-paso { display: flex; align-items: center; gap: 10px; margin: 18px 0 10px; font-weight: 700; color: var(--lab-texto); }
+#view-laboratorio-ia .luneq-paso:first-of-type { margin-top: 10px; }
+#view-laboratorio-ia .luneq-paso span {
+  display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 24px; border-radius: 50%;
+  background: linear-gradient(135deg, var(--lab-azul), var(--lab-violeta)); color: #fff; font-size: 13px; flex: none;
+}
+#view-laboratorio-ia .luneq-paso em { font-weight: 400; font-style: normal; }
+
+/* Etapas: tarjetas elegibles */
+.luneq-etapas { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 10px; }
+.luneq-etapa { display: block; cursor: pointer; }
+.luneq-etapa input { position: absolute; opacity: 0; pointer-events: none; }
+.luneq-etapa__caja {
+  display: flex; flex-direction: column; gap: 4px; height: 100%; box-sizing: border-box; padding: 12px 14px; border-radius: 12px;
+  border: 1px solid var(--lab-borde); background: var(--lab-panel); color: var(--lab-texto); font-size: 13.5px; transition: border-color .15s, box-shadow .15s;
+}
+.luneq-etapa__caja strong { color: #fff; font-size: 15px; }
+.luneq-etapa__caja span { color: var(--lab-suave); }
+.luneq-etapa input:checked + .luneq-etapa__caja { border-color: var(--lab-cian); box-shadow: var(--lab-glow); }
+.luneq-etapa input:focus-visible + .luneq-etapa__caja { outline: 2px solid var(--lab-cian); outline-offset: 2px; }
+
+/* Formatos */
+.luneq-formatos { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 8px; }
+.luneq-formato {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 9px 12px; border-radius: 10px;
+  border: 1px solid var(--lab-borde); background: var(--lab-panel); color: var(--lab-texto);
+}
+.luneq-formato__check { display: flex; align-items: center; gap: 8px; cursor: pointer; font-weight: 600; }
+.luneq-formato__cant { display: flex; align-items: center; gap: 6px; font-size: 12.5px; color: var(--lab-suave); }
+.luneq-formato select, .luneq-campo select {
+  font: inherit; font-size: 13.5px; color: #e8eeff; background: rgba(5, 10, 28, 0.7); border: 1px solid var(--lab-borde); border-radius: 8px; padding: 4px 8px;
+}
+
+/* Campos */
+.luneq-campo { display: flex; flex-direction: column; gap: 5px; margin: 0 0 12px; font-size: 14px; font-weight: 600; color: var(--lab-texto); }
+.luneq-campo textarea, .luneq-campo input[type="text"] {
+  width: 100%; box-sizing: border-box; font: inherit; font-weight: 400; font-size: 14.5px; line-height: 1.5; color: #e8eeff;
+  background: rgba(5, 10, 28, 0.7); border: 1px solid var(--lab-borde); border-radius: 10px; padding: 10px 12px; resize: vertical;
+}
+.luneq-campo textarea:focus, .luneq-campo input[type="text"]:focus { outline: 2px solid var(--lab-cian); outline-offset: 0; border-color: var(--lab-cian); }
+.luneq-campo input[type="range"] { width: 100%; max-width: 360px; accent-color: var(--lab-cian); }
+.luneq-ayuda { font-size: 12.5px; font-weight: 400; }
+.luneq-emojis { margin-top: 6px; }
+.luneq-acciones { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; margin-top: 8px; }
+#luneq-resultado { margin-top: 18px; }
+#view-laboratorio-ia .luneq-tema { margin: 0 0 12px; font-size: 13.5px; color: var(--lab-suave); }
+#view-laboratorio-ia .luneq-tema strong { color: var(--lab-texto); }
+
+/* Secciones plegables (ficha de marca y equipo) */
+.luneq-det > summary { cursor: pointer; display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px; list-style: none; }
+.luneq-det > summary::-webkit-details-marker { display: none; }
+.luneq-det > summary::before { content: '▸'; color: var(--lab-cian); }
+.luneq-det[open] > summary::before { content: '▾'; }
+.luneq-det[open] > summary { margin-bottom: 14px; }
+
+/* Equipo con acceso */
+.luneq-equipo { list-style: none; margin: 0 0 8px; padding: 0; display: grid; gap: 8px; }
+.luneq-equipo li { border: 1px solid var(--lab-borde); border-radius: 10px; background: var(--lab-panel); }
+.luneq-equipo label { display: flex; align-items: center; gap: 12px; padding: 10px 14px; cursor: pointer; }
+.luneq-equipo input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--lab-cian); flex: none; }
+.luneq-equipo .badge { margin-left: 6px; }
