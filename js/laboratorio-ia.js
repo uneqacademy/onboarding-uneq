@@ -33,7 +33,10 @@ const estrategiaServidor = httpsCallable(functions, 'laboratorioEstrategia', { t
 
 // En modo demo se manda la fase que la barra del Demo dice simular y, si activó «Simular H2F4», el texto del H2F4 de prueba
 // (ese control vive en la barra de arriba, no en esta pantalla); el servidor solo lo acepta si la cuenta es el demo.
+// Modo UNEQ: el mismo Laboratorio, pero para la marca (Laboratorio UNEQ). Todas las llamadas al servidor llevan `uneq: true`.
+let modoUneq = false;
 const conFase = (datos) => {
+  if (modoUneq) return { ...datos, uneq: true };
   if (!esModoDemo()) return datos;
   const h = getH2F4Demo();
   return { ...datos, faseDemo: getFaseDemo(), ...(h.activo ? { h2f4Demo: h.texto } : {}) };
@@ -103,6 +106,13 @@ let datos = null;       // respuesta de laboratorioAbrir
 let alumnoIdActual = null;
 
 function htmlCabeceraAlumno() {
+  if (modoUneq) {
+    return `
+    <div class="lab-hero">
+      <div class="lab-hero__saludo">Laboratorio UNEQ 🚀</div>
+      <p class="lab-hero__frase">Aquí el equipo crea el contenido de UNEQ (@somosuneq) con las fichas y la guía de la marca. Todas las fases están abiertas.</p>
+    </div>`;
+  }
   const nombre = datos.primerNombre ? `, ${esc(datos.primerNombre)}` : '';
   return `
     <div class="lab-hero">
@@ -115,8 +125,10 @@ function htmlFichas() {
   if (!datos.seccionesAbiertas.length) return '';
   return `
     <section class="lab-bloque">
-      <h3>Tu ficha</h3>
-      <p class="text-soft lab-bloque__sub">Esto es lo que la IA sabe de ti. Lo armó con lo que ya compartiste en tus hitos; revísalo, corrígelo si hace falta y apruébalo. Con eso, los contenidos sonarán a ti.</p>
+      <h3>${modoUneq ? 'Ficha de UNEQ' : 'Tu ficha'}</h3>
+      <p class="text-soft lab-bloque__sub">${modoUneq
+        ? 'Esto es lo que la IA sabe de UNEQ. Solo la Directora Académica completa y aprueba las fichas; el resto del equipo las puede ver.'
+        : 'Esto es lo que la IA sabe de ti. Lo armó con lo que ya compartiste en tus hitos; revísalo, corrígelo si hace falta y apruébalo. Con eso, los contenidos sonarán a ti.'}</p>
       ${datos.seccionesAbiertas.map(s => {
         const p = datos.preguntas[s];
         const f = datos.fichas[s];
@@ -128,8 +140,8 @@ function htmlFichas() {
               <strong>${esc(p.titulo)}</strong>
               ${p.descripcion ? `<p class="text-soft">${esc(p.descripcion)}</p>` : ''}
             </div>
-            <span class="lab-badge ${aprobada ? 'lab-badge--ok' : 'lab-badge--pend'}">${aprobada ? 'Aprobada ✓' : 'Por revisar'}</span>
-            <button type="button" class="btn ${aprobada ? 'btn--ghost' : 'btn--primary'}" data-abrir-ficha="${s}">${aprobada ? 'Ver / editar' : 'Revisar y aprobar'}</button>
+            <span class="lab-badge ${aprobada ? 'lab-badge--ok' : 'lab-badge--pend'}">${aprobada ? 'Aprobada ✓' : (modoUneq ? 'Pendiente' : 'Por revisar')}</span>
+            <button type="button" class="btn ${aprobada ? 'btn--ghost' : 'btn--primary'}" data-abrir-ficha="${s}">${modoUneq && !datos.puedeEditarFicha ? 'Ver' : aprobada ? 'Ver / editar' : (modoUneq ? 'Completar y aprobar' : 'Revisar y aprobar')}</button>
           </div>
           <div class="lab-ficha__editor hidden" data-editor="${s}"></div>
         </div>`;
@@ -144,7 +156,7 @@ function textoEstadoEtapa(id) {
   if (e.motivo === 'desactivada') return 'Disponible pronto.';
   if (e.motivo === 'fase') return `Se activa en la Fase ${info.desdeFase}.`;
   if (e.motivo === 'hito') return `Se activa cuando compartas tu hito ${info.hitoActivador || ''}.`.replace(' .', '.');
-  return 'Primero aprueba tu ficha.';
+  return modoUneq ? 'La Directora Académica debe aprobar primero las fichas de UNEQ.' : 'Primero aprueba tu ficha.';
 }
 
 /* --- Estrategia de Encuentro (técnica de la SDV, tipo de contenido, palabra clave, link y fecha) --- */
@@ -169,7 +181,7 @@ function htmlEstrategiaPanel(e) {
       <h4>Tu estrategia de Encuentro</h4>
       <p class="text-soft">Esto le da contexto a tus contenidos y define cómo se escriben los llamados a la acción. Puedes cambiarlo cuando quieras.</p>
       <p class="text-soft">La fecha y la hora de tu SDV salen de tu ficha «${esc(((datos.preguntas || {}).fase4 || {}).titulo || '¡Mi SDV lista para despegar!')}».</p>
-      <p class="lab-estrategia__estado text-soft ${e ? 'hidden' : ''}" id="lab-estrategia-estado"><span class="lab-spinner"></span> Leyendo tu hito ${esc(((datos.etapas.encuentro || {}).hitoActivador) || 'H2F4')} para proponerte una palabra clave…</p>
+      <p class="lab-estrategia__estado text-soft ${e ? 'hidden' : ''}" id="lab-estrategia-estado"><span class="lab-spinner"></span> ${modoUneq ? 'Pensando una palabra clave con la ficha de UNEQ…' : `Leyendo tu hito ${esc(((datos.etapas.encuentro || {}).hitoActivador) || 'H2F4')} para proponerte una palabra clave…`}</p>
       <fieldset class="lab-estrategia__campo"><legend>¿Qué técnica usarás?</legend>
         ${Object.entries(datos.tecnicas).map(([k, t]) => `<label class="lab-estrategia__opcion"><input type="radio" name="lab-est-tecnica" value="${esc(k)}" ${tec === k ? 'checked' : ''}> ${esc(t.nombre)}</label>`).join('')}
       </fieldset>
@@ -453,7 +465,8 @@ function botonesEtapa(id, e) {
       ? '<button type="button" class="btn btn--primary" data-pagado-venta>Mis ángulos y contenidos</button>'
       : '<button type="button" class="btn btn--primary" data-organico-venta>Elegir y generar contenidos</button>'}</div>`;
   }
-  return `<div class="lab-etapa__acciones"><button type="button" class="btn btn--primary" data-generar="${id}">Generar contenidos</button></div>`;
+  const btnLibre = modoUneq ? `<button type="button" class="btn btn--ghost" data-formatos-libres="${id}">Elegir formatos y cantidad</button>` : '';
+  return `<div class="lab-etapa__acciones">${btnLibre}<button type="button" class="btn btn--primary" data-generar="${id}">Generar contenidos</button></div>`;
 }
 
 /* --- Paneles que se despliegan bajo las tarjetas (estrategia, ángulos, opciones, flujo) ---
@@ -597,20 +610,27 @@ function pintarOpcionesPagado() {
   const recetas = recetasDisponibles('pagado');
   const aprobados = angulos.filter(a => a.aprobado);
   const recetaPrevia = (cont.querySelector('input[name="lab-receta"]:checked') || {}).value || (recetas[0] || [])[0];
+  const planPrevio = modoUneq && cont.querySelector('[data-formato]') ? leerPlanLibre(cont) : null;
   cont.innerHTML = `
-    <h5>¿Qué quieres crear?</h5>
-    ${recetas.map(([id, r]) => `<label class="lab-estrategia__opcion"><input type="radio" name="lab-receta" value="${esc(id)}" ${id === recetaPrevia ? 'checked' : ''}> <span><strong>${esc(r.nombre)}</strong>${r.descripcion ? ` <span class="text-soft">· ${esc(r.descripcion)}</span>` : ''}</span></label>`).join('') || '<p class="text-soft">No hay opciones activas por ahora.</p>'}
+    ${modoUneq ? htmlSelectorFormatos(planPrevio) : '<h5>¿Qué quieres crear?</h5>'}
+    ${modoUneq ? '' : recetas.map(([id, r]) => `<label class="lab-estrategia__opcion"><input type="radio" name="lab-receta" value="${esc(id)}" ${id === recetaPrevia ? 'checked' : ''}> <span><strong>${esc(r.nombre)}</strong>${r.descripcion ? ` <span class="text-soft">· ${esc(r.descripcion)}</span>` : ''}</span></label>`).join('') || '<p class="text-soft">No hay opciones activas por ahora.</p>'}
     <h5>¿Con qué ángulos?</h5>
     ${aprobados.length
       ? aprobados.map(a => `<label class="lab-estrategia__opcion"><input type="checkbox" data-ang-sel value="${esc(a.id)}" ${angulosElegidos.has(a.id) ? 'checked' : ''}> <span><strong>Ángulo ${esc(a.numero)}:</strong> ${esc(a.titulo)}</span></label>`).join('')
       : '<p class="text-soft">Aprueba al menos un ángulo para poder elegirlo aquí.</p>'}
     <p class="text-soft lab-pagado__nota">Si eliges más de un ángulo, los contenidos se reparten lo más parejo posible entre ellos.</p>
-    <button type="button" class="btn btn--primary" id="lab-pagado-generar" data-generar-pagado ${recetas.length && aprobados.length ? '' : 'disabled'}>Generar contenidos</button>`;
+    <button type="button" class="btn btn--primary" id="lab-pagado-generar" data-generar-pagado ${(modoUneq || recetas.length) && aprobados.length ? '' : 'disabled'}>Generar contenidos</button>`;
   cont.querySelectorAll('[data-ang-sel]').forEach(c => c.addEventListener('change', () => { if (c.checked) angulosElegidos.add(c.value); else angulosElegidos.delete(c.value); }));
   const btn = cont.querySelector('#lab-pagado-generar');
   btn.addEventListener('click', () => {
     const receta = (cont.querySelector('input[name="lab-receta"]:checked') || {}).value || '';
     if (!angulosElegidos.size) { alert('Elige al menos un ángulo aprobado.'); return; }
+    if (modoUneq) {
+      const plan = leerPlanLibre(cont);
+      if (!plan.length) { alert('Elige al menos un formato.'); return; }
+      generarEtapa(etapaPanel, btn, { plan, angulos: [...angulosElegidos] });
+      return;
+    }
     generarEtapa(etapaPanel, btn, { receta, angulos: [...angulosElegidos] });
   });
 }
@@ -623,6 +643,56 @@ function recetasDisponibles(tipo) {
     if (datos.programa === 'open') return r.etapa === 'open';   // en OPEN, Encuentro tiene sus propias opciones
     return (r.etapa || 'encuentro') === 'encuentro';
   });
+}
+
+/* --- Formatos y cantidades libres (solo Laboratorio UNEQ): reemplazan a las recetas --- */
+
+// `previo`: lista [{formato, cantidad}] ya elegida (para no perderla al repintar); sin ella se marcan los formatos de la etapa.
+function htmlSelectorFormatos(previo, etapaId) {
+  const porDefecto = ((datos.etapas[etapaId || etapaPanel] || {}).formatos) || [];
+  const mapa = new Map((previo && previo.length ? previo : porDefecto.map(f => ({ formato: f, cantidad: 2 }))).map(p => [p.formato, p.cantidad]));
+  return `
+    <h5>¿Qué formatos quieres y cuántos de cada uno?</h5>
+    <div class="luneq-formatos">${Object.keys(datos.formatos).map(f => `
+      <div class="luneq-formato">
+        <label class="luneq-formato__check"><input type="checkbox" data-formato="${esc(f)}" ${mapa.has(f) ? 'checked' : ''}> ${esc((datos.formatos[f] || {}).nombre || f)}</label>
+        <label class="luneq-formato__cant">Cantidad <select data-cantidad="${esc(f)}">${[1, 2, 3, 4, 5, 6].map(n => `<option value="${n}" ${n === (mapa.get(f) || 2) ? 'selected' : ''}>${n}</option>`).join('')}</select></label>
+      </div>`).join('')}</div>`;
+}
+function leerPlanLibre(cont) {
+  return [...cont.querySelectorAll('[data-formato]:checked')].map(c => ({ formato: c.dataset.formato, cantidad: Number(cont.querySelector(`[data-cantidad="${c.dataset.formato}"]`).value) || 2 }));
+}
+
+// Atracción y Conexión: además del clic de siempre, se pueden elegir los formatos y la cantidad.
+function abrirFormatosLibres(etapaId) {
+  const cont = document.getElementById('lab-pagado');
+  if (!cont) return;
+  if (!alternarPanel('libre-' + etapaId)) return;
+  cont.innerHTML = `
+    <div class="lab-estrategia lab-pagado">
+      <h4>${esc((datos.etapas[etapaId] || {}).nombre || '')}: elige tus formatos</h4>
+      ${htmlSelectorFormatos(null, etapaId)}
+      <p class="lab-error hidden" id="lab-libre-error"></p>
+      <div class="lab-acciones-pieza"><button type="button" class="btn btn--primary" id="lab-libre-generar" data-generar-pagado>Generar contenidos</button>${BOTON_CERRAR_PANEL}</div>
+    </div>`;
+  cont.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  conectarCerrarPanel(cont);
+  cont.querySelector('#lab-libre-generar').addEventListener('click', (ev) => {
+    const plan = leerPlanLibre(cont);
+    if (!plan.length) { const e = cont.querySelector('#lab-libre-error'); e.textContent = 'Elige al menos un formato.'; e.classList.remove('hidden'); return; }
+    generarEtapa(etapaId, ev.currentTarget, { plan });
+  });
+}
+
+// Ficha de UNEQ en solo lectura (para el equipo; la edita la Directora Académica).
+function htmlLecturaFicha(seccion) {
+  const f = datos.fichas[seccion];
+  const items = (f && f.items) || [];
+  return `
+    ${items.length
+      ? items.map(i => `<div class="lab-campo"><label>${esc(i.pregunta)}</label><p class="lab-lectura">${esc(i.respuesta || '—').replace(/\n/g, '<br>')}</p></div>`).join('')
+      : '<p class="lab-aviso">Esta ficha aún no está completa. La completa la Directora Académica.</p>'}
+    <div class="lab-ficha__acciones"><button type="button" class="btn btn--ghost" data-cerrar-ficha="${seccion}">Cerrar</button></div>`;
 }
 
 async function abrirPagado(etapa) {
@@ -720,29 +790,40 @@ function abrirOrganico(etapa) {
         : datos.programa === 'open'
           ? 'Elige una opción. Todos los contenidos invitan a sumarse a tu comunidad gratuita de WhatsApp y usan tu estrategia: el nombre de tu comunidad, tu palabra clave y el link de tu grupo.'
           : 'Elige una opción. Todos los contenidos usan tu estrategia: tu técnica, tu palabra clave, tu link y la fecha de tu SDV.'}</p>
-      ${recetas.map(([id, r]) => `<label class="lab-estrategia__opcion"><input type="radio" name="lab-receta-org" value="${esc(id)}" ${id === recetaOrganicaElegida ? 'checked' : ''}> <span><strong>${esc(r.nombre)}</strong>${r.descripcion ? `<br><span class="text-soft">${esc(r.descripcion)}</span>` : ''}</span></label>`).join('') || '<p class="text-soft">No hay opciones activas por ahora.</p>'}
+      ${modoUneq ? htmlSelectorFormatos() : ''}
+      ${modoUneq ? '' : recetas.map(([id, r]) => `<label class="lab-estrategia__opcion"><input type="radio" name="lab-receta-org" value="${esc(id)}" ${id === recetaOrganicaElegida ? 'checked' : ''}> <span><strong>${esc(r.nombre)}</strong>${r.descripcion ? `<br><span class="text-soft">${esc(r.descripcion)}</span>` : ''}</span></label>`).join('') || '<p class="text-soft">No hay opciones activas por ahora.</p>'}
       <div id="lab-org-wsp" class="hidden">
         <h5>¿Tu WhatsApp es para grupos o es un mensaje privado?</h5>
         <label class="lab-estrategia__opcion"><input type="radio" name="lab-wsp" value="grupo" ${wspElegido === 'grupo' ? 'checked' : ''}> Para grupos</label>
         <label class="lab-estrategia__opcion"><input type="radio" name="lab-wsp" value="privado" ${wspElegido === 'privado' ? 'checked' : ''}> Mensaje privado</label>
       </div>
       <p class="lab-error hidden" id="lab-org-error"></p>
-      <div class="lab-acciones-pieza"><button type="button" class="btn btn--primary" id="lab-org-generar" data-generar-pagado ${recetas.length ? '' : 'disabled'}>Generar contenidos</button>${BOTON_CERRAR_PANEL}</div>
+      <div class="lab-acciones-pieza"><button type="button" class="btn btn--primary" id="lab-org-generar" data-generar-pagado ${recetas.length || modoUneq ? '' : 'disabled'}>Generar contenidos</button>${BOTON_CERRAR_PANEL}</div>
     </div>`;
   cont.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   conectarCerrarPanel(cont);
   const actualizar = () => {
+    if (modoUneq) { cont.querySelector('#lab-org-wsp').classList.toggle('hidden', !leerPlanLibre(cont).some(p => p.formato === 'whatsapp')); return; }
     recetaOrganicaElegida = (cont.querySelector('input[name="lab-receta-org"]:checked') || {}).value || '';
     const r = (datos.recetas || {})[recetaOrganicaElegida];
     cont.querySelector('#lab-org-wsp').classList.toggle('hidden', !(r && r.preguntaWsp));
   };
   cont.querySelectorAll('input[name="lab-receta-org"]').forEach(x => x.addEventListener('change', actualizar));
+  cont.querySelectorAll('[data-formato]').forEach(x => x.addEventListener('change', actualizar));
   cont.querySelectorAll('input[name="lab-wsp"]').forEach(x => x.addEventListener('change', () => { wspElegido = x.value; }));
   actualizar();
   cont.querySelector('#lab-org-generar').addEventListener('click', (ev) => {
     const r = (datos.recetas || {})[recetaOrganicaElegida];
     const err = cont.querySelector('#lab-org-error');
     err.classList.add('hidden');
+    if (modoUneq) {
+      const plan = leerPlanLibre(cont);
+      const conWsp = plan.some(p => p.formato === 'whatsapp');
+      if (!plan.length) { err.textContent = 'Elige al menos un formato.'; err.classList.remove('hidden'); return; }
+      if (conWsp && !wspElegido) { err.textContent = 'Elige si el WhatsApp es para grupos o es un mensaje privado.'; err.classList.remove('hidden'); return; }
+      generarEtapa(etapaPanel, ev.currentTarget, { plan, wsp: conWsp ? wspElegido : '' });
+      return;
+    }
     if (!r) return;
     if (r.preguntaWsp && !wspElegido) { err.textContent = 'Elige si tu WhatsApp es para grupos o es un mensaje privado.'; err.classList.remove('hidden'); return; }
     generarEtapa(etapaPanel, ev.currentTarget, { receta: recetaOrganicaElegida, wsp: r.preguntaWsp ? wspElegido : '' });
@@ -959,7 +1040,7 @@ function htmlEtapas() {
         <h3>Crea tus contenidos</h3>
         <span class="text-soft" id="lab-contador">Generaciones de hoy: ${datos.usosHoy}/${datos.limiteDia}</span>
       </div>
-      <p class="text-soft lab-bloque__sub">Un clic por etapa y recibes propuestas listas para editar con tu voz.</p>
+      <p class="text-soft lab-bloque__sub">${modoUneq ? 'Un clic por etapa y recibes propuestas listas para editar con la voz de UNEQ.' : 'Un clic por etapa y recibes propuestas listas para editar con tu voz.'}</p>
       ${htmlBarraEmojis()}
       <div class="lab-etapas">
         ${orden.map((id, n) => {
@@ -980,7 +1061,7 @@ function htmlEtapas() {
       <div id="lab-resultado"></div>
     </section>
     <section class="lab-bloque">
-      <h3>Mis contenidos anteriores</h3>
+      <h3>${modoUneq ? 'Contenidos anteriores del equipo' : 'Mis contenidos anteriores'}</h3>
       <div id="lab-historial"></div>
     </section>`;
 }
@@ -1021,7 +1102,7 @@ function htmlEditorFicha(seccion, respuestas, vacias) {
     <p class="lab-error hidden" data-error></p>
     <div class="lab-ficha__acciones">
       <button type="button" class="btn btn--primary" data-guardar-ficha="${seccion}">Guardar y aprobar</button>
-      <button type="button" class="btn btn--ghost" data-rehacer-ficha="${seccion}">Rehacer borrador con IA</button>
+      ${modoUneq ? '' : `<button type="button" class="btn btn--ghost" data-rehacer-ficha="${seccion}">Rehacer borrador con IA</button>`}
       <button type="button" class="btn btn--ghost" data-cerrar-ficha="${seccion}">Cerrar</button>
     </div>`;
 }
@@ -1031,12 +1112,21 @@ async function abrirEditorFicha(seccion, forzarBorrador) {
   if (!editor) return;
   editor.classList.remove('hidden');
   const guardada = datos.fichas[seccion];
+  // UNEQ: quien no es la Directora solo puede ver la ficha.
+  if (modoUneq && !datos.puedeEditarFicha) {
+    editor.innerHTML = htmlLecturaFicha(seccion);
+    editor.querySelector('[data-cerrar-ficha]').addEventListener('click', () => { editor.classList.add('hidden'); editor.innerHTML = ''; });
+    return;
+  }
   let respuestas = {};
   let vacias = [];
   if (guardada && guardada.aprobada && !forzarBorrador) {
     (guardada.items || []).forEach(i => { respuestas[i.id] = i.respuesta; });
     // Preguntas nuevas que el Director agregó después de aprobar
     vacias = datos.preguntas[seccion].items.filter(i => !i.opcional && !respuestas[i.id]).map(i => i.id);
+  } else if (modoUneq) {
+    respuestas = {};   // UNEQ no tiene hitos: la Directora escribe la ficha directamente
+    vacias = [];
   } else {
     editor.innerHTML = '<div class="lab-cargando"><span class="lab-spinner"></span> Armando tu borrador con lo que ya compartiste… (puede tardar unos segundos)</div>';
     try {
@@ -1059,7 +1149,8 @@ async function abrirEditorFicha(seccion, forzarBorrador) {
 function conectarEditor(editor, seccion) {
   const errorEl = editor.querySelector('[data-error]');
   editor.querySelector('[data-cerrar-ficha]').addEventListener('click', () => { editor.classList.add('hidden'); editor.innerHTML = ''; });
-  editor.querySelector('[data-rehacer-ficha]').addEventListener('click', () => {
+  const rehacer = editor.querySelector('[data-rehacer-ficha]');
+  if (rehacer) rehacer.addEventListener('click', () => {
     if (confirm('Se reemplazarán los textos de esta ficha por un borrador nuevo de la IA. ¿Continuar?')) abrirEditorFicha(seccion, true);
   });
   const btnGuardar = editor.querySelector('[data-guardar-ficha]');
@@ -1143,6 +1234,7 @@ function conectarAlumno(el) {
     abrirEditorFicha(b.dataset.abrirFicha, false);
   }));
   el.querySelectorAll('[data-generar]').forEach(b => b.addEventListener('click', () => generarEtapa(b.dataset.generar, b)));
+  el.querySelectorAll('[data-formatos-libres]').forEach(b => b.addEventListener('click', () => abrirFormatosLibres(b.dataset.formatosLibres)));
   el.querySelectorAll('[data-estrategia]').forEach(b => b.addEventListener('click', () => abrirEstrategia()));
   el.querySelectorAll('[data-pagado]').forEach(b => b.addEventListener('click', () => abrirPagado()));
   el.querySelectorAll('[data-organico]').forEach(b => b.addEventListener('click', () => abrirOrganico('encuentro')));
@@ -1283,12 +1375,35 @@ async function verAlumno(alumnoId) {
    Punto de entrada
    ============================================================ */
 
+// Laboratorio UNEQ: el mismo Laboratorio de los alumnos, pero para la marca (@somosuneq). Lo abre laboratorio-uneq.js.
+export async function cargarLaboratorioUneq() {
+  modoUneq = true;
+  alumnoIdActual = 'uneq';                 // historial, fichas y estrategias de la marca viven bajo este id
+  usarCuentaInstagram('uneq');             // todo el equipo publica en la cuenta compartida
+  const titulo = document.getElementById('lab-titulo'); if (titulo) titulo.textContent = 'Laboratorio UNEQ';
+  cargarPanelInstagram({ cuenta: 'uneq' });
+  const el = rootEl();
+  if (!el) return;
+  el.classList.remove('hidden');
+  el.innerHTML = '<div class="lab-cargando"><span class="lab-spinner"></span> Abriendo el Laboratorio UNEQ…</div>';
+  try {
+    const r = await abrirLaboratorio(conFase({}));
+    datos = r.data;
+    fijarContextoVista({ nombre: 'somosuneq', fotoUrl: '' });
+    fijarWhatsappVenta((datos.estrategiaVenta || {}).whatsapp);
+    await cargarImagenesVista();
+    pintarAlumno();
+  } catch (err) {
+    el.innerHTML = `<div class="panel"><p class="lab-error">${esc(mensajeError(err, 'No se pudo abrir el Laboratorio UNEQ. Intenta de nuevo.'))}</p></div>`;
+  }
+}
+
 export async function cargarLaboratorio() {
+  modoUneq = false;
   usarCuentaInstagram('');   // aquí cada persona publica en su propia cuenta (la cuenta compartida es del Laboratorio UNEQ)
-  // Esta pantalla la comparte el Laboratorio UNEQ: aquí se apaga su bloque y se muestra el de los alumnos.
+  // Esta pantalla la comparte el Laboratorio UNEQ: aquí se vuelve al título y se oculta su panel de equipo.
   const titulo = document.getElementById('lab-titulo'); if (titulo) titulo.textContent = 'Laboratorio IA';
-  ['luneq-contenido', 'luneq-instagram'].forEach(id => { const x = document.getElementById(id); if (x) { x.classList.add('hidden'); x.innerHTML = ''; } });
-  const propio = document.getElementById('lab-contenido'); if (propio) propio.classList.remove('hidden');
+  const equipo = document.getElementById('luneq-contenido'); if (equipo) { equipo.classList.add('hidden'); equipo.innerHTML = ''; }
   cargarPanelInstagram();
   const role = getCurrentRole();
   const el = rootEl();

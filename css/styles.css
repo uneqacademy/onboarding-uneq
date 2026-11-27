@@ -1895,8 +1895,8 @@ body.tema-alumno-oscuro .nav-item[data-nav="ficha-alumno-propia"] { display: non
 body.tema-alumno-oscuro #sidebar-foto-alumno { cursor: pointer; transition: box-shadow 0.2s ease, transform 0.2s ease; }
 body.tema-alumno-oscuro #sidebar-foto-alumno:hover { transform: scale(1.04); box-shadow: 0 0 18px rgba(34, 211, 238, 0.45); }
 
-/* Ícono de IA (dos destellos) junto al texto de BOX Inteligente y Laboratorio IA: del color del texto y con un brillito */
-body.tema-alumno-oscuro .nav-item:is([data-nav="box-consultas"], [data-nav="laboratorio-ia"])::before {
+/* Ícono de IA (dos destellos) junto al texto de BOX Inteligente, Laboratorio IA y Laboratorio UNEQ, en el menú de todos los perfiles: del color del texto y con un brillito */
+.nav-item:is([data-nav="box-consultas"], [data-nav="laboratorio-ia"], [data-nav="laboratorio-uneq"])::before {
   content: ""; order: 1; flex-shrink: 0;
   width: 16px; height: 16px;
   background: currentColor;
@@ -1904,7 +1904,7 @@ body.tema-alumno-oscuro .nav-item:is([data-nav="box-consultas"], [data-nav="labo
   mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M9 5C9.6 9.7 12.3 12.4 17 13C12.3 13.6 9.6 16.3 9 21C8.4 16.3 5.7 13.6 1 13C5.7 12.4 8.4 9.7 9 5Z'/%3E%3Cpath d='M19 2C19.3 4.2 20.8 5.7 23 6C20.8 6.3 19.3 7.8 19 10C18.7 7.8 17.2 6.3 15 6C17.2 5.7 18.7 4.2 19 2Z'/%3E%3C/svg%3E") center / contain no-repeat;
   animation: nav-ia-brillo 3.4s ease-in-out infinite;
 }
-body.tema-alumno-oscuro .nav-item:is([data-nav="box-consultas"], [data-nav="laboratorio-ia"]).tiene-notificacion::after { order: 2; }
+.nav-item:is([data-nav="box-consultas"], [data-nav="laboratorio-ia"], [data-nav="laboratorio-uneq"]).tiene-notificacion::after { order: 2; }
 @keyframes nav-ia-brillo {
   0%, 100% { opacity: 0.8; transform: scale(1); }
   50% { opacity: 1; transform: scale(1.2) rotate(8deg); }
@@ -1918,6 +1918,6 @@ body.tema-alumno-oscuro .nav-item:is([data-nav="box-consultas"], [data-nav="labo
   93% { box-shadow: 0 0 0 7px rgba(34, 211, 238, 0.2), 0 0 30px 10px rgba(47, 118, 255, 0.55), 0 0 50px 16px rgba(176, 42, 200, 0.4); }
 }
 @media (prefers-reduced-motion: reduce) {
-  body.tema-alumno-oscuro .nav-item:is([data-nav="box-consultas"], [data-nav="laboratorio-ia"])::before { animation: none; }
+  .nav-item:is([data-nav="box-consultas"], [data-nav="laboratorio-ia"], [data-nav="laboratorio-uneq"])::before { animation: none; }
   .soporte-chat__burbuja { animation: none; }
 }
