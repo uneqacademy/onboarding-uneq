@@ -409,7 +409,9 @@ export async function generarPdfAcuerdo(alumnoId, cicloId) {
   // --- Subir a Storage y guardar la URL ---
   const blob = doc.output('blob');
   // En un upgrade a Vitalicio el PDF va en otra ruta: así el acuerdo anterior queda guardado como respaldo.
-  const archivoRef = storageRef(storage, `acuerdos/${cicloId}${esUpgrade ? '-vitalicio' : ''}.pdf`);
+  // Cada vez que se genera, el archivo lleva un nombre propio: si se sobrescribiera el mismo, el enlace anterior
+  // (el de «Ver PDF» ya abierto, o uno ya compartido) dejaría de funcionar con error 403.
+  const archivoRef = storageRef(storage, `acuerdos/${cicloId}${esUpgrade ? '-vitalicio' : ''}-${Date.now()}.pdf`);
   await uploadBytes(archivoRef, blob);
   const url = await getDownloadURL(archivoRef);
 
