@@ -1921,3 +1921,40 @@ body.tema-alumno-oscuro #sidebar-foto-alumno:hover { transform: scale(1.04); box
   .nav-item:is([data-nav="box-consultas"], [data-nav="laboratorio-ia"], [data-nav="laboratorio-uneq"])::before { animation: none; }
   .soporte-chat__burbuja { animation: none; }
 }
+
+/* ============================================
+   CONFIGURACIÓN: secciones plegables y tipografía amable
+   ============================================ */
+.cfg-vista {
+  --font-display: 'Nunito', 'Inter', system-ui, sans-serif;
+  --font-body: 'Nunito', 'Inter', system-ui, sans-serif;
+  font-family: var(--font-body);
+  font-size: 15px;
+  max-width: 980px;
+}
+.cfg-vista .text-soft { font-size: 14px; line-height: 1.55; }
+.cfg-grupo {
+  font-family: var(--font-display);
+  font-size: 13px; font-weight: 800; letter-spacing: 1.2px; text-transform: uppercase;
+  color: var(--color-ink-soft, #6B7280);
+  margin: 30px 0 12px; padding-bottom: 8px;
+  border-bottom: 2px solid var(--color-border);
+}
+.cfg-grupo:first-child { margin-top: 4px; }
+.cfg-plegable { margin-bottom: 12px !important; border-left: 4px solid var(--color-primary); overflow: hidden; }
+.cfg-plegable > .panel__header { cursor: pointer; padding: 16px 20px; user-select: none; transition: background .15s; }
+.cfg-plegable > .panel__header:hover { background: rgba(120,130,160,.08); }
+.cfg-plegable > .panel__header h3 {
+  font-family: var(--font-display); font-size: 18px; font-weight: 800; line-height: 1.25;
+  display: flex; align-items: center; gap: 10px;
+}
+.cfg-plegable > .panel__header h3::before {
+  content: '▾'; font-size: 16px; color: var(--color-primary); transition: transform .2s; flex: none;
+}
+.cfg-plegable.cfg-cerrado > .panel__header h3::before { transform: rotate(-90deg); }
+.cfg-plegable.cfg-cerrado > .panel__header { border-bottom-color: transparent; }
+.cfg-plegable.cfg-cerrado > :not(.panel__header) { display: none !important; }
+.cfg-vista .panel__body label { font-weight: 700; }
+.cfg-vista .panel__body h4 { font-size: 16px; font-weight: 800; margin: 18px 0 8px; }
+.cfg-grupo--equipo:has(+ .panel.hidden) { display: none; }
+.cfg-plegable.cfg-cerrado > .panel__header button { display: none; }
