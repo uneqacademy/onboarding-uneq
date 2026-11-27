@@ -19,7 +19,7 @@ import { escaparHtml } from './util-html.js';
 import { ref, get, set, push, update, remove } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-database.js";
 import { ref as storageRef, uploadBytes, getDownloadURL, deleteObject } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-storage.js";
 import { getCurrentRole } from './main.js';
-import { PROGRAMAS, cargarPreciosProgramas } from './ciclos.js';
+import { PROGRAMAS, VITALICIO, DESCUENTO_CONTINUIDAD, cargarPreciosProgramas } from './ciclos.js';
 import { parsearMonto } from './util-pagos.js';
 
 const TAMANO_MAXIMO_ARCHIVO_METODOLOGIA = 10 * 1024 * 1024;
@@ -52,6 +52,7 @@ const CAMPOS_POR_SECCION_CONFIG = {
     precioBeginClp: 'config-precio-begin',
     precioNextClp: 'config-precio-next',
     precioExitClp: 'config-precio-exit',
+    precioVitalicioClp: 'config-precio-vitalicio',
     tipoCambioUsd: 'config-tipo-cambio'
   },
   grabaciones: {
@@ -213,6 +214,8 @@ export async function cargarConfiguracion() {
     const input = document.getElementById(`config-precio-${programa}`);
     if (input) input.value = c[campo] || PROGRAMAS[programa].precioClp.toLocaleString('es-CL');
   });
+  const vitalicioEl = document.getElementById('config-precio-vitalicio');
+  if (vitalicioEl) vitalicioEl.value = c.precioVitalicioClp || VITALICIO.precioClp.toLocaleString('es-CL');
   const tipoCambioEl = document.getElementById('config-tipo-cambio');
   if (tipoCambioEl) tipoCambioEl.value = c.tipoCambioUsd || '';
   actualizarVistaPreviaPrecios();
@@ -403,6 +406,14 @@ if (btnQuitarFotoDirectorIa) {
 
 /* --- Precios: equivalente en USD según el tipo de cambio --- */
 function actualizarVistaPreviaPrecios() {
+  // Precio de continuidad (renovación sin cortar): 40% de descuento sobre el precio real.
+  const cont = document.getElementById('config-precios-continuidad');
+  if (cont) {
+    cont.textContent = 'Precio de continuidad (40% menos): ' + ['open', 'begin', 'next', 'exit'].map(programa => {
+      const clp = parsearMonto(document.getElementById('config-precio-' + programa).value);
+      return PROGRAMAS[programa].label + ' $' + Math.round(clp * (1 - DESCUENTO_CONTINUIDAD)).toLocaleString('es-CL');
+    }).join(' · ');
+  }
   const el = document.getElementById('config-precios-usd');
   if (!el) return;
   const tipoCambio = parseFloat(String(document.getElementById('config-tipo-cambio').value).replace(',', '.'));
@@ -415,7 +426,7 @@ function actualizarVistaPreviaPrecios() {
     return `${PROGRAMAS[programa].label} US$ ${(clp / tipoCambio).toLocaleString('es-CL', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   }).join(' · ');
 }
-['config-precio-open', 'config-precio-begin', 'config-precio-next', 'config-precio-exit', 'config-tipo-cambio'].forEach(id => {
+['config-precio-open', 'config-precio-begin', 'config-precio-next', 'config-precio-exit', 'config-precio-vitalicio', 'config-tipo-cambio'].forEach(id => {
   document.getElementById(id)?.addEventListener('input', actualizarVistaPreviaPrecios);
 });
 

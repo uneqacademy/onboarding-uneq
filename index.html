@@ -555,15 +555,22 @@
             <div class="field-grid mb-16">
               <div class="field"><label>Programa</label>
                 <select id="nuevo-ciclo-programa">
-                  <option value="open">Open (2 meses de acceso · $497.000)</option>
-                  <option value="begin">Begin (4 meses de acceso · $1.500.000)</option>
-                  <option value="next">Next (6 meses de acceso · $3.000.000)</option>
+                  <option value="open">Open (12 meses de acceso · $497.000)</option>
+                  <option value="begin">Begin (12 meses de acceso · $1.500.000)</option>
+                  <option value="next">Next (12 meses de acceso · $3.000.000)</option>
                   <option value="exit">eXIT (12 meses de acceso · $5.000.000)</option>
                 </select>
               </div>
               <div class="field" id="campo-nuevo-ciclo-coach"><label>Copiloto Asignado</label><select id="nuevo-ciclo-coach"></select></div>
             </div>
             <p class="text-soft hidden" id="aviso-nuevo-ciclo-begin-sin-coach" style="margin-top:-8px;">🚩 BEGIN y OPEN no llevan copiloto individual — los ve automáticamente el Copiloto de Cabecera.</p>
+            <div class="field mb-16">
+              <label style="display:flex; align-items:center; gap:8px; cursor:pointer; margin:0;">
+                <input type="checkbox" id="nuevo-ciclo-continuidad">
+                Renovación con continuidad (40% de descuento sobre el precio real)
+              </label>
+              <p class="text-soft" id="aviso-nuevo-ciclo-continuidad" style="margin:6px 0 0; font-size:12.5px;"></p>
+            </div>
             <div class="field-grid mb-16">
               <div class="field"><label>Monto Total</label><input id="nuevo-ciclo-monto"></div>
               <div class="field"><label>Moneda (según el país del alumno)</label><select id="nuevo-ciclo-moneda" disabled title="Chile siempre en CLP; el extranjero en USD"><option>CLP</option><option>USD</option></select></div>
@@ -923,11 +930,17 @@
             <div class="field-grid">
               <div class="field"><label>Programa</label>
                 <select id="nuevo-alumno-programa">
-                  <option value="open">Open (2 meses de acceso · $497.000)</option>
-                  <option value="begin">Begin (4 meses de acceso · $1.500.000)</option>
-                  <option value="next">Next (6 meses de acceso · $3.000.000)</option>
+                  <option value="open">Open (12 meses de acceso · $497.000)</option>
+                  <option value="begin">Begin (12 meses de acceso · $1.500.000)</option>
+                  <option value="next">Next (12 meses de acceso · $3.000.000)</option>
                   <option value="exit">eXIT (12 meses de acceso · $5.000.000)</option>
                 </select>
+              </div>
+              <div class="field hidden" id="campo-nuevo-alumno-vitalicio" style="display:flex; align-items:center; gap:8px; margin-top:22px;">
+                <label style="display:flex; align-items:center; gap:8px; cursor:pointer; margin:0;">
+                  <input type="checkbox" id="nuevo-alumno-vitalicio">
+                  Es Vitalicio (1.er año como OPEN; desde el 2.º, acceso vitalicio sin lo que es en vivo)
+                </label>
               </div>
               <div class="field" id="campo-nuevo-alumno-membresia" style="display:flex; align-items:center; gap:8px; margin-top:22px;">
                 <label style="display:flex; align-items:center; gap:8px; cursor:pointer; margin:0;">
@@ -2316,8 +2329,10 @@
               <div class="field"><label>Begin (CLP)</label><input id="config-precio-begin" placeholder="1.500.000"></div>
               <div class="field"><label>Next (CLP)</label><input id="config-precio-next" placeholder="3.000.000"></div>
               <div class="field"><label>eXIT (CLP)</label><input id="config-precio-exit" placeholder="5.000.000"></div>
+              <div class="field"><label>OPEN Vitalicio (CLP)</label><input id="config-precio-vitalicio" placeholder="597.000"></div>
               <div class="field"><label>Tipo de cambio (CLP por 1 USD)</label><input type="number" step="0.01" min="0" id="config-tipo-cambio" placeholder="Ej: 950"></div>
             </div>
+            <p id="config-precios-continuidad" class="text-soft" style="font-size:12.5px; margin:12px 0 0;"></p>
             <p id="config-precios-usd" class="text-soft" style="font-size:12.5px; margin:12px 0 0;"></p>
           </div>
         </div>

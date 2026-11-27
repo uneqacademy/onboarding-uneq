@@ -141,6 +141,40 @@ BENEFICIOS.open = {
   nota: null
 };
 
+/* --- Condiciones desde el 27-nov-2026 (ciclo.condiciones === 'v2'): todos los programas duran 12 meses.
+   Lo que era "de por vida" se mantiene; los plazos de 2, 4 o 6 meses pasan a 12. Lo que es solo del
+   primer tramo del acompañamiento de Maca y Felipe en eXIT (6 meses) no cambia. --- */
+function a12Meses(texto, programa) {
+  if (programa === 'exit' && texto.includes('privado y exclusivo con Maca y Felipe')) return texto;
+  return texto
+    .replace(/\((acceso|vigente durante el programa): (?:\d+ meses|1 año)\)/g, '($1: 12 meses)')
+    .replace(/vigente durante el programa: \d+ meses$/, 'vigente durante el programa: 12 meses');
+}
+
+function beneficiosV2(programa) {
+  if (programa === 'open') {
+    return {
+      items: BENEFICIOS.begin.items
+        .filter(t => !t.includes('Maca y Felipe') && !t.includes('Sinergia'))
+        .map(t => a12Meses(t
+          .replace('hasta 5 preguntas por semana', 'hasta 3 preguntas por semana')
+          .replace('Sesiones semanales grupales con copiloto', 'Sesión semanal grupal con copiloto')
+          .replace('exclusivo Begin', 'exclusivo Open')
+          .replace('Ex-Alumnos Begin', 'Ex-Alumnos Open'), 'open')),
+      duracion: 'Duración del programa (BOX de consultas y sesiones con el copiloto de cabecera): 12 meses.',
+      nota: null
+    };
+  }
+  const base = BENEFICIOS[programa] || BENEFICIOS.begin;
+  return {
+    items: base.items.map(t => a12Meses(t, programa)),
+    duracion: base.duracion.replace(/: \d+ meses\.$/, ': 12 meses.'),
+    nota: base.nota
+  };
+}
+
+const ORDINALES = ['PRIMERO', 'SEGUNDO', 'TERCERO', 'CUARTO', 'QUINTO', 'SEXTO', 'SÉPTIMO', 'OCTAVO', 'NOVENO', 'DÉCIMO', 'UNDÉCIMO', 'DUODÉCIMO'];
+
 export async function generarPdfAcuerdo(alumnoId, cicloId) {
   const [alumnoSnap, cicloSnap, acuerdoSnap] = await Promise.all([
     get(ref(db, `alumnos/${alumnoId}`)),
@@ -158,6 +192,8 @@ export async function generarPdfAcuerdo(alumnoId, cicloId) {
   const otrosSnaps = await Promise.all(idsProyectoAcuerdo.filter(id => id !== alumnoId).map(id => get(ref(db, `alumnos/${id}`))));
   const alumnosProyecto = [alumno, ...otrosSnaps.filter(s => s.exists()).map(s => s.val())];
 
+  const esV2 = ciclo.condiciones === 'v2';           // acuerdo con las condiciones desde el 27-nov-2026
+  const esVitalicio = esV2 && ciclo.vitalicio === true && ciclo.programa === 'open';
   const hoyStr = new Date().toISOString().slice(0, 10);
   const esMembresia = ciclo.modalidadPago === 'membresia';
   // Fechas reales del ciclo (ya escritas a mano en "Ciclo Actual") en
@@ -216,6 +252,9 @@ export async function generarPdfAcuerdo(alumnoId, cicloId) {
     y += 7;
   }
 
+  let nClausula = 0;
+  function clausula(titulo) { tituloSeccion(`${ORDINALES[nClausula++]}: ${titulo}`); }
+
   function bullets(items) {
     doc.setFontSize(10.5);
     doc.setFont('helvetica', 'normal');
@@ -271,7 +310,7 @@ export async function generarPdfAcuerdo(alumnoId, cicloId) {
   );
 
   // --- PRIMERO ---
-  tituloSeccion('PRIMERO: Objeto del Acuerdo');
+  clausula('Objeto del Acuerdo');
   parrafo(
     esMembresia
       ? `UNEQ se compromete a prestar al Alumno/a servicios de mentoría bajo el programa ${programaLabel(ciclo.programa)}, bajo la modalidad de Membresía (pago mensual), basado en la metodología propia 2E, con fecha de inicio el ${formatFechaLarga(fechaIngresoEstimada)}. Al tratarse de una Membresía, el presente Acuerdo no tiene una fecha de término fija, y se mantiene vigente mientras el/la Alumno/a se encuentre al día con el pago mensual correspondiente, hasta que ocurra alguno de los siguientes eventos: (a) el/la Alumno/a comunique su renuncia voluntaria a continuar en el programa; o (b) UNEQ dé por terminado el presente Acuerdo, lo que podrá ocurrir si se registran quince (15) días corridos de atraso en el pago de la mensualidad correspondiente, contados desde la fecha en que dicho pago debía efectuarse — en cuyo caso se entenderá que el/la Alumno/a ha desistido de continuar en el programa, sin perjuicio de las mensualidades ya devengadas y no pagadas a la fecha.`
@@ -280,7 +319,7 @@ export async function generarPdfAcuerdo(alumnoId, cicloId) {
   parrafo(clausulaCoach);
 
   // --- SEGUNDO ---
-  tituloSeccion('SEGUNDO: Condiciones Económicas');
+  clausula('Condiciones Económicas');
   const textoDescuento = descuento > 0 ? ', que incluye un descuento aplicado sobre el valor de lista' : '';
   parrafo(`El valor total del programa ${programaLabel(ciclo.programa)} es de ${acuerdo.montoTotal || '—'} ${moneda}${textoDescuento}.`);
   parrafo('La forma de pago acordada es la siguiente:');
@@ -294,44 +333,58 @@ export async function generarPdfAcuerdo(alumnoId, cicloId) {
   parrafo('En Chile, UNEQ emite factura por los servicios prestados. Para alumnos extranjeros, el comprobante de pago es emitido a través de la plataforma Hotmart.');
 
   // --- TERCERO ---
-  tituloSeccion('TERCERO: Compromisos de UNEQ');
+  clausula('Compromisos de UNEQ');
   parrafo('UNEQ se compromete a otorgar al Alumno/a acceso a los siguientes contenidos y beneficios, correspondientes al programa contratado:');
-  const beneficios = BENEFICIOS[ciclo.programa] || BENEFICIOS.begin;
+  const beneficios = esV2 ? beneficiosV2(ciclo.programa) : (BENEFICIOS[ciclo.programa] || BENEFICIOS.begin);
   bullets(beneficios.items);
   parrafo(beneficios.duracion, { style: 'bold' });
   if (beneficios.nota) parrafo(beneficios.nota, { style: 'italic' });
 
   // --- CUARTO ---
-  tituloSeccion('CUARTO: Compromisos del Alumno/a');
+  clausula('Compromisos del Alumno/a');
   parrafo('El Alumno/a se compromete a participar activamente, asistir a las sesiones acordadas, y cumplir con los pagos en las fechas establecidas.');
   parrafo('El Alumno/a declara comprender que los resultados de esta mentoría no dependen exclusivamente de UNEQ, sino principalmente del esfuerzo, compromiso y ejecución del propio Alumno/a, y que dichos resultados están sujetos a múltiples variables externas que escapan del control de UNEQ (mercado, industria, contexto económico, entre otras). Cada proyecto es único, por lo que los resultados obtenidos por otros alumnos no constituyen garantía ni referencia vinculante de los resultados que el Alumno/a pueda obtener.');
   parrafo('Asimismo, el Alumno/a declara entender que, para aplicar correctamente los contenidos entregados y obtener resultados, es probable que deba considerar inversión adicional propia en publicidad y/o herramientas digitales, según su caso particular.');
 
   // --- QUINTO ---
-  tituloSeccion('QUINTO: Atraso en Pagos');
+  clausula('Atraso en Pagos');
   parrafo('En caso de atraso en el pago de alguna cuota acordada, el Alumno/a podría perder el acceso a los activos del programa y a las mentorías en vivo mientras dicho atraso se mantenga vigente. El acceso se restablece una vez regularizado el pago.');
 
   // --- SEXTO ---
-  tituloSeccion('SEXTO: Retiro y Congelamiento');
+  clausula('Retiro y Congelamiento');
   parrafo('En caso de retiro voluntario del Alumno/a durante el desarrollo del programa, no procederá devolución de los montos pagados.');
   parrafo('El Alumno/a tendrá derecho a solicitar un (1) congelamiento de su participación en el programa, por un período máximo de tres (3) meses. La fecha de término del programa se extenderá automáticamente por el mismo número de días que dure el congelamiento.');
 
+  // --- Renovación y continuidad (solo acuerdos con las condiciones nuevas) ---
+  if (esV2) {
+    clausula('Duración, Renovación y Continuidad');
+    parrafo('Todos los programas de UNEQ tienen una duración de doce (12) meses, contados desde la fecha de inicio indicada en la cláusula Primera.');
+    parrafo('Al término del programa, el Alumno/a podrá renovar su participación por un nuevo período de doce (12) meses. Si la renovación se realiza con continuidad, es decir, sin interrupción entre el término de este programa y el inicio del nuevo período, y a más tardar dentro de los siete (7) días corridos siguientes a la fecha de término, el Alumno/a accederá a un precio especial de continuidad, equivalente al precio de lista vigente del programa con un cuarenta por ciento (40%) de descuento.');
+    parrafo('Transcurrido ese plazo de siete (7) días, la renovación se regirá por el precio de lista vigente a la fecha de renovación, sin el descuento de continuidad. La renovación se formaliza mediante un nuevo acuerdo y no es obligatoria.');
+  }
+  if (esVitalicio) {
+    clausula('Modalidad Vitalicio');
+    parrafo('El Alumno/a contrata el programa OPEN bajo la modalidad Vitalicio, por el valor indicado en la cláusula Segunda. Durante el primer año, contado desde la fecha de inicio, el programa funciona en las mismas condiciones del programa OPEN descritas en la cláusula Tercera.');
+    parrafo('A partir del segundo año, el Alumno/a mantiene acceso vitalicio a la plataforma de UNEQ y a todos los contenidos, herramientas y beneficios descritos en la cláusula Tercera que no requieren acompañamiento en vivo, sin necesidad de renovar ni de pagar valores adicionales. Desde el segundo año quedan excluidos únicamente: (a) las mentorías en vivo; (b) las sesiones con el Copiloto de Cabecera; y (c) el acompañamiento del Copiloto de Cabecera.');
+    parrafo('Por "acceso vitalicio" se entiende el acceso mientras la plataforma de UNEQ se mantenga en operación. UNEQ podrá actualizar, mejorar, reemplazar o reorganizar los contenidos y herramientas. Siguen siendo aplicables las demás cláusulas del presente Acuerdo, en particular las de comportamiento en la comunidad.');
+  }
+
   // --- SÉPTIMO ---
-  tituloSeccion('SÉPTIMO: Comportamiento y Convivencia en la Comunidad');
+  clausula('Comportamiento y Convivencia en la Comunidad');
   parrafo('El respeto hacia el equipo de UNEQ, copilotos y demás miembros de la comunidad es un valor fundamental e innegociable. Cualquier conducta que atente contra este principio, o contra los valores de UNEQ, será causal de expulsión inmediata del programa, sin derecho a devolución de los montos pagados.');
 
   // --- OCTAVO ---
-  tituloSeccion('OCTAVO: Confidencialidad y Propiedad Intelectual');
+  clausula('Confidencialidad y Propiedad Intelectual');
   parrafo('La metodología 2E, materiales, contenidos y demás recursos entregados durante el programa son de propiedad exclusiva de UNEQ, y su uso queda restringido exclusivamente al desarrollo personal del Alumno/a, quedando prohibida su reproducción, distribución o uso comercial no autorizado.');
 
   // --- NOVENO ---
-  tituloSeccion('NOVENO: Protección de Datos Personales');
+  clausula('Protección de Datos Personales');
   parrafo('Universo UNEQ protege la información personal del Alumno/a conforme a la normativa vigente. Los datos ingresados en la plataforma se almacenan en la infraestructura de Google Cloud / Firebase, con acceso restringido por reglas de seguridad y autenticación, y cifrado tanto en tránsito como en reposo.');
   parrafo('Las respuestas generadas por inteligencia artificial se procesan a través de la API paga de Google Gemini, bajo la cual Google se compromete contractualmente a no utilizar la información enviada (preguntas, respuestas, ni contenido de mentores o alumnos) para entrenar o mejorar sus propios modelos de IA.');
   parrafo('Universo UNEQ tampoco utiliza los datos personales de sus alumnos con fines distintos a la prestación del servicio contratado.');
 
   // --- DÉCIMO ---
-  tituloSeccion('DÉCIMO: Jurisdicción');
+  clausula('Jurisdicción');
   parrafo('Para todos los efectos legales derivados del presente acuerdo, las partes fijan su domicilio en la ciudad de Santiago de Chile, sometiéndose a la jurisdicción de sus Tribunales.');
 
   // --- FIRMAS ---
