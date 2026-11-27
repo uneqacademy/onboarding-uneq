@@ -6,7 +6,7 @@
 
 import { auth } from './firebase-config.js';
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-auth.js";
-import { llamarInstagram, direccionDeRetorno, IG_CLAVE_ESTADO } from './instagram-api.js';
+import { llamarInstagram, direccionDeRetorno, IG_CLAVE_ESTADO, IG_CLAVE_CUENTA, CUENTA_UNEQ } from './instagram-api.js';
 
 const cuadro = document.getElementById('ig-mensaje');
 const volver = document.getElementById('ig-volver');
@@ -29,6 +29,8 @@ async function procesar() {
   const state = q.get('state') || '';
   const guardado = sessionStorage.getItem(IG_CLAVE_ESTADO) || '';
   sessionStorage.removeItem(IG_CLAVE_ESTADO);
+  const cuenta = sessionStorage.getItem(IG_CLAVE_CUENTA) === CUENTA_UNEQ ? CUENTA_UNEQ : '';
+  sessionStorage.removeItem(IG_CLAVE_CUENTA);
   if (!code || !state || !guardado || state !== guardado) {
     mostrar('La conexión no se pudo verificar (el enlace caducó o se abrió desde otra ventana). Vuelve al Laboratorio y pulsa "Conectar Instagram" otra vez.', true);
     return mostrarVolver();
@@ -39,7 +41,7 @@ async function procesar() {
     return mostrarVolver();
   }
   try {
-    const r = await llamarInstagram('conectar', { code, redirectUri: retorno });
+    const r = await llamarInstagram('conectar', { code, redirectUri: retorno, ...(cuenta ? { cuenta } : {}) });
     mostrar(r && r.username ? `¡Listo! Conectamos la cuenta @${r.username}.` : '¡Listo! Conectamos tu cuenta de Instagram.');
     setTimeout(() => { location.replace('index.html'); }, 1800);
     mostrarVolver();

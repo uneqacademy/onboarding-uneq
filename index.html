@@ -27,6 +27,7 @@
 <link rel="stylesheet" href="css/telefono-pais.css?v=1">
 <link rel="stylesheet" href="css/laboratorio-ia.css?v=18">
 <link rel="stylesheet" href="css/instagram.css?v=3">
+<link rel="stylesheet" href="css/laboratorio-uneq.css?v=1">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/intl-tel-input@latest/build/css/intlTelInput.min.css">
 <script src="https://cdn.jsdelivr.net/npm/intl-tel-input@latest/build/js/intlTelInputWithUtils.min.js"></script>
 </head>
@@ -189,6 +190,7 @@
         <li class="nav-item hidden" data-nav="comunidad-uneq">Comunidad UNEQ</li>
         <li class="nav-item hidden" data-nav="contenidos">Contenidos</li>
         <li class="nav-item hidden" data-nav="laboratorio-ia">Laboratorio IA</li>
+        <li class="nav-item hidden" data-nav="laboratorio-uneq">Laboratorio UNEQ</li>
         <li class="nav-item hidden" data-nav="ranking">Ranking</li>
         <li class="nav-item" data-role="alumno" data-nav="soporte-alumnos">Soporte Alumnos</li>
       </div>
@@ -1690,9 +1692,12 @@
       </section>
 
       <section id="view-laboratorio-ia" class="view hidden">
-        <div class="flex-between mb-16"><h2>Laboratorio IA</h2></div>
+        <div class="flex-between mb-16"><h2 id="lab-titulo">Laboratorio IA</h2></div>
         <div id="lab-instagram" class="hidden"></div>
         <div id="lab-contenido"></div>
+        <!-- Laboratorio UNEQ (equipo): comparte esta pantalla y su estilo; laboratorio-uneq.js muestra solo uno de los dos bloques -->
+        <div id="luneq-instagram" class="hidden"></div>
+        <div id="luneq-contenido" class="hidden"></div>
       </section>
 
       <section id="view-ranking" class="view hidden">

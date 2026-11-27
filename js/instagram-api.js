@@ -12,6 +12,9 @@ import { ref, push, set, onValue, remove } from "https://www.gstatic.com/firebas
 export const META_APP_ID = '1681371620005466';
 export const META_CONFIG_ID = '1904742287562013';
 export const IG_CLAVE_ESTADO = 'uneq-ig-estado';
+// Cuenta compartida del equipo (@somosuneq): se recuerda en la pestaña mientras la persona está en el inicio de sesión de Meta.
+export const IG_CLAVE_CUENTA = 'uneq-ig-cuenta';
+export const CUENTA_UNEQ = 'uneq';
 // Solo estos dominios están registrados en la app de Meta como dirección de retorno.
 const HOSTS_RETORNO = ['alumnos.somosuneq.com', 'app.somosuneq.com'];
 
@@ -47,9 +50,10 @@ export function llamarInstagram(accion, datos, esperaMs = 100000) {
 
 /* Dirección del inicio de sesión de Meta. Lleva un "state" aleatorio que se guarda en esta pestaña: al volver se
    comprueba que sea el mismo (así nadie puede conectar otra cuenta de Instagram a tu perfil sin que tú lo pidas). */
-export function urlInicioSesion() {
+export function urlInicioSesion(cuenta) {
   const retorno = direccionDeRetorno();
   if (!retorno) return null;
+  if (cuenta === CUENTA_UNEQ) sessionStorage.setItem(IG_CLAVE_CUENTA, CUENTA_UNEQ); else sessionStorage.removeItem(IG_CLAVE_CUENTA);
   const bytes = new Uint8Array(24);
   crypto.getRandomValues(bytes);
   const state = Array.from(bytes, b => b.toString(16).padStart(2, '0')).join('');

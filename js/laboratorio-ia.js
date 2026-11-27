@@ -20,6 +20,7 @@ import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/
 import { EMOJIS_POR_CATEGORIA } from './emojis-todos.js';
 import { getCurrentRole, esModoDemo } from './main.js';
 import { cargarPanelInstagram } from './instagram-panel.js';
+import { usarCuentaInstagram } from './instagram-carrusel.js';
 import { getFaseDemo, getH2F4Demo } from './demo.js';
 import { htmlPiezas, conectarPiezas, fijarContextoVista, fijarWhatsappVenta, fijarImagenesVista, enlazarAcordeon, cerrarOtrasPeticiones, hayEdicionesSinGuardar, descartarEdiciones } from './laboratorio-ia-vista.js';
 
@@ -1283,6 +1284,11 @@ async function verAlumno(alumnoId) {
    ============================================================ */
 
 export async function cargarLaboratorio() {
+  usarCuentaInstagram('');   // aquí cada persona publica en su propia cuenta (la cuenta compartida es del Laboratorio UNEQ)
+  // Esta pantalla la comparte el Laboratorio UNEQ: aquí se apaga su bloque y se muestra el de los alumnos.
+  const titulo = document.getElementById('lab-titulo'); if (titulo) titulo.textContent = 'Laboratorio IA';
+  ['luneq-contenido', 'luneq-instagram'].forEach(id => { const x = document.getElementById(id); if (x) { x.classList.add('hidden'); x.innerHTML = ''; } });
+  const propio = document.getElementById('lab-contenido'); if (propio) propio.classList.remove('hidden');
   cargarPanelInstagram();
   const role = getCurrentRole();
   const el = rootEl();

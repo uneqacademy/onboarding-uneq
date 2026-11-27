@@ -100,6 +100,11 @@ export function applyRole(role, nombre, rolesDisponibles) {
   const navLaboratorio = document.querySelector('.nav-item[data-nav="laboratorio-ia"]');
   if (navLaboratorio) navLaboratorio.classList.toggle('hidden', !(['director', 'coach', 'mentor'].includes(role) || (role === 'alumno' && (LABORATORIO_ABIERTO_A_ALUMNOS || esModoDemo()))));
 
+  // Laboratorio UNEQ: lo ve el Director/a y quien ella asigne (se comprueba en laboratorio-uneq.js al recibir este aviso).
+  const navLaboratorioUneq = document.querySelector('.nav-item[data-nav="laboratorio-uneq"]');
+  if (navLaboratorioUneq) navLaboratorioUneq.classList.add('hidden');
+  window.dispatchEvent(new CustomEvent('uneq:rol-aplicado', { detail: { role } }));
+
   const navMentoriasMentor = document.querySelector('.nav-item[data-nav="mentorias-mentor"]');
   if (navMentoriasMentor) navMentoriasMentor.classList.toggle('hidden', role !== 'mentor');
 
@@ -379,6 +384,9 @@ export function setNav(section) {
   } else if (section === 'laboratorio-ia') {
     showView('view-laboratorio-ia');
     document.getElementById('topbar-title').textContent = 'Laboratorio IA';
+  } else if (section === 'laboratorio-uneq') {
+    showView('view-laboratorio-ia');   // misma pantalla que el Laboratorio IA; laboratorio-uneq.js pone su contenido
+    document.getElementById('topbar-title').textContent = 'Laboratorio UNEQ';
   } else if (section === 'ranking') {
     showView('view-ranking');
     document.getElementById('topbar-title').textContent = 'Ranking';

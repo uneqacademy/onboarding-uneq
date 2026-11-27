@@ -37,6 +37,7 @@ import { iniciarNotificaciones } from './notificaciones.js';
 import './ranking.js';
 import './contenidos.js';
 import './laboratorio-ia.js';
+import './laboratorio-uneq.js';
 import './laboratorio-ia-config.js';
 import './laboratorio-ia-guia.js';
 import './pagos-consolidado.js';
