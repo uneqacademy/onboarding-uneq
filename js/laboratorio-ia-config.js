@@ -61,16 +61,15 @@ Object.entries(NOMBRES_FORMATO_PROMPT).forEach(([f, n]) => ['organico', 'pagado'
   const tipo = t === 'organico' ? 'orgánico' : 'pagado';
   NOMBRES_PROMPT[`fmt_${f}_${t}`] = [`${n} · contenido ${tipo}`, `Cómo deben escribirse los ${n.toLowerCase()} cuando el contenido de Encuentro es ${tipo}: tono, a quién les hablan, qué destacar. Admite {palabra}, {link} y {fecha}. Puede quedar vacía.`];
 }));
+Object.entries(NOMBRES_FORMATO_PROMPT).forEach(([f, n]) => ['organico', 'pagado'].forEach(t => {
+  const tipo = t === 'organico' ? 'orgánico' : 'pagado';
+  NOMBRES_PROMPT[`vfmt_${f}_${t}`] = [`Venta · ${n} · contenido ${tipo}`, `Cómo deben escribirse los ${n.toLowerCase()} de Venta cuando el contenido es ${tipo}. Puede quedar vacía.`];
+}));
 // Cómo se agrupan en pantalla (de lo más general a lo más específico).
 const GRUPOS_PROMPT = [
   { titulo: 'Instrucciones generales de la IA', ayuda: 'Valen para todas las etapas del funnel.', claves: ['sistema', 'generacion', 'ganchos', 'vozApp', 'formatoTexto', 'bienvenida', 'fichaBorrador', 'emoji0', 'emoji1', 'emoji2', 'emoji3', 'emoji4'] },
   { titulo: 'Flujos de mensajes para el grupo', ayuda: 'Directrices técnicas de los flujos de Encuentro (antes de la SDV) y de Venta (después de la SDV). Los flujos mismos se definen más arriba.', claves: ['flujoEncuentro', 'flujoVenta'] },
   { titulo: 'Programa OPEN: Encuentro (comunidad de WhatsApp)', ayuda: 'Solo para alumnos del programa OPEN: Encuentro lleva a una comunidad gratuita de WhatsApp y no hay Venta ni flujos.', claves: ['openGeneral', 'openAngulos', 'ideasGrupo', 'ideasGrupoCerrado', 'ideasMedioTexto', 'ideasMedioVideo', 'ideasMedioAudio', 'ideasMedioVariado'] },
-  { titulo: 'Venta', ayuda: 'Instrucciones de la etapa Venta.', claves: ['ventaGeneral', 'ventaAngulos'] },
-  { titulo: 'Encuentro: para todo contenido', ayuda: 'Se suma a todo lo que se genere en Encuentro.', claves: ['encuentroGeneral'] },
-  { titulo: 'Encuentro: según la técnica de la SDV', ayuda: 'Se suma según la técnica que eligió el alumno.', claves: ['tecnica_web', 'tecnica_puente', 'tecnica_directo'] },
-  { titulo: 'Encuentro: según sea orgánico o pagado', ayuda: 'Las reglas de cada tipo de contenido y la creación de ángulos.', claves: ['estrategia', 'pagado', 'angulos'] },
-  { titulo: 'Encuentro: por tipo de mensaje y tipo de contenido', ayuda: 'Una instrucción para cada medio (reel, carrusel, historia, imagen, WhatsApp, DM, email), según sea orgánico o pagado. Se suma a la instrucción del formato.', claves: Object.keys(NOMBRES_PROMPT).filter(k => k.startsWith('fmt_')) }
 ];
 const ETIQUETAS_FICHA = { fase1: 'Ficha 1', fase2: 'Ficha 2', fase3: 'Ficha 3', fase4: 'Ficha 4 (SDV)' };
 
@@ -98,6 +97,82 @@ function etiquetaGrupoReceta(r) {
 
 function opcionesFase(sel) {
   return [1, 2, 3, 4].map(n => `<option value="${n}" ${Number(sel) === n ? 'selected' : ''}>Fase ${n}</option>`).join('');
+}
+
+/* --- Instrucciones por etapa: generales + cada formato (descripción e instrucciones) --- */
+
+const ORDEN_FORMATOS = ['reel', 'carrusel', 'historia', 'whatsapp', 'dm'];
+const FORMATOS_EXTRA_ETAPA = { encuentro: ['imagen', 'email'], venta: ['imagen', 'email'] };
+// Instrucciones que antes estaban sueltas más abajo y ahora viven dentro de su etapa.
+const PROMPTS_DE_ETAPA = {
+  encuentro: ['encuentroGeneral', 'tecnica_web', 'tecnica_puente', 'tecnica_directo', 'estrategia', 'pagado', 'angulos'],
+  venta: ['ventaGeneral', 'ventaAngulos']
+};
+const etapasAbiertas = new Set();
+
+function cajaPrompt(k, filas) {
+  return `
+    <div class="labcfg-bloque" style="background:rgba(0,0,0,0.02);">
+      <label style="font-size:13px; font-weight:700;">${esc(NOMBRES_PROMPT[k][0])}</label>
+      <p class="text-soft" style="font-size:12.5px; margin:2px 0 6px;">${esc(NOMBRES_PROMPT[k][1])}</p>
+      <textarea data-prompt="${k}" rows="${filas || 5}" maxlength="8000">${esc(cfg.prompts[k])}</textarea>
+      <button type="button" class="btn btn--ghost labcfg-mini" data-act="restaurar-prompt" data-k="${k}" style="margin-top:6px;">Restaurar el original</button>
+    </div>`;
+}
+
+function bloqueFormatoEtapa(etapaId, fid) {
+  const e = cfg.etapas[etapaId];
+  const fc = (e.formatosCfg || {})[fid] || { descripcion: '', instruccion: '', cantidad: 3 };
+  const nombre = cfg.formatos[fid].nombre;
+  const conTipos = etapaId === 'encuentro' || etapaId === 'venta';
+  const pref = etapaId === 'venta' ? 'vfmt_' : 'fmt_';
+  const caja = (tipo, titulo) => {
+    const k = `${pref}${fid}_${tipo}`;
+    if (cfg.prompts[k] === undefined) return '';
+    return `
+      <div class="field" style="margin-top:6px;"><label>${titulo}</label>
+        <textarea data-prompt="${k}" rows="3" maxlength="8000" placeholder="Opcional. Admite {palabra}, {link} y {fecha}.">${esc(cfg.prompts[k])}</textarea></div>`;
+  };
+  return `
+    <div class="labcfg-pieza" data-fmt="${fid}" style="border-left:3px solid rgba(47,118,255,0.45); padding-left:12px; margin-top:12px;">
+      <div class="labcfg-fila">
+        <div style="font-weight:700; font-size:14px; align-self:center;">${esc(nombre)}</div>
+        <label style="font-size:13px; display:flex; gap:5px; align-items:center;"><input type="checkbox" data-f="formato" value="${fid}" ${e.formatos.includes(fid) ? 'checked' : ''}> Se genera en esta etapa</label>
+        <div class="field" style="margin:0;"><label>Propuestas por clic (1 a 6)</label><input type="number" min="1" max="6" data-f="fcantidad" value="${esc(fc.cantidad)}"></div>
+      </div>
+      <div class="field"><label>Descripción general (qué es y cómo se estructura; secciones separadas por «;», en orden)</label>
+        <textarea data-f="fdescripcion" rows="2" maxlength="600">${esc(fc.descripcion)}</textarea></div>
+      <div class="field"><label>Instrucciones para la IA</label>
+        <textarea data-f="finstruccion" rows="3" maxlength="1500">${esc(fc.instruccion)}</textarea></div>
+      ${conTipos ? caja('organico', 'Instrucciones extra cuando el contenido es ORGÁNICO') + caja('pagado', 'Instrucciones extra cuando el contenido es PAGADO') : ''}
+    </div>`;
+}
+
+function bloqueEtapa(id, n) {
+  const base = cfg.base;
+  const e = cfg.etapas[id];
+  const formatos = [...ORDEN_FORMATOS, ...(FORMATOS_EXTRA_ETAPA[id] || [])].filter(f => cfg.formatos[f]);
+  return `
+    <details class="labcfg-bloque" data-et="${id}" ${etapasAbiertas.has(id) ? 'open' : ''}>
+      <summary style="cursor:pointer; font-size:15px; font-weight:700;">${n}. ${esc(e.nombre)} <span class="text-soft" style="font-weight:400; font-size:12.5px;">· instrucciones generales y de cada formato</span></summary>
+
+      <div class="labcfg-sub" style="font-size:13.5px;">Instrucciones generales (objetivo y características)</div>
+      <div class="labcfg-fila">
+        <div class="field" style="margin:0;"><label>Nombre</label><input type="text" data-f="nombre" value="${esc(e.nombre)}" maxlength="40"></div>
+        <div class="field" style="margin:0;"><label>Se activa desde</label><select data-f="desdeFase">${opcionesFase(e.desdeFase)}</select></div>
+        <label style="font-size:13px; display:flex; gap:5px; align-items:center; margin-top:22px;"><input type="checkbox" data-f="activa" ${e.activa ? 'checked' : ''}> Activa</label>
+      </div>
+      <div class="field"><label>Descripción (la ve el alumno)</label><input type="text" data-f="descripcion" value="${esc(e.descripcion)}" maxlength="300"></div>
+      <label style="font-size:12.5px; font-weight:600;">Fichas que debe tener aprobadas</label>
+      <div class="labcfg-checks">${base.secciones.map(s => `<label><input type="checkbox" data-f="ficha" value="${s}" ${e.requiereFichas.includes(s) ? 'checked' : ''}> ${esc(cfg.preguntas[s].titulo)}</label>`).join('')}</div>
+      <div class="field"><label>Objetivo de la etapa (instrucción para la IA)</label><textarea data-f="objetivo" rows="3" maxlength="1500">${esc(e.objetivo)}</textarea></div>
+      ${id === 'encuentro' ? '<p class="text-soft" style="font-size:12.5px; margin:0 0 6px;">En el programa OPEN, Encuentro tiene sus propias instrucciones: están más abajo, en «Programa OPEN».</p>' : ''}
+      ${(PROMPTS_DE_ETAPA[id] || []).filter(k => cfg.prompts[k] !== undefined).map(k => cajaPrompt(k, k.startsWith('tecnica_') ? 4 : 5)).join('')}
+
+      <div class="labcfg-sub" style="font-size:13.5px;">Formatos de ${esc(e.nombre)}</div>
+      <p class="text-soft" style="font-size:12.5px; margin:0 0 4px;">Para cada formato: marca si se genera en esta etapa, cuántas propuestas salen por clic, su descripción general y las instrucciones para la IA.${id === 'encuentro' || id === 'venta' ? ' También puedes dar instrucciones extra según el contenido sea orgánico o pagado.' : ''}</p>
+      ${formatos.map(fid => bloqueFormatoEtapa(id, fid)).join('')}
+    </details>`;
 }
 
 function pintar() {
@@ -144,39 +219,14 @@ function pintar() {
       </div>`;
     }).join('')}
 
-    <div class="labcfg-sub">Etapas del funnel</div>
-    ${base.etapas.map(id => {
-      const e = cfg.etapas[id];
-      return `
-      <div class="labcfg-bloque" data-et="${id}">
-        <div class="labcfg-fila">
-          <div class="field" style="margin:0;"><label>Nombre</label><input type="text" data-f="nombre" value="${esc(e.nombre)}" maxlength="40"></div>
-          <div class="field" style="margin:0;"><label>Se activa desde</label><select data-f="desdeFase">${opcionesFase(e.desdeFase)}</select></div>
-          <label style="font-size:13px; display:flex; gap:5px; align-items:center; margin-top:22px;"><input type="checkbox" data-f="activa" ${e.activa ? 'checked' : ''}> Activa</label>
-        </div>
-        <div class="field"><label>Descripción (la ve el alumno)</label><input type="text" data-f="descripcion" value="${esc(e.descripcion)}" maxlength="300"></div>
-        <label style="font-size:12.5px; font-weight:600;">Formatos que genera</label>
-        <div class="labcfg-checks">${base.formatos.map(f => `<label><input type="checkbox" data-f="formato" value="${f}" ${e.formatos.includes(f) ? 'checked' : ''}> ${esc(cfg.formatos[f].nombre)}</label>`).join('')}</div>
-        <label style="font-size:12.5px; font-weight:600;">Fichas que debe tener aprobadas</label>
-        <div class="labcfg-checks">${base.secciones.map(s => `<label><input type="checkbox" data-f="ficha" value="${s}" ${e.requiereFichas.includes(s) ? 'checked' : ''}> ${esc(cfg.preguntas[s].titulo)}</label>`).join('')}</div>
-        <div class="field"><label>Objetivo de la etapa (instrucción para la IA)</label><textarea data-f="objetivo" rows="3" maxlength="1500">${esc(e.objetivo)}</textarea></div>
-      </div>`;
-    }).join('')}
+    <div class="labcfg-sub">Etapas del funnel: instrucciones generales y de cada formato</div>
+    <p class="text-soft" style="font-size:12.5px; margin:0 0 8px;">Cada etapa tiene sus <strong>instrucciones generales</strong> (objetivo y características) y, debajo, la <strong>descripción general y las instrucciones de cada formato</strong>: Reels, Carruseles, Historias, WhatsApp y DMs (en Encuentro y Venta, además Imágenes estáticas y Emails). Así un mismo formato puede escribirse distinto en cada etapa. Abre una etapa para editarla.</p>
+    ${base.etapas.map((id, n) => bloqueEtapa(id, n + 1)).join('')}
 
-    <div class="labcfg-sub">Formatos</div>
-    ${base.formatos.map(id => {
-      const f = cfg.formatos[id];
-      return `
-      <div class="labcfg-bloque" data-fo="${id}">
-        <div class="labcfg-fila">
-          <div class="field" style="margin:0;"><label>Nombre</label><input type="text" data-f="nombre" value="${esc(f.nombre)}" maxlength="40"></div>
-          <div class="field" style="margin:0;"><label>Propuestas por clic (1 a 6)</label><input type="number" min="1" max="6" data-f="cantidad" value="${esc(f.cantidad)}"></div>
-          <span></span>
-        </div>
-        <div class="field"><label>Estructura de cada propuesta (secciones separadas por «;», en orden)</label><input type="text" data-f="estructura" value="${esc(f.estructura)}" maxlength="600"></div>
-        <div class="field"><label>Instrucción para la IA</label><textarea data-f="instruccion" rows="3" maxlength="1500">${esc(f.instruccion)}</textarea></div>
-      </div>`;
-    }).join('')}
+    <div class="labcfg-sub">Nombres de los formatos</div>
+    <div class="labcfg-bloque"><div class="labcfg-fila">
+      ${base.formatos.map(id => `<div class="field" style="margin:0;" data-fo="${id}"><label>${esc(id)}</label><input type="text" data-f="nombre" value="${esc(cfg.formatos[id].nombre)}" maxlength="40"></div>`).join('')}
+    </div></div>
 
     <div class="labcfg-sub">Flujos de mensajes para el grupo (antes y después de la SDV)</div>
     <p class="text-soft" style="font-size:12.5px; margin:0 0 8px;">Define tú la estructura: cuántos mensajes, en qué día y con qué objetivo. Los flujos de Encuentro se envían <strong>antes</strong> de la SDV y los de Venta <strong>después</strong>. El día es relativo a la SDV: «antes» o «después» más la cantidad de días, o «el mismo día». La hora puede ser fija (19:00) o relativa a la hora de inicio de la SDV (-2h = 2 horas antes, -15m, +2h = 2 horas después); si la dejas vacía, se usa la hora de la SDV. Máximo ${MAX_MENSAJES_FLUJO} mensajes por flujo.</p>
@@ -267,7 +317,7 @@ function pintar() {
         <span></span>
       </div>
       <div class="labcfg-fila" style="margin-top:8px;">
-        <div class="field" style="margin:0;"><label>Contenido (solo Encuentro)</label><select id="labcfg-vp-tipo"><option value="organico">Orgánico</option><option value="pagado">Pagado</option></select></div>
+        <div class="field" style="margin:0;"><label>Contenido (Encuentro y Venta)</label><select id="labcfg-vp-tipo"><option value="organico">Orgánico</option><option value="pagado">Pagado</option></select></div>
         <div class="field" style="margin:0;"><label>Técnica (solo Encuentro, sin OPEN)</label><select id="labcfg-vp-tecnica"><option value="web">SDV con Registro WEB y luego a Grupo</option><option value="puente">SDV con Página Puente y luego a Grupo</option><option value="directo">SDV Directo a Grupo</option></select></div>
         <div class="field" style="margin:0;"><label>Formato de las ideas (solo OPEN)</label><select id="labcfg-vp-medio"><option value="variado">Formatos variados</option><option value="texto">Textos</option><option value="video">Videos</option><option value="audio">Audios</option></select></div>
         <div class="field" style="margin:0;"><label>Cómo llegan al grupo (solo OPEN pagado)</label><select id="labcfg-vp-destino"><option value="grupo">Directo al grupo</option><option value="puente">A través de una página puente</option></select></div>
@@ -332,13 +382,20 @@ function leer() {
     e.formatos = [...bloque.querySelectorAll('[data-f="formato"]:checked')].map(c => c.value);
     e.requiereFichas = [...bloque.querySelectorAll('[data-f="ficha"]:checked')].map(c => c.value);
     e.objetivo = bloque.querySelector('[data-f="objetivo"]').value.trim();
+    e.formatosCfg = e.formatosCfg || {};
+    bloque.querySelectorAll('[data-fmt]').forEach(fb => {
+      const fid = fb.dataset.fmt;
+      const previo = e.formatosCfg[fid] || {};
+      e.formatosCfg[fid] = {
+        descripcion: fb.querySelector('[data-f="fdescripcion"]').value.trim(),
+        instruccion: fb.querySelector('[data-f="finstruccion"]').value.trim(),
+        cantidad: Math.round(Number(fb.querySelector('[data-f="fcantidad"]').value)) || previo.cantidad || 3
+      };
+    });
   });
   el.querySelectorAll('[data-fo]').forEach(bloque => {
     const f = cfg.formatos[bloque.dataset.fo];
     f.nombre = bloque.querySelector('[data-f="nombre"]').value.trim();
-    f.cantidad = Number(bloque.querySelector('[data-f="cantidad"]').value) || f.cantidad;
-    f.estructura = bloque.querySelector('[data-f="estructura"]').value.trim();
-    f.instruccion = bloque.querySelector('[data-f="instruccion"]').value.trim();
   });
   el.querySelectorAll('[data-id-idea]').forEach(bloque => {
     const i = (cfg.ideas || {})[bloque.dataset.idIdea];
@@ -408,11 +465,14 @@ function validar() {
     const e = cfg.etapas[id];
     if (!e.nombre) return 'Cada etapa necesita un nombre.';
     if (!e.formatos.length) return `La etapa «${e.nombre}» necesita al menos un formato.`;
+    for (const [fid, fc] of Object.entries(e.formatosCfg || {})) {
+      if (!(fc.cantidad >= 1 && fc.cantidad <= 6)) return `Las propuestas de «${cfg.formatos[fid].nombre}» en «${e.nombre}» deben ser entre 1 y 6.`;
+      if (!fc.descripcion) return `Escribe la descripción general de «${cfg.formatos[fid].nombre}» en «${e.nombre}».`;
+    }
   }
   for (const id of cfg.base.formatos) {
     const f = cfg.formatos[id];
-    if (!f.nombre || !f.estructura) return 'Cada formato necesita nombre y estructura.';
-    if (!(f.cantidad >= 1 && f.cantidad <= 6)) return `Las propuestas de «${f.nombre}» deben ser entre 1 y 6.`;
+    if (!f.nombre) return 'Cada formato necesita un nombre.';
   }
   for (const i of Object.values(cfg.ideas || {})) {
     if (!i.nombre) return 'Cada tipo de idea para el grupo necesita un nombre.';
@@ -442,6 +502,7 @@ function conectar(el) {
   // El clic delegado se registra una sola vez (el contenido se repinta, el contenedor no).
   if (!delegadoListo) {
     delegadoListo = true;
+    el.addEventListener('toggle', (ev) => { const d = ev.target; if (d && d.dataset && d.dataset.et) { if (d.open) etapasAbiertas.add(d.dataset.et); else etapasAbiertas.delete(d.dataset.et); } }, true);
     el.addEventListener('click', alHacerClic);
     // Flujos: «El mismo día» no lleva cantidad de días.
     el.addEventListener('change', (ev) => {
