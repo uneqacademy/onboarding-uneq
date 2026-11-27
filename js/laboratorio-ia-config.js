@@ -175,6 +175,32 @@ function bloqueEtapa(id, n) {
     </details>`;
 }
 
+/* --- Estrategias del Laboratorio UNEQ: lo que recibe la IA de cada una, por etapa (Encuentro y/o Venta) --- */
+
+const NOMBRE_ETAPA_UNEQ = { encuentro: 'Encuentro', venta: 'Venta' };
+function bloqueEstrategiasUneq() {
+  const lista = (cfg.base && cfg.base.estrategiasUneq) || [];
+  const cajas = lista.map(e => `
+    <details class="labcfg-bloque">
+      <summary style="cursor:pointer; font-size:14px; font-weight:700;">${esc(e.nombre)} <span class="text-soft" style="font-weight:400; font-size:12.5px;">· condiciona ${e.etapas.map(x => NOMBRE_ETAPA_UNEQ[x]).join(' y ')}${e.etapas.length === 1 ? ' (Encuentro queda libre)' : ''}</span></summary>
+      ${e.etapas.map(et => {
+        const k = `estrUneq_${e.id}_${et}`;
+        NOMBRES_PROMPT[k] = [`${e.nombre} · ${NOMBRE_ETAPA_UNEQ[et]}`, `Qué debe saber y hacer la IA cuando UNEQ elige esta estrategia y se crean contenidos de ${NOMBRE_ETAPA_UNEQ[et]}: qué se busca, cómo hablar, qué llamado a la acción usar y qué evitar.${e.conEvento ? ' Admite {evento} y {precio} (con su moneda).' : ''}`];
+        return `
+      <div class="labcfg-bloque" style="background:rgba(0,0,0,0.02); margin-top:8px;">
+        <label style="font-size:13px; font-weight:700;">${NOMBRE_ETAPA_UNEQ[et]}</label>
+        <p class="text-soft" style="font-size:12.5px; margin:2px 0 6px;">${esc(NOMBRES_PROMPT[k][1])}</p>
+        <textarea data-prompt="${k}" rows="7" maxlength="8000">${esc(cfg.prompts[k] === undefined ? '' : cfg.prompts[k])}</textarea>
+        <button type="button" class="btn btn--ghost labcfg-mini" data-act="restaurar-prompt" data-k="${k}" style="margin-top:6px;">Restaurar el original</button>
+      </div>`;
+      }).join('')}
+    </details>`).join('');
+  return `
+    <div class="labcfg-sub">Laboratorio UNEQ: estrategias de Encuentro y Venta</div>
+    <p class="text-soft" style="font-size:12.5px; margin:0 0 8px;">El equipo de UNEQ elige una estrategia y ella condiciona los contenidos de Encuentro y de Venta de @somosuneq (Evergreen Low Ticket y Evento Online condicionan solo Venta). Aquí describes cómo debe entenderla la IA en cada etapa. Los textos de partida son un borrador: edítalos a tu manera.</p>
+    ${cajas}`;
+}
+
 function pintar() {
   const el = cuerpo();
   if (!el) return;
@@ -327,6 +353,8 @@ function pintar() {
       <p class="text-soft hidden" id="labcfg-vp-estado" style="font-size:12.5px;"></p>
       <textarea id="labcfg-vp-salida" class="hidden" rows="22" readonly style="margin-top:8px; font-size:12.5px;"></textarea>
     </div>
+
+    ${bloqueEstrategiasUneq()}
 
     <div class="labcfg-sub">Instrucciones de la IA (todas editables)</div>
     <p class="text-soft" style="font-size:12.5px; margin:0 0 8px;">Aquí le explicas a la IA cada cosa. Van de lo más general a lo más específico y se suman entre sí. Las de Encuentro admiten {palabra}, {link} y {fecha}: la app los reemplaza con lo que cada alumno definió en su estrategia. Lo único que no se puede cambiar es la forma técnica de la respuesta (para que la pantalla no se rompa).</p>
